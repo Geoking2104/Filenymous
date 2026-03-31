@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Build release artifacts ──────────────────────────────────────────────────
+  build:
+    name: Build hApp + UI
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Nix store
+        uses: cachix/cachix-action@v14
+        with:
+          name: holochain-ci
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
+
+      - name: Build WASM + DNA + hApp
+        run: nix develop --command make build-happ
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build React UI
+        run: |
+          npm ci
+          npm run build
+        working-directory: ui
+        env:
+          VITE_HC_URL: ws://localhost:8888
+          VITE_BRIDGE_URL: http://localhost:3001
+          VITE_BRIDGE_SECRET: replace-in-deployment
+
+      - name: Package UI dist
+        run: |
+          cd ui
+          tar -czf ../filenymous-ui-${{ github.ref_name }}.tar.gz dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Filenymous ${{ github.ref_name }}
+          body: |
+            ## Filenymous ${{ github.ref_name }}
+
+            ### Artefacts
+            - `filenymous.happ` — Holochain application bundle (DNA + zomes WASM)
+            - `filenymous-ui-${{ github.ref_name }}.tar.gz` — React UI build
+
+            ### Déploiement rapide
+            ```bash
+            # Lancer le conducteur Holochain
+            holochain -c conductor-config.yaml
+
+            # Lancer le bridge de notification
+            cd bridge && cp .env.example .env && npm start
+
+            # Servir l'UI (nginx, caddy, ou un CDN)
+            tar -xzf filenymous-ui-${{ github.ref_name }}.tar.gz
+            ```
+
+            Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour la configuration complète.
+          files: |
+            filenymous.happ
+            filenymous-ui-${{ github.ref_name }}.tar.gz
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

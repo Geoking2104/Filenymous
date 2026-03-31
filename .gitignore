@@ -1,0 +1,31 @@
+# Rust / Cargo
+target/
+**/*.rs.bk
+
+# WASM artefacts
+workdir/
+*.dna
+*.happ
+*.webhapp
+
+# Node
+node_modules/
+tests/node_modules/
+ui/node_modules/
+bridge/node_modules/
+dist/
+ui/dist/
+
+# Env (ne jamais committer les secrets)
+.env
+bridge/.env
+ui/.env
+
+# Holochain runtime
+conductor-data/
+lair-keystore/
+databases/
+
+# OS
+.DS_Store
+Thumbs.db

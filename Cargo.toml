@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = [
+  "dnas/filenymous/zomes/integrity/identity_integrity",
+  "dnas/filenymous/zomes/integrity/transfer_integrity",
+  "dnas/filenymous/zomes/integrity/storage_integrity",
+  "dnas/filenymous/zomes/coordinator/identity",
+  "dnas/filenymous/zomes/coordinator/transfer",
+  "dnas/filenymous/zomes/coordinator/storage",
+]
+
+[profile.dev]
+opt-level = "z"
+
+[profile.release]
+opt-level = "z"

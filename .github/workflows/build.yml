@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Rust / Holochain DNA ────────────────────────────────────────────────────
+  rust:
+    name: Rust & DNA
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Nix store
+        uses: cachix/cachix-action@v14
+        with:
+          name: holochain-ci
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
+
+      - name: Install Holochain toolchain (via Nix)
+        run: nix develop --command echo "Holochain toolchain ready"
+
+      - name: Check Rust formatting
+        run: nix develop --command cargo fmt --all -- --check
+
+      - name: Clippy
+        run: nix develop --command cargo clippy --all-targets -- -D warnings
+
+      - name: Compile WASM zomes
+        run: nix develop --command make build-wasm
+
+      - name: Pack DNA
+        run: nix develop --command make build-dna
+
+      - name: Pack hApp
+        run: nix develop --command make build-happ
+
+      - name: Upload hApp artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filenymous-happ
+          path: filenymous.happ
+          retention-days: 7
+
+  # ── tryorama integration tests ──────────────────────────────────────────────
+  tryorama:
+    name: Tryorama tests
+    needs: rust
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Nix store
+        uses: cachix/cachix-action@v14
+        with:
+          name: holochain-ci
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
+
+      - name: Download hApp artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: filenymous-happ
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Install test dependencies
+        run: npm ci
+        working-directory: tests
+
+      - name: Run tryorama tests
+        run: nix develop --command npm test
+        working-directory: tests
+
+  # ── Bridge (TypeScript) ─────────────────────────────────────────────────────
+  bridge:
+    name: Bridge
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: bridge/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: bridge
+
+      - name: Type-check
+        run: npx tsc --noEmit
+        working-directory: bridge
+
+  # ── React UI ─────────────────────────────────────────────────────────────────
+  ui:
+    name: React UI
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ui
+
+      - name: Type-check
+        run: npx tsc --noEmit
+        working-directory: ui
+
+      - name: Build
+        run: npm run build
+        working-directory: ui
+        env:
+          VITE_HC_URL: ws://localhost:8888
+          VITE_BRIDGE_URL: http://localhost:3001
+          VITE_BRIDGE_SECRET: ci-placeholder

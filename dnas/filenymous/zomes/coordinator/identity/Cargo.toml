@@ -1,0 +1,13 @@
+[package]
+name = "identity"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "identity"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hdk = { version = "0.4", features = ["trace"] }
+serde = { version = "1", features = ["derive"] }
+identity_integrity = { path = "../../integrity/identity_integrity" }
