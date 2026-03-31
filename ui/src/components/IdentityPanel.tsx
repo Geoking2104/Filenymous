@@ -1,9 +1,15 @@
-import { useState } from "react";
-import { hashContact } from "../crypto/contact";
-import { identityZome } from "../holochain/identity";
-import { useStore }     from "../store/useStore";
+import { useState, useEffect } from "react";
+import { hashContact }          from "../crypto/contact";
+import { identityZome }         from "../holochain/identity";
+import { useStore }             from "../store/useStore";
+import { loadOrCreateKeyPair, loadPublicKeyBytes } from "../crypto/keystore";
 
 declare const __BRIDGE_URL__: string;
+
+/** Convert raw bytes to base64 string */
+function toBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
+}
 
 export default function IdentityPanel() {
   const { pubkey, contacts, addContact, removeContact } = useStore();
@@ -12,6 +18,14 @@ export default function IdentityPanel() {
   const [otpCode,    setOtpCode]    = useState("");
   const [pkCopied,   setPkCopied]   = useState(false);
   const [loading,    setLoading]    = useState(false);
+  const [x25519Pub,  setX25519Pub]  = useState<string | null>(null);
+
+  // M3: Load or display existing X25519 public key on mount
+  useEffect(() => {
+    loadPublicKeyBytes().then((bytes) => {
+      if (bytes) setX25519Pub(toBase64(bytes));
+    }).catch(() => {/* no key yet */});
+  }, []);
 
   const validContact = (v: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+[1-9]\d{7,14}$/.test(v);
@@ -37,8 +51,16 @@ export default function IdentityPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contact: newContact, code: otpCode }),
       });
+
+      // M3: generate (or load) X25519 keypair and publish it alongside the ContactClaim
+      const { publicKeyBytes } = await loadOrCreateKeyPair();
+      const pubKeyB64 = toBase64(publicKeyBytes);
+
       const h = await hashContact(newContact);
       await identityZome.claimContact(h);
+      await identityZome.publishX25519Key(pubKeyB64);
+
+      setX25519Pub(pubKeyB64);
       addContact({ contact: newContact, hash: h });
       setOtpStep(false); setOtpCode(""); setNewContact("");
     } catch (e) { alert("Erreur vérification : " + String(e)); }
@@ -55,7 +77,7 @@ export default function IdentityPanel() {
 
   return (
     <div>
-      {/* Clé publique */}
+      {/* Clé publique Holochain */}
       <div className="card">
         <div className="card-label">Ma clé publique (agent Holochain)</div>
         <div style={{ display:"flex",alignItems:"center",gap:".8rem" }}>
@@ -73,6 +95,25 @@ export default function IdentityPanel() {
             {pkCopied ? "✓ Copié" : "Copier"}
           </button>
         </div>
+      </div>
+
+      {/* M3 — Clé X25519 pour le chiffrement ECIES */}
+      <div className="card">
+        <div className="card-label">Clé de chiffrement (X25519 — M3)</div>
+        {x25519Pub ? (
+          <div>
+            <div className="info-box" style={{ background:"#f0fdf4",border:"1px solid #86efac" }}>
+              🔒 Clé X25519 active — les expéditeurs peuvent vous envoyer des fichiers sans exposer la clé AES dans l'URL.
+            </div>
+            <div style={{ fontSize:".72rem",fontFamily:"monospace",wordBreak:"break-all",color:"var(--muted)",marginTop:".5rem" }}>
+              <span style={{ color:"var(--text)" }}>X25519 pub : </span>{x25519Pub.slice(0, 40)}…
+            </div>
+          </div>
+        ) : (
+          <div className="info-box">
+            ⚠️ Aucune clé X25519 — liez d'abord un contact pour générer votre clé de chiffrement.
+          </div>
+        )}
       </div>
 
       {/* Contacts liés */}

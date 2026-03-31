@@ -11,3 +11,5 @@ crate-type = ["cdylib", "rlib"]
 hdk = { version = "0.4", features = ["trace"] }
 serde = { version = "1", features = ["derive"] }
 identity_integrity = { path = "../../integrity/identity_integrity" }
+# M3: base64 encoding for X25519 key transport
+base64 = "0.22"

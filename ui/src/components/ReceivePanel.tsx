@@ -1,13 +1,18 @@
 /**
  * ReceivePanel — resolve a transfer link and download the file.
  *
- * The link format is: ?d=<transfer_id>&k=<base64_aes_key>
- * In M3, the key will be ECIES-encrypted; in M2 it's transmitted in the URL
- * (acceptable for prototype, TODO before production).
+ * M3: link format is simply ?d=<transfer_id> — no key in URL.
+ * The AES session key is recovered by:
+ *  1. Fetching the TransferManifest from DHT (contains encrypted_key_blob)
+ *  2. Loading the recipient's X25519 private key from IndexedDB
+ *  3. ECIES-decrypting the blob to recover the raw AES key bytes
+ *  4. Decrypting all chunks with AES-256-GCM
  */
 
 import { useState, useEffect } from "react";
 import { importAesKey }  from "../crypto/aes";
+import { decryptAesKeyFromBlob } from "../crypto/ecies";
+import { loadPrivateKey }        from "../crypto/keystore";
 import { decryptChunks, saveBlob } from "../crypto/chunker";
 import { transferZome }  from "../holochain/transfer";
 import { storageZome }   from "../holochain/storage";
@@ -60,14 +65,17 @@ export default function ReceivePanel() {
     setLoading(true); setPct(0);
     const progress = (p: number, s: string) => { setPct(p); setStep(s); };
     try {
-      // Extract AES key from URL (M2 — plaintext, TODO ECIES in M3)
-      const url     = new URL(rxLink);
-      const keyB64  = url.searchParams.get("k");
-      if (!keyB64) throw new Error("Clé de déchiffrement absente du lien");
-      const keyRaw  = Uint8Array.from(atob(keyB64), (c) => c.charCodeAt(0));
-      const aesKey  = await importAesKey(keyRaw);
+      // M3: recover AES key via ECIES decryption (no URL param)
+      progress(8, "Chargement de votre clé X25519 privée…");
+      const recipientPrivKey = await loadPrivateKey();
 
-      progress(15, "Récupération des chunks DHT…");
+      progress(14, "Déchiffrement ECIES de la clé de session…");
+      const blobB64    = manifest.encrypted_key_blob;
+      const eciesBlob  = Uint8Array.from(atob(blobB64), (c) => c.charCodeAt(0));
+      const aesRawBytes = await decryptAesKeyFromBlob(eciesBlob, recipientPrivKey);
+      const aesKey      = await importAesKey(aesRawBytes);
+
+      progress(22, "Récupération des chunks DHT…");
       const { chunks } = await storageZome.getChunks(manifest.transfer_id);
 
       progress(50, "Déchiffrement AES-256-GCM…");
@@ -140,7 +148,7 @@ export default function ReceivePanel() {
         </div>
       )}
 
-      <div className="info-box">🔒 Déchiffrement dans votre navigateur — le fichier en clair ne quitte pas votre appareil.</div>
+      <div className="info-box">🔒 <strong>M3</strong> : clé AES reconstituée par ECIES/X25519 — ni l'URL, ni le réseau ne contiennent la clé. Déchiffrement 100% local.</div>
 
       <button className="btn-success btn-full" style={{ padding:".75rem" }} disabled={loading} onClick={download}>
         {loading
@@ -160,7 +168,7 @@ export default function ReceivePanel() {
         <div style={{ fontSize:".87rem",color:"var(--muted)",marginBottom:"1.6rem" }}>Collez le lien reçu par email ou SMS.</div>
         <div className="form-row" style={{ maxWidth:"420px",margin:"0 auto 1.2rem",textAlign:"left" }}>
           <label className="form-label">Lien de transfert</label>
-          <input type="text" value={rxLink} onChange={(e) => setRxLink(e.target.value)} placeholder="https://…?d=…&k=…" />
+          <input type="text" value={rxLink} onChange={(e) => setRxLink(e.target.value)} placeholder="https://…?d=<transfer_id>" />
         </div>
         <button className="btn-primary" style={{ padding:".6rem 2rem" }} disabled={!rxLink || loading}
           onClick={() => resolveLink(rxLink)}>

@@ -14,10 +14,26 @@ pub struct ContactClaim {
     pub created_at: Timestamp,
 }
 
+/// M3 — An agent's X25519 Diffie-Hellman public key, published on the DHT
+/// so that senders can ECIES-wrap the AES session key for that recipient.
+/// The corresponding private key never leaves the recipient's browser.
+#[hdk_entry_helper]
+#[derive(Clone, PartialEq)]
+pub struct AgentX25519Key {
+    /// Raw 32-byte X25519 public key (big-endian).
+    pub x25519_pubkey: Vec<u8>,
+    /// The Holochain agent this key belongs to.
+    pub agent: AgentPubKey,
+    /// Timestamp (microseconds) of publication.
+    pub created_at: Timestamp,
+}
+
 #[hdk_entry_types]
 #[unit_enum(UnitEntryTypes)]
 pub enum EntryTypes {
     ContactClaim(ContactClaim),
+    /// M3
+    AgentX25519Key(AgentX25519Key),
 }
 
 #[hdk_link_types]
@@ -26,6 +42,8 @@ pub enum LinkTypes {
     ContactHashToAgent,
     /// AgentPubKey → ActionHash of their ContactClaim (for self-lookup)
     AgentToContactClaim,
+    /// M3: AgentPubKey → ActionHash of their AgentX25519Key entry
+    AgentToX25519Key,
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────
@@ -38,10 +56,16 @@ pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
                 EntryTypes::ContactClaim(claim) => {
                     validate_contact_claim(&claim, &action.author)
                 }
+                EntryTypes::AgentX25519Key(key_entry) => {
+                    validate_x25519_key(&key_entry, &action.author)
+                }
             },
             OpEntry::UpdateEntry { app_entry, action, .. } => match app_entry {
                 EntryTypes::ContactClaim(claim) => {
                     validate_contact_claim(&claim, &action.author)
+                }
+                EntryTypes::AgentX25519Key(key_entry) => {
+                    validate_x25519_key(&key_entry, &action.author)
                 }
             },
             _ => Ok(ValidateCallbackResult::Valid),
@@ -54,11 +78,11 @@ pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
             ..
         } => match link_type {
             LinkTypes::ContactHashToAgent => {
-                // Only the agent itself may publish its own contact link
                 let _ = (base_address, target_address);
                 Ok(ValidateCallbackResult::Valid)
             }
             LinkTypes::AgentToContactClaim => Ok(ValidateCallbackResult::Valid),
+            LinkTypes::AgentToX25519Key => Ok(ValidateCallbackResult::Valid),
         },
         FlatOp::RegisterDeleteLink { .. } => Ok(ValidateCallbackResult::Valid),
         _ => Ok(ValidateCallbackResult::Valid),
@@ -84,6 +108,25 @@ fn validate_contact_claim(
     if &claim.agent != author {
         return Ok(ValidateCallbackResult::Invalid(
             "ContactClaim.agent must equal the action author".into(),
+        ));
+    }
+    Ok(ValidateCallbackResult::Valid)
+}
+
+fn validate_x25519_key(
+    key_entry: &AgentX25519Key,
+    author: &AgentPubKey,
+) -> ExternResult<ValidateCallbackResult> {
+    // X25519 public keys are always 32 bytes
+    if key_entry.x25519_pubkey.len() != 32 {
+        return Ok(ValidateCallbackResult::Invalid(
+            "x25519_pubkey must be exactly 32 bytes".into(),
+        ));
+    }
+    // The entry's agent field must match the author
+    if &key_entry.agent != author {
+        return Ok(ValidateCallbackResult::Invalid(
+            "AgentX25519Key.agent must equal the action author".into(),
         ));
     }
     Ok(ValidateCallbackResult::Valid)

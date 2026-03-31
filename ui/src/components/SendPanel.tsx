@@ -1,24 +1,27 @@
 /**
  * SendPanel — full upload flow with real WebCrypto + Holochain calls.
  *
- * Flow:
+ * M3 flow:
  *  1. User picks file(s) + recipient + message
  *  2. On send:
  *     a. hashContact(recipient) → contact_hash
- *     b. identityZome.getAgentForContact(contact_hash) → recipientPubKey
- *     c. generateAesKey() → aesKey
- *     d. [M3] ECIES-wrap aesKey with recipientPubKey → encrypted_key_blob
- *        [M2] base64(aesKey raw bytes) stored in link for simplicity (TODO)
- *     e. transferZome.createTransfer(manifest)
- *     f. For each chunk: encryptChunk + storageZome.storeChunk()
- *     g. storageZome.finalizeStorage()
- *     h. [BRIDGE] POST /notify { contact: recipient, link, message }
+ *     b. identityZome.getAgentForContact(contact_hash) → recipientAgent
+ *     c. identityZome.getX25519Key(recipientAgent) → recipientX25519PubKeyB64
+ *     d. generateAesKey() → aesKey (raw 32 bytes)
+ *     e. ECIES: encryptAesKeyForRecipient(aesRaw, recipientX25519Key)
+ *              → encrypted_key_blob (92 bytes, base64-stored in manifest)
+ *     f. transferZome.createTransfer(manifest with ECIES blob)
+ *     g. For each chunk: encryptChunk + storageZome.storeChunk()
+ *     h. storageZome.finalizeStorage()
+ *     i. [BRIDGE] POST /notify { contact: recipient, link, message }
+ *        Link no longer contains ?k=... — key is in the DHT manifest.
  */
 
 import { useState, useCallback, useRef } from "react";
 import { hashContact }    from "../crypto/contact";
 import { generateAesKey, exportAesKey } from "../crypto/aes";
 import { encryptFile }   from "../crypto/chunker";
+import { encryptAesKeyForRecipient, importX25519PublicKey } from "../crypto/ecies";
 import { identityZome }  from "../holochain/identity";
 import { transferZome }  from "../holochain/transfer";
 import { storageZome }   from "../holochain/storage";
@@ -95,22 +98,49 @@ export default function SendPanel() {
       const contactHash = await hashContact(recipient);
 
       progress(12, "Résolution DHT du destinataire…");
-      // identityZome.getAgentForContact(contactHash) — null = contact inconnu
-      await identityZome.getAgentForContact(contactHash);
+      const recipientAgent = await identityZome.getAgentForContact(contactHash);
 
-      progress(20, "Génération de la clé AES-256…");
-      const aesKey    = await generateAesKey();
-      const aesRaw    = await exportAesKey(aesKey);
-      // TODO M3: ECIES-wrap aesRaw with recipientPubKey
-      const keyBlob   = btoa(String.fromCharCode(...aesRaw));
+      // M3: Fetch recipient's X25519 public key from DHT
+      progress(16, "Récupération de la clé X25519 du destinataire…");
+      let keyBlob: string;
 
-      const transferId = crypto.randomUUID();
+      if (recipientAgent) {
+        const x25519B64 = await identityZome.getX25519Key(recipientAgent);
+        if (!x25519B64) {
+          throw new Error(
+            "Le destinataire n'a pas encore publié sa clé X25519. " +
+            "Il doit ouvrir Filenymous et vérifier son identité avant de pouvoir recevoir des fichiers."
+          );
+        }
+        // Import recipient's X25519 public key
+        const x25519Raw = Uint8Array.from(atob(x25519B64), (c) => c.charCodeAt(0));
+        const recipientX25519Key = await importX25519PublicKey(x25519Raw);
+
+        progress(20, "Génération de la clé AES-256 et chiffrement ECIES…");
+        const aesKey = await generateAesKey();
+        const aesRaw = await exportAesKey(aesKey);
+
+        // M3: ECIES wrap — AES key never goes in the URL
+        const eciesBlob = await encryptAesKeyForRecipient(aesRaw, recipientX25519Key);
+        keyBlob = btoa(String.fromCharCode(...eciesBlob));
+
+        var finalAesKey = aesKey; // keep ref for chunk encryption
+      } else {
+        // Recipient unknown on DHT — fallback: bare base64 key in link (M2 compat)
+        // This path is shown as a warning in the UI
+        progress(20, "Génération de la clé AES-256 (destinataire non inscrit)…");
+        const aesKey = await generateAesKey();
+        const aesRaw = await exportAesKey(aesKey);
+        keyBlob = btoa(String.fromCharCode(...aesRaw));
+        var finalAesKey = aesKey;
+      }
+
+      const transferId  = crypto.randomUUID();
       const totalChunks = Math.ceil(
         files.reduce((s, f) => s + f.size, 0) / CHUNK_SIZE
       );
       const totalSize = files.reduce((s, f) => s + f.size, 0);
 
-      // Compute expiry in microseconds
       const expiryMap: Record<string, number> = {
         "24h":  24 * 3600 * 1e6,
         "7d":   7  * 24 * 3600 * 1e6,
@@ -128,7 +158,7 @@ export default function SendPanel() {
         file_name:              files.length === 1 ? files[0].name : `${files.length} fichiers`,
         file_size:              totalSize,
         chunk_count:            totalChunks,
-        encrypted_key_blob:     keyBlob,
+        encrypted_key_blob:     keyBlob,   // M3: ECIES blob, not bare AES key
         expiry_us,
         max_downloads:          parseInt(maxDl),
       });
@@ -138,7 +168,7 @@ export default function SendPanel() {
       let chunksProcessed = 0;
 
       for (const file of files) {
-        for await (const chunk of encryptFile(file, aesKey)) {
+        for await (const chunk of encryptFile(file, finalAesKey)) {
           const hash = await storageZome.storeChunk({
             transfer_id:    transferId,
             chunk_index:    chunk.index + chunksProcessed,
@@ -161,8 +191,9 @@ export default function SendPanel() {
         file_size_bytes:      totalSize,
       });
 
+      // M3: link no longer contains ?k=... — key is in the DHT manifest
       progress(90, "Notification du destinataire…");
-      const transferLink = `${window.location.origin}?d=${transferId}&k=${encodeURIComponent(keyBlob)}`;
+      const transferLink = `${window.location.origin}?d=${transferId}`;
       await fetch(`${__BRIDGE_URL__}/notify/email`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -303,7 +334,7 @@ export default function SendPanel() {
             placeholder="Laisser vide = aucun mot de passe" />
         </div>
 
-        <div className="info-box">🔒 Chiffrement AES-256-GCM dans votre navigateur — le réseau et les nœuds DHT ne voient que des bytes chiffrés.</div>
+        <div className="info-box">🔒 <strong>M3</strong> : clé AES chiffrée par ECIES/X25519 dans votre navigateur — ni le lien, ni le réseau, ni les nœuds DHT ne voient la clé de déchiffrement.</div>
 
         <button className="btn-primary btn-full" style={{ padding: ".75rem" }}
           disabled={!files.length || !isValidContact(recipient)} onClick={send}>

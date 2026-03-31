@@ -13,6 +13,18 @@ export interface ContactClaim {
   created_at: Timestamp;
 }
 
+/** M3 — Agent's X25519 public key published on the DHT */
+export interface AgentX25519Key {
+  x25519_pubkey: Uint8Array;  // 32 bytes
+  agent: AgentPubKey;
+  created_at: Timestamp;
+}
+
+/** M3 — Input for publish_x25519_key zome call */
+export interface PublishX25519KeyInput {
+  x25519_pubkey_b64: string;  // base64(raw 32 bytes)
+}
+
 // ── transfer_integrity ───────────────────────────────────────────────────
 
 export type TransferStatus = "pending" | "downloaded" | "expired" | "revoked";
