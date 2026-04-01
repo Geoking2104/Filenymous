@@ -1,0 +1,14 @@
+---
+manifest_version: "1"
+name: filenymous
+description: "Peer-to-peer file transfer on Holochain — no central server"
+roles:
+  - name: filenymous
+    provisioning:
+      strategy: create
+      deferred: false
+    dna:
+      bundled: "./dnas/filenymous/filenymous.dna"
+      modifiers:
+        network_seed: ~
+        properties: ~

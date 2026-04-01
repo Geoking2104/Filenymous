@@ -1,0 +1,13 @@
+[package]
+name = "transfer"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "transfer"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hdk = { version = "0.4", features = ["trace"] }
+serde = { version = "1", features = ["derive"] }
+transfer_integrity = { path = "../../integrity/transfer_integrity" }

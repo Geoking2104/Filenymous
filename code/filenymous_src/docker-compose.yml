@@ -1,0 +1,117 @@
+## Filenymous — Full stack Docker Compose (M5)
+##
+## Services:
+##   bootstrap  — kitsune2-bootstrap-srv  (peer discovery)
+##   signal     — kitsune2-sbd-server     (WebRTC relay / NAT traversal)
+##   bridge     — Fastify notification service (OTP · email · SMS)
+##   caddy      — TLS reverse proxy (Let's Encrypt automatic)
+##
+## Quick start:
+##   cp .env.compose.example .env.compose
+##   docker compose up -d
+##
+## For dev (no TLS, no Caddy):
+##   docker compose --profile dev up -d
+
+name: filenymous
+
+# ── Shared network ──────────────────────────────────────────────────────────
+networks:
+  filenymous:
+    driver: bridge
+
+# ── Volumes ─────────────────────────────────────────────────────────────────
+volumes:
+  caddy-data:
+  caddy-config:
+
+# ── Services ─────────────────────────────────────────────────────────────────
+services:
+
+  # ── 1. Bootstrap server ────────────────────────────────────────────────────
+  bootstrap:
+    build:
+      context: ./network/bootstrap
+      dockerfile: Dockerfile
+    image: ghcr.io/filenymous/filenymous-bootstrap:latest
+    restart: unless-stopped
+    networks: [filenymous]
+    expose: ["8787"]
+    # Health: bootstrap exposes /health (HTTP 200)
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── 2. Signal / SBD server ─────────────────────────────────────────────────
+  signal:
+    build:
+      context: ./network/signal
+      dockerfile: Dockerfile
+    image: ghcr.io/filenymous/filenymous-signal:latest
+    restart: unless-stopped
+    networks: [filenymous]
+    expose: ["8788"]
+    environment:
+      ALLOW_PLAIN: "true"   # TLS terminated by Caddy
+      BIND: "0.0.0.0:8788"
+
+  # ── 3. Bridge (notification micro-service) ─────────────────────────────────
+  bridge:
+    build:
+      context: ./bridge
+      dockerfile: Dockerfile
+    image: ghcr.io/filenymous/filenymous-bridge:latest
+    restart: unless-stopped
+    networks: [filenymous]
+    expose: ["3001"]
+    env_file: .env.compose
+    environment:
+      PORT: "3001"
+      HOST: "0.0.0.0"
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── 4. Caddy (TLS termination + reverse proxy) ─────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    networks: [filenymous]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      bootstrap:
+        condition: service_healthy
+      bridge:
+        condition: service_healthy
+    profiles: [prod]   # only in production — omit for dev
+
+  # ── Dev-only: expose ports directly (no TLS) ───────────────────────────────
+  bootstrap-dev:
+    extends:
+      service: bootstrap
+    ports: ["8787:8787"]
+    profiles: [dev]
+
+  signal-dev:
+    extends:
+      service: signal
+    ports: ["8788:8788"]
+    profiles: [dev]
+
+  bridge-dev:
+    extends:
+      service: bridge
+    ports: ["3001:3001"]
+    profiles: [dev]

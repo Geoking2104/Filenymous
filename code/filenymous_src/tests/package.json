@@ -1,0 +1,19 @@
+{
+  "name": "filenymous-tests",
+  "version": "0.1.0",
+  "description": "Tryorama integration tests for Filenymous M1",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@holochain/client": "^0.17.0",
+    "@holochain/tryorama": "^0.16.0"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

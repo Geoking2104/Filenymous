@@ -1,0 +1,35 @@
+---
+# Filenymous — conductor config DEV
+# Local bootstrap + signal (docker compose --profile dev up)
+# Run: holochain -c conductor-config.dev.yaml
+
+environment_path: ./conductor-data/dev
+
+keystore:
+  type: lair_server_in_proc
+
+admin_interfaces:
+  - driver:
+      type: websocket
+      port: 9000
+      allowed_origins: "*"
+
+network:
+  # Local kitsune2 — single binary handles both bootstrap (HTTP) and signal (WS)
+  # on the same port 8787 (docker compose --profile dev)
+  bootstrap_service: "http://localhost:8787"
+
+  # Signal uses the same host/port as bootstrap, just WebSocket protocol
+  signal_url: "ws://localhost:8787"
+
+  # Transport: WebRTC via local kitsune2 signal
+  transport_pool:
+    - type: webrtc
+      signal_url: "ws://localhost:8787"
+
+  # Tune — aggressive gossip for local dev
+  tuning_params:
+    gossip_strategy: sharded-gossip
+    gossip_loop_iteration_delay_ms: 200
+    default_notify_remote_agent_count: 5
+    default_timeout_ms: 10000

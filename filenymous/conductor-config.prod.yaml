@@ -1,0 +1,42 @@
+---
+# Filenymous — conductor config PRODUCTION
+# Points to the public bootstrap + signal infrastructure.
+# Run: holochain -c conductor-config.prod.yaml
+#
+# Replace the URLs with your actual deployed endpoints.
+
+environment_path: /var/lib/filenymous/conductor
+
+keystore:
+  type: lair_server
+  connection_url: "unix:///var/run/lair-keystore/socket"
+
+admin_interfaces:
+  - driver:
+      type: websocket
+      port: 9000
+      # Restrict to localhost — expose via Caddy/nginx if needed externally
+      allowed_origins: "http://localhost:*"
+
+network:
+  # kitsune2-bootstrap-srv handles BOTH bootstrap (HTTPS) and signal (WSS)
+  # on the same host — bootstrap.filenymous.app:443
+  bootstrap_service: "https://bootstrap.filenymous.app"
+
+  # Same host, different protocol prefix — kitsune2 multiplexes on port 443
+  signal_url: "wss://bootstrap.filenymous.app"
+
+  transport_pool:
+    - type: webrtc
+      signal_url: "wss://bootstrap.filenymous.app"
+      # ICE / STUN — Google public STUN + your own TURN if needed
+      ice_servers_override:
+        - urls:
+            - "stun:stun.l.google.com:19302"
+            - "stun:stun1.l.google.com:19302"
+
+  tuning_params:
+    gossip_strategy: sharded-gossip
+    gossip_loop_iteration_delay_ms: 1000
+    default_notify_remote_agent_count: 5
+    default_timeout_ms: 30000

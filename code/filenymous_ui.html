@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Filenymous — Transfert de fichiers P2P</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.min.js" defer></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --g1: #6366f1;   /* indigo */
+      --g2: #8b5cf6;   /* violet */
+      --g3: #a78bfa;   /* light violet */
+      --grad: linear-gradient(135deg, var(--g1), var(--g2));
+      --grad-soft: linear-gradient(135deg, #ede9fe, #e0e7ff);
+      --text:   #1e1b4b;
+      --muted:  #6b7280;
+      --border: #e5e7eb;
+      --bg:     #f9fafb;
+      --white:  #ffffff;
+      --success:#059669;
+      --danger: #dc2626;
+      --warn:   #d97706;
+      --radius: 12px;
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(99,102,241,.07);
+    }
+    html { font-size: 15px; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.55; }
+
+    /* ── Typography ── */
+    h1,h2,h3,h4 { font-weight: 700; letter-spacing: -.02em; }
+
+    /* ── Inputs ── */
+    input, select, textarea {
+      font-family: inherit; font-size: inherit;
+      background: var(--white); color: var(--text);
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: .6rem .9rem; outline: none; width: 100%;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--g1);
+      box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+    }
+    textarea { resize: vertical; min-height: 76px; line-height: 1.55; }
+
+    /* ── Buttons ── */
+    button { font-family: inherit; font-size: inherit; cursor: pointer; border: none; border-radius: var(--radius); padding: .6rem 1.2rem; transition: all .15s; }
+    button:active { transform: scale(.98); }
+    button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--grad); color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(99,102,241,.35); }
+    .btn-primary:hover:not(:disabled) { box-shadow: 0 4px 16px rgba(99,102,241,.45); filter: brightness(1.05); }
+    .btn-ghost { background: transparent; color: var(--g1); border: 1.5px solid var(--border); font-weight: 500; }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--g1); background: #ede9fe33; }
+    .btn-danger { background: var(--danger); color: #fff; font-weight: 600; }
+    .btn-success { background: var(--success); color: #fff; font-weight: 600; }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: .3rem .75rem; font-size: .82rem; }
+
+    /* ── Layout ── */
+    .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* Header */
+    .header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: .9rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+      box-shadow: 0 1px 0 var(--border);
+    }
+    .logo { display: flex; align-items: center; gap: .6rem; font-size: 1.15rem; font-weight: 800; color: var(--g1); letter-spacing: -.03em; }
+    .logo-mark {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--grad);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; color: #fff; box-shadow: 0 2px 8px rgba(99,102,241,.4);
+    }
+    .nav { display: flex; gap: .15rem; }
+    .nav-btn { background: transparent; color: var(--muted); padding: .4rem .85rem; font-size: .88rem; font-weight: 500; border-radius: 8px; border: none; }
+    .nav-btn:hover { background: #f3f4f6; color: var(--text); }
+    .nav-btn.active { background: #ede9fe; color: var(--g1); font-weight: 600; }
+    .peer-badge {
+      display: flex; align-items: center; gap: .4rem;
+      font-size: .78rem; color: var(--muted);
+      padding: .3rem .75rem; background: var(--bg);
+      border: 1.5px solid var(--border); border-radius: 20px;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .dot.on { background: var(--success); box-shadow: 0 0 0 3px rgba(5,150,105,.15); }
+    .dot.off { background: var(--danger); }
+
+    /* Main */
+    .main { flex: 1; max-width: 680px; margin: 0 auto; width: 100%; padding: 2.5rem 1.5rem 4rem; }
+
+    /* Cards */
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 1.6rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+    .card-label { font-size: .75rem; font-weight: 700; color: var(--g2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .9rem; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed #d1d5db; border-radius: 12px;
+      padding: 2.8rem 1.5rem; text-align: center; cursor: pointer; position: relative;
+      transition: all .2s; background: var(--bg);
+    }
+    .drop-zone:hover, .drop-zone.on { border-color: var(--g1); background: #ede9fe22; }
+    .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .drop-icon { font-size: 2.4rem; margin-bottom: .6rem; }
+    .drop-text { font-size: .9rem; color: var(--muted); }
+    .drop-text strong { color: var(--g1); }
+    .drop-hint { font-size: .76rem; color: #9ca3af; margin-top: .3rem; }
+
+    /* File item */
+    .file-item { display: flex; align-items: center; gap: .7rem; padding: .6rem .8rem; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; margin-top: .5rem; }
+    .file-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name { font-size: .88rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-sz { font-size: .75rem; color: var(--muted); }
+    .file-rm { background: transparent; color: #9ca3af; font-size: .9rem; padding: .2rem .5rem; border-radius: 6px; }
+    .file-rm:hover { background: #fee2e2; color: var(--danger); }
+
+    /* Form */
+    .form-row { margin-bottom: .9rem; }
+    .form-label { display: block; font-size: .8rem; font-weight: 600; color: var(--muted); margin-bottom: .35rem; }
+    .char-count { font-size: .72rem; color: #9ca3af; text-align: right; margin-top: .2rem; }
+    .opts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    @media(max-width:500px) { .opts-grid { grid-template-columns: 1fr; } }
+
+    /* Progress */
+    .progress-wrap { margin-top: .7rem; }
+    .progress-bar { height: 6px; border-radius: 3px; background: #e5e7eb; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; background: var(--grad); transition: width .35s ease; }
+    .progress-label { font-size: .77rem; color: var(--muted); margin-top: .35rem; }
+
+    /* Link box */
+    .link-box { display: flex; align-items: center; gap: .5rem; background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: .45rem .45rem .45rem .85rem; }
+    .link-box span { flex: 1; font-size: .82rem; font-family: monospace; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; font-size: .72rem; font-weight: 600; padding: .18rem .55rem; border-radius: 20px; }
+    .badge-pending { background: #fef3c7; color: var(--warn); }
+    .badge-done    { background: #d1fae5; color: var(--success); }
+    .badge-revoked { background: #fee2e2; color: var(--danger); }
+    .badge-expired { background: #f3f4f6; color: var(--muted); }
+
+    /* Transfer row */
+    .transfer-row { display: flex; align-items: flex-start; gap: .9rem; padding: 1rem 1.1rem; background: var(--white); border: 1px solid var(--border); border-radius: 12px; margin-bottom: .6rem; box-shadow: var(--shadow); transition: border-color .15s; }
+    .transfer-row:hover { border-color: var(--g3); }
+    .t-thumb { width: 38px; height: 38px; border-radius: 9px; background: var(--grad-soft); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+    .t-info { flex: 1; min-width: 0; }
+    .t-name { font-size: .9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .t-meta { font-size: .75rem; color: var(--muted); margin-top: .1rem; }
+    .t-actions { display: flex; gap: .35rem; flex-shrink: 0; }
+
+    /* Identity */
+    .id-item { display: flex; align-items: center; gap: .85rem; padding: .85rem 1rem; background: var(--white); border: 1px solid var(--border); border-radius: 12px; margin-bottom: .55rem; box-shadow: var(--shadow); }
+    .id-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: .95rem; color: #fff; font-weight: 700; flex-shrink: 0; }
+    .id-contact { font-size: .88rem; font-weight: 500; }
+    .id-hash { font-size: .7rem; color: var(--muted); font-family: monospace; margin-top: .1rem; word-break: break-all; }
+
+    /* Info box */
+    .info-box { background: #ede9fe; border: 1px solid #c4b5fd; border-radius: 10px; padding: .75rem 1rem; font-size: .82rem; color: #4c1d95; margin-bottom: 1rem; display: flex; gap: .6rem; }
+
+    /* RGPD sections */
+    .rgpd-hero { background: var(--grad); border-radius: 16px; padding: 2.5rem 2rem; color: #fff; margin-bottom: 1.5rem; text-align: center; }
+    .rgpd-hero h2 { font-size: 1.5rem; margin-bottom: .5rem; }
+    .rgpd-hero p { font-size: .9rem; opacity: .88; max-width: 480px; margin: 0 auto; }
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .75rem; margin-bottom: 1.5rem; }
+    @media(max-width:560px) { .compare-grid { grid-template-columns: 1fr; } }
+    .compare-card { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem; box-shadow: var(--shadow); }
+    .compare-card.highlight { border: 2px solid var(--g1); }
+    .compare-title { font-size: .82rem; font-weight: 700; margin-bottom: .8rem; display: flex; align-items: center; gap: .4rem; }
+    .compare-row { display: flex; gap: .5rem; font-size: .78rem; margin-bottom: .45rem; align-items: flex-start; }
+    .check { color: var(--success); font-weight: 700; flex-shrink: 0; }
+    .cross { color: var(--danger); font-weight: 700; flex-shrink: 0; }
+    .neutral { color: var(--warn); font-weight: 700; flex-shrink: 0; }
+    .section-title { font-size: 1rem; font-weight: 700; color: var(--text); margin: 1.6rem 0 .8rem; display: flex; align-items: center; gap: .5rem; }
+    .pillar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: 1.5rem; }
+    @media(max-width:480px) { .pillar-grid { grid-template-columns: 1fr; } }
+    .pillar { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.2rem; box-shadow: var(--shadow); }
+    .pillar-icon { font-size: 1.4rem; margin-bottom: .45rem; }
+    .pillar-title { font-size: .85rem; font-weight: 700; margin-bottom: .3rem; }
+    .pillar-text { font-size: .78rem; color: var(--muted); line-height: 1.55; }
+    .legal-block { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; font-size: .8rem; color: var(--muted); line-height: 1.65; }
+    .legal-block h4 { font-size: .83rem; font-weight: 700; color: var(--text); margin-bottom: .4rem; }
+
+    /* Toasts */
+    .toast-wrap { position: fixed; bottom: 1.5rem; right: 1.5rem; display: flex; flex-direction: column; gap: .45rem; z-index: 999; }
+    .toast { padding: .7rem 1rem; border-radius: 10px; font-size: .84rem; font-weight: 500; max-width: 300px; display: flex; align-items: center; gap: .55rem; box-shadow: 0 8px 24px rgba(0,0,0,.12); animation: tin .2s ease; border: 1px solid; }
+    .t-ok  { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+    .t-err { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+    .t-inf { background: #ede9fe; border-color: #c4b5fd; color: #4c1d95; }
+    @keyframes tin { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:none; } }
+
+    /* Spinner */
+    .spin { display:inline-block; width:13px; height:13px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:sp .6s linear infinite; }
+    @keyframes sp { to { transform:rotate(360deg); } }
+
+    /* Empty */
+    .empty { text-align:center; padding:3rem 1rem; color:var(--muted); font-size:.9rem; }
+    .empty-icon { font-size:2.2rem; margin-bottom:.6rem; }
+
+    /* Footer */
+    footer {
+      background: var(--white); border-top: 1px solid var(--border);
+      padding: 1.4rem 2rem;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .8rem;
+    }
+    .footer-left { display: flex; align-items: center; gap: .5rem; }
+    .footer-logo { font-size: .85rem; font-weight: 700; color: var(--g1); }
+    .footer-sep { color: var(--border); }
+    .footer-copy { font-size: .78rem; color: var(--muted); }
+    .footer-links { display: flex; gap: 1.2rem; align-items: center; flex-wrap: wrap; }
+    .footer-link { font-size: .8rem; color: var(--muted); text-decoration: none; display: flex; align-items: center; gap: .3rem; transition: color .15s; }
+    .footer-link:hover { color: var(--g1); }
+    .footer-link.active { color: var(--g1); font-weight: 600; }
+
+    /* Receive */
+    .receive-center { text-align:center; padding:2.5rem 1rem; }
+    .receive-icon { font-size:3rem; margin-bottom:.8rem; }
+    .msg-box { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 10px; padding: .9rem 1.1rem; margin-bottom:1rem; }
+    .msg-label { font-size: .72rem; font-weight: 700; color: var(--g2); text-transform: uppercase; letter-spacing:.05em; margin-bottom:.35rem; }
+    .msg-text { font-size: .87rem; line-height: 1.6; color: var(--text); white-space: pre-wrap; }
+
+    [x-cloak] { display:none !important; }
+  </style>
+</head>
+<body x-data="app()" x-init="init()">
+
+<!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">⟁</div>
+    Filenymous
+  </div>
+
+  <nav class="nav">
+    <button class="nav-btn" :class="{active:tab==='send'}"     @click="tab='send'">Envoyer</button>
+    <button class="nav-btn" :class="{active:tab==='receive'}"  @click="tab='receive'">Recevoir</button>
+    <button class="nav-btn" :class="{active:tab==='history'}"  @click="tab='history'">
+      Historique
+      <span x-show="pendingCount" x-text="'('+pendingCount+')'" style="color:var(--g1)"></span>
+    </button>
+    <button class="nav-btn" :class="{active:tab==='identity'}" @click="tab='identity'">Identité</button>
+  </nav>
+
+  <div class="peer-badge">
+    <span class="dot" :class="net.ok ? 'on' : 'off'"></span>
+    <span x-text="net.ok ? net.peers+' pairs DHT' : 'Hors-ligne'"></span>
+  </div>
+</header>
+
+<!-- ══ MAIN ════════════════════════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- ─── ENVOYER ─────────────────────────────────────────────────────── -->
+  <div x-show="tab==='send'" x-cloak>
+
+    <!-- Résultat envoi -->
+    <template x-if="sendState==='done'">
+      <div class="card" style="text-align:center;padding:2.5rem">
+        <div style="font-size:3rem;margin-bottom:.8rem">✅</div>
+        <div style="font-size:1.15rem;font-weight:700;margin-bottom:.4rem">Transfert publié sur le réseau</div>
+        <div style="font-size:.87rem;color:var(--muted);margin-bottom:1.6rem">
+          Le destinataire reçoit un lien par <span x-text="recipient.includes('@')?'email':'SMS'"></span>.
+        </div>
+        <div class="form-row" style="text-align:left">
+          <div class="form-label">Lien de téléchargement</div>
+          <div class="link-box">
+            <span x-text="generatedLink"></span>
+            <button class="btn-ghost btn-sm" @click="copyLink()" x-text="copied?'✓ Copié':'Copier'"></button>
+          </div>
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);margin:.8rem 0 1.4rem">
+          Expire : <strong x-text="expiryLabels[expiry]"></strong> · Max : <strong x-text="maxDl=='0'?'∞':maxDl"></strong> téléchargement(s)
+        </div>
+        <button class="btn-ghost btn-full" @click="resetSend()">Nouvel envoi</button>
+      </div>
+    </template>
+
+    <!-- Progression -->
+    <template x-if="sendState==='uploading'">
+      <div class="card" style="text-align:center;padding:2.5rem">
+        <div style="font-size:2.5rem;margin-bottom:.8rem">🔒</div>
+        <div style="font-size:1rem;font-weight:600;margin-bottom:.4rem" x-text="uploadStep"></div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:1.2rem">
+          Chiffrement local — vos fichiers ne transitent jamais en clair.
+        </div>
+        <div class="progress-bar"><div class="progress-fill" :style="'width:'+pct+'%'"></div></div>
+        <div class="progress-label" x-text="pct+'%'"></div>
+      </div>
+    </template>
+
+    <!-- Formulaire -->
+    <template x-if="sendState==='idle'">
+      <div>
+        <div class="card" style="padding:1rem">
+          <div class="drop-zone" :class="{on:dragging}"
+               @dragover.prevent="dragging=true" @dragleave="dragging=false" @drop.prevent="onDrop($event)">
+            <input type="file" multiple @change="onFilePick($event)" />
+            <div class="drop-icon">📂</div>
+            <div class="drop-text"><strong>Cliquez</strong> ou déposez vos fichiers ici</div>
+            <div class="drop-hint">Tous formats · jusqu'à 5 Go par envoi</div>
+          </div>
+          <template x-for="(f,i) in files" :key="i">
+            <div class="file-item">
+              <span class="file-icon" x-text="icon(f.name)"></span>
+              <div class="file-info">
+                <div class="file-name" x-text="f.name"></div>
+                <div class="file-sz" x-text="fmtSize(f.size)"></div>
+              </div>
+              <button class="file-rm btn-sm" @click="files.splice(i,1)">✕</button>
+            </div>
+          </template>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Destinataire & options</div>
+
+          <div class="form-row">
+            <label class="form-label">Email ou téléphone *</label>
+            <input type="text" x-model="recipient" placeholder="alice@example.com ou +33612345678"
+                   :style="recipient && !validContact(recipient) ? 'border-color:var(--danger)' : ''" />
+            <div x-show="recipient && !validContact(recipient)"
+                 style="font-size:.74rem;color:var(--danger);margin-top:.25rem">
+              Format invalide — email ou numéro e.164 (+33…)
+            </div>
+            <div x-show="recipient && validContact(recipient)"
+                 style="font-size:.74rem;margin-top:.25rem"
+                 :style="resolvedKey ? 'color:var(--success)' : 'color:var(--warn)'">
+              <span x-text="resolvedKey ? '✓ Clé publique trouvée sur le DHT' : '⚠ Contact inconnu du DHT — un lien lui sera envoyé'"></span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label class="form-label">Message de présentation <span style="font-weight:400;color:#9ca3af">(optionnel)</span></label>
+            <textarea x-model="message" :maxlength="500"
+                      placeholder="Ex : Bonjour, voici le document dont nous avons parlé. N'hésitez pas à me revenir si besoin."></textarea>
+            <div class="char-count" x-text="message.length+' / 500'"></div>
+          </div>
+
+          <div class="opts-grid" style="margin-bottom:.9rem">
+            <div>
+              <label class="form-label">Expiration</label>
+              <select x-model="expiry">
+                <option value="24h">24 heures</option>
+                <option value="7d" selected>7 jours</option>
+                <option value="30d">30 jours</option>
+                <option value="never">Jamais</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Téléchargements max</label>
+              <select x-model="maxDl">
+                <option value="1" selected>1 fois</option>
+                <option value="3">3 fois</option>
+                <option value="10">10 fois</option>
+                <option value="0">Illimité</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label class="form-label">Mot de passe <span style="font-weight:400;color:#9ca3af">(optionnel)</span></label>
+            <input type="password" x-model="password" placeholder="Laisser vide = aucun mot de passe" />
+          </div>
+
+          <div class="info-box">
+            🔒 Chiffrement AES-256-GCM <strong>dans votre navigateur</strong> — ni le réseau, ni les nœuds DHT ne voient le contenu.
+          </div>
+
+          <button class="btn-primary btn-full" style="padding:.75rem" :disabled="!canSend" @click="send()">
+            <span x-show="!uploading">Chiffrer & Envoyer</span>
+            <span x-show="uploading" style="display:flex;align-items:center;justify-content:center;gap:.5rem">
+              <span class="spin"></span> Envoi en cours…
+            </span>
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- ─── RECEVOIR ─────────────────────────────────────────────────────── -->
+  <div x-show="tab==='receive'" x-cloak>
+    <div class="card">
+      <template x-if="rxState==='idle'">
+        <div class="receive-center">
+          <div class="receive-icon">📥</div>
+          <div style="font-size:1.15rem;font-weight:700;margin-bottom:.4rem">Recevoir un fichier</div>
+          <div style="font-size:.87rem;color:var(--muted);margin-bottom:1.6rem">Collez le lien reçu par email ou SMS.</div>
+          <div class="form-row" style="max-width:400px;margin:0 auto 1.2rem;text-align:left">
+            <label class="form-label">Lien de transfert</label>
+            <input type="text" x-model="rxLink" placeholder="https://filenymous.app/d/xxxxxxxx" />
+          </div>
+          <button class="btn-primary" style="padding:.6rem 2rem" :disabled="!rxLink" @click="resolveRx()">Accéder au fichier</button>
+        </div>
+      </template>
+
+      <template x-if="rxState==='found'">
+        <div>
+          <div style="display:flex;align-items:center;gap:.9rem;margin-bottom:1.3rem">
+            <div style="font-size:2.2rem;background:var(--grad-soft);border-radius:10px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;flex-shrink:0" x-text="icon(rxFile.name)"></div>
+            <div>
+              <div style="font-size:1rem;font-weight:700" x-text="rxFile.name"></div>
+              <div style="font-size:.78rem;color:var(--muted)" x-text="fmtSize(rxFile.size)+' · '+rxFile.chunks+' chunks chiffrés'"></div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.1rem">
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:.65rem .9rem">
+              <div style="font-size:.7rem;color:var(--muted);margin-bottom:.15rem">Expire le</div>
+              <div style="font-size:.85rem;font-weight:600" x-text="rxFile.expiry"></div>
+            </div>
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:.65rem .9rem">
+              <div style="font-size:.7rem;color:var(--muted);margin-bottom:.15rem">Télécharg. restants</div>
+              <div style="font-size:.85rem;font-weight:600" x-text="rxFile.dlLeft==0?'Illimité':rxFile.dlLeft"></div>
+            </div>
+          </div>
+
+          <template x-if="rxFile.message">
+            <div class="msg-box">
+              <div class="msg-label">Message de l'expéditeur</div>
+              <div class="msg-text" x-text="rxFile.message"></div>
+            </div>
+          </template>
+
+          <template x-if="rxFile.hasPassword">
+            <div class="form-row">
+              <label class="form-label">Mot de passe requis</label>
+              <input type="password" x-model="rxPwd" placeholder="Entrez le mot de passe" />
+            </div>
+          </template>
+
+          <template x-if="rxPct > 0 && rxPct < 100">
+            <div class="progress-wrap" style="margin-bottom:.8rem">
+              <div class="progress-bar"><div class="progress-fill" :style="'width:'+rxPct+'%'"></div></div>
+              <div class="progress-label" x-text="rxStep"></div>
+            </div>
+          </template>
+
+          <div class="info-box">🔒 Déchiffrement dans votre navigateur — le fichier en clair ne quitte pas votre appareil.</div>
+
+          <button class="btn-success btn-full" style="padding:.75rem" :disabled="rxDl" @click="download()">
+            <span x-show="!rxDl">⬇ Télécharger & Déchiffrer</span>
+            <span x-show="rxDl" style="display:flex;align-items:center;justify-content:center;gap:.5rem">
+              <span class="spin"></span><span x-text="rxStep"></span>
+            </span>
+          </button>
+        </div>
+      </template>
+
+      <template x-if="rxState==='done'">
+        <div class="receive-center">
+          <div class="receive-icon">🎉</div>
+          <div style="font-size:1.1rem;font-weight:700;margin-bottom:.4rem">Fichier téléchargé !</div>
+          <div style="font-size:.87rem;color:var(--muted);margin-bottom:1.4rem" x-text="'«'+rxFile.name+'» déchiffré et sauvegardé.'"></div>
+          <button class="btn-ghost" @click="rxState='idle';rxLink=''">Recevoir un autre fichier</button>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ─── HISTORIQUE ───────────────────────────────────────────────────── -->
+  <div x-show="tab==='history'" x-cloak>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:1rem;font-weight:700">Transferts sortants</div>
+      <div style="display:flex;gap:.3rem">
+        <button class="btn-ghost btn-sm" :class="filt==='all'&&'btn-primary'" @click="filt='all'">Tous</button>
+        <button class="btn-ghost btn-sm" :class="filt==='pending'&&'btn-primary'" @click="filt='pending'">En attente</button>
+        <button class="btn-ghost btn-sm" :class="filt==='done'&&'btn-primary'" @click="filt='done'">Téléchargés</button>
+      </div>
+    </div>
+
+    <template x-if="filteredTx.length===0">
+      <div class="empty"><div class="empty-icon">📭</div>Aucun transfert dans cette catégorie</div>
+    </template>
+
+    <template x-for="t in filteredTx" :key="t.id">
+      <div class="transfer-row">
+        <div class="t-thumb" x-text="icon(t.name)"></div>
+        <div class="t-info">
+          <div class="t-name" x-text="t.name"></div>
+          <div class="t-meta" x-text="t.to+' · '+fmtSize(t.size)+' · '+t.date"></div>
+          <div style="margin-top:.35rem;display:flex;align-items:center;gap:.4rem">
+            <span class="badge" :class="{'badge-pending':t.status==='pending','badge-done':t.status==='done','badge-revoked':t.status==='revoked','badge-expired':t.status==='expired'}"
+                  x-text="{pending:'En attente',done:'Téléchargé',revoked:'Révoqué',expired:'Expiré'}[t.status]"></span>
+            <span x-show="t.status==='done'" style="font-size:.73rem;color:var(--muted)" x-text="t.dl+'/'+(t.maxDl==0?'∞':t.maxDl)+' dl'"></span>
+          </div>
+        </div>
+        <div class="t-actions">
+          <button class="btn-ghost btn-sm" @click="copyTx(t)" :title="'Copier le lien'">
+            <span x-text="t.copied?'✓':'🔗'"></span>
+          </button>
+          <button x-show="t.status==='pending'" class="btn-danger btn-sm" @click="revoke(t)">Révoquer</button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- ─── IDENTITÉ ─────────────────────────────────────────────────────── -->
+  <div x-show="tab==='identity'" x-cloak>
+    <div class="card">
+      <div class="card-label">Ma clé publique (agent Holochain)</div>
+      <div style="display:flex;align-items:center;gap:.8rem">
+        <div class="id-avatar" x-text="(identity.contacts[0]||{contact:'?'}).contact[0].toUpperCase()"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.74rem;color:var(--muted);margin-bottom:.15rem">AgentPubKey Ed25519</div>
+          <div style="font-size:.72rem;font-family:monospace;word-break:break-all;color:var(--text)" x-text="identity.pubkey"></div>
+        </div>
+        <button class="btn-ghost btn-sm" @click="copyPK()" x-text="pkCopied?'✓ Copié':'Copier'"></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Contacts liés</div>
+      <div class="info-box">📡 Votre email ou téléphone n'est <strong>jamais publié en clair</strong> — seul son hash SHA-256 est enregistré sur le DHT.</div>
+
+      <template x-for="(c,i) in identity.contacts" :key="i">
+        <div class="id-item">
+          <div class="id-avatar" x-text="c.contact[0].toUpperCase()"></div>
+          <div style="flex:1;min-width:0">
+            <div class="id-contact" x-text="c.contact"></div>
+            <div class="id-hash" x-text="'SHA-256 : '+c.hash"></div>
+            <div style="font-size:.72rem;color:var(--success);margin-top:.1rem">✓ Vérifié OTP · Publié sur le DHT</div>
+          </div>
+          <button class="btn-danger btn-sm" @click="revokeContact(i)">Révoquer</button>
+        </div>
+      </template>
+
+      <template x-if="identity.contacts.length===0">
+        <div class="empty" style="padding:1.2rem">Aucun contact lié</div>
+      </template>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0" />
+
+      <div class="card-label" style="margin-bottom:.7rem">Lier un nouveau contact</div>
+      <template x-if="!otpStep">
+        <div style="display:flex;gap:.6rem">
+          <input type="text" x-model="newContact" placeholder="email ou +33…" />
+          <button class="btn-primary" :disabled="!validContact(newContact)" @click="sendOtp()">Vérifier</button>
+        </div>
+      </template>
+      <template x-if="otpStep">
+        <div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem">Code envoyé à <strong x-text="newContact"></strong>. Valable 10 min.</div>
+          <div style="display:flex;gap:.6rem">
+            <input type="text" x-model="otpCode" placeholder="Code à 6 chiffres" maxlength="6"
+                   style="letter-spacing:.25em;text-align:center;font-weight:700" />
+            <button class="btn-success" :disabled="otpCode.length<6" @click="verifyOtp()">Confirmer</button>
+            <button class="btn-ghost" @click="otpStep=false;otpCode=''">Annuler</button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ─── CONFIDENTIALITÉ & RGPD ──────────────────────────────────────── -->
+  <div x-show="tab==='privacy'" x-cloak>
+
+    <div class="rgpd-hero">
+      <h2>Confidentialité par conception</h2>
+      <p>Filenymous n'est pas juste conforme au RGPD. Il est construit de façon à ce qu'il soit <em>structurellement impossible</em> pour un opérateur de lire vos fichiers.</p>
+    </div>
+
+    <!-- Comparatif -->
+    <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.8rem">Comparatif des solutions de transfert</div>
+    <div class="compare-grid">
+      <div class="compare-card">
+        <div class="compare-title">WeTransfer <span style="font-size:.95rem">🇳🇱</span></div>
+        <div class="compare-row"><span class="cross">✗</span> Fichiers stockés sur serveurs AWS centralisés</div>
+        <div class="compare-row"><span class="cross">✗</span> Analyse des fichiers pour ciblage publicitaire (plan gratuit)</div>
+        <div class="compare-row"><span class="cross">✗</span> Compte obligatoire pour +2 Go</div>
+        <div class="compare-row"><span class="cross">✗</span> Serveurs aux États-Unis — soumis au Cloud Act</div>
+        <div class="compare-row"><span class="neutral">~</span> Chiffrement HTTPS en transit uniquement</div>
+        <div class="compare-row"><span class="neutral">~</span> Max 2 Go gratuit, 1 To payant</div>
+      </div>
+      <div class="compare-card">
+        <div class="compare-title">SwissTransfer <span style="font-size:.95rem">🇨🇭</span></div>
+        <div class="compare-row"><span class="neutral">~</span> Serveurs en Suisse — meilleure protection légale</div>
+        <div class="compare-row"><span class="cross">✗</span> Fichiers stockés en clair sur infrastructure Infomaniak</div>
+        <div class="compare-row"><span class="check">✓</span> Pas de publicité</div>
+        <div class="compare-row"><span class="cross">✗</span> Infomaniak techniquement capable de lire vos fichiers</div>
+        <div class="compare-row"><span class="check">✓</span> Gratuit jusqu'à 50 Go</div>
+        <div class="compare-row"><span class="neutral">~</span> Chiffrement HTTPS uniquement</div>
+      </div>
+      <div class="compare-card highlight">
+        <div class="compare-title" style="color:var(--g1)">Filenymous <span style="font-size:.95rem">⟁</span></div>
+        <div class="compare-row"><span class="check">✓</span> Aucun fichier sur un serveur tiers</div>
+        <div class="compare-row"><span class="check">✓</span> Chiffrement E2E AES-256 dans le navigateur</div>
+        <div class="compare-row"><span class="check">✓</span> Pas de compte, pas de pub, pas de traçage</div>
+        <div class="compare-row"><span class="check">✓</span> Réseau P2P : pas de Cloud Act applicable</div>
+        <div class="compare-row"><span class="check">✓</span> Expiration & révocation garanties cryptographiquement</div>
+        <div class="compare-row"><span class="check">✓</span> Jusqu'à 5 Go, gratuit par architecture</div>
+      </div>
+    </div>
+
+    <!-- Piliers de sécurité -->
+    <div class="section-title">🛡 Les piliers de sécurité du réseau Holochain</div>
+    <div class="pillar-grid">
+      <div class="pillar">
+        <div class="pillar-icon">🔑</div>
+        <div class="pillar-title">Identité cryptographique</div>
+        <div class="pillar-text">Chaque participant est une paire de clés Ed25519 générée localement. Aucune autorité centrale ne délivre d'identité. Vos actions sur le réseau sont signées par votre clé privée, qui ne quitte jamais votre appareil.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">🧩</div>
+        <div class="pillar-title">Fragmentation chiffrée</div>
+        <div class="pillar-text">Les fichiers sont découpés en chunks de 256 Ko, chiffrés individuellement avec AES-256-GCM, puis distribués sur des nœuds différents du DHT. Aucun nœud ne possède un fichier complet, ni la clé pour le déchiffrer.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">🌐</div>
+        <div class="pillar-title">DHT sans coordinateur</div>
+        <div class="pillar-text">La Distributed Hash Table Holochain stocke les données de façon redondante sans serveur maître. Il n'existe pas de point unique d'attaque, de saisie, ou de censure. Couper un nœud ne compromet pas les données.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">📜</div>
+        <div class="pillar-title">Source chain immuable</div>
+        <div class="pillar-text">Chaque agent tient un journal local signé et chaîné de toutes ses actions (source chain). La falsification d'une action est détectable par l'ensemble du réseau, sans blockchain ni consensus global coûteux.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">⏱</div>
+        <div class="pillar-title">Expiration garantie</div>
+        <div class="pillar-text">L'expiration d'un transfert publie une DeleteAction sur le DHT. Les nœuds stockant les chunks sont obligés par la DNA (contrat applicatif) de supprimer les données. Ce n'est pas une promesse — c'est une règle cryptographiquement validée.</div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">🕵️</div>
+        <div class="pillar-title">Identité des contacts minimale</div>
+        <div class="pillar-text">Votre email ou téléphone n'est jamais publié sur le réseau. Seul son hash SHA-256 est stocké sur le DHT, associé à votre clé publique. Un observateur externe ne peut pas reconstituer votre adresse depuis ce hash.</div>
+      </div>
+    </div>
+
+    <!-- Mentions légales RGPD -->
+    <div class="section-title">📋 Mentions légales & RGPD</div>
+    <div class="legal-block">
+      <h4>Responsable de traitement</h4>
+      <p style="margin-bottom:.9rem">Filenymous est un protocole décentralisé open-source. En l'absence de base de données centrale, il n'existe pas de "responsable de traitement" au sens classique du RGPD pour les données des fichiers transférés. Chaque utilisateur est responsable des données qu'il publie sur le DHT.</p>
+
+      <h4>Données collectées</h4>
+      <p style="margin-bottom:.9rem">Le bridge de notification (envoi email/SMS) reçoit temporairement l'adresse de destination et le lien de transfert. Ces données ne sont pas persistées au-delà de l'envoi du message (TTL : 0). Aucun cookie de traçage, aucune analytics, aucune publicité.</p>
+
+      <h4>Droit à l'effacement</h4>
+      <p style="margin-bottom:.9rem">L'expéditeur peut révoquer un transfert à tout moment depuis l'onglet Historique. La révocation publie une suppression cryptographique sur le DHT. Les chunks chiffrés sont effacés par les nœuds participants dans un délai de 24h maximum.</p>
+
+      <h4>Hébergement des données</h4>
+      <p>Les chunks chiffrés sont distribués sur les nœuds actifs du réseau Holochain Filenymous. Aucun chunk n'est localisé sur un serveur géré par l'éditeur. La localisation géographique des nœuds est inconnue par conception (réseau pair-à-pair décentralisé).</p>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══ FOOTER ═══════════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-left">
+    <span class="footer-logo">⟁ Filenymous</span>
+    <span class="footer-sep">·</span>
+    <span class="footer-copy">© 2026 — Protocole open-source</span>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/filenymous/filenymous" target="_blank" class="footer-link">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      GitHub
+    </a>
+    <a href="#" class="footer-link" @click.prevent="tab='privacy'">
+      🔒 Confidentialité & RGPD
+    </a>
+    <a href="https://developer.holochain.org" target="_blank" class="footer-link">
+      Holochain
+    </a>
+  </div>
+</footer>
+
+<!-- ══ TOASTS ════════════════════════════════════════════════════════════════ -->
+<div class="toast-wrap">
+  <template x-for="t in toasts" :key="t.id">
+    <div class="toast" :class="{'t-ok':t.type==='ok','t-err':t.type==='err','t-inf':t.type==='inf'}">
+      <span x-text="t.icon"></span><span x-text="t.msg"></span>
+    </div>
+  </template>
+</div>
+
+<!-- ══ SCRIPT ════════════════════════════════════════════════════════════════ -->
+<script>
+function app() {
+  return {
+    tab: 'send',
+
+    // Network
+    net: { ok: false, peers: 0 },
+
+    // Send
+    files: [], recipient: '', message: '', password: '', expiry: '7d', maxDl: '1',
+    dragging: false, sendState: 'idle', uploading: false,
+    pct: 0, uploadStep: '', generatedLink: '', copied: false, resolvedKey: false,
+    expiryLabels: { '24h':'24 heures', '7d':'7 jours', '30d':'30 jours', never:'jamais' },
+
+    // Receive
+    rxLink: '', rxState: 'idle', rxFile: null, rxPwd: '', rxDl: false, rxPct: 0, rxStep: '',
+
+    // History
+    filt: 'all',
+    txs: [
+      { id:'t1', name:'rapport-Q1-2026.pdf',    to:'bob@acme.com',      size:3.2*1024*1024,       date:'28 mars', status:'done',    dl:1, maxDl:1, link:'https://filenymous.app/d/a1b2c3d4', copied:false },
+      { id:'t2', name:'design-system-v3.zip',   to:'+33612345678',      size:87*1024*1024,        date:'29 mars', status:'pending', dl:0, maxDl:1, link:'https://filenymous.app/d/e5f6g7h8', copied:false },
+      { id:'t3', name:'contrat-nda-2026.docx',  to:'legal@partner.io',  size:420*1024,            date:'30 mars', status:'revoked', dl:0, maxDl:1, link:'https://filenymous.app/d/i9j0k1l2', copied:false },
+      { id:'t4', name:'backup-photos-mars.tar.gz', to:'alice@perso.fr', size:1.8*1024*1024*1024,  date:'31 mars', status:'pending', dl:0, maxDl:0, link:'https://filenymous.app/d/m3n4o5p6', copied:false },
+    ],
+
+    // Identity
+    identity: {
+      pubkey: 'uhCAkYq8R2wXvNmP4TsKjL7DfGcBzAeHiMoWnVuQpRtJxSyCdE3F5K9',
+      contacts: [{ contact: 'geoffroydelatournelle@gmail.com', hash: 'a3f82bc19e0d4571fa2c8d93b7e14029fa3c8d93b' }]
+    },
+    newContact: '', otpStep: false, otpCode: '', pkCopied: false,
+
+    // Toasts
+    toasts: [], _tid: 0,
+
+    // ── Init ──────────────────────────────────────────────────────────────
+    init() {
+      // [HOLOCHAIN] AppAgentWebsocket.connect('ws://localhost:8888','filenymous')
+      setTimeout(() => { this.net.ok = true; this.net.peers = 8; }, 1100);
+
+      const p = new URLSearchParams(location.search);
+      if (p.get('d')) { this.rxLink = 'https://filenymous.app/d/' + p.get('d'); this.tab = 'receive'; setTimeout(() => this.resolveRx(), 400); }
+    },
+
+    // ── Computed ──────────────────────────────────────────────────────────
+    get canSend()      { return this.files.length > 0 && this.validContact(this.recipient); },
+    get pendingCount() { return this.txs.filter(t => t.status === 'pending').length; },
+    get filteredTx()   { return this.filt === 'all' ? this.txs : this.txs.filter(t => t.status === this.filt); },
+
+    // ── Send ──────────────────────────────────────────────────────────────
+    onDrop(e) { this.dragging = false; this.addFiles(Array.from(e.dataTransfer.files)); },
+    onFilePick(e) { this.addFiles(Array.from(e.target.files)); e.target.value = ''; },
+    addFiles(fs) {
+      const total = [...this.files, ...fs].reduce((s,f) => s+f.size, 0);
+      if (total > 5*1024**3) { this.toast('err','⚠️','Limite 5 Go dépassée'); return; }
+      this.files.push(...fs);
+    },
+
+    async send() {
+      this.uploading = true; this.sendState = 'uploading'; this.pct = 0;
+      const steps = [[8,'Calcul des checksums SHA-256…'],[22,'Génération clé AES-256…'],[38,'Chiffrement des chunks…'],[55,'Résolution DHT du destinataire…'],[72,'Publication sur le réseau Holochain…'],[88,'Notification du destinataire…'],[100,'Transfert finalisé !']];
+      for (const [p, s] of steps) { await this.sleep(480 + Math.random()*320); this.pct = p; this.uploadStep = s; }
+
+      // [HOLOCHAIN] identity::get_agent_for_contact(sha256(recipient))
+      // [HOLOCHAIN] transfer::create_transfer({transfer_id, recipient_contact_hash, file_name, chunk_count, encrypted_key_blob, expiry_us, max_downloads})
+      // [HOLOCHAIN] storage::store_chunk({transfer_id, chunk_index, encrypted_data, checksum}) × N
+      // [HOLOCHAIN] storage::finalize_storage({transfer_id, chunk_action_hashes, file_size_bytes})
+      // [BRIDGE]    POST /notify { contact: recipient, link, message: this.message }
+
+      this.generatedLink = 'https://filenymous.app/d/' + Math.random().toString(36).slice(2,10);
+      const totalSize = this.files.reduce((s,f) => s+f.size, 0);
+      this.txs.unshift({ id:'t'+Date.now(), name: this.files.length===1 ? this.files[0].name : this.files.length+' fichiers', to: this.recipient, size: totalSize, date:"Aujourd'hui", status:'pending', dl:0, maxDl:parseInt(this.maxDl), link:this.generatedLink, copied:false });
+      await this.sleep(250); this.uploading = false; this.sendState = 'done';
+      this.toast('ok','✅','Transfert publié sur le réseau');
+    },
+
+    resetSend() { this.files=[]; this.recipient=''; this.message=''; this.password=''; this.expiry='7d'; this.maxDl='1'; this.sendState='idle'; this.pct=0; this.copied=false; },
+
+    copyLink() { navigator.clipboard.writeText(this.generatedLink).catch(()=>{}); this.copied=true; setTimeout(()=>this.copied=false,2000); },
+
+    // ── Receive ───────────────────────────────────────────────────────────
+    async resolveRx() {
+      if (!this.rxLink) return;
+      // [HOLOCHAIN] transfer::get_transfer(transfer_id) + storage::get_chunk_manifest(transfer_id)
+      await this.sleep(650);
+      this.rxFile = { name:'rapport-confidentiel.pdf', size:2.4*1024*1024, chunks:10, expiry:'7 avril 2026', dlLeft:1, hasPassword:false, message:"Bonjour,\n\nVoici le rapport dont nous avons parlé lors de notre réunion de lundi. N'hésitez pas à me revenir si vous avez des questions." };
+      this.rxState = 'found';
+    },
+
+    async download() {
+      this.rxDl = true; this.rxPct = 0;
+      const steps = [[18,'Récupération des chunks DHT…'],[45,'Déchiffrement AES-256-GCM…'],[82,'Recomposition du fichier…'],[100,'Prêt !']];
+      for (const [p,s] of steps) { await this.sleep(600+Math.random()*400); this.rxPct=p; this.rxStep=s; }
+      // [HOLOCHAIN] storage::get_chunks(transfer_id) → decrypt each chunk with WebCrypto → Blob.saveAs
+      // [HOLOCHAIN] transfer::record_download({transfer_id, download_count:1})
+      await this.sleep(250); this.rxDl=false; this.rxState='done'; this.toast('ok','📥','Fichier téléchargé avec succès');
+    },
+
+    // ── History ───────────────────────────────────────────────────────────
+    copyTx(t) { navigator.clipboard.writeText(t.link).catch(()=>{}); t.copied=true; setTimeout(()=>t.copied=false,2000); this.toast('inf','🔗','Lien copié'); },
+    revoke(t) {
+      if (!confirm(`Révoquer «${t.name}» ? Le destinataire ne pourra plus télécharger.`)) return;
+      // [HOLOCHAIN] transfer::revoke_transfer(transfer_id) + storage::delete_chunks(transfer_id)
+      t.status='revoked'; this.toast('inf','🚫','Transfert révoqué — chunks supprimés du DHT');
+    },
+
+    // ── Identity ──────────────────────────────────────────────────────────
+    async sendOtp() {
+      // [BRIDGE] POST /otp/send { contact: newContact }
+      this.otpStep = true; this.toast('inf','📨','Code OTP envoyé à '+this.newContact);
+    },
+    async verifyOtp() {
+      // [BRIDGE] POST /otp/verify { contact, otp_code }
+      // [HOLOCHAIN] identity::claim_contact({ contact_hash: sha256(contact) })
+      await this.sleep(600);
+      this.identity.contacts.push({ contact: this.newContact, hash: Math.random().toString(16).slice(2).repeat(5).slice(0,40) });
+      this.otpStep=false; this.otpCode=''; this.newContact=''; this.toast('ok','✓','Contact lié et publié sur le DHT');
+    },
+    revokeContact(i) {
+      if (!confirm('Révoquer ce ContactClaim ?')) return;
+      // [HOLOCHAIN] identity::revoke_contact_claim(sha256(contact))
+      this.identity.contacts.splice(i,1); this.toast('inf','🗑','ContactClaim supprimé du DHT');
+    },
+    copyPK() { navigator.clipboard.writeText(this.identity.pubkey).catch(()=>{}); this.pkCopied=true; setTimeout(()=>this.pkCopied=false,2000); },
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+    validContact(v) { if(!v) return false; return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+[1-9]\d{7,14}$/.test(v); },
+    fmtSize(b) { if(!b) return '0 o'; const k=1024,s=['o','Ko','Mo','Go','To'],i=Math.floor(Math.log(b)/Math.log(k)); return parseFloat((b/Math.pow(k,i)).toFixed(1))+' '+s[i]; },
+    icon(n) {
+      if(!n) return '📄';
+      const e=(n.split('.').pop()||'').toLowerCase();
+      return {pdf:'📕',zip:'🗜',tar:'🗜',gz:'🗜',jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',webp:'🖼',mp4:'🎬',mov:'🎬',mp3:'🎵',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📋',pptx:'📋',txt:'📃',md:'📃',js:'💻',ts:'💻',py:'💻',rs:'💻',key:'🔑'}[e]||'📄';
+    },
+    sleep(ms) { return new Promise(r=>setTimeout(r,ms)); },
+    toast(type,icon,msg) { const id=++this._tid; this.toasts.push({id,type,icon,msg}); setTimeout(()=>{ this.toasts=this.toasts.filter(t=>t.id!==id); },3500); },
+  };
+}
+</script>
+</html>

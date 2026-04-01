@@ -1,0 +1,38 @@
+---
+# Filenymous — conductor config PRODUCTION
+# Points to the public bootstrap + signal infrastructure.
+# Run: holochain -c conductor-config.prod.yaml
+#
+# Replace the URLs with your actual deployed endpoints.
+
+environment_path: /var/lib/filenymous/conductor
+
+keystore:
+  type: lair_server
+  connection_url: "unix:///var/run/lair-keystore/socket"
+
+admin_interfaces:
+  - driver:
+      type: websocket
+      port: 9000
+      # Restrict to localhost — expose via Caddy/nginx if needed externally
+      allowed_origins: "http://localhost:*"
+
+network:
+  # Public bootstrap server (Holochain-hosted or self-hosted)
+  # Self-hosted: https://bootstrap.filenymous.app
+  # Fallback: Holochain public bootstrap
+  bootstrap_service: "https://bootstrap.filenymous.app"
+
+  # Public signal server (WSS required for browsers)
+  signal_url: "wss://signal.filenymous.app"
+
+  transport_pool:
+    - type: webrtc
+      signal_url: "wss://signal.filenymous.app"
+
+  tuning_params:
+    gossip_strategy: sharded-gossip
+    gossip_loop_iteration_delay_ms: 1000
+    default_notify_remote_agent_count: 5
+    default_timeout_ms: 30000
