@@ -62,18 +62,28 @@ cp .env.example .env
 ## Workflow de développement
 
 ```bash
-# Terminal 1 — compilation Rust (rebuild en cas de changement)
-nix develop   # ou activer Rust manuellement
+# Terminal 1 — compilation Rust + shell Nix (M5: flake.nix)
+nix develop          # installe holochain, hc, lair-keystore, cargo, node
 make build-happ
 
-# Terminal 2 — conducteur Holochain
-holochain -c conductor-config.yaml
+# Terminal 2 — infrastructure réseau locale (bootstrap + signal + bridge)
+make infra-up        # docker compose --profile dev up -d
+# ou manuellement :  cd bridge && npm run dev
 
-# Terminal 3 — bridge
-cd bridge && npm run dev
+# Terminal 3 — conducteur Holochain (pointe vers infra locale)
+holochain -c conductor-config.dev.yaml
 
 # Terminal 4 — UI
 cd ui && npm run dev
+```
+
+### Nix flake (M5)
+
+Le fichier `flake.nix` remplace `shell.nix` et pin les versions exactes de Holochain.
+
+```bash
+nix develop          # dev shell complet
+nix develop --command make build-webhapp   # build CI-style
 ```
 
 ### Configuration conducteur (exemple minimal)
@@ -141,6 +151,7 @@ Format : `type(scope): message`
 | `zome` | Changement DNA/zome |
 | `ui` | Changement interface |
 | `bridge` | Changement bridge |
+| `infra` | Bootstrap / signal / docker-compose |
 | `ci` | Workflow GitHub Actions |
 | `docs` | Documentation |
 

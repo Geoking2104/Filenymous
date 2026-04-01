@@ -123,6 +123,36 @@ filenymous/
 7. **Bob** ouvre le lien, déchiffre les chunks localement
 8. **Bob** → `transfer::record_download(...)` — met à jour le statut
 
+## Déploiement réseau public (M5)
+
+```
+VPS / fly.io
+├── bootstrap.filenymous.app  ← kitsune2-bootstrap-srv (découverte de pairs)
+├── signal.filenymous.app     ← kitsune2-sbd-server (relay WebRTC / NAT)
+└── bridge.filenymous.app     ← Fastify (OTP · email · SMS)
+     ↑ Caddy (TLS Let's Encrypt automatique)
+```
+
+```bash
+# Démarrer l'infra complète (TLS via Caddy)
+cp .env.compose.example .env.compose   # renseigner SENDGRID_API_KEY, TWILIO…
+docker compose --profile prod up -d
+
+# Démarrer uniquement en dev (ports directs, pas de TLS)
+make infra-up
+
+# Relancer holochain avec la config prod
+holochain -c conductor-config.prod.yaml
+```
+
+Les images Docker sont publiées automatiquement sur GHCR à chaque push sur `main` :
+
+```
+ghcr.io/filenymous/filenymous-bootstrap:latest
+ghcr.io/filenymous/filenymous-signal:latest
+ghcr.io/filenymous/filenymous-bridge:latest
+```
+
 ## Sécurité
 
 - **Chiffrement E2E** : AES-256-GCM dans le navigateur. Ni le bridge ni les nœuds ne voient les données en clair.
@@ -138,7 +168,7 @@ filenymous/
 | M2 — React UI + bridge notifications | ✅ |
 | M3 — ECIES/X25519 wrapping de la clé AES | ✅ |
 | M4 — .webhapp + packaging Holochain Launcher | ✅ |
-| M5 — Réseau public + nœuds bootstrap | 🔜 |
+| M5 — Réseau public + nœuds bootstrap | ✅ |
 
 ## Licence
 

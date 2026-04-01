@@ -1,0 +1,31 @@
+# Filenymous — Caddy reverse proxy configuration
+# Replace the three domain names with your actual domains.
+# Caddy auto-provisions TLS via Let's Encrypt.
+#
+# DNS records required:
+#   bootstrap.filenymous.app  A  <your-server-ip>
+#   signal.filenymous.app     A  <your-server-ip>
+#   bridge.filenymous.app     A  <your-server-ip>
+
+# ── Bootstrap server ────────────────────────────────────────────────────────
+bootstrap.filenymous.app {
+    reverse_proxy bootstrap:8787
+    log { output stdout }
+}
+
+# ── Signal / SBD server (WebSocket upgrade required) ────────────────────────
+signal.filenymous.app {
+    @ws {
+        header Connection *Upgrade*
+        header Upgrade    websocket
+    }
+    reverse_proxy @ws signal:8788
+    reverse_proxy signal:8788
+    log { output stdout }
+}
+
+# ── Bridge (notification REST API) ──────────────────────────────────────────
+bridge.filenymous.app {
+    reverse_proxy bridge:3001
+    log { output stdout }
+}

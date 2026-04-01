@@ -2,7 +2,10 @@
 manifest_version: "1"
 name: filenymous
 integrity:
-  network_seed: ~
+  # M5: stable network_seed — all public nodes join the same DHT network.
+  # Change this value to create an isolated test network (e.g., for staging).
+  # WARNING: changing this in production creates a network fork.
+  network_seed: "filenymous-mainnet-v1"
   properties: ~
   origin_time: 1735689600000000
   zomes:

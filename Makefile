@@ -71,3 +71,31 @@ clean:
 	rm -rf $(UI_DIST)
 	rm -rf tests/node_modules
 	rm -rf $(UI_DIR)/node_modules
+
+# ── M5: Infrastructure réseau ──────────────────────────────────────────────
+
+## Démarrer bootstrap + signal + bridge en mode dev (ports directs, pas de TLS)
+infra-up:
+	docker compose --profile dev up -d
+	@echo "✅ Infrastructure dev démarrée"
+	@echo "   Bootstrap : http://localhost:8787"
+	@echo "   Signal    : ws://localhost:8788"
+	@echo "   Bridge    : http://localhost:3001"
+
+## Arrêter l'infrastructure dev
+infra-down:
+	docker compose --profile dev down
+
+## Démarrer la stack complète de production (avec Caddy TLS)
+infra-prod:
+	docker compose --profile prod up -d
+
+## Rebuilder les images Docker de l'infrastructure
+infra-build:
+	docker compose build bootstrap signal bridge
+
+## Voir les logs de l'infrastructure
+infra-logs:
+	docker compose logs -f bootstrap signal bridge
+
+.PHONY: infra-up infra-down infra-prod infra-build infra-logs
