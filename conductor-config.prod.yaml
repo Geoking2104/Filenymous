@@ -19,17 +19,21 @@ admin_interfaces:
       allowed_origins: "http://localhost:*"
 
 network:
-  # Public bootstrap server (Holochain-hosted or self-hosted)
-  # Self-hosted: https://bootstrap.filenymous.app
-  # Fallback: Holochain public bootstrap
+  # kitsune2-bootstrap-srv handles BOTH bootstrap (HTTPS) and signal (WSS)
+  # on the same host — bootstrap.filenymous.app:443
   bootstrap_service: "https://bootstrap.filenymous.app"
 
-  # Public signal server (WSS required for browsers)
-  signal_url: "wss://signal.filenymous.app"
+  # Same host, different protocol prefix — kitsune2 multiplexes on port 443
+  signal_url: "wss://bootstrap.filenymous.app"
 
   transport_pool:
     - type: webrtc
-      signal_url: "wss://signal.filenymous.app"
+      signal_url: "wss://bootstrap.filenymous.app"
+      # ICE / STUN — Google public STUN + your own TURN if needed
+      ice_servers_override:
+        - urls:
+            - "stun:stun.l.google.com:19302"
+            - "stun:stun1.l.google.com:19302"
 
   tuning_params:
     gossip_strategy: sharded-gossip

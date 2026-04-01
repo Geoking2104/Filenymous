@@ -1,28 +1,14 @@
-# Filenymous — Caddy reverse proxy configuration
-# Replace the three domain names with your actual domains.
-# Caddy auto-provisions TLS via Let's Encrypt.
+# Filenymous — Caddy reverse proxy
+#
+# IMPORTANT: kitsune2-bootstrap-srv handles its own TLS on port 443.
+# Caddy is only used for the bridge notification service.
 #
 # DNS records required:
-#   bootstrap.filenymous.app  A  <your-server-ip>
-#   signal.filenymous.app     A  <your-server-ip>
-#   bridge.filenymous.app     A  <your-server-ip>
-
-# ── Bootstrap server ────────────────────────────────────────────────────────
-bootstrap.filenymous.app {
-    reverse_proxy bootstrap:8787
-    log { output stdout }
-}
-
-# ── Signal / SBD server (WebSocket upgrade required) ────────────────────────
-signal.filenymous.app {
-    @ws {
-        header Connection *Upgrade*
-        header Upgrade    websocket
-    }
-    reverse_proxy @ws signal:8788
-    reverse_proxy signal:8788
-    log { output stdout }
-}
+#   bootstrap.filenymous.app  A  <your-server-ip>  ← direct to kitsune2 (port 443)
+#   bridge.filenymous.app     A  <your-server-ip>  ← Caddy (port 8443)
+#
+# If your server only has one IP, use different ports or subdomains pointing
+# to port 443 (kitsune2) vs 8443 (Caddy → bridge).
 
 # ── Bridge (notification REST API) ──────────────────────────────────────────
 bridge.filenymous.app {

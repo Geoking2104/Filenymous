@@ -59,9 +59,11 @@ jobs:
           cache-from: type=gha
           cache-to:   type=gha,mode=max
 
-  # ── Bootstrap server ────────────────────────────────────────────────────────
-  bootstrap:
-    name: Bootstrap image
+  # ── kitsune2 (bootstrap + SBD signal — single binary) ──────────────────────
+  # kitsune2-bootstrap-srv built with --features sbd handles both peer discovery
+  # (HTTP/HTTPS) and WebRTC signaling (WS/WSS) on the same port 443.
+  kitsune2:
+    name: kitsune2 image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -74,10 +76,11 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.ORG }}/filenymous-bootstrap
+          images: ${{ env.REGISTRY }}/${{ env.ORG }}/filenymous-kitsune2
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
 
       - name: Log in to GHCR
@@ -91,54 +94,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push bootstrap
+      - name: Build and push kitsune2
         uses: docker/build-push-action@v5
         with:
-          context: ./network/bootstrap
+          context: .
+          file:    ./network/kitsune2/Dockerfile
           push:    ${{ github.event_name != 'pull_request' }}
           tags:    ${{ steps.meta.outputs.tags }}
           labels:  ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to:   type=gha,mode=max
-
-  # ── Signal server ────────────────────────────────────────────────────────────
-  signal:
-    name: Signal image
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.ORG }}/filenymous-signal
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=sha,format=short
-
-      - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push signal
-        uses: docker/build-push-action@v5
-        with:
-          context: ./network/signal
-          push:    ${{ github.event_name != 'pull_request' }}
-          tags:    ${{ steps.meta.outputs.tags }}
-          labels:  ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to:   type=gha,mode=max
+          # Rust builds are slow — cache the Cargo registry and target dir
+          build-args: |
+            KITSUNE2_TAG=v0.4.0-dev.6
