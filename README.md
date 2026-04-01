@@ -1,2 +1,2 @@
 # Filenymous
-peer to peer file transfer
+peer to peer file transfer based on Holochain
