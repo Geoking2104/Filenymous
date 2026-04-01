@@ -99,7 +99,12 @@ hc app install --app-id filenymous filenymous.happ
 hc admin add-agent-info
 ```
 
-> Pour un setup plus simple, utiliser le [Holochain Launcher](https://github.com/holochain/launcher).
+> **M4 — voie recommandée** : utiliser le [Holochain Launcher](https://github.com/holochain/launcher) avec le `.webhapp`.
+>
+> ```bash
+> make build-webhapp   # → workdir/filenymous.webhapp
+> # Puis dans le Launcher : File → Install hApp from filesystem
+> ```
 
 ## Tests
 

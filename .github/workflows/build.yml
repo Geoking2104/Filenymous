@@ -48,7 +48,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: filenymous-happ
-          path: filenymous.happ
+          path: workdir/filenymous.happ
           retention-days: 7
 
   # ── tryorama integration tests ──────────────────────────────────────────────
@@ -144,3 +144,57 @@ jobs:
           VITE_HC_URL: ws://localhost:8888
           VITE_BRIDGE_URL: http://localhost:3001
           VITE_BRIDGE_SECRET: ci-placeholder
+
+      - name: Zip UI dist (M4 — webhapp packaging)
+        run: |
+          mkdir -p workdir
+          cd ui/dist && zip -r ../../workdir/ui.zip .
+
+      - name: Upload UI zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filenymous-ui-zip
+          path: workdir/ui.zip
+          retention-days: 7
+
+  # ── .webhapp bundle (M4) ─────────────────────────────────────────────────────
+  webhapp:
+    name: .webhapp bundle
+    needs: [rust, ui]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Nix store
+        uses: cachix/cachix-action@v14
+        with:
+          name: holochain-ci
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
+
+      - name: Download hApp artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: filenymous-happ
+          path: workdir
+
+      - name: Download UI zip artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: filenymous-ui-zip
+          path: workdir
+
+      - name: Pack .webhapp
+        run: nix develop --command hc web-app pack . -o workdir/filenymous.webhapp
+
+      - name: Upload .webhapp artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filenymous-webhapp
+          path: workdir/filenymous.webhapp
+          retention-days: 7

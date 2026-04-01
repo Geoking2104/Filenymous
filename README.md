@@ -36,11 +36,27 @@
 
 | Outil | Version |
 |-------|---------|
-| Nix | ≥ 2.18 (multi-user) |
+| Holochain Launcher | ≥ 0.11 (pour installation .webhapp) |
+| Nix | ≥ 2.18 (pour le build depuis les sources) |
 | Node | ≥ 20 LTS |
 | Rust | via Nix (nightly ciblé WASM) |
 
-## Démarrage rapide
+## Installation via Holochain Launcher (M4 — recommandé)
+
+```bash
+# 1. Télécharger le Launcher
+#    → https://github.com/holochain/launcher/releases
+
+# 2. Télécharger filenymous.webhapp depuis la dernière Release GitHub
+#    → https://github.com/filenymous/filenymous/releases/latest
+
+# 3. Dans le Launcher : File → Install hApp from filesystem → filenymous.webhapp
+
+# 4. (Optionnel) Lancer le bridge pour les notifications email/SMS
+cd bridge && cp .env.example .env && npm install && npm start
+```
+
+## Build depuis les sources
 
 ```bash
 # 1. Cloner
@@ -50,18 +66,15 @@ cd filenymous
 # 2. Entrer dans le shell Nix (installe Holochain + Rust automatiquement)
 nix develop
 
-# 3. Compiler les zomes + DNA + hApp
-make build-happ
+# 3. Compiler WASM + DNA + hApp + UI → .webhapp
+make build-webhapp
+# → workdir/filenymous.webhapp
 
-# 4. Lancer le bridge (autre terminal)
-cd bridge
-cp .env.example .env   # renseigner les clés API
-npm install && npm run dev
-
-# 5. Lancer l'UI (autre terminal)
-cd ui
-cp .env.example .env
-npm install && npm run dev
+# 4. (Optionnel) Dev mode : bridge + UI en mode hot-reload
+#    Terminal A
+cd bridge && cp .env.example .env && npm install && npm run dev
+#    Terminal B
+cd ui && cp .env.example .env && npm install && npm run dev
 # → http://localhost:5173
 ```
 
@@ -123,8 +136,8 @@ filenymous/
 |-----------|--------|
 | M1 — DNA Holochain (6 zomes) + tryorama | ✅ |
 | M2 — React UI + bridge notifications | ✅ |
-| M3 — ECIES/X25519 wrapping de la clé AES | 🔜 |
-| M4 — Launcher Holochain + packaging desktop | 🔜 |
+| M3 — ECIES/X25519 wrapping de la clé AES | ✅ |
+| M4 — .webhapp + packaging Holochain Launcher | ✅ |
 | M5 — Réseau public + nœuds bootstrap | 🔜 |
 
 ## Licence

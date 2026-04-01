@@ -1,0 +1,12 @@
+---
+manifest_version: "1"
+
+name: filenymous
+description: "Peer-to-peer encrypted file transfer on Holochain — no central server, no account required"
+
+ui:
+  # The UI zip is produced by `make build-ui` (vite build → zip of ui/dist/)
+  bundled: "./workdir/ui.zip"
+
+happ_manifest:
+  bundled: "./workdir/filenymous.happ"
