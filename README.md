@@ -2,7 +2,7 @@
 
 > Transfert de fichiers P2P chiffré de bout en bout — sans serveur central, sans compte, sans traçage.
 
-[![CI](https://github.com/filenymous/filenymous/actions/workflows/build.yml/badge.svg)](https://github.com/filenymous/filenymous/actions/workflows/build.yml)
+[![CI](https://github.com/Geoking2104/filenymous/actions/workflows/build.yml/badge.svg)](https://github.com/Geoking2104/filenymous/actions/workflows/build.yml)
 
 ---
 
@@ -48,7 +48,7 @@
 #    → https://github.com/holochain/launcher/releases
 
 # 2. Télécharger filenymous.webhapp depuis la dernière Release GitHub
-#    → https://github.com/filenymous/filenymous/releases/latest
+#    → https://github.com/Geoking2104/filenymous/releases/latest
 
 # 3. Dans le Launcher : File → Install hApp from filesystem → filenymous.webhapp
 
@@ -60,7 +60,7 @@ cd bridge && cp .env.example .env && npm install && npm start
 
 ```bash
 # 1. Cloner
-git clone https://github.com/filenymous/filenymous.git
+git clone https://github.com/Geoking2104/filenymous.git
 cd filenymous
 
 # 2. Entrer dans le shell Nix (installe Holochain + Rust automatiquement)

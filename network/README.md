@@ -63,7 +63,7 @@ chmod 600 /opt/filenymous/kitsune2-certs/*.pem
 
 ```bash
 cd /opt/filenymous
-git clone https://github.com/filenymous/filenymous.git .
+git clone https://github.com/Geoking2104/filenymous.git .
 
 # Variables d'environnement bridge
 cp .env.compose.example .env.compose

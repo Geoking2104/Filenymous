@@ -22,7 +22,7 @@ export default function Footer() {
         </div>
         <div className="footer-links">
           <a
-            href="https://github.com/filenymous/filenymous"
+            href="https://github.com/Geoking2104/filenymous"
             target="_blank"
             rel="noreferrer"
             className="footer-link"
