@@ -5,12 +5,12 @@
 ```
 VPS / fly.io  (une seule IP)
 │
-├── bootstrap.filenymous.app:443  ← kitsune2-bootstrap-srv (TLS interne rustls)
+├── bootstrap.filenymous.eu:443  ← kitsune2-bootstrap-srv (TLS interne rustls)
 │     • HTTPS   → découverte de pairs (bootstrap REST)
 │     • WSS     → signaling WebRTC (SBD relay)
 │     Même binaire, même port, même hôte.
 │
-└── bridge.filenymous.app:443     ← Caddy → bridge:3001 (Fastify)
+└── bridge.filenymous.eu:443     ← Caddy → bridge:3001 (Fastify)
       • HTTPS   → notifications OTP / email / SMS
 ```
 
@@ -31,9 +31,9 @@ Caddy est uniquement utilisé pour le service `bridge`.
 - VPS Ubuntu 22.04+ avec accès root
 - Docker + Docker Compose v2
 - Deux sous-domaines DNS pointant vers la même IP :
-  - `bootstrap.filenymous.app` → port 443 (kitsune2)
-  - `bridge.filenymous.app` → port 443 (Caddy → bridge)
-- Un certificat TLS pour `bootstrap.filenymous.app` (Let's Encrypt / certbot standalone)
+  - `bootstrap.filenymous.eu` → port 443 (kitsune2)
+  - `bridge.filenymous.eu` → port 443 (Caddy → bridge)
+- Un certificat TLS pour `bootstrap.filenymous.eu` (Let's Encrypt / certbot standalone)
 
 ---
 
@@ -46,13 +46,13 @@ kitsune2 gère son TLS en interne mais a besoin de fichiers PEM :
 apt install certbot
 
 # Obtenir le cert (port 80 libre)
-certbot certonly --standalone -d bootstrap.filenymous.app
+certbot certonly --standalone -d bootstrap.filenymous.eu
 
 # Copier vers le volume Docker
 mkdir -p /opt/filenymous/kitsune2-certs
-cp /etc/letsencrypt/live/bootstrap.filenymous.app/fullchain.pem \
+cp /etc/letsencrypt/live/bootstrap.filenymous.eu/fullchain.pem \
    /opt/filenymous/kitsune2-certs/cert.pem
-cp /etc/letsencrypt/live/bootstrap.filenymous.app/privkey.pem \
+cp /etc/letsencrypt/live/bootstrap.filenymous.eu/privkey.pem \
    /opt/filenymous/kitsune2-certs/key.pem
 chmod 600 /opt/filenymous/kitsune2-certs/*.pem
 ```
@@ -109,11 +109,11 @@ network:
 ### Production
 ```yaml
 network:
-  bootstrap_service: "https://bootstrap.filenymous.app"
-  signal_url:        "wss://bootstrap.filenymous.app"
+  bootstrap_service: "https://bootstrap.filenymous.eu"
+  signal_url:        "wss://bootstrap.filenymous.eu"
   transport_pool:
     - type: webrtc
-      signal_url: "wss://bootstrap.filenymous.app"
+      signal_url: "wss://bootstrap.filenymous.eu"
       ice_servers_override:
         - urls:
             - "stun:stun.l.google.com:19302"
@@ -129,9 +129,9 @@ Bootstrap et signal utilisent le **même hôte et le même port (443)**. kitsune
 ```bash
 # /etc/letsencrypt/renewal-hooks/deploy/filenymous.sh
 #!/bin/bash
-cp /etc/letsencrypt/live/bootstrap.filenymous.app/fullchain.pem \
+cp /etc/letsencrypt/live/bootstrap.filenymous.eu/fullchain.pem \
    /opt/filenymous/kitsune2-certs/cert.pem
-cp /etc/letsencrypt/live/bootstrap.filenymous.app/privkey.pem \
+cp /etc/letsencrypt/live/bootstrap.filenymous.eu/privkey.pem \
    /opt/filenymous/kitsune2-certs/key.pem
 docker compose -f /opt/filenymous/docker-compose.yml restart kitsune2
 ```

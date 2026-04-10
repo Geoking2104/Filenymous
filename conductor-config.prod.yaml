@@ -20,15 +20,15 @@ admin_interfaces:
 
 network:
   # kitsune2-bootstrap-srv handles BOTH bootstrap (HTTPS) and signal (WSS)
-  # on the same host — bootstrap.filenymous.app:443
-  bootstrap_service: "https://bootstrap.filenymous.app"
+  # on the same host — bootstrap.filenymous.eu:443
+  bootstrap_service: "https://bootstrap.filenymous.eu"
 
   # Same host, different protocol prefix — kitsune2 multiplexes on port 443
-  signal_url: "wss://bootstrap.filenymous.app"
+  signal_url: "wss://bootstrap.filenymous.eu"
 
   transport_pool:
     - type: webrtc
-      signal_url: "wss://bootstrap.filenymous.app"
+      signal_url: "wss://bootstrap.filenymous.eu"
       # ICE / STUN — Google public STUN + your own TURN if needed
       ice_servers_override:
         - urls:

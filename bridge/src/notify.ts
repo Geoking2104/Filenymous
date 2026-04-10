@@ -29,7 +29,7 @@ const transporter = nodemailer.createTransport(
       }
 );
 
-const FROM_EMAIL = process.env.FROM_EMAIL ?? "noreply@filenymous.app";
+const FROM_EMAIL = process.env.FROM_EMAIL ?? "noreply@filenymous.eu";
 const FROM_NAME  = "Filenymous";
 
 export async function sendEmail(

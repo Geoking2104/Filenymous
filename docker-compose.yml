@@ -13,13 +13,13 @@
 ##                kitsune2 handles its own TLS — do NOT proxy it.
 ##
 ## Architecture note:
-##   ┌─ bootstrap.filenymous.app:443 ─┐
+##   ┌─ bootstrap.filenymous.eu:443 ─┐
 ##   │  kitsune2-bootstrap-srv (TLS)   │  ← agents connect directly
 ##   │  • HTTPS  → peer discovery      │
 ##   │  • WSS    → WebRTC signaling    │
 ##   └────────────────────────────────┘
 ##
-##   ┌─ bridge.filenymous.app:443 ─────┐
+##   ┌─ bridge.filenymous.eu:443 ─────┐
 ##   │  Caddy (Let's Encrypt)           │
 ##   │  → bridge:3001 (Fastify)         │
 ##   └──────────────────────────────────┘

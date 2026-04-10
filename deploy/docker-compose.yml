@@ -8,8 +8,8 @@ version: "3.9"
 #
 # TLS certificates must be present before starting (see setup.sh).
 # Expected paths (created by certbot):
-#   /etc/letsencrypt/live/bootstrap.filenymous.app/fullchain.pem
-#   /etc/letsencrypt/live/bootstrap.filenymous.app/privkey.pem
+#   /etc/letsencrypt/live/bootstrap.filenymous.eu/fullchain.pem
+#   /etc/letsencrypt/live/bootstrap.filenymous.eu/privkey.pem
 
 services:
   kitsune2:
@@ -19,8 +19,8 @@ services:
     ports:
       - "443:443"
     volumes:
-      - /etc/letsencrypt/live/bootstrap.filenymous.app/fullchain.pem:/etc/kitsune2/cert.pem:ro
-      - /etc/letsencrypt/live/bootstrap.filenymous.app/privkey.pem:/etc/kitsune2/key.pem:ro
+      - /etc/letsencrypt/live/bootstrap.filenymous.eu/fullchain.pem:/etc/kitsune2/cert.pem:ro
+      - /etc/letsencrypt/live/bootstrap.filenymous.eu/privkey.pem:/etc/kitsune2/key.pem:ro
     environment:
       RUST_LOG: info
     command:

@@ -5,7 +5,7 @@
 ```
 Users (browsers)
     │
-    ├─── HTTPS/WSS ──► bootstrap.filenymous.app:443   (kitsune2, your VPS)
+    ├─── HTTPS/WSS ──► bootstrap.filenymous.eu:443   (kitsune2, your VPS)
     │                   ├─ Peer discovery (Bootstrap REST)
     │                   └─ WebRTC signaling (SBD relay)
     │
@@ -22,7 +22,7 @@ P2P transfers happen **directly between users** — your server only handles dis
 You need a domain pointing to your server. Recommended: **Cloudflare Registrar** (cheapest renewal fees, free DNS management).
 
 1. Go to [cloudflare.com/products/registrar](https://www.cloudflare.com/products/registrar/)
-2. Search and register `filenymous.app` (or any domain you own)
+2. Search and register `filenymous.eu` (or any domain you own)
 3. After server setup (Step 2), add a DNS A record:
    - **Name**: `bootstrap`
    - **Type**: `A`
@@ -56,7 +56,7 @@ In Cloudflare (or your registrar's DNS panel), add:
 
 Wait 5 minutes for propagation, then verify:
 ```bash
-ping bootstrap.filenymous.app
+ping bootstrap.filenymous.eu
 ```
 
 ---
@@ -79,7 +79,7 @@ This automatically:
 **Check it's running:**
 ```bash
 docker logs -f filenymous-kitsune2
-curl https://bootstrap.filenymous.app/health
+curl https://bootstrap.filenymous.eu/health
 ```
 
 ---

@@ -9,13 +9,13 @@
 # What this script does:
 #   1. Installs Docker + Docker Compose
 #   2. Installs certbot (Let's Encrypt)
-#   3. Obtains a TLS certificate for bootstrap.filenymous.app
+#   3. Obtains a TLS certificate for bootstrap.filenymous.eu
 #   4. Pulls and starts the kitsune2 container
 #   5. Sets up auto-renewal for TLS certs
 # =============================================================================
 set -euo pipefail
 
-DOMAIN="bootstrap.filenymous.app"
+DOMAIN="bootstrap.filenymous.eu"
 EMAIL="geoffroydelatournelle@gmail.com"   # change if needed
 REPO="https://raw.githubusercontent.com/Geoking2104/Filenymous/main/deploy"
 

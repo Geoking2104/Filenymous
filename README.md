@@ -127,9 +127,9 @@ filenymous/
 
 ```
 VPS / fly.io
-├── bootstrap.filenymous.app  ← kitsune2-bootstrap-srv (découverte de pairs)
-├── signal.filenymous.app     ← kitsune2-sbd-server (relay WebRTC / NAT)
-└── bridge.filenymous.app     ← Fastify (OTP · email · SMS)
+├── bootstrap.filenymous.eu  ← kitsune2-bootstrap-srv (découverte de pairs)
+├── signal.filenymous.eu     ← kitsune2-sbd-server (relay WebRTC / NAT)
+└── bridge.filenymous.eu     ← Fastify (OTP · email · SMS)
      ↑ Caddy (TLS Let's Encrypt automatique)
 ```
 
