@@ -19,16 +19,14 @@ admin_interfaces:
       allowed_origins: "http://localhost:*"
 
 network:
-  # kitsune2-bootstrap-srv handles BOTH bootstrap (HTTPS) and signal (WSS)
-  # on the same host — bootstrap.filenymous.eu:443
-  bootstrap_service: "https://bootstrap.filenymous.eu"
-
-  # Same host, different protocol prefix — kitsune2 multiplexes on port 443
-  signal_url: "wss://bootstrap.filenymous.eu"
+  # Using Holochain public bootstrap server (dev-test, no uptime guarantee).
+  # Replace with wss://bootstrap.filenymous.eu once your VPS is ready.
+  bootstrap_service: "https://dev-test-bootstrap2.holochain.org"
+  signal_url: "wss://dev-test-bootstrap2.holochain.org"
 
   transport_pool:
     - type: webrtc
-      signal_url: "wss://bootstrap.filenymous.eu"
+      signal_url: "wss://dev-test-bootstrap2.holochain.org"
       # ICE / STUN — Google public STUN + your own TURN if needed
       ice_servers_override:
         - urls:
