@@ -5,10 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Filenymous</title>
 <style>
-/* ── Reset & variables ─────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --indigo:#6366f1;--violet:#8b5cf6;--lavender:#a78bfa;
+  --indigo:#6366f1;--violet:#8b5cf6;
   --grad:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);
   --grad-soft:linear-gradient(135deg,#ede9fe 0%,#e0e7ff 100%);
   --bg:#f8f9fc;--surface:#fff;--border:#e5e7eb;
@@ -19,24 +18,45 @@
   --font:'Inter',system-ui,-apple-system,sans-serif;
 }
 html{font-size:15px;scroll-behavior:smooth}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;line-height:1.6}
+body{
+  font-family:var(--font);color:var(--text);min-height:100vh;
+  display:flex;flex-direction:column;line-height:1.6;
+  /* Landscape background — sky blue / rapeseed yellow / wheat green */
+  background:
+    linear-gradient(
+      to bottom,
+      #4da8e8 0%,   /* sky */
+      #87ceeb 28%,  /* horizon sky */
+      #c8e67a 38%,  /* treeline */
+      #e8c830 44%,  /* rapeseed yellow band */
+      #e8c830 50%,  /* rapeseed yellow band */
+      #5db34a 54%,  /* wheat green */
+      #3a9230 100%  /* deep green */
+    );
+  background-attachment:fixed;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:rgba(255,255,255,.78);
+  z-index:0;
+}
+body>*{position:relative;z-index:1}
 
-/* ── Form elements ────────────────────────────────────────────── */
+/* ── Form elements ─────────────────────────────────────────────── */
 input,select,textarea{
   font-family:inherit;font-size:.9rem;
-  background:var(--surface);color:var(--text);
+  background:rgba(255,255,255,.95);color:var(--text);
   border:1.5px solid var(--border);border-radius:var(--r-sm);
   padding:.65rem 1rem;outline:none;width:100%;
   transition:border-color .15s,box-shadow .15s;
 }
 input:focus,select:focus,textarea:focus{
-  border-color:var(--indigo);
-  box-shadow:0 0 0 3px rgba(99,102,241,.12);
+  border-color:var(--indigo);box-shadow:0 0 0 3px rgba(99,102,241,.12);
 }
 input.err{border-color:var(--err)}
-textarea{resize:vertical;min-height:80px;line-height:1.55}
+textarea{resize:vertical;min-height:80px}
 
-/* ── Buttons ──────────────────────────────────────────────────── */
+/* ── Buttons ───────────────────────────────────────────────────── */
 button{font-family:inherit;font-size:.9rem;font-weight:500;cursor:pointer;border:none;border-radius:var(--r-sm);padding:.65rem 1.3rem;transition:all .15s;display:inline-flex;align-items:center;gap:.45rem;justify-content:center}
 button:active:not(:disabled){transform:scale(.98)}
 button:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
@@ -44,31 +64,36 @@ button:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
 .btn-primary:hover:not(:disabled){filter:brightness(1.07);box-shadow:0 4px 20px rgba(99,102,241,.4)}
 .btn-outline{background:transparent;color:var(--indigo);border:1.5px solid var(--border)}
 .btn-outline:hover:not(:disabled){border-color:var(--indigo);background:#ede9fe30}
-.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border)}
-.btn-ghost:hover:not(:disabled){background:var(--bg);color:var(--text)}
+.btn-ghost{background:rgba(255,255,255,.7);color:var(--muted);border:1.5px solid var(--border)}
+.btn-ghost:hover:not(:disabled){background:rgba(255,255,255,.95);color:var(--text)}
 .btn-danger{background:var(--err);color:#fff}
-.btn-danger:hover:not(:disabled){filter:brightness(1.07)}
 .btn-ok{background:var(--ok);color:#fff}
 .btn-ok:hover:not(:disabled){filter:brightness(1.07)}
 .btn-full{width:100%}
 .btn-sm{padding:.35rem .75rem;font-size:.8rem}
 .btn-lg{padding:.8rem 1.6rem;font-size:1rem}
 
-/* ── Cards ────────────────────────────────────────────────────── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.6rem;margin-bottom:1rem;box-shadow:var(--sh)}
+/* ── Cards ─────────────────────────────────────────────────────── */
+.card{
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:var(--r);padding:1.6rem;margin-bottom:1rem;
+  box-shadow:var(--sh);
+}
 .card-title{font-size:.72rem;font-weight:700;color:var(--violet);text-transform:uppercase;letter-spacing:.07em;margin-bottom:1rem;display:flex;align-items:center;gap:.4rem}
 
-/* ── Badges ───────────────────────────────────────────────────── */
+/* ── Badges ─────────────────────────────────────────────────────── */
 .badge{display:inline-flex;align-items:center;font-size:.72rem;font-weight:600;padding:.2rem .6rem;border-radius:20px;white-space:nowrap}
 .badge-pending{background:#fef3c7;color:var(--warn)}
 .badge-done{background:#d1fae5;color:var(--ok)}
 .badge-revoked{background:#fee2e2;color:var(--err)}
 
-/* ── Progress ─────────────────────────────────────────────────── */
+/* ── Progress ───────────────────────────────────────────────────── */
 .progress-track{height:5px;background:#e5e7eb;border-radius:4px;overflow:hidden}
 .progress-fill{height:100%;background:var(--grad);border-radius:4px;transition:width .4s ease}
 
-/* ── Info boxes ───────────────────────────────────────────────── */
+/* ── Info boxes ─────────────────────────────────────────────────── */
 .infobox{display:flex;gap:.65rem;align-items:flex-start;padding:.75rem 1rem;border-radius:var(--r-sm);font-size:.83rem;line-height:1.5;margin-bottom:.9rem}
 .infobox-violet{background:#ede9fe;border:1px solid #c4b5fd;color:#4c1d95}
 .infobox-green{background:#f0fdf4;border:1px solid #86efac;color:#14532d}
@@ -76,119 +101,162 @@ button:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
 .infobox-blue{background:#eff6ff;border:1px solid #93c5fd;color:#1e3a8a}
 .infobox-demo{background:#fff7ed;border:1px solid #fb923c;color:#7c2d12}
 
-/* ── Spinner ──────────────────────────────────────────────────── */
+/* ── Spinner ─────────────────────────────────────────────────────── */
 .spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:_sp .55s linear infinite;flex-shrink:0}
 @keyframes _sp{to{transform:rotate(360deg)}}
 
-/* ── Header ───────────────────────────────────────────────────── */
+/* ── Header ──────────────────────────────────────────────────────── */
 .header{
-  background:rgba(255,255,255,.9);
-  backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.88);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(229,231,235,.8);
   padding:.85rem 2rem;
-  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  display:flex;align-items:center;justify-content:space-between;gap:.75rem;
   position:sticky;top:0;z-index:100;flex-wrap:wrap;
 }
 .logo{display:flex;align-items:center;gap:.6rem;text-decoration:none;color:var(--indigo);font-size:1.15rem;font-weight:800;letter-spacing:-.03em}
 .logo-mark{width:34px;height:34px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:1.05rem;color:#fff;box-shadow:0 2px 10px rgba(99,102,241,.4);flex-shrink:0}
-.nav{display:flex;gap:.1rem}
+.nav{display:flex;gap:.1rem;flex-wrap:wrap}
 .nav-btn{background:none;border:none;color:var(--muted);padding:.42rem .9rem;font-size:.87rem;font-weight:500;border-radius:8px;position:relative;white-space:nowrap}
-.nav-btn:hover{background:var(--bg);color:var(--text)}
+.nav-btn:hover{background:rgba(243,244,246,.8);color:var(--text)}
 .nav-btn.active{background:#ede9fe;color:var(--indigo);font-weight:600}
 .nav-dot{position:absolute;top:4px;right:6px;width:6px;height:6px;background:var(--indigo);border-radius:50%;display:none}
 .nav-dot.show{display:block}
-.status-pill{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--muted);padding:.3rem .8rem;background:var(--bg);border:1.5px solid var(--border);border-radius:20px;white-space:nowrap}
+
+/* ── Language switcher ───────────────────────────────────────────── */
+.lang-switcher{display:flex;gap:.2rem;align-items:center}
+.lang-btn{background:none;border:1.5px solid transparent;color:var(--muted);padding:.25rem .5rem;font-size:.78rem;font-weight:600;border-radius:6px;letter-spacing:.03em}
+.lang-btn:hover{border-color:var(--border);color:var(--text)}
+.lang-btn.active{background:#ede9fe;border-color:#c4b5fd;color:var(--indigo)}
+
+/* ── Status pill ─────────────────────────────────────────────────── */
+.status-pill{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--muted);padding:.3rem .8rem;background:rgba(249,250,251,.9);border:1.5px solid var(--border);border-radius:20px;white-space:nowrap}
 .status-dot{width:7px;height:7px;border-radius:50%;background:var(--err);transition:all .4s}
 .status-dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(5,150,105,.15)}
 
-/* ── Main layout ──────────────────────────────────────────────── */
-.main{flex:1;max-width:660px;margin:0 auto;width:100%;padding:2rem 1.5rem 5rem}
+/* ── Main ────────────────────────────────────────────────────────── */
+.main{flex:1;max-width:680px;margin:0 auto;width:100%;padding:2rem 1.5rem 3rem}
 .panel{display:none}
 .panel.active{display:block}
 
-/* ── Drop zone ────────────────────────────────────────────────── */
-.dropzone{border:2px dashed var(--border);border-radius:var(--r);padding:3rem 1.5rem;text-align:center;cursor:pointer;position:relative;background:var(--bg);transition:all .2s}
-.dropzone:hover,.dropzone.over{border-color:var(--indigo);background:#ede9fe18}
+/* ── Drop zone ───────────────────────────────────────────────────── */
+.dropzone{border:2px dashed var(--border);border-radius:var(--r);padding:3rem 1.5rem;text-align:center;cursor:pointer;position:relative;background:rgba(248,249,252,.8);transition:all .2s}
+.dropzone:hover,.dropzone.over{border-color:var(--indigo);background:rgba(237,233,254,.3)}
 .dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 
-/* ── File chip ────────────────────────────────────────────────── */
-.file-chip{display:flex;align-items:center;gap:.7rem;padding:.6rem .85rem;background:var(--bg);border:1px solid var(--border);border-radius:9px;margin-top:.5rem}
+/* ── File chip ───────────────────────────────────────────────────── */
+.file-chip{display:flex;align-items:center;gap:.7rem;padding:.6rem .85rem;background:rgba(248,249,252,.9);border:1px solid var(--border);border-radius:9px;margin-top:.5rem}
 .file-info{flex:1;min-width:0}
 .file-name{font-size:.87rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .file-size{font-size:.74rem;color:var(--muted)}
 .file-remove{background:none;border:none;color:var(--light);font-size:.9rem;padding:.2rem .5rem;border-radius:6px;cursor:pointer;flex-shrink:0}
-.file-remove:hover{color:var(--err);background:#fee2e220}
+.file-remove:hover{color:var(--err)}
 
-/* ── Form row ─────────────────────────────────────────────────── */
+/* ── Form row ────────────────────────────────────────────────────── */
 .frow{margin-bottom:.9rem}
 .flabel{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.35rem}
 .flabel-opt{font-weight:400;color:var(--light)}
 .fhint{font-size:.74rem;margin-top:.25rem}
-.fhint-ok{color:var(--ok)}
-.fhint-warn{color:var(--warn)}
-.fhint-err{color:var(--err)}
-
-/* ── Grid ─────────────────────────────────────────────────────── */
+.fhint-ok{color:var(--ok)}.fhint-warn{color:var(--warn)}.fhint-err{color:var(--err)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
 
-/* ── Link box ─────────────────────────────────────────────────── */
-.link-box{display:flex;gap:.5rem;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;padding:.45rem .45rem .45rem .9rem;align-items:center}
+/* ── Link box ────────────────────────────────────────────────────── */
+.link-box{display:flex;gap:.5rem;background:rgba(248,249,252,.9);border:1.5px solid var(--border);border-radius:9px;padding:.45rem .45rem .45rem .9rem;align-items:center}
 .link-url{flex:1;font-size:.8rem;font-family:monospace;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* ── Big state ────────────────────────────────────────────────── */
+/* ── Big state ───────────────────────────────────────────────────── */
 .big-state{text-align:center;padding:3rem 1rem}
 .big-icon{font-size:3.2rem;margin-bottom:.8rem}
 .big-title{font-size:1.1rem;font-weight:700;margin-bottom:.35rem}
 .big-sub{font-size:.87rem;color:var(--muted);margin-bottom:1.5rem}
 
-/* ── History ──────────────────────────────────────────────────── */
-.hist-row{display:flex;align-items:center;gap:.85rem;padding:.9rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.55rem;box-shadow:var(--sh)}
-.hist-icon{font-size:1.7rem;flex-shrink:0}
+/* ── History ─────────────────────────────────────────────────────── */
+.hist-row{display:flex;align-items:center;gap:.85rem;padding:.9rem 1rem;background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.55rem;box-shadow:var(--sh)}
 .hist-info{flex:1;min-width:0}
 .hist-name{font-size:.88rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hist-meta{font-size:.74rem;color:var(--muted)}
 
-/* ── Identity ─────────────────────────────────────────────────── */
-.contact-card{display:flex;align-items:center;gap:.85rem;padding:.9rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.55rem;box-shadow:var(--sh)}
+/* ── Identity ────────────────────────────────────────────────────── */
+.contact-card{display:flex;align-items:center;gap:.85rem;padding:.9rem 1rem;background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.55rem;box-shadow:var(--sh)}
 .avatar{width:38px;height:38px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.95rem;flex-shrink:0}
 .avatar-lg{width:48px;height:48px;font-size:1.1rem}
-.key-mono{font-size:.72rem;font-family:monospace;word-break:break-all;color:var(--muted);padding:.5rem .75rem;background:var(--bg);border-radius:6px;border:1px solid var(--border);margin-top:.5rem}
-
-/* ── Privacy ──────────────────────────────────────────────────── */
-.priv-block{margin-bottom:1.5rem}
-.priv-block h3{font-size:.95rem;font-weight:700;margin-bottom:.45rem;color:var(--text)}
-.priv-block p{font-size:.87rem;line-height:1.65;color:var(--muted)}
+.key-mono{font-size:.72rem;font-family:monospace;word-break:break-all;color:var(--muted);padding:.5rem .75rem;background:rgba(248,249,252,.9);border-radius:6px;border:1px solid var(--border);margin-top:.5rem}
 hr.sep{border:none;border-top:1px solid var(--border);margin:1rem 0}
 
-/* ── Footer ───────────────────────────────────────────────────── */
-.footer{background:var(--surface);border-top:1px solid var(--border);padding:1.1rem 2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem}
+/* ── Privacy ─────────────────────────────────────────────────────── */
+.priv-block{margin-bottom:1.5rem}
+.priv-block h3{font-size:.95rem;font-weight:700;margin-bottom:.45rem}
+.priv-block p{font-size:.87rem;line-height:1.65;color:var(--muted)}
+
+/* ── COMPARISON SECTION ─────────────────────────────────────────── */
+.compare-section{
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(10px);
+  border-top:1px solid rgba(229,231,235,.8);
+  padding:3rem 2rem 2.5rem;
+}
+.compare-inner{max-width:860px;margin:0 auto}
+.compare-title{text-align:center;margin-bottom:.5rem}
+.compare-title h2{font-size:1.3rem;font-weight:800;color:var(--text)}
+.compare-subtitle{text-align:center;font-size:.9rem;color:var(--muted);margin-bottom:2.5rem}
+.compare-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-bottom:2rem}
+.compare-card{border-radius:16px;padding:1.6rem;border:2px solid var(--border);background:rgba(255,255,255,.95);transition:transform .2s,box-shadow .2s;position:relative}
+.compare-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(99,102,241,.14)}
+.compare-card.winner{border-color:var(--indigo);background:linear-gradient(160deg,rgba(237,233,254,.5),rgba(224,231,255,.5))}
+.compare-card.winner::before{content:'★ Best';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--grad);color:#fff;font-size:.72rem;font-weight:700;padding:.25rem .75rem;border-radius:20px;white-space:nowrap}
+.compare-logo{font-size:1.5rem;margin-bottom:.5rem}
+.compare-name{font-size:1rem;font-weight:800;margin-bottom:.25rem}
+.compare-tagline{font-size:.78rem;color:var(--muted);margin-bottom:1.2rem;line-height:1.4}
+.compare-rows{}
+.compare-row{display:flex;align-items:flex-start;gap:.5rem;padding:.45rem 0;border-bottom:1px solid rgba(229,231,235,.5);font-size:.82rem;line-height:1.45}
+.compare-row:last-child{border-bottom:none}
+.compare-row .ico{flex-shrink:0;font-size:.9rem;margin-top:.05rem}
+.compare-row .label{color:var(--muted)}
+.compare-row .val{color:var(--text);font-weight:500}
+.compare-row.pro .ico{color:var(--ok)}
+.compare-row.con .ico{color:var(--err)}
+.compare-row.neu .ico{color:var(--warn)}
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+.footer{
+  background:rgba(255,255,255,.88);
+  backdrop-filter:blur(16px);
+  border-top:1px solid rgba(229,231,235,.8);
+  padding:1.1rem 2rem;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;
+}
 .flinks{display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap}
 .flink{font-size:.8rem;color:var(--muted);text-decoration:none;background:none;border:none;cursor:pointer;transition:color .15s;padding:0;display:inline-flex;align-items:center;gap:.3rem}
 .flink:hover{color:var(--indigo)}
 
-/* ── Demo banner ──────────────────────────────────────────────── */
-.demo-bar{background:#fff7ed;border-bottom:1px solid #fb923c;padding:.55rem 1.5rem;font-size:.8rem;color:#92400e;text-align:center}
+/* ── Demo banner ─────────────────────────────────────────────────── */
+.demo-bar{background:rgba(255,247,237,.95);border-bottom:1px solid #fb923c;padding:.55rem 1.5rem;font-size:.8rem;color:#92400e;text-align:center}
 
-/* ── Responsive ───────────────────────────────────────────────── */
-@media(max-width:600px){
+/* ── Responsive ──────────────────────────────────────────────────── */
+@media(max-width:700px){
   .header{padding:.75rem 1rem}
-  .main{padding:1.5rem 1rem 4rem}
+  .main{padding:1.5rem 1rem 3rem}
   .g2{grid-template-columns:1fr}
   .nav-btn{padding:.38rem .65rem;font-size:.82rem}
   .status-pill{display:none}
+  .compare-grid{grid-template-columns:1fr}
+  .compare-card.winner::before{top:-10px}
+  .compare-section{padding:2rem 1rem 2rem}
+}
+@media(max-width:420px){
+  .lang-switcher .lang-btn{padding:.2rem .35rem;font-size:.72rem}
 }
 </style>
 </head>
 <body>
 
 <div class="demo-bar">
-  🧪 <strong>Demo mode</strong> — full UI, real WebCrypto encryption, simulated Holochain network ·
+  🧪 <strong data-i18n="demo_label">Demo mode</strong> — <span data-i18n="demo_sub">real WebCrypto encryption, simulated Holochain network</span> ·
   <a href="https://github.com/Geoking2104/filenymous" target="_blank" style="color:#92400e;font-weight:600">github.com/Geoking2104/filenymous</a>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     HEADER
-════════════════════════════════════════════════════════════════ -->
+<!-- ═══ HEADER ═══ -->
 <header class="header">
   <a class="logo" href="#">
     <div class="logo-mark">⟁</div>
@@ -196,29 +264,34 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:1rem 0}
   </a>
 
   <nav class="nav">
-    <button class="nav-btn active" id="tab-send"     onclick="nav('send')">Send</button>
-    <button class="nav-btn"        id="tab-receive"  onclick="nav('receive')">Receive</button>
+    <button class="nav-btn active" id="tab-send"     onclick="nav('send')"     data-i18n="tab_send">Send</button>
+    <button class="nav-btn"        id="tab-receive"  onclick="nav('receive')"  data-i18n="tab_receive">Receive</button>
     <button class="nav-btn"        id="tab-history"  onclick="nav('history')">
-      History<span class="nav-dot" id="hist-dot"></span>
+      <span data-i18n="tab_history">History</span><span class="nav-dot" id="hist-dot"></span>
     </button>
-    <button class="nav-btn"        id="tab-identity" onclick="nav('identity')">Identity</button>
-    <button class="nav-btn"        id="tab-privacy"  onclick="nav('privacy')">Privacy</button>
+    <button class="nav-btn"        id="tab-identity" onclick="nav('identity')" data-i18n="tab_identity">Identity</button>
+    <button class="nav-btn"        id="tab-privacy"  onclick="nav('privacy')"  data-i18n="tab_privacy">Privacy</button>
   </nav>
 
-  <div class="status-pill">
-    <span class="status-dot" id="sdot"></span>
-    <span id="slabel">Connecting…</span>
+  <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('fr')">FR</button>
+      <button class="lang-btn" onclick="setLang('es')">ES</button>
+      <button class="lang-btn" onclick="setLang('ko')">한국어</button>
+    </div>
+    <div class="status-pill">
+      <span class="status-dot" id="sdot"></span>
+      <span id="slabel">Connecting…</span>
+    </div>
   </div>
 </header>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     MAIN
-════════════════════════════════════════════════════════════════ -->
+<!-- ═══ MAIN ═══ -->
 <main class="main">
 
-  <!-- ────── SEND ────── -->
+  <!-- ── SEND ── -->
   <div class="panel active" id="panel-send">
-
     <div class="card" style="padding:1rem" id="send-drop-card">
       <div class="dropzone" id="dz"
         ondragover="event.preventDefault();this.classList.add('over')"
@@ -226,287 +299,547 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:1rem 0}
         ondrop="handleDrop(event)">
         <input type="file" multiple onchange="handleFiles(event)">
         <div style="font-size:2.6rem;margin-bottom:.6rem">📂</div>
-        <div style="font-size:.9rem;color:var(--muted)"><strong style="color:var(--indigo)">Click</strong> or drop your files here</div>
-        <div style="font-size:.76rem;color:var(--light);margin-top:.25rem">All formats · up to 5 GB per transfer</div>
+        <div style="font-size:.9rem;color:var(--muted)"><strong style="color:var(--indigo)" data-i18n="dz_click">Click</strong> <span data-i18n="dz_or_drop">or drop your files here</span></div>
+        <div style="font-size:.76rem;color:var(--light);margin-top:.25rem" data-i18n="dz_sub">All formats · up to 5 GB per transfer</div>
       </div>
       <div id="file-list"></div>
     </div>
 
     <div class="card" id="send-form-card">
-      <div class="card-title">✉️ Recipient &amp; options</div>
-
+      <div class="card-title">✉️ <span data-i18n="form_title">Recipient &amp; options</span></div>
       <div class="frow">
-        <label class="flabel">Email or phone number *</label>
-        <input id="inp-recipient" type="text" placeholder="alice@example.com or +1-555-000-0000" oninput="onRecipient(this.value)">
+        <label class="flabel" data-i18n="label_recipient">Email or phone number *</label>
+        <input id="inp-recipient" type="text" oninput="onRecipient(this.value)">
         <div id="recipient-hint" class="fhint"></div>
       </div>
-
       <div class="frow">
-        <label class="flabel">Message <span class="flabel-opt">(optional)</span></label>
-        <textarea id="inp-message" maxlength="500" placeholder="e.g. Hi, here are the files we discussed." oninput="Q('msg-count').textContent=this.value.length"></textarea>
+        <label class="flabel"><span data-i18n="label_message">Message</span> <span class="flabel-opt" data-i18n="optional">(optional)</span></label>
+        <textarea id="inp-message" maxlength="500" oninput="Q('msg-count').textContent=this.value.length"></textarea>
         <div style="font-size:.72rem;color:var(--light);text-align:right;margin-top:.2rem"><span id="msg-count">0</span>/500</div>
       </div>
-
       <div class="g2">
         <div class="frow" style="margin-bottom:0">
-          <label class="flabel">Expiry</label>
+          <label class="flabel" data-i18n="label_expiry">Expiry</label>
           <select id="inp-expiry">
-            <option value="24h">24 hours</option>
-            <option value="7d" selected>7 days</option>
-            <option value="30d">30 days</option>
-            <option value="never">Never</option>
+            <option value="24h" data-i18n="exp_24h">24 hours</option>
+            <option value="7d" selected data-i18n="exp_7d">7 days</option>
+            <option value="30d" data-i18n="exp_30d">30 days</option>
+            <option value="never" data-i18n="exp_never">Never</option>
           </select>
         </div>
         <div class="frow" style="margin-bottom:0">
-          <label class="flabel">Max downloads</label>
+          <label class="flabel" data-i18n="label_maxdl">Max downloads</label>
           <select id="inp-maxdl">
-            <option value="1" selected>1 time</option>
-            <option value="3">3 times</option>
-            <option value="10">10 times</option>
-            <option value="0">Unlimited</option>
+            <option value="1" selected data-i18n="dl_1">1 time</option>
+            <option value="3" data-i18n="dl_3">3 times</option>
+            <option value="10" data-i18n="dl_10">10 times</option>
+            <option value="0" data-i18n="dl_0">Unlimited</option>
           </select>
         </div>
       </div>
-
       <div style="height:.9rem"></div>
-
-      <div class="infobox infobox-violet">
-        🔒
-        <div><strong>End-to-end encryption</strong> — AES-256-GCM key wrapped by ECIES/X25519 in your browser. No URL, no server ever sees the decryption key.</div>
-      </div>
-
-      <button class="btn-primary btn-full btn-lg" id="send-btn" disabled onclick="doSend()">
-        Encrypt &amp; Send
-      </button>
+      <div class="infobox infobox-violet">🔒 <div><strong data-i18n="e2e_title">End-to-end encryption</strong> — <span data-i18n="e2e_desc">AES-256-GCM key wrapped by ECIES/X25519 in your browser. No URL, no server ever sees the decryption key.</span></div></div>
+      <button class="btn-primary btn-full btn-lg" id="send-btn" disabled onclick="doSend()" data-i18n="btn_send">Encrypt &amp; Send</button>
     </div>
 
-    <!-- Upload progress -->
     <div class="card big-state" id="send-prog-card" style="display:none">
       <div class="big-icon">🔒</div>
-      <div class="big-title" id="prog-step">Initializing…</div>
-      <div class="big-sub">Local encryption — your files never travel in plaintext</div>
+      <div class="big-title" id="prog-step"></div>
+      <div class="big-sub" data-i18n="prog_sub">Local encryption — your files never travel in plaintext</div>
       <div class="progress-track" style="max-width:340px;margin:.8rem auto 0">
         <div class="progress-fill" id="prog-bar" style="width:0%"></div>
       </div>
       <div style="font-size:.77rem;color:var(--light);margin-top:.5rem" id="prog-pct">0%</div>
     </div>
 
-    <!-- Done -->
     <div class="card big-state" id="send-done-card" style="display:none">
       <div class="big-icon">✅</div>
-      <div class="big-title">Transfer published</div>
-      <div class="big-sub" id="send-done-sub">The recipient has been notified.</div>
+      <div class="big-title" data-i18n="send_done_title">Transfer published</div>
+      <div class="big-sub" id="send-done-sub"></div>
       <div class="frow" style="text-align:left;max-width:500px;margin:0 auto 1.2rem">
-        <label class="flabel">Download link</label>
+        <label class="flabel" data-i18n="download_link">Download link</label>
         <div class="link-box">
           <span class="link-url" id="send-link-url"></span>
-          <button class="btn-outline btn-sm" onclick="copyLink('send-link-url',this)">Copy</button>
+          <button class="btn-outline btn-sm" onclick="copyLink('send-link-url',this)" data-i18n="btn_copy">Copy</button>
         </div>
       </div>
-      <button class="btn-ghost" onclick="resetSend()">New transfer</button>
+      <button class="btn-ghost" onclick="resetSend()" data-i18n="btn_new_transfer">New transfer</button>
     </div>
   </div>
 
-  <!-- ────── RECEIVE ────── -->
+  <!-- ── RECEIVE ── -->
   <div class="panel" id="panel-receive">
-
     <div class="card" id="rx-idle-card">
       <div class="big-state" style="padding:2rem 1rem">
         <div class="big-icon">📥</div>
-        <div class="big-title">Receive a file</div>
-        <div class="big-sub">Paste the link you received by email or SMS.</div>
+        <div class="big-title" data-i18n="rx_title">Receive a file</div>
+        <div class="big-sub" data-i18n="rx_sub">Paste the link you received by email or SMS.</div>
         <div class="frow" style="max-width:420px;margin:0 auto 1rem;text-align:left">
-          <label class="flabel">Transfer link</label>
-          <input id="rx-link-inp" type="text" placeholder="https://geoking2104.github.io/filenymous?d=…" oninput="Q('rx-go-btn').disabled=!this.value.trim()">
+          <label class="flabel" data-i18n="rx_label">Transfer link</label>
+          <input id="rx-link-inp" type="text" oninput="Q('rx-go-btn').disabled=!this.value.trim()">
         </div>
-        <button class="btn-primary btn-lg" id="rx-go-btn" disabled onclick="rxResolve()">
-          Access file
-        </button>
+        <button class="btn-primary btn-lg" id="rx-go-btn" disabled onclick="rxResolve()" data-i18n="rx_btn">Access file</button>
       </div>
     </div>
 
     <div class="card" id="rx-found-card" style="display:none">
       <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.4rem">
         <div style="width:54px;height:54px;border-radius:12px;background:var(--grad-soft);display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0">📄</div>
-        <div>
-          <div style="font-size:1rem;font-weight:700" id="rx-fname">—</div>
-          <div style="font-size:.78rem;color:var(--muted)" id="rx-fmeta">—</div>
-        </div>
+        <div><div style="font-size:1rem;font-weight:700" id="rx-fname">—</div><div style="font-size:.78rem;color:var(--muted)" id="rx-fmeta">—</div></div>
       </div>
       <div class="g2" style="margin-bottom:1rem">
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:.7rem 1rem">
-          <div style="font-size:.7rem;color:var(--muted);margin-bottom:.15rem">Max downloads</div>
+        <div style="background:rgba(248,249,252,.9);border:1px solid var(--border);border-radius:9px;padding:.7rem 1rem">
+          <div style="font-size:.7rem;color:var(--muted);margin-bottom:.15rem" data-i18n="label_maxdl">Max downloads</div>
           <div style="font-size:.87rem;font-weight:600" id="rx-maxdl">—</div>
         </div>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:.7rem 1rem">
-          <div style="font-size:.7rem;color:var(--muted);margin-bottom:.15rem">Status</div>
-          <div style="font-size:.87rem;font-weight:600;color:var(--ok)">Available</div>
+        <div style="background:rgba(248,249,252,.9);border:1px solid var(--border);border-radius:9px;padding:.7rem 1rem">
+          <div style="font-size:.7rem;color:var(--muted);margin-bottom:.15rem" data-i18n="status">Status</div>
+          <div style="font-size:.87rem;font-weight:600;color:var(--ok)" data-i18n="available">Available</div>
         </div>
       </div>
-
       <div id="rx-prog" style="display:none;margin-bottom:.8rem">
         <div class="progress-track"><div class="progress-fill" id="rx-bar" style="width:0%"></div></div>
         <div style="font-size:.76rem;color:var(--muted);margin-top:.35rem" id="rx-step-label"></div>
       </div>
-
-      <div class="infobox infobox-violet">
-        🔒
-        <div><strong>Local decryption</strong> — AES key recovered via ECIES/X25519 from the DHT. Neither the URL nor any server holds the key.</div>
-      </div>
-
-      <button class="btn-ok btn-full btn-lg" id="rx-dl-btn" onclick="rxDownload()">
-        ⬇ Download &amp; Decrypt
-      </button>
+      <div class="infobox infobox-violet">🔒 <div><strong data-i18n="local_decrypt">Local decryption</strong> — <span data-i18n="local_decrypt_desc">AES key recovered via ECIES/X25519 from the DHT. No URL or server holds the key.</span></div></div>
+      <button class="btn-ok btn-full btn-lg" id="rx-dl-btn" onclick="rxDownload()" data-i18n="btn_download">⬇ Download &amp; Decrypt</button>
     </div>
 
     <div class="card big-state" id="rx-done-card" style="display:none">
       <div class="big-icon">🎉</div>
-      <div class="big-title">File downloaded</div>
-      <div class="big-sub" id="rx-done-sub">Decrypted and saved.</div>
-      <button class="btn-ghost" onclick="rxReset()">Receive another file</button>
+      <div class="big-title" data-i18n="rx_done_title">File downloaded</div>
+      <div class="big-sub" id="rx-done-sub"></div>
+      <button class="btn-ghost" onclick="rxReset()" data-i18n="rx_another">Receive another file</button>
     </div>
   </div>
 
-  <!-- ────── HISTORY ────── -->
+  <!-- ── HISTORY ── -->
   <div class="panel" id="panel-history">
     <div class="card">
-      <div class="card-title">📋 Sent transfers</div>
-      <div id="hist-list">
-        <div style="text-align:center;padding:3rem 1rem;color:var(--light);font-size:.9rem">No transfers yet</div>
-      </div>
+      <div class="card-title">📋 <span data-i18n="hist_title">Sent transfers</span></div>
+      <div id="hist-list"></div>
     </div>
   </div>
 
-  <!-- ────── IDENTITY ────── -->
+  <!-- ── IDENTITY ── -->
   <div class="panel" id="panel-identity">
-
     <div class="card">
-      <div class="card-title">🔑 My Holochain agent key</div>
+      <div class="card-title">🔑 <span data-i18n="id_agent_title">My Holochain agent key</span></div>
       <div style="display:flex;align-items:center;gap:.9rem">
         <div class="avatar avatar-lg" id="id-avatar">?</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:.73rem;color:var(--muted);margin-bottom:.2rem">AgentPubKey Ed25519</div>
           <div class="key-mono" id="agent-key-el" style="margin-top:0;border:none;padding:.2rem 0;background:none">—</div>
         </div>
-        <button class="btn-outline btn-sm" onclick="copyText(S.agentKey,this)">Copy</button>
+        <button class="btn-outline btn-sm" onclick="copyText(S.agentKey,this)" data-i18n="btn_copy">Copy</button>
       </div>
     </div>
-
     <div class="card">
-      <div class="card-title">🔐 Encryption key — X25519 (M3)</div>
+      <div class="card-title">🔐 <span data-i18n="x25519_title">Encryption key — X25519 (M3)</span></div>
       <div id="x25519-card-body">
-        <div class="infobox infobox-amber">⚠️ <span>No X25519 key yet — link a contact first to generate your encryption key.</span></div>
+        <div class="infobox infobox-amber">⚠️ <span data-i18n="x25519_empty">No X25519 key yet — link a contact first to generate your encryption key.</span></div>
       </div>
     </div>
-
     <div class="card">
-      <div class="card-title">📡 Linked contacts</div>
-      <div class="infobox infobox-blue">🛡️ <div>Your email or phone number is <strong>never published in plaintext</strong> — only its SHA-256 hash circulates on the DHT.</div></div>
-
+      <div class="card-title">📡 <span data-i18n="contacts_title">Linked contacts</span></div>
+      <div class="infobox infobox-blue">🛡️ <div data-i18n="contacts_info">Your email or phone is <strong>never published in plaintext</strong> — only its SHA-256 hash circulates on the DHT.</div></div>
       <div id="contact-list"></div>
-
       <hr class="sep">
-      <div class="card-title" style="margin-bottom:.75rem">Link a new contact</div>
-
+      <div class="card-title" style="margin-bottom:.75rem" data-i18n="add_contact">Link a new contact</div>
       <div id="otp-s1" style="display:flex;gap:.6rem">
-        <input id="inp-contact" type="text" placeholder="email or +1-555-…" oninput="checkOtpBtn()">
-        <button class="btn-primary" id="otp-btn" disabled onclick="sendOtp()" style="white-space:nowrap;flex-shrink:0">Verify →</button>
+        <input id="inp-contact" type="text" oninput="checkOtpBtn()">
+        <button class="btn-primary" id="otp-btn" disabled onclick="sendOtp()" style="white-space:nowrap;flex-shrink:0" data-i18n="btn_verify">Verify →</button>
       </div>
-
       <div id="otp-s2" style="display:none">
-        <div style="font-size:.83rem;color:var(--muted);margin-bottom:.7rem">
-          Code sent to <strong id="otp-target-label"></strong> — valid for 10 min.
-        </div>
-        <div class="infobox infobox-demo">🧪 <span>Demo mode: use code <strong>123456</strong> to simulate OTP verification.</span></div>
+        <div style="font-size:.83rem;color:var(--muted);margin-bottom:.7rem"><span data-i18n="otp_sent">Code sent to</span> <strong id="otp-target-label"></strong></div>
+        <div class="infobox infobox-demo">🧪 <span data-i18n="otp_hint">Demo mode: use code <strong>123456</strong></span></div>
         <div style="display:flex;gap:.6rem">
-          <input id="inp-otp" type="text" maxlength="6" placeholder="● ● ● ● ● ●"
-            style="letter-spacing:.3em;text-align:center;font-weight:700;font-size:1.1rem"
-            oninput="Q('otp-confirm-btn').disabled=this.value.length<6">
-          <button class="btn-ok" id="otp-confirm-btn" disabled onclick="confirmOtp()" style="white-space:nowrap;flex-shrink:0">Confirm</button>
+          <input id="inp-otp" type="text" maxlength="6" style="letter-spacing:.3em;text-align:center;font-weight:700;font-size:1.1rem" oninput="Q('otp-confirm-btn').disabled=this.value.length<6">
+          <button class="btn-ok" id="otp-confirm-btn" disabled onclick="confirmOtp()" style="white-space:nowrap;flex-shrink:0" data-i18n="btn_confirm">Confirm</button>
           <button class="btn-ghost btn-sm" onclick="otpCancel()" style="flex-shrink:0">✕</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ────── PRIVACY ────── -->
+  <!-- ── PRIVACY ── -->
   <div class="panel" id="panel-privacy">
     <div class="card">
-      <div class="card-title">🔒 Privacy &amp; GDPR</div>
-
-      <div class="priv-block">
-        <h3>End-to-end encryption</h3>
-        <p>Files are encrypted with AES-256-GCM directly in your browser before any transfer takes place. The AES session key is itself encrypted via ECIES/X25519 (HKDF-SHA-256) using the recipient's X25519 public key. Nobody — not DHT nodes, not the Filenymous team — can decrypt your files.</p>
-      </div>
-
-      <div class="priv-block">
-        <h3>Peer-to-peer Holochain network</h3>
-        <p>There is no central server. Data is distributed across the Holochain DHT. Each participant hosts a fraction of the encrypted network. Your email or phone number is never published in plaintext — only its SHA-256 fingerprint (non-reversible) travels on the network.</p>
-      </div>
-
-      <div class="priv-block">
-        <h3>Keys and identity</h3>
-        <p>Your X25519 private key is generated locally and stored in your browser's IndexedDB. It never leaves your device. OTP verification is handled by a bridge service (Node.js + Fastify) that keeps no contact logs.</p>
-      </div>
-
-      <div class="priv-block">
-        <h3>Retention period</h3>
-        <p>Transfers expire according to the duration chosen at send time (24h, 7d, 30d, or no expiry). After expiry or when the download quota is reached, the manifest is revoked on the DHT and the encrypted chunks become inaccessible.</p>
-      </div>
-
-      <div class="priv-block">
-        <h3>GDPR</h3>
-        <p>Filenymous collects no personally identifiable data. No tracking cookies. No behavioral analytics. OTP notifications transit via SendGrid / Twilio — their policies apply for message delivery only. Addresses are not stored.</p>
-      </div>
-
-      <div class="infobox infobox-green" style="margin-bottom:0">
-        ✅
-        <div>Open-source codebase — <a href="https://github.com/Geoking2104/filenymous" target="_blank" style="color:var(--ok);font-weight:600">github.com/Geoking2104/filenymous</a> — auditable at any time.</div>
-      </div>
+      <div class="card-title">🔒 <span data-i18n="priv_title">Privacy &amp; GDPR</span></div>
+      <div class="priv-block"><h3 data-i18n="priv_e2e_h">End-to-end encryption</h3><p data-i18n="priv_e2e_p">Files are encrypted with AES-256-GCM directly in your browser before any transfer. The AES session key is encrypted via ECIES/X25519 (HKDF-SHA-256) using the recipient's public key. Nobody — not DHT nodes, not the Filenymous team — can decrypt your files.</p></div>
+      <div class="priv-block"><h3 data-i18n="priv_p2p_h">Peer-to-peer Holochain network</h3><p data-i18n="priv_p2p_p">No central server. Data is distributed across the Holochain DHT. Your email or phone number is never published in plaintext — only its non-reversible SHA-256 fingerprint circulates.</p></div>
+      <div class="priv-block"><h3 data-i18n="priv_keys_h">Keys and identity</h3><p data-i18n="priv_keys_p">Your X25519 private key is generated locally and stored in your browser's IndexedDB. It never leaves your device. OTP verification is handled by a bridge service that keeps no contact logs.</p></div>
+      <div class="priv-block"><h3 data-i18n="priv_ret_h">Retention period</h3><p data-i18n="priv_ret_p">Transfers expire according to the duration chosen at send time. After expiry or when the download quota is reached, the manifest is revoked on the DHT.</p></div>
+      <div class="priv-block"><h3>GDPR</h3><p data-i18n="priv_gdpr_p">No personally identifiable data collected. No tracking cookies. No behavioral analytics. OTP notifications transit via SendGrid / Twilio for delivery only.</p></div>
+      <div class="infobox infobox-green" style="margin-bottom:0">✅ <div><span data-i18n="opensource">Open-source codebase</span> — <a href="https://github.com/Geoking2104/filenymous" target="_blank" style="color:var(--ok);font-weight:600">github.com/Geoking2104/filenymous</a></div></div>
     </div>
   </div>
 
 </main>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     FOOTER
-════════════════════════════════════════════════════════════════ -->
+<!-- ═══ COMPARISON ═══ -->
+<section class="compare-section">
+  <div class="compare-inner">
+    <div class="compare-title"><h2 data-i18n="cmp_title">Why Filenymous?</h2></div>
+    <div class="compare-subtitle" data-i18n="cmp_sub">Filenymous vs WeTransfer vs SwissTransfer</div>
+    <div class="compare-grid">
+
+      <!-- Filenymous -->
+      <div class="compare-card winner">
+        <div class="compare-logo">⟁</div>
+        <div class="compare-name">Filenymous</div>
+        <div class="compare-tagline" data-i18n="cmp_filen_tag">Decentralized · Encrypted · Open-source</div>
+        <div class="compare-rows">
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_e2e">Encryption: </span><span class="val">ECIES/X25519 + AES-256</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_key">Key in URL: </span><span class="val" data-i18n="cmp_never">Never</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_server">Central server: </span><span class="val" data-i18n="cmp_none">None (DHT P2P)</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_size">Size limit: </span><span class="val" data-i18n="cmp_nolimit">No limit (P2P)</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_account">Account: </span><span class="val" data-i18n="cmp_notrequired">Not required</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_ads">Ads: </span><span class="val" data-i18n="cmp_noads">None</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_oss">Source code: </span><span class="val" data-i18n="cmp_opensource">Open-source</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_id">Identity: </span><span class="val" data-i18n="cmp_sha256">SHA-256 hash only</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label">GDPR: </span><span class="val" data-i18n="cmp_bydesign">By design</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_price">Price: </span><span class="val" data-i18n="cmp_free">Free forever</span></div></div>
+        </div>
+      </div>
+
+      <!-- WeTransfer -->
+      <div class="compare-card">
+        <div class="compare-logo">🔵</div>
+        <div class="compare-name">WeTransfer</div>
+        <div class="compare-tagline" data-i18n="cmp_wet_tag">Centralized · Simple · Freemium</div>
+        <div class="compare-rows">
+          <div class="compare-row con"><span class="ico">❌</span><div><span class="label" data-i18n="cmp_row_e2e">Encryption: </span><span class="val" data-i18n="cmp_transit_only">Transit only (TLS)</span></div></div>
+          <div class="compare-row con"><span class="ico">❌</span><div><span class="label" data-i18n="cmp_row_key">Key in URL: </span><span class="val" data-i18n="cmp_yes">Yes</span></div></div>
+          <div class="compare-row con"><span class="ico">❌</span><div><span class="label" data-i18n="cmp_row_server">Central server: </span><span class="val" data-i18n="cmp_us_servers">US servers</span></div></div>
+          <div class="compare-row neu"><span class="ico">⚠️</span><div><span class="label" data-i18n="cmp_row_size">Size limit: </span><span class="val" data-i18n="cmp_wet_size">2 GB (free) / 200 GB</span></div></div>
+          <div class="compare-row neu"><span class="ico">⚠️</span><div><span class="label" data-i18n="cmp_row_account">Account: </span><span class="val" data-i18n="cmp_for_plus">Required for Pro</span></div></div>
+          <div class="compare-row con"><span class="ico">❌</span><div><span class="label" data-i18n="cmp_row_ads">Ads: </span><span class="val" data-i18n="cmp_free_tier">On free tier</span></div></div>
+          <div class="compare-row con"><span class="ico">❌</span><div><span class="label" data-i18n="cmp_row_oss">Source code: </span><span class="val" data-i18n="cmp_closed">Closed source</span></div></div>
+          <div class="compare-row con"><span class="ico">❌</span><div><span class="label" data-i18n="cmp_row_id">Identity: </span><span class="val" data-i18n="cmp_email_stored">Email stored</span></div></div>
+          <div class="compare-row con"><span class="ico">❌</span><div><span class="label">GDPR: </span><span class="val" data-i18n="cmp_partial">Partial</span></div></div>
+          <div class="compare-row neu"><span class="ico">⚠️</span><div><span class="label" data-i18n="cmp_row_price">Price: </span><span class="val" data-i18n="cmp_wet_price">Free / €12/mo</span></div></div>
+        </div>
+      </div>
+
+      <!-- SwissTransfer -->
+      <div class="compare-card">
+        <div class="compare-logo">🇨🇭</div>
+        <div class="compare-name">SwissTransfer</div>
+        <div class="compare-tagline" data-i18n="cmp_swt_tag">Swiss servers · Generous · Free</div>
+        <div class="compare-rows">
+          <div class="compare-row neu"><span class="ico">⚠️</span><div><span class="label" data-i18n="cmp_row_e2e">Encryption: </span><span class="val" data-i18n="cmp_aes_url">AES-256 (key in URL)</span></div></div>
+          <div class="compare-row con"><span class="ico">❌</span><div><span class="label" data-i18n="cmp_row_key">Key in URL: </span><span class="val" data-i18n="cmp_yes">Yes</span></div></div>
+          <div class="compare-row neu"><span class="ico">⚠️</span><div><span class="label" data-i18n="cmp_row_server">Central server: </span><span class="val" data-i18n="cmp_ch_servers">Swiss servers</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_size">Size limit: </span><span class="val" data-i18n="cmp_swt_size">50 GB</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_account">Account: </span><span class="val" data-i18n="cmp_notrequired">Not required</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_ads">Ads: </span><span class="val" data-i18n="cmp_noads">None</span></div></div>
+          <div class="compare-row con"><span class="ico">❌</span><div><span class="label" data-i18n="cmp_row_oss">Source code: </span><span class="val" data-i18n="cmp_closed">Closed source</span></div></div>
+          <div class="compare-row neu"><span class="ico">⚠️</span><div><span class="label" data-i18n="cmp_row_id">Identity: </span><span class="val" data-i18n="cmp_email_optional">Email optional</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label">GDPR: </span><span class="val" data-i18n="cmp_swiss_law">Swiss law</span></div></div>
+          <div class="compare-row pro"><span class="ico">✅</span><div><span class="label" data-i18n="cmp_row_price">Price: </span><span class="val" data-i18n="cmp_free">Free forever</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
 <footer class="footer">
   <div style="display:flex;align-items:center;gap:.5rem">
     <span style="font-size:.85rem;font-weight:800;color:var(--indigo)">⟁ Filenymous</span>
     <span style="color:var(--border)">·</span>
-    <span style="font-size:.77rem;color:var(--light)">© 2026 — Open-source protocol</span>
+    <span style="font-size:.77rem;color:var(--light)">© 2026 — <span data-i18n="opensource">Open-source protocol</span></span>
   </div>
   <div class="flinks">
     <a href="https://github.com/Geoking2104/filenymous" target="_blank" class="flink">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
       GitHub
     </a>
-    <button class="flink" onclick="nav('privacy')">🔒 Privacy</button>
+    <button class="flink" onclick="nav('privacy')" data-i18n="tab_privacy">Privacy</button>
     <a href="https://developer.holochain.org" target="_blank" class="flink">Holochain</a>
   </div>
 </footer>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     SCRIPT
-════════════════════════════════════════════════════════════════ -->
+<!-- ═══ SCRIPT ═══ -->
 <script>
-const Q = id => document.getElementById(id);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-const S = {
-  files:[],transfers:[],contacts:[],
-  agentKey:'',x25519pub:null,x25519priv:null,rxManifest:null,
+/* ── i18n ──────────────────────────────────────────────────────────── */
+const STRINGS = {
+  en:{
+    demo_label:'Demo mode',demo_sub:'real WebCrypto encryption, simulated Holochain network',
+    tab_send:'Send',tab_receive:'Receive',tab_history:'History',tab_identity:'Identity',tab_privacy:'Privacy',
+    dz_click:'Click',dz_or_drop:'or drop your files here',dz_sub:'All formats · up to 5 GB per transfer',
+    form_title:'Recipient &amp; options',label_recipient:'Email or phone number *',
+    label_message:'Message',optional:'(optional)',
+    label_expiry:'Expiry',exp_24h:'24 hours',exp_7d:'7 days',exp_30d:'30 days',exp_never:'Never',
+    label_maxdl:'Max downloads',dl_1:'1 time',dl_3:'3 times',dl_10:'10 times',dl_0:'Unlimited',
+    e2e_title:'End-to-end encryption',e2e_desc:'AES-256-GCM key wrapped by ECIES/X25519 in your browser. No URL, no server ever sees the decryption key.',
+    btn_send:'Encrypt &amp; Send',prog_sub:'Local encryption — your files never travel in plaintext',
+    send_done_title:'Transfer published',download_link:'Download link',btn_copy:'Copy',btn_new_transfer:'New transfer',
+    rx_title:'Receive a file',rx_sub:'Paste the link you received by email or SMS.',
+    rx_label:'Transfer link',rx_btn:'Access file',
+    local_decrypt:'Local decryption',local_decrypt_desc:'AES key recovered via ECIES/X25519 from the DHT. No URL or server holds the key.',
+    btn_download:'⬇ Download &amp; Decrypt',rx_done_title:'File downloaded',rx_another:'Receive another file',
+    hist_title:'Sent transfers',hist_empty:'No transfers yet',
+    id_agent_title:'My Holochain agent key',x25519_title:'Encryption key — X25519 (M3)',
+    x25519_empty:'No X25519 key yet — link a contact first to generate your encryption key.',
+    contacts_title:'Linked contacts',contacts_info:'Your email or phone is <strong>never published in plaintext</strong> — only its SHA-256 hash circulates on the DHT.',
+    add_contact:'Link a new contact',otp_sent:'Code sent to',otp_hint:'Demo mode: use code <strong>123456</strong>',
+    btn_verify:'Verify →',btn_confirm:'Confirm',
+    priv_title:'Privacy &amp; GDPR',
+    priv_e2e_h:'End-to-end encryption',priv_e2e_p:'Files are encrypted with AES-256-GCM directly in your browser before any transfer. The AES session key is encrypted via ECIES/X25519 using the recipient\'s public key. Nobody — not DHT nodes, not Filenymous — can decrypt your files.',
+    priv_p2p_h:'Peer-to-peer Holochain network',priv_p2p_p:'No central server. Data is distributed across the Holochain DHT. Your email or phone number is never published in plaintext — only its non-reversible SHA-256 fingerprint circulates.',
+    priv_keys_h:'Keys and identity',priv_keys_p:'Your X25519 private key is generated locally and stored in your browser\'s IndexedDB. It never leaves your device. OTP verification keeps no contact logs.',
+    priv_ret_h:'Retention period',priv_ret_p:'Transfers expire according to the duration chosen at send time. After expiry or download quota, the manifest is revoked on the DHT.',
+    priv_gdpr_p:'No personally identifiable data collected. No tracking cookies. No behavioral analytics.',
+    opensource:'Open-source',
+    status_connecting:'Connecting…',status_connected:'3 DHT peers (demo)',
+    hint_known:'✓ X25519 key found on DHT',hint_unknown:'⚠ Unknown contact — a link will be sent by',
+    hint_email:'email',hint_sms:'SMS',
+    notified_by:'Recipient notified by',
+    prog_checksums:'Computing checksums…',prog_dht:'Resolving recipient on DHT…',
+    prog_x25519:'Fetching X25519 key…',prog_aes:'Generating AES-256-GCM key…',
+    prog_ecies:'ECIES wrapping session key…',prog_manifest:'Creating DHT manifest…',
+    prog_chunk:'Encrypting chunk',prog_finalize:'Finalizing DHT storage…',
+    prog_notify:'Notifying recipient…',prog_done:'Published!',
+    rx_prog_priv:'Loading X25519 private key…',rx_prog_ecies:'ECIES-decrypting session key…',
+    rx_prog_chunks:'Fetching encrypted chunks from DHT…',rx_prog_decrypt:'Decrypting chunk',
+    rx_prog_save:'Saving file…',rx_prog_done:'Done!',
+    decrypted_saved:'decrypted and saved.',
+    otp_verified:'✓ OTP verified · Published on DHT',
+    x25519_active:'X25519 key active — senders can encrypt files specifically for you without exposing the AES key in the URL.',
+    revoke:'Revoke',revoke_confirm:'Revoke',
+    cmp_title:'Why Filenymous?',cmp_sub:'Filenymous vs WeTransfer vs SwissTransfer',
+    cmp_filen_tag:'Decentralized · Encrypted · Open-source',
+    cmp_wet_tag:'Centralized · Simple · Freemium',
+    cmp_swt_tag:'Swiss servers · Generous · Free',
+    cmp_row_e2e:'Encryption: ',cmp_row_key:'Key in URL: ',cmp_row_server:'Central server: ',
+    cmp_row_size:'Size limit: ',cmp_row_account:'Account: ',cmp_row_ads:'Ads: ',
+    cmp_row_oss:'Source code: ',cmp_row_id:'Identity: ',cmp_row_price:'Price: ',
+    cmp_never:'Never',cmp_none:'None (DHT P2P)',cmp_nolimit:'No limit (P2P)',
+    cmp_notrequired:'Not required',cmp_noads:'None',cmp_opensource:'Open-source',
+    cmp_sha256:'SHA-256 hash only',cmp_bydesign:'By design',cmp_free:'Free forever',
+    cmp_transit_only:'Transit only (TLS)',cmp_yes:'Yes',cmp_us_servers:'US servers',
+    cmp_wet_size:'2 GB (free) / 200 GB',cmp_for_plus:'Required for Pro',cmp_free_tier:'On free tier',
+    cmp_closed:'Closed source',cmp_email_stored:'Email stored',cmp_partial:'Partial',cmp_wet_price:'Free / €12/mo',
+    cmp_aes_url:'AES-256 (key in URL)',cmp_ch_servers:'Swiss servers',cmp_swt_size:'50 GB',
+    cmp_email_optional:'Email optional',cmp_swiss_law:'Swiss law',
+    status:'Status',available:'Available',
+  },
+  fr:{
+    demo_label:'Mode démo',demo_sub:'chiffrement WebCrypto réel, réseau Holochain simulé',
+    tab_send:'Envoyer',tab_receive:'Recevoir',tab_history:'Historique',tab_identity:'Identité',tab_privacy:'Confidentialité',
+    dz_click:'Cliquez',dz_or_drop:'ou déposez vos fichiers ici',dz_sub:'Tous formats · jusqu\'à 5 Go par transfert',
+    form_title:'Destinataire &amp; options',label_recipient:'Email ou numéro de téléphone *',
+    label_message:'Message',optional:'(optionnel)',
+    label_expiry:'Expiration',exp_24h:'24 heures',exp_7d:'7 jours',exp_30d:'30 jours',exp_never:'Jamais',
+    label_maxdl:'Téléchargements max',dl_1:'1 fois',dl_3:'3 fois',dl_10:'10 fois',dl_0:'Illimité',
+    e2e_title:'Chiffrement de bout en bout',e2e_desc:'Clé AES-256-GCM enveloppée par ECIES/X25519 dans votre navigateur. Ni l\'URL, ni aucun serveur ne voit la clé.',
+    btn_send:'Chiffrer &amp; Envoyer',prog_sub:'Chiffrement local — vos fichiers ne transitent jamais en clair',
+    send_done_title:'Transfert publié',download_link:'Lien de téléchargement',btn_copy:'Copier',btn_new_transfer:'Nouvel envoi',
+    rx_title:'Recevoir un fichier',rx_sub:'Collez le lien reçu par email ou SMS.',
+    rx_label:'Lien de transfert',rx_btn:'Accéder au fichier',
+    local_decrypt:'Déchiffrement local',local_decrypt_desc:'Clé AES reconstituée via ECIES/X25519 depuis le DHT. Ni l\'URL ni aucun serveur ne contient la clé.',
+    btn_download:'⬇ Télécharger &amp; Déchiffrer',rx_done_title:'Fichier téléchargé',rx_another:'Recevoir un autre fichier',
+    hist_title:'Transferts envoyés',hist_empty:'Aucun transfert pour l\'instant',
+    id_agent_title:'Ma clé agent Holochain',x25519_title:'Clé de chiffrement — X25519 (M3)',
+    x25519_empty:'Aucune clé X25519 — liez d\'abord un contact pour générer votre clé de chiffrement.',
+    contacts_title:'Contacts liés',contacts_info:'Votre email ou téléphone n\'est <strong>jamais publié en clair</strong> — seul son hash SHA-256 circule sur le DHT.',
+    add_contact:'Lier un nouveau contact',otp_sent:'Code envoyé à',otp_hint:'Démo : utilisez le code <strong>123456</strong>',
+    btn_verify:'Vérifier →',btn_confirm:'Confirmer',
+    priv_title:'Confidentialité &amp; RGPD',
+    priv_e2e_h:'Chiffrement de bout en bout',priv_e2e_p:'Les fichiers sont chiffrés avec AES-256-GCM directement dans votre navigateur. La clé AES est chiffrée via ECIES/X25519 avec la clé publique du destinataire. Personne — ni les nœuds DHT, ni Filenymous — ne peut déchiffrer vos fichiers.',
+    priv_p2p_h:'Réseau pair-à-pair Holochain',priv_p2p_p:'Pas de serveur central. Les données sont distribuées sur le DHT Holochain. Votre email ou téléphone n\'est jamais publié en clair — seule son empreinte SHA-256 (non réversible) circule.',
+    priv_keys_h:'Clés et identité',priv_keys_p:'Votre clé privée X25519 est générée localement et stockée dans l\'IndexedDB de votre navigateur. Elle ne quitte jamais votre appareil. La vérification OTP ne conserve aucun log.',
+    priv_ret_h:'Durée de rétention',priv_ret_p:'Les transferts expirent selon la durée choisie. À l\'expiration ou dépassement du quota, le manifest est révoqué sur le DHT.',
+    priv_gdpr_p:'Aucune donnée personnelle collectée. Aucun cookie de tracking. Aucune analyse comportementale.',
+    opensource:'Open-source',
+    status_connecting:'Connexion…',status_connected:'3 pairs DHT (démo)',
+    hint_known:'✓ Clé X25519 trouvée sur le DHT',hint_unknown:'⚠ Contact inconnu — un lien sera envoyé par',
+    hint_email:'email',hint_sms:'SMS',
+    notified_by:'Destinataire notifié par',
+    prog_checksums:'Calcul des checksums…',prog_dht:'Résolution DHT du destinataire…',
+    prog_x25519:'Récupération de la clé X25519…',prog_aes:'Génération de la clé AES-256-GCM…',
+    prog_ecies:'Chiffrement ECIES de la clé de session…',prog_manifest:'Création du manifest DHT…',
+    prog_chunk:'Chunk chiffré',prog_finalize:'Finalisation du stockage DHT…',
+    prog_notify:'Notification du destinataire…',prog_done:'Publié !',
+    rx_prog_priv:'Chargement de la clé X25519 privée…',rx_prog_ecies:'Déchiffrement ECIES de la clé AES…',
+    rx_prog_chunks:'Récupération des chunks DHT…',rx_prog_decrypt:'Chunk déchiffré',
+    rx_prog_save:'Sauvegarde du fichier…',rx_prog_done:'Terminé !',
+    decrypted_saved:'déchiffré et sauvegardé.',
+    otp_verified:'✓ Vérifié OTP · Publié sur le DHT',
+    x25519_active:'Clé X25519 active — les expéditeurs peuvent vous envoyer des fichiers chiffrés sans exposer la clé AES dans l\'URL.',
+    revoke:'Révoquer',revoke_confirm:'Révoquer',
+    cmp_title:'Pourquoi Filenymous ?',cmp_sub:'Filenymous vs WeTransfer vs SwissTransfer',
+    cmp_filen_tag:'Décentralisé · Chiffré · Open-source',
+    cmp_wet_tag:'Centralisé · Simple · Freemium',
+    cmp_swt_tag:'Serveurs suisses · Généreux · Gratuit',
+    cmp_row_e2e:'Chiffrement : ',cmp_row_key:'Clé dans l\'URL : ',cmp_row_server:'Serveur central : ',
+    cmp_row_size:'Taille max : ',cmp_row_account:'Compte : ',cmp_row_ads:'Publicités : ',
+    cmp_row_oss:'Code source : ',cmp_row_id:'Identité : ',cmp_row_price:'Prix : ',
+    cmp_never:'Jamais',cmp_none:'Aucun (DHT P2P)',cmp_nolimit:'Illimité (P2P)',
+    cmp_notrequired:'Non requis',cmp_noads:'Aucune',cmp_opensource:'Open-source',
+    cmp_sha256:'Hash SHA-256 uniquement',cmp_bydesign:'Conçu pour ça',cmp_free:'Gratuit à vie',
+    cmp_transit_only:'Transit uniquement (TLS)',cmp_yes:'Oui',cmp_us_servers:'Serveurs US',
+    cmp_wet_size:'2 Go (gratuit) / 200 Go',cmp_for_plus:'Requis pour Pro',cmp_free_tier:'Version gratuite',
+    cmp_closed:'Code fermé',cmp_email_stored:'Email stocké',cmp_partial:'Partiel',cmp_wet_price:'Gratuit / 12 €/mois',
+    cmp_aes_url:'AES-256 (clé dans l\'URL)',cmp_ch_servers:'Serveurs suisses',cmp_swt_size:'50 Go',
+    cmp_email_optional:'Email optionnel',cmp_swiss_law:'Droit suisse',
+    status:'Statut',available:'Disponible',
+  },
+  es:{
+    demo_label:'Modo demo',demo_sub:'cifrado WebCrypto real, red Holochain simulada',
+    tab_send:'Enviar',tab_receive:'Recibir',tab_history:'Historial',tab_identity:'Identidad',tab_privacy:'Privacidad',
+    dz_click:'Haz clic',dz_or_drop:'o arrastra tus archivos aquí',dz_sub:'Todos los formatos · hasta 5 GB por transferencia',
+    form_title:'Destinatario &amp; opciones',label_recipient:'Email o número de teléfono *',
+    label_message:'Mensaje',optional:'(opcional)',
+    label_expiry:'Caducidad',exp_24h:'24 horas',exp_7d:'7 días',exp_30d:'30 días',exp_never:'Nunca',
+    label_maxdl:'Descargas máximas',dl_1:'1 vez',dl_3:'3 veces',dl_10:'10 veces',dl_0:'Ilimitado',
+    e2e_title:'Cifrado de extremo a extremo',e2e_desc:'Clave AES-256-GCM envuelta por ECIES/X25519 en tu navegador. Ni la URL ni ningún servidor ven la clave de descifrado.',
+    btn_send:'Cifrar &amp; Enviar',prog_sub:'Cifrado local — tus archivos nunca viajan en texto plano',
+    send_done_title:'Transferencia publicada',download_link:'Enlace de descarga',btn_copy:'Copiar',btn_new_transfer:'Nueva transferencia',
+    rx_title:'Recibir un archivo',rx_sub:'Pega el enlace recibido por email o SMS.',
+    rx_label:'Enlace de transferencia',rx_btn:'Acceder al archivo',
+    local_decrypt:'Descifrado local',local_decrypt_desc:'Clave AES recuperada vía ECIES/X25519 desde el DHT. Ni la URL ni ningún servidor tiene la clave.',
+    btn_download:'⬇ Descargar &amp; Descifrar',rx_done_title:'Archivo descargado',rx_another:'Recibir otro archivo',
+    hist_title:'Transferencias enviadas',hist_empty:'Sin transferencias todavía',
+    id_agent_title:'Mi clave agente Holochain',x25519_title:'Clave de cifrado — X25519 (M3)',
+    x25519_empty:'Sin clave X25519 — vincula un contacto primero para generar tu clave de cifrado.',
+    contacts_title:'Contactos vinculados',contacts_info:'Tu email o teléfono <strong>nunca se publica en texto plano</strong> — solo su hash SHA-256 circula en el DHT.',
+    add_contact:'Vincular nuevo contacto',otp_sent:'Código enviado a',otp_hint:'Demo: usa el código <strong>123456</strong>',
+    btn_verify:'Verificar →',btn_confirm:'Confirmar',
+    priv_title:'Privacidad &amp; GDPR',
+    priv_e2e_h:'Cifrado de extremo a extremo',priv_e2e_p:'Los archivos se cifran con AES-256-GCM directamente en tu navegador. La clave AES se cifra vía ECIES/X25519 con la clave pública del destinatario. Nadie — ni los nodos DHT ni Filenymous — puede descifrar tus archivos.',
+    priv_p2p_h:'Red peer-to-peer Holochain',priv_p2p_p:'Sin servidor central. Los datos se distribuyen por el DHT de Holochain. Tu email o teléfono nunca se publica en claro — solo su huella SHA-256 (no reversible) circula.',
+    priv_keys_h:'Claves e identidad',priv_keys_p:'Tu clave privada X25519 se genera localmente y se almacena en el IndexedDB de tu navegador. Nunca sale de tu dispositivo. La verificación OTP no guarda registros.',
+    priv_ret_h:'Período de retención',priv_ret_p:'Las transferencias caducan según la duración elegida. Tras la caducidad o el cupo de descargas, el manifiesto se revoca en el DHT.',
+    priv_gdpr_p:'No se recogen datos personales identificables. Sin cookies de seguimiento. Sin análisis de comportamiento.',
+    opensource:'Código abierto',
+    status_connecting:'Conectando…',status_connected:'3 pares DHT (demo)',
+    hint_known:'✓ Clave X25519 encontrada en el DHT',hint_unknown:'⚠ Contacto desconocido — se enviará un enlace por',
+    hint_email:'email',hint_sms:'SMS',
+    notified_by:'Destinatario notificado por',
+    prog_checksums:'Calculando checksums…',prog_dht:'Resolviendo destinatario en DHT…',
+    prog_x25519:'Obteniendo clave X25519…',prog_aes:'Generando clave AES-256-GCM…',
+    prog_ecies:'Envolviendo clave de sesión con ECIES…',prog_manifest:'Creando manifiesto DHT…',
+    prog_chunk:'Fragmento cifrado',prog_finalize:'Finalizando almacenamiento DHT…',
+    prog_notify:'Notificando al destinatario…',prog_done:'¡Publicado!',
+    rx_prog_priv:'Cargando clave X25519 privada…',rx_prog_ecies:'Descifrando clave AES con ECIES…',
+    rx_prog_chunks:'Obteniendo fragmentos del DHT…',rx_prog_decrypt:'Fragmento descifrado',
+    rx_prog_save:'Guardando archivo…',rx_prog_done:'¡Hecho!',
+    decrypted_saved:'descifrado y guardado.',
+    otp_verified:'✓ OTP verificado · Publicado en DHT',
+    x25519_active:'Clave X25519 activa — los remitentes pueden cifrarte archivos sin exponer la clave AES en la URL.',
+    revoke:'Revocar',revoke_confirm:'Revocar',
+    cmp_title:'¿Por qué Filenymous?',cmp_sub:'Filenymous vs WeTransfer vs SwissTransfer',
+    cmp_filen_tag:'Descentralizado · Cifrado · Código abierto',
+    cmp_wet_tag:'Centralizado · Simple · Freemium',
+    cmp_swt_tag:'Servidores suizos · Generoso · Gratuito',
+    cmp_row_e2e:'Cifrado: ',cmp_row_key:'Clave en URL: ',cmp_row_server:'Servidor central: ',
+    cmp_row_size:'Tamaño máx.: ',cmp_row_account:'Cuenta: ',cmp_row_ads:'Anuncios: ',
+    cmp_row_oss:'Código fuente: ',cmp_row_id:'Identidad: ',cmp_row_price:'Precio: ',
+    cmp_never:'Nunca',cmp_none:'Ninguno (DHT P2P)',cmp_nolimit:'Sin límite (P2P)',
+    cmp_notrequired:'No requerida',cmp_noads:'Ninguno',cmp_opensource:'Código abierto',
+    cmp_sha256:'Solo hash SHA-256',cmp_bydesign:'Por diseño',cmp_free:'Gratis para siempre',
+    cmp_transit_only:'Solo tránsito (TLS)',cmp_yes:'Sí',cmp_us_servers:'Servidores EE.UU.',
+    cmp_wet_size:'2 GB (gratis) / 200 GB',cmp_for_plus:'Requerida para Pro',cmp_free_tier:'En versión gratuita',
+    cmp_closed:'Código cerrado',cmp_email_stored:'Email almacenado',cmp_partial:'Parcial',cmp_wet_price:'Gratis / 12 €/mes',
+    cmp_aes_url:'AES-256 (clave en URL)',cmp_ch_servers:'Servidores suizos',cmp_swt_size:'50 GB',
+    cmp_email_optional:'Email opcional',cmp_swiss_law:'Ley suiza',
+    status:'Estado',available:'Disponible',
+  },
+  ko:{
+    demo_label:'데모 모드',demo_sub:'실제 WebCrypto 암호화, Holochain 네트워크 시뮬레이션',
+    tab_send:'보내기',tab_receive:'받기',tab_history:'기록',tab_identity:'신원',tab_privacy:'개인정보',
+    dz_click:'클릭',dz_or_drop:'하거나 파일을 여기에 드롭하세요',dz_sub:'모든 형식 · 전송당 최대 5GB',
+    form_title:'수신자 &amp; 옵션',label_recipient:'이메일 또는 전화번호 *',
+    label_message:'메시지',optional:'(선택 사항)',
+    label_expiry:'만료',exp_24h:'24시간',exp_7d:'7일',exp_30d:'30일',exp_never:'만료 없음',
+    label_maxdl:'최대 다운로드 횟수',dl_1:'1회',dl_3:'3회',dl_10:'10회',dl_0:'무제한',
+    e2e_title:'종단간 암호화',e2e_desc:'브라우저에서 ECIES/X25519로 래핑된 AES-256-GCM 키. URL이나 서버가 복호화 키를 절대 볼 수 없습니다.',
+    btn_send:'암호화 &amp; 전송',prog_sub:'로컬 암호화 — 파일이 평문으로 전송되지 않습니다',
+    send_done_title:'전송 완료',download_link:'다운로드 링크',btn_copy:'복사',btn_new_transfer:'새 전송',
+    rx_title:'파일 받기',rx_sub:'이메일 또는 SMS로 받은 링크를 붙여넣으세요.',
+    rx_label:'전송 링크',rx_btn:'파일 접근',
+    local_decrypt:'로컬 복호화',local_decrypt_desc:'DHT에서 ECIES/X25519를 통해 AES 키를 복구합니다. URL이나 서버에 키가 없습니다.',
+    btn_download:'⬇ 다운로드 &amp; 복호화',rx_done_title:'파일 다운로드 완료',rx_another:'다른 파일 받기',
+    hist_title:'보낸 전송',hist_empty:'아직 전송 없음',
+    id_agent_title:'내 Holochain 에이전트 키',x25519_title:'암호화 키 — X25519 (M3)',
+    x25519_empty:'X25519 키 없음 — 먼저 연락처를 연결하여 암호화 키를 생성하세요.',
+    contacts_title:'연결된 연락처',contacts_info:'이메일 또는 전화번호는 <strong>절대 평문으로 공개되지 않습니다</strong> — SHA-256 해시만 DHT에서 순환합니다.',
+    add_contact:'새 연락처 연결',otp_sent:'코드 전송됨',otp_hint:'데모 모드: 코드 <strong>123456</strong> 사용',
+    btn_verify:'확인 →',btn_confirm:'확인',
+    priv_title:'개인정보 &amp; GDPR',
+    priv_e2e_h:'종단간 암호화',priv_e2e_p:'파일은 전송 전 브라우저에서 직접 AES-256-GCM으로 암호화됩니다. AES 세션 키는 수신자의 공개 키를 사용하여 ECIES/X25519로 암호화됩니다. DHT 노드도, Filenymous도 파일을 복호화할 수 없습니다.',
+    priv_p2p_h:'Holochain P2P 네트워크',priv_p2p_p:'중앙 서버 없음. 데이터는 Holochain DHT에 분산됩니다. 이메일이나 전화번호는 평문으로 공개되지 않으며, 비가역적 SHA-256 지문만 순환합니다.',
+    priv_keys_h:'키 및 신원',priv_keys_p:'X25519 개인 키는 로컬에서 생성되어 브라우저의 IndexedDB에 저장됩니다. 기기를 떠나지 않습니다. OTP 인증은 연락처 로그를 보관하지 않습니다.',
+    priv_ret_h:'보존 기간',priv_ret_p:'전송은 전송 시 선택한 기간에 따라 만료됩니다. 만료되거나 다운로드 한도에 도달하면 DHT에서 매니페스트가 취소됩니다.',
+    priv_gdpr_p:'개인 식별 데이터 수집 없음. 추적 쿠키 없음. 행동 분석 없음.',
+    opensource:'오픈소스',
+    status_connecting:'연결 중…',status_connected:'DHT 피어 3개 (데모)',
+    hint_known:'✓ DHT에서 X25519 키 발견',hint_unknown:'⚠ 알 수 없는 연락처 — 링크가 전송됩니다',
+    hint_email:'이메일',hint_sms:'SMS',
+    notified_by:'수신자 알림 전송:',
+    prog_checksums:'체크섬 계산 중…',prog_dht:'DHT에서 수신자 확인 중…',
+    prog_x25519:'X25519 키 가져오는 중…',prog_aes:'AES-256-GCM 키 생성 중…',
+    prog_ecies:'ECIES로 세션 키 래핑 중…',prog_manifest:'DHT 매니페스트 생성 중…',
+    prog_chunk:'청크 암호화됨',prog_finalize:'DHT 스토리지 완료 중…',
+    prog_notify:'수신자 알림 중…',prog_done:'게시 완료!',
+    rx_prog_priv:'X25519 개인 키 로딩 중…',rx_prog_ecies:'ECIES로 AES 키 복호화 중…',
+    rx_prog_chunks:'DHT에서 암호화된 청크 가져오는 중…',rx_prog_decrypt:'청크 복호화됨',
+    rx_prog_save:'파일 저장 중…',rx_prog_done:'완료!',
+    decrypted_saved:'복호화 및 저장 완료.',
+    otp_verified:'✓ OTP 인증됨 · DHT에 게시됨',
+    x25519_active:'X25519 키 활성화 — 발신자가 URL에 AES 키를 노출하지 않고 파일을 암호화할 수 있습니다.',
+    revoke:'취소',revoke_confirm:'취소',
+    cmp_title:'왜 Filenymous인가요?',cmp_sub:'Filenymous vs WeTransfer vs SwissTransfer',
+    cmp_filen_tag:'분산형 · 암호화 · 오픈소스',
+    cmp_wet_tag:'중앙화 · 단순 · 부분 유료',
+    cmp_swt_tag:'스위스 서버 · 관대한 용량 · 무료',
+    cmp_row_e2e:'암호화: ',cmp_row_key:'URL의 키: ',cmp_row_server:'중앙 서버: ',
+    cmp_row_size:'크기 제한: ',cmp_row_account:'계정: ',cmp_row_ads:'광고: ',
+    cmp_row_oss:'소스 코드: ',cmp_row_id:'신원: ',cmp_row_price:'가격: ',
+    cmp_never:'없음',cmp_none:'없음 (DHT P2P)',cmp_nolimit:'제한 없음 (P2P)',
+    cmp_notrequired:'불필요',cmp_noads:'없음',cmp_opensource:'오픈소스',
+    cmp_sha256:'SHA-256 해시만',cmp_bydesign:'설계상 보장',cmp_free:'영구 무료',
+    cmp_transit_only:'전송만 (TLS)',cmp_yes:'예',cmp_us_servers:'미국 서버',
+    cmp_wet_size:'2GB (무료) / 200GB',cmp_for_plus:'Pro 필요',cmp_free_tier:'무료 버전',
+    cmp_closed:'비공개 소스',cmp_email_stored:'이메일 저장됨',cmp_partial:'부분적',cmp_wet_price:'무료 / 월 €12',
+    cmp_aes_url:'AES-256 (URL에 키)',cmp_ch_servers:'스위스 서버',cmp_swt_size:'50GB',
+    cmp_email_optional:'이메일 선택사항',cmp_swiss_law:'스위스 법률',
+    status:'상태',available:'이용 가능',
+  }
 };
 
-/* ── WebCrypto ─────────────────────────────────────────────────── */
+let CL = 'en';
+function t(k){ return STRINGS[CL][k] || STRINGS.en[k] || k; }
+function setLang(l){
+  CL=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.textContent.trim()===l.toUpperCase()||(l==='ko'&&b.textContent.trim()==='한국어')));
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n');
+    const v=t(k);
+    if(v.includes('<')){el.innerHTML=v;}else{el.textContent=v;}
+  });
+  // Re-render dynamic content
+  renderHistory();renderContacts();
+  Q('inp-recipient').placeholder=isEmail||isPhone?'':t('label_recipient').replace(' *','');
+  Q('inp-contact').placeholder='email / +1-555-…';
+  Q('slabel').textContent=S.dhConnected?t('status_connected'):t('status_connecting');
+  updateSendBtn();
+}
+
+/* ── Helpers ───────────────────────────────────────────────────────── */
+const Q=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const S={files:[],transfers:[],contacts:[],agentKey:'',x25519pub:null,x25519priv:null,rxManifest:null,dhConnected:false};
+
+/* ── WebCrypto ─────────────────────────────────────────────────────── */
 async function sha256hex(str){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
   return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-async function genAES(){
-  return crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);
-}
+async function genAES(){return crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);}
 async function encryptSlice(key,buf){
   const iv=crypto.getRandomValues(new Uint8Array(12));
   const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,buf);
@@ -514,27 +847,20 @@ async function encryptSlice(key,buf){
 }
 const toB64=b=>btoa(String.fromCharCode(...b));
 
-/* ── Formatting ────────────────────────────────────────────────── */
+/* ── Format ────────────────────────────────────────────────────────── */
 function fmtSize(b){
-  if(!b)return '0 B';
-  const u=['B','KB','MB','GB'],i=Math.min(3,Math.floor(Math.log(b)/Math.log(1024)));
-  return (b/1024**i).toFixed(i?1:0)+' '+u[i];
+  if(!b)return'0 B';
+  const u=CL==='fr'?['o','Ko','Mo','Go']:['B','KB','MB','GB'];
+  const i=Math.min(3,Math.floor(Math.log(b)/Math.log(1024)));
+  return(b/1024**i).toFixed(i?1:0)+' '+u[i];
 }
-function fmtDate(){
-  return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-}
-function fileEmoji(name){
-  const e=(name.split('.').pop()||'').toLowerCase();
-  return {pdf:'📕',zip:'🗜',tar:'🗜',gz:'🗜',jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',svg:'🖼',
-    mp4:'🎬',mov:'🎬',avi:'🎬',mp3:'🎵',wav:'🎵',
-    doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📊',pptx:'📊',
-    rs:'💻',ts:'💻',js:'💻',py:'💻',html:'💻',css:'💻'}[e]||'📄';
-}
-function isEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)}
-function isPhone(v){return /^\+[1-9]\d{7,14}$/.test(v)}
+function fmtDate(){return new Date().toLocaleDateString(CL==='ko'?'ko-KR':CL==='fr'?'fr-FR':CL==='es'?'es-ES':'en-US',{month:'short',day:'numeric',year:'numeric'});}
+function fileEmoji(name){const e=(name.split('.').pop()||'').toLowerCase();return{pdf:'📕',zip:'🗜',tar:'🗜',gz:'🗜',jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',svg:'🖼',mp4:'🎬',mov:'🎬',mp3:'🎵',wav:'🎵',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',rs:'💻',ts:'💻',js:'💻',py:'💻',html:'💻'}[e]||'📄';}
+function isEmail(v){return/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)}
+function isPhone(v){return/^\+[1-9]\d{7,14}$/.test(v)}
 function isContact(v){return isEmail(v)||isPhone(v)}
 
-/* ── Navigation ────────────────────────────────────────────────── */
+/* ── Nav ───────────────────────────────────────────────────────────── */
 function nav(id){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -542,7 +868,7 @@ function nav(id){
   Q('tab-'+id).classList.add('active');
 }
 
-/* ── Init ──────────────────────────────────────────────────────── */
+/* ── Init ──────────────────────────────────────────────────────────── */
 (async()=>{
   const rnd=crypto.getRandomValues(new Uint8Array(32));
   S.agentKey='uhCAk'+toB64(rnd).replace(/[+/=]/g,'X').slice(0,40);
@@ -554,17 +880,17 @@ function nav(id){
     S.x25519pub=new Uint8Array(raw);
   }catch(e){console.warn('X25519:',e.message)}
   setTimeout(()=>{
+    S.dhConnected=true;
     Q('sdot').classList.add('on');
-    Q('slabel').textContent='3 DHT peers (demo)';
+    Q('slabel').textContent=t('status_connected');
   },1600);
+  setLang('en');
+  renderHistory();
 })();
 
-/* ── Files ─────────────────────────────────────────────────────── */
+/* ── Files ─────────────────────────────────────────────────────────── */
 function handleFiles(e){addFiles([...e.target.files]);e.target.value='';}
-function handleDrop(e){
-  e.preventDefault();Q('dz').classList.remove('over');
-  addFiles([...e.dataTransfer.files]);
-}
+function handleDrop(e){e.preventDefault();Q('dz').classList.remove('over');addFiles([...e.dataTransfer.files]);}
 function addFiles(list){
   const total=[...S.files,...list].reduce((s,f)=>s+f.size,0);
   if(total>5*1024**3){alert('5 GB limit exceeded');return}
@@ -575,15 +901,12 @@ function renderFiles(){
   Q('file-list').innerHTML=S.files.map((f,i)=>`
     <div class="file-chip">
       <span style="font-size:1.35rem">${fileEmoji(f.name)}</span>
-      <div class="file-info">
-        <div class="file-name">${f.name}</div>
-        <div class="file-size">${fmtSize(f.size)}</div>
-      </div>
+      <div class="file-info"><div class="file-name">${f.name}</div><div class="file-size">${fmtSize(f.size)}</div></div>
       <button class="file-remove" onclick="removeFile(${i})">✕</button>
     </div>`).join('');
 }
 
-/* ── Recipient ─────────────────────────────────────────────────── */
+/* ── Recipient ─────────────────────────────────────────────────────── */
 let _rt;
 function onRecipient(v){
   clearTimeout(_rt);
@@ -594,38 +917,28 @@ function onRecipient(v){
   _rt=setTimeout(async()=>{
     const known=S.contacts.some(c=>c.contact===v);
     hint.className='fhint '+(known?'fhint-ok':'fhint-warn');
-    hint.textContent=known
-      ?'✓ X25519 key found on DHT'
-      :'⚠ Unknown contact — a link will be sent by '+(isEmail(v)?'email':'SMS');
+    hint.textContent=known?t('hint_known'):t('hint_unknown')+' '+(isEmail(v)?t('hint_email'):t('hint_sms'));
     updateSendBtn();
   },700);
 }
-function updateSendBtn(){
-  Q('send-btn').disabled=!(S.files.length&&isContact(Q('inp-recipient').value));
-}
+function updateSendBtn(){Q('send-btn').disabled=!(S.files.length&&isContact(Q('inp-recipient').value));}
 
-/* ── Send flow ─────────────────────────────────────────────────── */
-function setProg(pct,step){
-  Q('prog-bar').style.width=pct+'%';
-  Q('prog-pct').textContent=pct+'%';
-  Q('prog-step').textContent=step;
-}
+/* ── Send ──────────────────────────────────────────────────────────── */
+function setProg(pct,step){Q('prog-bar').style.width=pct+'%';Q('prog-pct').textContent=pct+'%';Q('prog-step').textContent=step;}
 async function doSend(){
   const recipient=Q('inp-recipient').value;
-  Q('send-drop-card').style.display='none';
-  Q('send-form-card').style.display='none';
-  Q('send-prog-card').style.display='block';
+  Q('send-drop-card').style.display='none';Q('send-form-card').style.display='none';Q('send-prog-card').style.display='block';
   try{
-    setProg(5,'Computing checksums…');           await sleep(350);
-    setProg(12,'Resolving recipient on DHT…');   await sleep(450);
-    setProg(18,'Fetching recipient X25519 key…'); await sleep(350);
-    setProg(24,'Generating AES-256-GCM key…');
-    const aesKey=await genAES();                 await sleep(200);
-    setProg(30,'ECIES wrapping session key…');   await sleep(300);
+    setProg(5,t('prog_checksums'));      await sleep(350);
+    setProg(12,t('prog_dht'));           await sleep(450);
+    setProg(18,t('prog_x25519'));        await sleep(350);
+    setProg(24,t('prog_aes'));
+    const aesKey=await genAES();         await sleep(200);
+    setProg(30,t('prog_ecies'));         await sleep(300);
     const CHUNK=256*1024;
     const totalSize=S.files.reduce((s,f)=>s+f.size,0);
     const totalChunks=Math.max(1,Math.ceil(totalSize/CHUNK));
-    setProg(36,'Creating DHT manifest…');        await sleep(300);
+    setProg(36,t('prog_manifest'));      await sleep(300);
     let done=0;
     for(const file of S.files){
       const buf=await file.arrayBuffer();
@@ -633,65 +946,54 @@ async function doSend(){
       for(let i=0;i<n;i++){
         await encryptSlice(aesKey,buf.slice(i*CHUNK,(i+1)*CHUNK));
         done++;
-        setProg(36+Math.round((done/totalChunks)*46),`Encrypting chunk ${done}/${totalChunks}…`);
+        setProg(36+Math.round((done/totalChunks)*46),t('prog_chunk')+` ${done}/${totalChunks}…`);
         await sleep(Math.min(70,350/totalChunks));
       }
     }
-    setProg(84,'Finalizing DHT storage…');       await sleep(400);
-    setProg(91,'Notifying recipient…');           await sleep(350);
-    setProg(100,'Published!');                    await sleep(250);
+    setProg(84,t('prog_finalize')); await sleep(400);
+    setProg(91,t('prog_notify'));   await sleep(350);
+    setProg(100,t('prog_done'));    await sleep(250);
     const tid=crypto.randomUUID();
     const link=`https://geoking2104.github.io/filenymous?d=${tid}`;
-    const fname=S.files.length===1?S.files[0].name:`${S.files.length} files`;
+    const fname=S.files.length===1?S.files[0].name:`${S.files.length} ${CL==='fr'?'fichiers':CL==='es'?'archivos':CL==='ko'?'파일':'files'}`;
     S.transfers.unshift({tid,fname,to:recipient,size:totalSize,date:fmtDate(),maxdl:Q('inp-maxdl').value,link,status:'pending'});
     renderHistory();updateHistDot();
     Q('send-link-url').textContent=link;
-    Q('send-done-sub').textContent=`Recipient notified by ${isEmail(recipient)?'email':'SMS'}.`;
-    Q('send-prog-card').style.display='none';
-    Q('send-done-card').style.display='block';
+    Q('send-done-sub').textContent=t('notified_by')+' '+(isEmail(recipient)?t('hint_email'):t('hint_sms'))+'.';
+    Q('send-prog-card').style.display='none';Q('send-done-card').style.display='block';
   }catch(e){alert('Error: '+e.message);resetSend();}
 }
 function copyLink(elId,btn){
   navigator.clipboard.writeText(Q(elId).textContent).catch(()=>{});
-  btn.textContent='✓ Copied';setTimeout(()=>btn.textContent='Copy',2200);
+  btn.textContent='✓';setTimeout(()=>btn.setAttribute('data-i18n','btn_copy')||setLang(CL),2200);
 }
 function copyText(txt,btn){
   navigator.clipboard.writeText(txt||'').catch(()=>{});
-  btn.textContent='✓ Copied';setTimeout(()=>btn.textContent='Copy',2200);
+  btn.textContent='✓';setTimeout(()=>{btn.textContent=t('btn_copy');},2200);
 }
 function resetSend(){
   S.files=[];Q('file-list').innerHTML='';
   Q('inp-recipient').value='';Q('inp-message').value='';
   Q('msg-count').textContent='0';Q('recipient-hint').textContent='';
-  Q('send-done-card').style.display='none';
-  Q('send-prog-card').style.display='none';
-  Q('send-drop-card').style.display='block';
-  Q('send-form-card').style.display='block';
+  ['send-done-card','send-prog-card'].forEach(id=>Q(id).style.display='none');
+  Q('send-drop-card').style.display='block';Q('send-form-card').style.display='block';
   Q('send-btn').disabled=true;
 }
 
-/* ── History ───────────────────────────────────────────────────── */
+/* ── History ───────────────────────────────────────────────────────── */
 function renderHistory(){
   const el=Q('hist-list');
-  if(!S.transfers.length){
-    el.innerHTML='<div style="text-align:center;padding:3rem 1rem;color:var(--light);font-size:.9rem">No transfers yet</div>';
-    return;
-  }
-  el.innerHTML=S.transfers.map(t=>`
+  if(!S.transfers.length){el.innerHTML=`<div style="text-align:center;padding:3rem 1rem;color:var(--light);font-size:.9rem">${t('hist_empty')}</div>`;return;}
+  el.innerHTML=S.transfers.map(tr=>`
     <div class="hist-row">
-      <div class="hist-icon">${fileEmoji(t.fname)}</div>
-      <div class="hist-info">
-        <div class="hist-name">${t.fname}</div>
-        <div class="hist-meta">→ ${t.to} · ${fmtSize(t.size)} · ${t.date}</div>
-      </div>
-      <span class="badge badge-${t.status}">${t.status==='pending'?'Pending':'Downloaded'}</span>
+      <div style="font-size:1.7rem;flex-shrink:0">${fileEmoji(tr.fname)}</div>
+      <div class="hist-info"><div class="hist-name">${tr.fname}</div><div class="hist-meta">→ ${tr.to} · ${fmtSize(tr.size)} · ${tr.date}</div></div>
+      <span class="badge badge-${tr.status}">${tr.status==='pending'?(CL==='fr'?'En attente':CL==='es'?'Pendiente':CL==='ko'?'대기중':'Pending'):(CL==='fr'?'Téléchargé':CL==='es'?'Descargado':CL==='ko'?'다운로드됨':'Downloaded')}</span>
     </div>`).join('');
 }
-function updateHistDot(){
-  Q('hist-dot').classList.toggle('show',S.transfers.some(t=>t.status==='pending'));
-}
+function updateHistDot(){Q('hist-dot').classList.toggle('show',S.transfers.some(t=>t.status==='pending'));}
 
-/* ── Receive ───────────────────────────────────────────────────── */
+/* ── Receive ───────────────────────────────────────────────────────── */
 function rxResolve(){
   const raw=Q('rx-link-inp').value.trim();
   let tid;
@@ -699,47 +1001,37 @@ function rxResolve(){
   const found=tid&&S.transfers.find(t=>t.tid===tid);
   S.rxManifest=found||{fname:'filenymous-transfer.pdf',size:2.4*1024*1024,maxdl:'1',tid:tid||crypto.randomUUID()};
   Q('rx-fname').textContent=S.rxManifest.fname;
-  Q('rx-fmeta').textContent=`${fmtSize(S.rxManifest.size)} · AES-256-GCM encrypted`;
-  Q('rx-maxdl').textContent=S.rxManifest.maxdl==='0'?'Unlimited':S.rxManifest.maxdl+' time'+(S.rxManifest.maxdl==='1'?'':'s');
-  Q('rx-idle-card').style.display='none';
-  Q('rx-found-card').style.display='block';
+  Q('rx-fmeta').textContent=`${fmtSize(S.rxManifest.size)} · AES-256-GCM`;
+  Q('rx-maxdl').textContent=S.rxManifest.maxdl==='0'?t('dl_0'):S.rxManifest.maxdl+' '+(CL==='ko'?'회':CL==='es'?'veces':CL==='fr'?'fois':'time'+(S.rxManifest.maxdl==='1'?'':'s'));
+  Q('rx-idle-card').style.display='none';Q('rx-found-card').style.display='block';
 }
 async function rxDownload(){
-  Q('rx-dl-btn').disabled=true;
-  Q('rx-prog').style.display='block';
+  Q('rx-dl-btn').disabled=true;Q('rx-prog').style.display='block';
   const set=(p,s)=>{Q('rx-bar').style.width=p+'%';Q('rx-step-label').textContent=s;};
-  set(8,'Loading X25519 private key…');        await sleep(500);
-  set(16,'ECIES-decrypting session key…');     await sleep(500);
-  set(26,'Fetching encrypted chunks from DHT…');await sleep(600);
+  set(8,t('rx_prog_priv'));   await sleep(500);
+  set(16,t('rx_prog_ecies')); await sleep(500);
+  set(26,t('rx_prog_chunks'));await sleep(600);
   const total=Math.max(1,Math.ceil(S.rxManifest.size/(256*1024)));
   for(let i=0;i<total;i++){
     await sleep(Math.min(60,400/total));
-    set(26+Math.round(((i+1)/total)*65),`Decrypting chunk ${i+1}/${total}…`);
+    set(26+Math.round(((i+1)/total)*65),t('rx_prog_decrypt')+` ${i+1}/${total}…`);
   }
-  set(95,'Saving file…'); await sleep(300);
-  const blob=new Blob([
-    `[Filenymous — demo file]\nName: ${S.rxManifest.fname}\nSimulated size: ${fmtSize(S.rxManifest.size)}\n\nECIES/X25519 + AES-256-GCM decryption performed in your browser.\nNo data was transmitted in plaintext.`
-  ],{type:'text/plain'});
-  const a=Object.assign(document.createElement('a'),{
-    href:URL.createObjectURL(blob),
-    download:S.rxManifest.fname.replace(/\.[^.]+$/,'')+'_demo.txt'
-  });
-  a.click();
-  set(100,'Done!'); await sleep(200);
-  Q('rx-done-sub').textContent=`"${S.rxManifest.fname}" decrypted and saved.`;
-  Q('rx-found-card').style.display='none';
-  Q('rx-done-card').style.display='block';
+  set(95,t('rx_prog_save')); await sleep(300);
+  const blob=new Blob([`[Filenymous demo]\nFile: ${S.rxManifest.fname}\nSize: ${fmtSize(S.rxManifest.size)}\n\nECIES/X25519 + AES-256-GCM decryption performed locally.\nNo plaintext data was transmitted.`],{type:'text/plain'});
+  Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:S.rxManifest.fname.replace(/\.[^.]+$/,'')+'_demo.txt'}).click();
+  set(100,t('rx_prog_done')); await sleep(200);
+  Q('rx-done-sub').textContent=`"${S.rxManifest.fname}" ${t('decrypted_saved')}`;
+  Q('rx-found-card').style.display='none';Q('rx-done-card').style.display='block';
 }
 function rxReset(){
   S.rxManifest=null;
   Q('rx-idle-card').style.display='block';
-  Q('rx-found-card').style.display='none';
-  Q('rx-done-card').style.display='none';
+  ['rx-found-card','rx-done-card'].forEach(id=>Q(id).style.display='none');
   Q('rx-link-inp').value='';Q('rx-go-btn').disabled=true;
   Q('rx-prog').style.display='none';Q('rx-bar').style.width='0%';
 }
 
-/* ── Identity / OTP ────────────────────────────────────────────── */
+/* ── Identity / OTP ────────────────────────────────────────────────── */
 function checkOtpBtn(){Q('otp-btn').disabled=!isContact(Q('inp-contact').value);}
 function sendOtp(){
   const c=Q('inp-contact').value;
@@ -751,30 +1043,22 @@ async function confirmOtp(){
   if(Q('inp-otp').value!=='123456'){alert('Wrong code — use 123456 in demo mode.');return}
   const contact=Q('inp-contact').value;
   if(!S.x25519pub){
-    try{
-      const kp=await crypto.subtle.generateKey({name:'X25519'},true,['deriveBits']);
-      S.x25519priv=kp.privateKey;
-      const raw=await crypto.subtle.exportKey('raw',kp.publicKey);
-      S.x25519pub=new Uint8Array(raw);
-    }catch(e){console.warn(e)}
+    try{const kp=await crypto.subtle.generateKey({name:'X25519'},true,['deriveBits']);S.x25519priv=kp.privateKey;const raw=await crypto.subtle.exportKey('raw',kp.publicKey);S.x25519pub=new Uint8Array(raw);}catch(e){console.warn(e)}
   }
   const hash=await sha256hex(contact.toLowerCase().trim());
-  S.contacts.push({contact,hash});
-  renderContacts();
+  S.contacts.push({contact,hash});renderContacts();
   if(S.x25519pub){
-    const pub64=btoa(String.fromCharCode(...S.x25519pub));
+    const pub64=toB64(S.x25519pub);
     Q('x25519-card-body').innerHTML=`
-      <div class="infobox infobox-green">🔒 <span>X25519 key active — senders can encrypt files specifically for you without exposing the AES key in the URL.</span></div>
+      <div class="infobox infobox-green">🔒 <span>${t('x25519_active')}</span></div>
       <div class="key-mono">X25519 pub: ${pub64.slice(0,44)}…</div>`;
   }
   Q('id-avatar').textContent=contact[0].toUpperCase();
   otpCancel();Q('inp-contact').value='';
 }
-function otpCancel(){
-  Q('otp-s1').style.display='flex';Q('otp-s2').style.display='none';Q('inp-otp').value='';
-}
+function otpCancel(){Q('otp-s1').style.display='flex';Q('otp-s2').style.display='none';Q('inp-otp').value='';}
 function revokeContact(i){
-  if(!confirm(`Revoke ${S.contacts[i].contact}?`))return;
+  if(!confirm(`${t('revoke_confirm')} ${S.contacts[i].contact}?`))return;
   S.contacts.splice(i,1);renderContacts();
   if(!S.contacts.length)Q('id-avatar').textContent='?';
 }
@@ -785,13 +1069,11 @@ function renderContacts(){
       <div style="flex:1;min-width:0">
         <div style="font-size:.88rem;font-weight:500">${c.contact}</div>
         <div class="key-mono" style="font-size:.68rem;margin-top:.25rem;padding:.25rem .5rem">SHA-256: ${c.hash}</div>
-        <div style="font-size:.72rem;color:var(--ok);margin-top:.2rem">✓ OTP verified · Published on DHT</div>
+        <div style="font-size:.72rem;color:var(--ok);margin-top:.2rem">${t('otp_verified')}</div>
       </div>
-      <button class="btn-danger btn-sm" onclick="revokeContact(${i})">Revoke</button>
+      <button class="btn-danger btn-sm" onclick="revokeContact(${i})">${t('revoke')}</button>
     </div>`).join('');
 }
-
-renderHistory();
 </script>
 </body>
 </html>
