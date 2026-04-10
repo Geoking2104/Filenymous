@@ -1,0 +1,53 @@
+version: "3.9"
+
+# Filenymous — Production kitsune2 server
+# Single binary handles both bootstrap (HTTPS) and WebRTC signal (WSS) on port 443.
+#
+# Usage:
+#   docker compose up -d
+#
+# TLS certificates must be present before starting (see setup.sh).
+# Expected paths (created by certbot):
+#   /etc/letsencrypt/live/bootstrap.filenymous.app/fullchain.pem
+#   /etc/letsencrypt/live/bootstrap.filenymous.app/privkey.pem
+
+services:
+  kitsune2:
+    image: ghcr.io/geoking2104/filenymous-kitsune2:main
+    container_name: filenymous-kitsune2
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt/live/bootstrap.filenymous.app/fullchain.pem:/etc/kitsune2/cert.pem:ro
+      - /etc/letsencrypt/live/bootstrap.filenymous.app/privkey.pem:/etc/kitsune2/key.pem:ro
+    environment:
+      RUST_LOG: info
+    command:
+      - kitsune2-bootstrap-srv
+      - --production
+      - --listen
+      - "[::]:443"
+      - --tls-cert
+      - /etc/kitsune2/cert.pem
+      - --tls-key
+      - /etc/kitsune2/key.pem
+    healthcheck:
+      test: ["CMD", "curl", "-fk", "https://localhost:443/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Watchtower: auto-pulls new image when docker.yml pushes to GHCR
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_POLL_INTERVAL: 3600   # check every hour
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_INCLUDE_STOPPED: "false"
+    command: filenymous-kitsune2
