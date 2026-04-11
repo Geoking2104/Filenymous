@@ -11,7 +11,7 @@ permissions:
 jobs:
   # ── Build release artifacts ──────────────────────────────────────────────────
   build:
-    name: Build hApp + UI
+    name: Build hApp
     runs-on: ubuntu-latest
 
     steps:
@@ -28,24 +28,13 @@ jobs:
           name: holochain-ci
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
+      - name: Build hApp (WASM zomes + DNA + hApp pack)
+        run: nix develop --command make build-happ
 
-      - name: Build .webhapp (hApp + UI — M4)
-        run: nix develop --command make build-webhapp
-        env:
-          VITE_HC_URL: ws://localhost:8888
-          VITE_BRIDGE_URL: http://localhost:3001
-          VITE_BRIDGE_SECRET: replace-in-deployment
-
-      - name: Copy artefacts to root for upload
+      - name: Copy demo UI into release folder
         run: |
-          cp workdir/filenymous.happ    filenymous.happ
-          cp workdir/filenymous.webhapp filenymous.webhapp
+          cp workdir/filenymous.happ filenymous.happ
+          cp demo/index.html         filenymous-demo.html
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -54,34 +43,34 @@ jobs:
           body: |
             ## Filenymous ${{ github.ref_name }}
 
-            ### Artefacts
+            ### Release artifacts
 
-            | Fichier | Usage |
-            |---------|-------|
-            | `filenymous.webhapp` | **Installation directe dans Holochain Launcher** (recommandé) |
-            | `filenymous.happ` | Pour déploiement headless sur un conducteur Holochain existant |
+            | File | Usage |
+            |------|-------|
+            | `filenymous.happ` | Install in Holochain Launcher or run headless |
+            | `filenymous-demo.html` | Open in any browser — standalone demo UI (no install needed) |
 
-            ### Installation via Holochain Launcher (M4)
+            ### Install via Holochain Launcher
 
-            1. Télécharger [Holochain Launcher](https://github.com/holochain/launcher/releases)
-            2. Ouvrir le Launcher → **Install hApp from filesystem**
-            3. Sélectionner `filenymous.webhapp`
-            4. Lancer le bridge de notification (optionnel pour les notifications email/SMS) :
-               ```bash
-               cd bridge && cp .env.example .env && npm start
-               ```
+            1. Download [Holochain Launcher](https://github.com/holochain/launcher/releases)
+            2. Open Launcher → **Install hApp from filesystem**
+            3. Select `filenymous.happ`
 
-            ### Déploiement headless (sans Launcher)
+            ### Try the demo UI instantly
+
+            Open `filenymous-demo.html` in your browser — no installation required.
+            Live version: https://geoking2104.github.io/Filenymous/
+
+            ### Headless deployment
 
             ```bash
-            holochain -c conductor-config.yaml
+            holochain -c conductor-config.prod.yaml
             hc app install --app-id filenymous filenymous.happ
-            cd bridge && cp .env.example .env && npm start
             ```
 
-            Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour la configuration complète.
+            Bootstrap server: `https://dev-test-bootstrap2.holochain.org`
           files: |
-            filenymous.webhapp
             filenymous.happ
+            filenymous-demo.html
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
