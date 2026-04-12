@@ -211,6 +211,5 @@ pub fn get_x25519_key(agent: AgentPubKey) -> ExternResult<Option<String>> {
 fn anchor_for_contact(contact_hash: &str) -> ExternResult<AnyLinkableHash> {
     // Use the contact_hash string as a path component → deterministic DHT address
     let path = Path::from(format!("contacts.{contact_hash}"));
-    path.ensure()?;
     Ok(path.path_entry_hash()?.into())
 }

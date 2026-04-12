@@ -180,12 +180,10 @@ pub fn delete_chunks(transfer_id: String) -> ExternResult<Vec<ActionHash>> {
 
 fn transfer_chunks_anchor(transfer_id: &str) -> ExternResult<AnyLinkableHash> {
     let path = Path::from(format!("chunks.{transfer_id}"));
-    path.ensure()?;
     Ok(path.path_entry_hash()?.into())
 }
 
 fn transfer_manifest_anchor(transfer_id: &str) -> ExternResult<AnyLinkableHash> {
     let path = Path::from(format!("chunk_manifests.{transfer_id}"));
-    path.ensure()?;
     Ok(path.path_entry_hash()?.into())
 }

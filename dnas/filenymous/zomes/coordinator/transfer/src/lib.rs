@@ -164,13 +164,11 @@ pub fn expire_transfer(transfer_id: String) -> ExternResult<ActionHash> {
 
 fn transfer_anchor(transfer_id: &str) -> ExternResult<AnyLinkableHash> {
     let path = Path::from(format!("transfers.{transfer_id}"));
-    path.ensure()?;
     Ok(path.path_entry_hash()?.into())
 }
 
 fn recipient_contact_anchor(contact_hash: &str) -> ExternResult<AnyLinkableHash> {
     let path = Path::from(format!("recipients.{contact_hash}"));
-    path.ensure()?;
     Ok(path.path_entry_hash()?.into())
 }
 
