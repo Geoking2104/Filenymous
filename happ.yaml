@@ -1,5 +1,5 @@
 ---
-manifest_version: "1"
+manifest_version: "0"
 name: filenymous
 description: "Peer-to-peer file transfer on Holochain — no central server"
 roles:

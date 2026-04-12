@@ -1,5 +1,5 @@
 ---
-manifest_version: "1"
+manifest_version: "0"
 name: filenymous
 integrity:
   # M5: stable network_seed — all public nodes join the same DHT network.
