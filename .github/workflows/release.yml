@@ -9,7 +9,6 @@ permissions:
   contents: write
 
 jobs:
-  # ── Build release artifacts ──────────────────────────────────────────────────
   build:
     name: Build hApp
     runs-on: ubuntu-latest
@@ -17,25 +16,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v26
+      # ── Rust toolchain with wasm32 target ───────────────────────────────────
+      - name: Install Rust + wasm32 target
+        uses: dtolnay/rust-toolchain@stable
         with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          targets: wasm32-unknown-unknown
 
-      - name: Cache Nix store
-        uses: cachix/cachix-action@v14
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
         with:
-          name: holochain-ci
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Build hApp (WASM zomes + DNA + hApp pack)
-        run: nix develop --command make build-happ
+      # ── Install hc CLI from Holochain prebuilt release ───────────────────────
+      - name: Install hc CLI
+        run: |
+          HC_VERSION="holochain-0.5.0-dev.7"
+          curl -fsSL \
+            "https://github.com/holochain/holochain/releases/download/${HC_VERSION}/hc-x86_64-linux.tar.gz" \
+            -o hc.tar.gz 2>/dev/null || \
+          cargo install holochain_cli --locked --quiet
+          if [ -f hc.tar.gz ]; then
+            tar xzf hc.tar.gz
+            sudo mv hc /usr/local/bin/hc
+            rm hc.tar.gz
+          fi
+          hc --version
 
-      - name: Copy demo UI into release folder
+      # ── Build WASM zomes ────────────────────────────────────────────────────
+      - name: Build WASM zomes
+        run: cargo build --release --target wasm32-unknown-unknown
+
+      # ── Pack DNA + hApp ─────────────────────────────────────────────────────
+      - name: Pack DNA
+        run: |
+          mkdir -p workdir
+          hc dna pack dnas/filenymous -o workdir/filenymous.dna
+
+      - name: Pack hApp
+        run: hc app pack . -o workdir/filenymous.happ
+
+      # ── Add demo UI to release ───────────────────────────────────────────────
+      - name: Prepare release artifacts
         run: |
           cp workdir/filenymous.happ filenymous.happ
           cp demo/index.html         filenymous-demo.html
 
+      # ── GitHub Release ───────────────────────────────────────────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -47,8 +78,8 @@ jobs:
 
             | File | Usage |
             |------|-------|
-            | `filenymous.happ` | Install in Holochain Launcher or run headless |
-            | `filenymous-demo.html` | Open in any browser — standalone demo UI (no install needed) |
+            | `filenymous.happ` | Install in Holochain Launcher |
+            | `filenymous-demo.html` | Open in any browser — standalone demo (no install needed) |
 
             ### Install via Holochain Launcher
 
@@ -56,19 +87,14 @@ jobs:
             2. Open Launcher → **Install hApp from filesystem**
             3. Select `filenymous.happ`
 
-            ### Try the demo UI instantly
+            ### Demo UI (browser only)
 
             Open `filenymous-demo.html` in your browser — no installation required.
             Live version: https://geoking2104.github.io/Filenymous/
 
-            ### Headless deployment
+            ### Bootstrap server
 
-            ```bash
-            holochain -c conductor-config.prod.yaml
-            hc app install --app-id filenymous filenymous.happ
-            ```
-
-            Bootstrap server: `https://dev-test-bootstrap2.holochain.org`
+            `https://dev-test-bootstrap2.holochain.org` (Holochain public test server)
           files: |
             filenymous.happ
             filenymous-demo.html
