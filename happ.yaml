@@ -9,6 +9,3 @@ roles:
       deferred: false
     dna:
       bundled: "./dnas/filenymous/filenymous.dna"
-      modifiers:
-        network_seed: ~
-        properties: ~

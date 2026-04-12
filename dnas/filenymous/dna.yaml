@@ -7,7 +7,6 @@ integrity:
   # WARNING: changing this in production creates a network fork.
   network_seed: "filenymous-mainnet-v1"
   properties: ~
-  origin_time: 1735689600000000
   zomes:
     - name: identity_integrity
       bundled: "../../target/wasm32-unknown-unknown/release/identity_integrity.wasm"
