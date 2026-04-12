@@ -9,24 +9,24 @@ integrity:
   properties: ~
   zomes:
     - name: identity_integrity
-      bundled: "../../target/wasm32-unknown-unknown/release/identity_integrity.wasm"
+      path: "../../target/wasm32-unknown-unknown/release/identity_integrity.wasm"
     - name: transfer_integrity
-      bundled: "../../target/wasm32-unknown-unknown/release/transfer_integrity.wasm"
+      path: "../../target/wasm32-unknown-unknown/release/transfer_integrity.wasm"
     - name: storage_integrity
-      bundled: "../../target/wasm32-unknown-unknown/release/storage_integrity.wasm"
+      path: "../../target/wasm32-unknown-unknown/release/storage_integrity.wasm"
 coordinator:
   zomes:
     - name: identity
-      bundled: "../../target/wasm32-unknown-unknown/release/identity.wasm"
+      path: "../../target/wasm32-unknown-unknown/release/identity.wasm"
       dependencies:
         - name: identity_integrity
     - name: transfer
-      bundled: "../../target/wasm32-unknown-unknown/release/transfer.wasm"
+      path: "../../target/wasm32-unknown-unknown/release/transfer.wasm"
       dependencies:
         - name: transfer_integrity
         - name: identity_integrity
     - name: storage
-      bundled: "../../target/wasm32-unknown-unknown/release/storage.wasm"
+      path: "../../target/wasm32-unknown-unknown/release/storage.wasm"
       dependencies:
         - name: storage_integrity
         - name: transfer_integrity

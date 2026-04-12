@@ -8,4 +8,4 @@ roles:
       strategy: create
       deferred: false
     dna:
-      bundled: "./dnas/filenymous/filenymous.dna"
+      path: "./dnas/filenymous/filenymous.dna"
