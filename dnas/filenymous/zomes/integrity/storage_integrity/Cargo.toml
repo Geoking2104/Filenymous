@@ -8,5 +8,5 @@ name = "storage_integrity"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-hdi = { version = "0.5", features = ["trace"] }
+hdi = { version = "0.5" }
 serde = { version = "1", features = ["derive"] }

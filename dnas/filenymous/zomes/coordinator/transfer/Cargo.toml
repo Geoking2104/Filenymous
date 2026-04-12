@@ -8,6 +8,6 @@ name = "transfer"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-hdk = { version = "0.4", features = ["trace"] }
+hdk = { version = "0.4" }
 serde = { version = "1", features = ["derive"] }
 transfer_integrity = { path = "../../integrity/transfer_integrity" }

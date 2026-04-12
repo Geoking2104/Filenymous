@@ -8,6 +8,6 @@ name = "storage"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-hdk = { version = "0.4", features = ["trace"] }
+hdk = { version = "0.4" }
 serde = { version = "1", features = ["derive"] }
 storage_integrity = { path = "../../integrity/storage_integrity" }
