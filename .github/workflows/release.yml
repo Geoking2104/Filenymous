@@ -35,16 +35,12 @@ jobs:
       # ── Install hc CLI from Holochain prebuilt release ───────────────────────
       - name: Install hc CLI
         run: |
-          HC_VERSION="holochain-0.5.0-dev.7"
+          HC_TAG="holochain-0.6.1-rc.7"
           curl -fsSL \
-            "https://github.com/holochain/holochain/releases/download/${HC_VERSION}/hc-x86_64-linux.tar.gz" \
-            -o hc.tar.gz 2>/dev/null || \
-          cargo install holochain_cli --locked --quiet
-          if [ -f hc.tar.gz ]; then
-            tar xzf hc.tar.gz
-            sudo mv hc /usr/local/bin/hc
-            rm hc.tar.gz
-          fi
+            "https://github.com/holochain/holochain/releases/download/${HC_TAG}/hc-x86_64-unknown-linux-gnu" \
+            -o hc
+          chmod +x hc
+          sudo mv hc /usr/local/bin/hc
           hc --version
 
       # ── Build WASM zomes ────────────────────────────────────────────────────
