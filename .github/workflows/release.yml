@@ -50,11 +50,13 @@ jobs:
       # ── Pack DNA + hApp ─────────────────────────────────────────────────────
       - name: Pack DNA
         run: |
-          mkdir -p workdir
-          hc dna pack dnas/filenymous -o workdir/filenymous.dna
+          mkdir -p workdir dnas/filenymous
+          hc dna pack dnas/filenymous -o dnas/filenymous/filenymous.dna
 
       - name: Pack hApp
-        run: hc app pack . -o workdir/filenymous.happ
+        run: |
+          mkdir -p workdir
+          hc app pack . -o workdir/filenymous.happ
 
       # ── Add demo UI to release ───────────────────────────────────────────────
       - name: Prepare release artifacts
