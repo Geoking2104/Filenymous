@@ -236,7 +236,29 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:1rem 0}
     </div>
 
     <div class="card" id="send-form-card">
-      <div class="card-title">✉️ <span data-i18n="form_title">Recipient &amp; options</span></div>
+
+      <!-- ── Expéditeur ── -->
+      <div class="card-title">👤 <span data-i18n="sender_title">Sender</span></div>
+      <div class="g2">
+        <div class="frow">
+          <label class="flabel" data-i18n="label_firstname">First name *</label>
+          <input id="inp-firstname" type="text" oninput="updateSendBtn()">
+        </div>
+        <div class="frow">
+          <label class="flabel" data-i18n="label_lastname">Last name *</label>
+          <input id="inp-lastname" type="text" oninput="updateSendBtn()">
+        </div>
+      </div>
+      <div class="frow">
+        <label class="flabel" data-i18n="label_sender_email">Sender email *</label>
+        <input id="inp-sender-email" type="email" oninput="updateSendBtn()">
+        <div id="sender-email-hint" class="fhint"></div>
+      </div>
+
+      <hr class="sep" style="margin:1.1rem 0">
+
+      <!-- ── Destinataire ── -->
+      <div class="card-title">✉️ <span data-i18n="form_title">Recipient</span></div>
       <div class="frow">
         <label class="flabel" data-i18n="label_recipient">Email or phone number *</label>
         <input id="inp-recipient" type="text" oninput="onRecipient(this.value)">
@@ -247,6 +269,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:1rem 0}
         <textarea id="inp-message" maxlength="500" oninput="Q('msg-count').textContent=this.value.length"></textarea>
         <div style="font-size:.72rem;color:var(--light);text-align:right;margin-top:.2rem"><span id="msg-count">0</span>/500</div>
       </div>
+
       <div style="height:.9rem"></div>
       <div class="infobox infobox-green">🔗 <div><strong data-i18n="p2p_title">Real peer-to-peer</strong> — <span data-i18n="p2p_desc">Your file travels directly from your browser to the recipient's. AES-256-GCM encrypted. No server stores your data.</span></div></div>
       <button class="btn-primary btn-full btn-lg" id="send-btn" disabled onclick="doSend()" data-i18n="btn_send">Encrypt &amp; Send</button>
@@ -660,7 +683,8 @@ const STRINGS = {
     demo_sub:'files go directly browser-to-browser, AES-256-GCM encrypted, no central server',
     tab_send:'Send',tab_receive:'Receive',tab_history:'History',tab_identity:'Identity',tab_privacy:'Privacy',
     dz_click:'Click',dz_or_drop:'or drop your files here',dz_sub:'All formats · file goes directly to recipient',
-    form_title:'Recipient &amp; options',label_recipient:'Email or phone number *',
+    sender_title:'Sender',label_firstname:'First name *',label_lastname:'Last name *',label_sender_email:'Sender email *',
+    form_title:'Recipient',label_recipient:'Email or phone number *',
     label_message:'Message',optional:'(optional)',
     p2p_title:'Real peer-to-peer',p2p_desc:'Your file travels directly from your browser to the recipient\'s. AES-256-GCM encrypted. No server stores your data.',
     btn_send:'Encrypt &amp; Send',prog_sub:'Local encryption — your files never travel in plaintext',
@@ -711,7 +735,8 @@ const STRINGS = {
     demo_sub:'fichiers transférés directement navigateur à navigateur, chiffrés AES-256-GCM, aucun serveur central',
     tab_send:'Envoyer',tab_receive:'Recevoir',tab_history:'Historique',tab_identity:'Identité',tab_privacy:'Confidentialité',
     dz_click:'Cliquez',dz_or_drop:'ou déposez vos fichiers ici',dz_sub:'Tous formats · le fichier va directement au destinataire',
-    form_title:'Destinataire &amp; options',label_recipient:'Email ou numéro de téléphone *',
+    sender_title:'Expéditeur',label_firstname:'Prénom *',label_lastname:'Nom *',label_sender_email:'Email de l\'expéditeur *',
+    form_title:'Destinataire',label_recipient:'Email ou numéro de téléphone *',
     label_message:'Message',optional:'(optionnel)',
     p2p_title:'Vrai pair-à-pair',p2p_desc:'Votre fichier transite directement de votre navigateur vers celui du destinataire. Chiffrement AES-256-GCM. Aucun serveur ne stocke vos données.',
     btn_send:'Chiffrer &amp; Envoyer',prog_sub:'Chiffrement local — vos fichiers ne transitent jamais en clair',
@@ -760,7 +785,8 @@ const STRINGS = {
     demo_sub:'archivos van directamente navegador a navegador, cifrado AES-256-GCM, sin servidor central',
     tab_send:'Enviar',tab_receive:'Recibir',tab_history:'Historial',tab_identity:'Identidad',tab_privacy:'Privacidad',
     dz_click:'Haz clic',dz_or_drop:'o arrastra tus archivos aquí',dz_sub:'Todos los formatos · el archivo va directamente al destinatario',
-    form_title:'Destinatario &amp; opciones',label_recipient:'Email o número de teléfono *',
+    sender_title:'Remitente',label_firstname:'Nombre *',label_lastname:'Apellido *',label_sender_email:'Email del remitente *',
+    form_title:'Destinatario',label_recipient:'Email o número de teléfono *',
     label_message:'Mensaje',optional:'(opcional)',
     p2p_title:'Verdadero peer-to-peer',p2p_desc:'Tu archivo viaja directamente de tu navegador al del destinatario. Cifrado AES-256-GCM. Ningún servidor guarda tus datos.',
     btn_send:'Cifrar &amp; Enviar',prog_sub:'Cifrado local — tus archivos nunca viajan en texto plano',
@@ -809,7 +835,8 @@ const STRINGS = {
     demo_sub:'파일이 브라우저에서 브라우저로 직접 전송, AES-256-GCM 암호화, 중앙 서버 없음',
     tab_send:'보내기',tab_receive:'받기',tab_history:'기록',tab_identity:'신원',tab_privacy:'개인정보',
     dz_click:'클릭',dz_or_drop:'하거나 파일을 여기에 드롭하세요',dz_sub:'모든 형식 · 파일이 직접 수신자에게 전송',
-    form_title:'수신자 &amp; 옵션',label_recipient:'이메일 또는 전화번호 *',
+    sender_title:'발신자',label_firstname:'이름 *',label_lastname:'성 *',label_sender_email:'발신자 이메일 *',
+    form_title:'수신자',label_recipient:'이메일 또는 전화번호 *',
     label_message:'메시지',optional:'(선택 사항)',
     p2p_title:'진정한 P2P',p2p_desc:'파일이 브라우저에서 수신자 브라우저로 직접 전송됩니다. AES-256-GCM 암호화. 서버에 데이터가 저장되지 않습니다.',
     btn_send:'암호화 &amp; 전송',prog_sub:'로컬 암호화 — 파일이 평문으로 전송되지 않습니다',
@@ -906,7 +933,17 @@ function onRecipient(v) {
   updateSendBtn();
 }
 function updateSendBtn() {
-  Q('send-btn').disabled = !(S.files.length && isContact(Q('inp-recipient').value));
+  const firstname = Q('inp-firstname').value.trim();
+  const lastname  = Q('inp-lastname').value.trim();
+  const semail    = Q('inp-sender-email').value.trim();
+  const recipient = Q('inp-recipient').value.trim();
+  const hint = Q('sender-email-hint');
+  if (semail && !isEmail(semail)) {
+    hint.className = 'fhint fhint-err'; hint.textContent = '✗';
+  } else if (semail) {
+    hint.className = 'fhint fhint-ok'; hint.textContent = '✓';
+  } else { hint.textContent = ''; }
+  Q('send-btn').disabled = !(S.files.length && firstname && lastname && isEmail(semail) && isContact(recipient));
 }
 function setProg(pct, step) {
   Q('prog-bar').style.width = pct + '%';
@@ -918,7 +955,9 @@ function setProg(pct, step) {
 const CHUNK = 16384; // 16 KB — safe for WebRTC DataChannel
 
 async function doSend() {
-  const recipient = Q('inp-recipient').value;
+  const recipient  = Q('inp-recipient').value;
+  const senderName = Q('inp-firstname').value.trim() + ' ' + Q('inp-lastname').value.trim();
+  const senderEmail= Q('inp-sender-email').value.trim();
   Q('send-drop-card').style.display = 'none';
   Q('send-form-card').style.display = 'none';
   Q('send-prog-card').style.display = 'block';
@@ -1023,13 +1062,14 @@ async function sendFiles(conn, aesKey, recipient) {
   const fname = S.files.length === 1 ? S.files[0].name : `${S.files.length} files`;
   S.transfers.unshift({
     tid: crypto.randomUUID(), fname, to: recipient,
+    from: senderName, fromEmail: senderEmail,
     size: totalSize, date: fmtDate(), status: 'done'
   });
   renderHistory(); updateHistDot();
 
   Q('send-wait-card').style.display = 'none';
   Q('send-done-card').style.display = 'block';
-  Q('send-done-sub').textContent = `"${fname}" ${t('transferred')}`;
+  Q('send-done-sub').textContent = `"${fname}" ${t('transferred')} ${senderName} → ${recipient}`;
   Q('sdot').classList.remove('on');
   Q('slabel').textContent = t('status_ready');
 }
@@ -1042,6 +1082,10 @@ function cancelSend() {
 function resetSend() {
   S.files = [];
   Q('file-list').innerHTML = '';
+  Q('inp-firstname').value = '';
+  Q('inp-lastname').value  = '';
+  Q('inp-sender-email').value = '';
+  Q('sender-email-hint').textContent = '';
   Q('inp-recipient').value = '';
   if (Q('inp-message')) Q('inp-message').value = '';
   Q('msg-count').textContent = '0';
@@ -1214,7 +1258,7 @@ function renderHistory() {
       <div style="font-size:1.7rem;flex-shrink:0">${fileEmoji(tr.fname)}</div>
       <div class="hist-info">
         <div class="hist-name">${tr.fname}</div>
-        <div class="hist-meta">→ ${tr.to} · ${fmtSize(tr.size)} · ${tr.date}</div>
+        <div class="hist-meta">${tr.from ? tr.from + ' → ' : '→ '}${tr.to} · ${fmtSize(tr.size)} · ${tr.date}</div>
       </div>
       <span class="badge badge-${tr.status}">${tr.status === 'done' ?
         (CL==='fr'?'Envoyé':CL==='es'?'Enviado':CL==='ko'?'전송됨':'Sent') :
