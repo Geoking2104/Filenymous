@@ -1,5 +1,6 @@
 [workspace]
 resolver = "2"
+exclude = ["mailer"]
 members = [
   "dnas/filenymous/zomes/integrity/identity_integrity",
   "dnas/filenymous/zomes/integrity/transfer_integrity",

@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Filenymous — P2P File Transfer</title>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -744,16 +743,11 @@ function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 function isPhone(v) { return /^\+[1-9]\d{7,14}$/.test(v); }
 function isContact(v) { return isEmail(v) || isPhone(v); }
 
-/* ── EmailJS config ─────────────────────────────────────────────── */
-// Create a free account at https://www.emailjs.com
-// → Add an email service (Gmail, Outlook…) → note the Service ID
-// → Create a template with variables: {{to_email}} {{from_name}} {{from_contact}} {{file_names}} {{transfer_link}}
-// → Copy your Public Key from Account → API Keys
-const EMAILJS_PUBLIC_KEY   = 'YOUR_PUBLIC_KEY';   // e.g. 'abc123XYZ'
-const EMAILJS_SERVICE_ID   = 'YOUR_SERVICE_ID';   // e.g. 'service_xxxxxx'
-const EMAILJS_TEMPLATE_ID  = 'YOUR_TEMPLATE_ID';  // e.g. 'template_xxxxxx'
-const EMAILJS_CONFIGURED   = EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY';
-if (EMAILJS_CONFIGURED) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+/* ── Mailer API config ──────────────────────────────────────────── */
+// Deploy mailer/ (Rust/Axum/lettre) and set the URL here.
+// See mailer/README.md for deployment instructions (Fly.io, Railway, VPS…).
+// Leave empty to disable silent email (link must be shared manually).
+const MAILER_API_URL = '';  // e.g. 'https://filenymous-mailer.fly.dev'
 
 /* ── App state ──────────────────────────────────────────────────── */
 const S = {
@@ -1551,38 +1545,50 @@ function updateHistDot() {
   Q('hist-dot').classList.toggle('show', S.transfers.some(tr => tr.status === 'pending'));
 }
 
-/* ── Silent background email (EmailJS) ──────────────────────────── */
+/* ── Silent background email (Rust mailer via fetch) ────────────── */
 function sendEmailSilent(toEmail, fromName, fromContact, transferUrl, fileNames) {
   const statusEl = Q('wait-email-status');
-  if (!isEmail(toEmail)) return; // phone number — skip email
+  if (!isEmail(toEmail)) return; // numéro de téléphone — pas d'email
 
-  if (!EMAILJS_CONFIGURED) {
+  if (!MAILER_API_URL) {
     if (statusEl) statusEl.innerHTML =
-      '<span style="color:var(--warn)">⚙️ EmailJS non configuré — copiez le lien manuellement.</span>';
+      '<span style="color:var(--warn)">⚙️ Mailer non configuré — copiez le lien manuellement.</span>';
     return;
   }
 
   if (statusEl) statusEl.innerHTML =
-    '<span style="color:var(--muted)"><span class="spin" style="width:11px;height:11px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:5px"></span>Envoi en cours…</span>';
+    '<span style="color:var(--muted)">' +
+    '<span class="spin" style="width:11px;height:11px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:5px"></span>' +
+    'Envoi en cours…</span>';
 
-  const params = {
-    to_email:      toEmail,
-    from_name:     fromName,
-    from_contact:  fromContact || fromName,
-    file_names:    fileNames || '—',
-    transfer_link: transferUrl
-  };
-
-  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params)
-    .then(() => {
-      if (statusEl) statusEl.innerHTML =
-        `<span style="color:var(--ok)">✓ Email envoyé à ${toEmail}</span>`;
+  fetch(MAILER_API_URL + '/send-email', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({
+      to:            toEmail,
+      from_name:     fromName,
+      from_contact:  fromContact || fromName,
+      file_names:    fileNames   || '—',
+      transfer_link: transferUrl,
+      lang:          CL
     })
-    .catch(err => {
-      console.warn('EmailJS error', err);
-      if (statusEl) statusEl.innerHTML =
-        '<span style="color:var(--err)">✗ Échec envoi email — copiez le lien manuellement.</span>';
-    });
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (statusEl) {
+      if (data.ok) {
+        statusEl.innerHTML = `<span style="color:var(--ok)">✓ Email envoyé à ${toEmail}</span>`;
+      } else {
+        statusEl.innerHTML =
+          `<span style="color:var(--err)">✗ Échec : ${data.message} — copiez le lien manuellement.</span>`;
+      }
+    }
+  })
+  .catch(err => {
+    console.warn('Mailer fetch error', err);
+    if (statusEl) statusEl.innerHTML =
+      '<span style="color:var(--err)">✗ Mailer injoignable — copiez le lien manuellement.</span>';
+  });
 }
 
 /* ── Copy helpers ───────────────────────────────────────────────── */
