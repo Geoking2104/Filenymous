@@ -1,18 +1,20 @@
 [package]
 name    = "filenymous-mailer"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-axum          = { version = "0.7",  features = ["json"] }
+axum          = { version = "0.7", features = ["json", "ws"] }
 lettre        = { version = "0.11", features = ["smtp-transport", "tokio1-native-tls", "builder"] }
-serde         = { version = "1",    features = ["derive"] }
+serde         = { version = "1",   features = ["derive"] }
 serde_json    = "1"
-tokio         = { version = "1",    features = ["full"] }
-tower-http    = { version = "0.5",  features = ["cors"] }
+tokio         = { version = "1",   features = ["full"] }
+tower-http    = { version = "0.5", features = ["cors"] }
+futures       = "0.3"
+uuid          = { version = "1",   features = ["v4"] }
 tracing       = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# Shuttle runtime — replaces tokio::main + dotenvy
+# Shuttle runtime
 shuttle-runtime = "0.48"
 shuttle-axum    = "0.48"

@@ -1134,8 +1134,32 @@ function stopCountdown() {
 }
 
 /* ── P2P Send ───────────────────────────────────────────────────── */
-const CHUNK = 16384; // 16 KB — safe for WebRTC DataChannel
+const CHUNK = 131072; // 128 KB — like Syncthing BEP minimum block size
 
+/* ── Transport abstraction ───────────────────────────────────────────────────
+   Wraps either a WebSocket relay or a PeerJS DataChannel behind a common API:
+     .sendText(str)   .sendBinary(buffer)   .onmessage   .onopen   .onclose
+   ─────────────────────────────────────────────────────────────────────────── */
+function makeWSTransport(ws) {
+  return {
+    sendText:   s   => ws.readyState === 1 && ws.send(s),
+    sendBinary: buf => ws.readyState === 1 && ws.send(buf),
+    close:      ()  => ws.close(),
+    get bufferedAmount() { return ws.bufferedAmount || 0; }
+  };
+}
+function makePeerTransport(conn) {
+  return {
+    sendText:   s   => conn.send(s),
+    sendBinary: buf => conn.send(buf),
+    close:      ()  => { try { conn.close(); } catch(e){} },
+    get bufferedAmount() {
+      return (conn.dataChannel && conn.dataChannel.bufferedAmount) || 0;
+    }
+  };
+}
+
+/* ── Sender entry point ──────────────────────────────────────────────────── */
 async function doSend() {
   const recipient  = Q('inp-recipient').value;
   const senderName = Q('inp-firstname').value.trim() + ' ' + Q('inp-lastname').value.trim();
@@ -1152,137 +1176,191 @@ async function doSend() {
     S.currentAesKey = aesKey;
 
     setProg(40, t('prog_peer'));
-    await sleep(300);
+    await sleep(200);
 
-    const peer = new Peer(undefined, {
-      debug: 0,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'turn:openrelay.metered.ca:80',           username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:443',          username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-        ]
-      }
-    });
-    S.senderPeer = peer;
-
-    peer.on('error', err => {
-      console.error('Peer error', err);
-      alert('P2P error: ' + err.message + '\n\nMake sure you have internet access and try again.');
-      resetSend();
-    });
-
-    peer.on('open', id => {
-      setProg(100, '✓ Session ready');
-      setTimeout(() => {
-        const base = location.origin + location.pathname;
-        // Encode sender info in URL so receiver can show acceptance card
-        const sn  = encodeURIComponent(senderName);
-        const sc  = encodeURIComponent(senderEmail || recipient);
-        const url = `${base}?r=${id}&sn=${sn}&sc=${sc}#${keyB64}`;
-        S.currentShareUrl      = url;
-        S.currentRecipient     = recipient;
-        S.currentSenderName    = senderName;
-        S.currentSenderEmail   = senderEmail;
-        Q('send-prog-card').style.display = 'none';
-        Q('send-wait-card').style.display = 'block';
-        Q('wait-link-url').textContent = url;
-        Q('sdot').classList.add('on');
-        Q('slabel').textContent = '⏳ ' + t('wait_title');
-
-        // Silent background email send
-        sendEmailSilent(recipient, senderName, senderEmail, url,
-          S.files.map(f => f.name).join(', '));
-
-        // Start ring + countdown
-        startRing();
-        startCountdown(() => {
-          // Timeout: no one picked up
-          playTimeout();
-          if (S.senderPeer) { try { S.senderPeer.destroy(); } catch(e){} S.senderPeer = null; }
-          Q('send-wait-card').style.display = 'none';
-          Q('send-drop-card').style.display = 'block';
-          Q('send-form-card').style.display = 'block';
-          Q('sdot').classList.remove('on');
-          Q('slabel').textContent = t('status_ready');
-          alert(CL==='fr' ? '⏰ Délai expiré — aucune connexion. Renvoyez le lien.' :
-            CL==='es' ? '⏰ Tiempo agotado — sin conexión. Reenvía el enlace.' :
-            '⏰ Timeout — no connection received. Please resend.');
-        });
-      }, 400);
-    });
-
-    peer.on('connection', conn => {
-      conn.on('open', async () => {
-        // Recipient picked up — stop ring, play bell
-        stopCountdown();
-        playBell();
-        Q('wait-title').textContent = CL==='fr' ? '🔔 Connecté ! Envoi en cours…' :
-          CL==='es' ? '🔔 ¡Conectado! Enviando…' : CL==='ko' ? '🔔 연결됨! 전송 중…' : '🔔 Connected! Sending…';
-        Q('wait-infobox').style.display = 'none';
-        Q('wait-progress').style.display = 'block';
-        // Replace phone animation with sending icon
-        document.querySelector('#send-wait-card .phone-icon').style.animation = 'none';
-        document.querySelector('#send-wait-card .phone-icon').textContent = '🚀';
-        Q('countdown-ring').style.stroke = 'var(--ok)';
-        await sendFiles(conn, aesKey, recipient);
-      });
-      conn.on('error', err => {
-        console.error('Conn error', err);
-      });
-    });
-
+    if (MAILER_API_URL) {
+      await doSendRelay(recipient, senderName, senderEmail, aesKey, keyB64);
+    } else {
+      await doSendPeerJS(recipient, senderName, senderEmail, aesKey, keyB64);
+    }
   } catch(e) {
+    console.error(e);
     alert('Error: ' + e.message);
     resetSend();
   }
 }
 
-async function sendFiles(conn, aesKey, recipient) {
+/* ── Relay send (Syncthing-style WebSocket relay) ────────────────────────── */
+async function doSendRelay(recipient, senderName, senderEmail, aesKey, keyB64) {
+  const sessionId = crypto.randomUUID();
+  const wsBase = MAILER_API_URL.replace(/^https?:\/\//, m => m === 'https://' ? 'wss://' : 'ws://');
+  const ws = new WebSocket(`${wsBase}/relay/${sessionId}`);
+  S.senderWS = ws;
+
+  ws.binaryType = 'arraybuffer';
+
+  ws.onerror = () => { alert(CL==='fr' ? 'Erreur relay — vérifiez MAILER_API_URL.' : 'Relay error.'); resetSend(); };
+
+  ws.onmessage = async (evt) => {
+    // Relay only sends JSON text control messages
+    if (typeof evt.data !== 'string') return;
+    const msg = JSON.parse(evt.data);
+
+    if (msg.type === 'waiting') {
+      // Session created — build share URL and show waiting UI
+      setProg(100, '✓ Session prête');
+      await sleep(200);
+
+      const base = location.origin + location.pathname;
+      const rel  = encodeURIComponent(MAILER_API_URL);
+      const sn   = encodeURIComponent(senderName);
+      const sc   = encodeURIComponent(senderEmail || recipient);
+      const url  = `${base}?r=${sessionId}&rel=${rel}&sn=${sn}&sc=${sc}#${keyB64}`;
+
+      S.currentShareUrl   = url; S.currentRecipient  = recipient;
+      S.currentSenderName = senderName; S.currentSenderEmail = senderEmail;
+
+      Q('send-prog-card').style.display = 'none';
+      Q('send-wait-card').style.display = 'block';
+      Q('wait-link-url').textContent = url;
+      Q('sdot').classList.add('on');
+      Q('slabel').textContent = '⏳ ' + t('wait_title');
+
+      sendEmailSilent(recipient, senderName, senderEmail, url, S.files.map(f=>f.name).join(', '));
+      startRing();
+      startCountdown(() => {
+        playTimeout();
+        ws.close(); S.senderWS = null;
+        Q('send-wait-card').style.display = 'none';
+        Q('send-drop-card').style.display = 'block';
+        Q('send-form-card').style.display = 'block';
+        Q('sdot').classList.remove('on');
+        Q('slabel').textContent = t('status_ready');
+        alert(CL==='fr' ? '⏰ Délai expiré — aucune connexion. Renvoyez le lien.' :
+          '⏰ Timeout — no connection received. Please resend.');
+      });
+    }
+
+    if (msg.type === 'connected') {
+      // Recipient joined — start transfer
+      stopCountdown(); playBell();
+      Q('wait-title').textContent = CL==='fr' ? '🔔 Connecté ! Envoi en cours…' : '🔔 Connected! Sending…';
+      Q('wait-infobox').style.display = 'none';
+      Q('wait-progress').style.display = 'block';
+      const ph = document.querySelector('#send-wait-card .phone-icon');
+      if (ph) { ph.style.animation = 'none'; ph.textContent = '🚀'; }
+      Q('countdown-ring').style.stroke = 'var(--ok)';
+      await sendFiles(makeWSTransport(ws), aesKey, recipient, senderName, senderEmail);
+    }
+
+    if (msg.type === 'disconnected') {
+      ws.close(); S.senderWS = null;
+    }
+  };
+}
+
+/* ── PeerJS send (fallback when no relay configured) ─────────────────────── */
+async function doSendPeerJS(recipient, senderName, senderEmail, aesKey, keyB64) {
+  const peer = new Peer(undefined, {
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'turn:openrelay.metered.ca:80',                username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443',               username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+      ]
+    }
+  });
+  S.senderPeer = peer;
+
+  peer.on('error', err => { alert('P2P error: ' + err.message); resetSend(); });
+
+  peer.on('open', id => {
+    setProg(100, '✓ Session ready');
+    setTimeout(() => {
+      const base = location.origin + location.pathname;
+      const sn = encodeURIComponent(senderName), sc = encodeURIComponent(senderEmail || recipient);
+      const url = `${base}?r=${id}&sn=${sn}&sc=${sc}#${keyB64}`;
+      S.currentShareUrl = url; S.currentRecipient = recipient;
+      S.currentSenderName = senderName; S.currentSenderEmail = senderEmail;
+      Q('send-prog-card').style.display = 'none';
+      Q('send-wait-card').style.display = 'block';
+      Q('wait-link-url').textContent = url;
+      Q('sdot').classList.add('on');
+      Q('slabel').textContent = '⏳ ' + t('wait_title');
+      sendEmailSilent(recipient, senderName, senderEmail, url, S.files.map(f=>f.name).join(', '));
+      startRing();
+      startCountdown(() => {
+        playTimeout();
+        try { peer.destroy(); } catch(e){} S.senderPeer = null;
+        Q('send-wait-card').style.display='none';
+        Q('send-drop-card').style.display='block';
+        Q('send-form-card').style.display='block';
+        Q('sdot').classList.remove('on');
+        Q('slabel').textContent = t('status_ready');
+        alert(CL==='fr'?'⏰ Délai expiré — aucune connexion. Renvoyez le lien.':
+          '⏰ Timeout — no connection received. Please resend.');
+      });
+    }, 400);
+  });
+
+  peer.on('connection', conn => {
+    conn.on('open', async () => {
+      stopCountdown(); playBell();
+      Q('wait-title').textContent = CL==='fr' ? '🔔 Connecté ! Envoi en cours…' : '🔔 Connected! Sending…';
+      Q('wait-infobox').style.display = 'none';
+      Q('wait-progress').style.display = 'block';
+      const ph = document.querySelector('#send-wait-card .phone-icon');
+      if (ph) { ph.style.animation = 'none'; ph.textContent = '🚀'; }
+      Q('countdown-ring').style.stroke = 'var(--ok)';
+      await sendFiles(makePeerTransport(conn), aesKey, recipient, senderName, senderEmail);
+    });
+  });
+}
+
+/* ── Shared file send (works with both transports) ───────────────────────── */
+async function sendFiles(transport, aesKey, recipient, senderName, senderEmail) {
   const totalSize = S.files.reduce((s, f) => s + f.size, 0);
   let totalSent = 0;
+  const t0 = Date.now();
 
   for (let fi = 0; fi < S.files.length; fi++) {
     const file = S.files[fi];
-    const buf = await file.arrayBuffer();
+    const buf  = await file.arrayBuffer();
     const totalChunks = Math.max(1, Math.ceil(buf.byteLength / CHUNK));
 
-    conn.send(JSON.stringify({
-      type: 'meta',
-      name: file.name,
-      size: buf.byteLength,
-      totalChunks,
-      fileIndex: fi,
-      totalFiles: S.files.length
+    transport.sendText(JSON.stringify({
+      type: 'meta', name: file.name, size: buf.byteLength,
+      totalChunks, fileIndex: fi, totalFiles: S.files.length
     }));
 
     for (let i = 0; i < totalChunks; i++) {
-      const slice = buf.slice(i * CHUNK, (i + 1) * CHUNK);
-      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const slice     = buf.slice(i * CHUNK, (i + 1) * CHUNK);
+      const iv        = crypto.getRandomValues(new Uint8Array(12));
       const encrypted = await encryptChunk(aesKey, iv, slice);
 
       const chunk = new Uint8Array(12 + encrypted.byteLength);
       chunk.set(iv, 0);
       chunk.set(new Uint8Array(encrypted), 12);
 
-      // Backpressure: wait if buffer is full
-      while (conn.dataChannel && conn.dataChannel.bufferedAmount > 4 * 1024 * 1024) {
-        await sleep(30);
-      }
-      conn.send(chunk.buffer);
+      // Backpressure — don't flood the buffer
+      while (transport.bufferedAmount > 4 * 1024 * 1024) await sleep(20);
+      transport.sendBinary(chunk.buffer);
 
       totalSent += slice.byteLength;
-      const pct = Math.round((totalSent / totalSize) * 100);
+      const pct   = Math.round(totalSent / totalSize * 100);
+      const kbps  = Math.round(totalSent / ((Date.now() - t0) || 1));
       Q('wait-prog-bar').style.width = pct + '%';
-      Q('wait-prog-label').textContent = `${t('sending_file')} ${file.name} (${i+1}/${totalChunks}) — ${pct}%`;
+      Q('wait-prog-label').textContent =
+        `${file.name} — ${pct}% · ${fmtSize(totalSent)}/${fmtSize(totalSize)} · ${fmtSize(kbps)}/s`;
     }
 
-    conn.send(JSON.stringify({type: 'fileDone', fileIndex: fi}));
+    transport.sendText(JSON.stringify({type: 'fileDone', fileIndex: fi}));
   }
 
-  conn.send(JSON.stringify({type: 'allDone'}));
+  transport.sendText(JSON.stringify({type: 'allDone'}));
 
   const fname = S.files.length === 1 ? S.files[0].name : `${S.files.length} files`;
   S.transfers.unshift({
@@ -1301,6 +1379,7 @@ async function sendFiles(conn, aesKey, recipient) {
 
 function cancelSend() {
   stopCountdown();
+  if (S.senderWS)   { try { S.senderWS.close();    } catch(e){} S.senderWS   = null; }
   if (S.senderPeer) { try { S.senderPeer.destroy(); } catch(e){} S.senderPeer = null; }
   resetSend();
 }
@@ -1333,22 +1412,92 @@ function resetSend() {
 
 /* ── P2P Receive ────────────────────────────────────────────────── */
 function checkReceiveMode() {
-  const params      = new URLSearchParams(location.search);
-  const peerId      = params.get('r');
-  const keyB64      = location.hash.slice(1);
-  const senderName  = decodeURIComponent(params.get('sn') || '');
-  const senderContact = decodeURIComponent(params.get('sc') || '');
-  if (peerId && keyB64) {
+  const params        = new URLSearchParams(location.search);
+  const sessionId     = params.get('r');
+  const keyB64        = location.hash.slice(1);
+  const senderName    = decodeURIComponent(params.get('sn')  || '');
+  const senderContact = decodeURIComponent(params.get('sc')  || '');
+  const relayUrl      = decodeURIComponent(params.get('rel') || '');
+  if (sessionId && keyB64) {
     nav('receive');
     Q('rx-idle-card').style.display = 'none';
-    startReceive(peerId, keyB64, senderName, senderContact);
+    startReceive(sessionId, keyB64, senderName, senderContact, relayUrl);
   }
 }
 
-async function startReceive(senderId, keyB64, senderName, senderContact) {
+async function startReceive(sessionId, keyB64, senderName, senderContact, relayUrl) {
   try {
     const keyBytes = fromB64url(keyB64);
     const aesKey = await crypto.subtle.importKey('raw', keyBytes, {name:'AES-GCM'}, false, ['decrypt']);
+
+    if (relayUrl) {
+      // ── Relay path (Syncthing-style WebSocket) ──────────────────────────
+      function doConnectRelay() {
+        Q('rx-accept-card').style.display  = 'none';
+        Q('rx-connecting-card').style.display = 'block';
+
+        const wsBase = relayUrl.replace(/^https?:\/\//, m => m === 'https://' ? 'wss://' : 'ws://');
+        const ws = new WebSocket(`${wsBase}/relay/${sessionId}`);
+        ws.binaryType = 'arraybuffer';
+
+        const timeout = setTimeout(() => {
+          if (Q('rx-connecting-card').style.display !== 'none') {
+            ws.close();
+            Q('rx-connecting-card').style.display = 'none';
+            Q('rx-error-card').style.display = 'block';
+            Q('rx-error-sub').textContent = CL==='fr'
+              ? 'Délai dépassé — l\'expéditeur a peut-être fermé son onglet.'
+              : 'Timeout — sender may have closed their tab.';
+          }
+        }, 30000);
+
+        ws.onmessage = async (evt) => {
+          if (typeof evt.data === 'string') {
+            const msg = JSON.parse(evt.data);
+            if (msg.type === 'connected') {
+              clearTimeout(timeout);
+              Q('rx-connecting-card').style.display = 'none';
+              Q('rx-found-card').style.display = 'block';
+              Q('rx-fname').textContent = senderName
+                ? (CL==='fr' ? `Envoi de ${senderName}…` : `Receiving from ${senderName}…`)
+                : (CL==='fr' ? 'Connexion établie…' : 'Connected…');
+              Q('rx-fmeta').textContent = 'AES-256-GCM · ' + (senderContact || '');
+              receiveFilesWS(ws, aesKey);
+            }
+            if (msg.type === 'disconnected' || msg.type === 'timeout') {
+              clearTimeout(timeout);
+              ws.close();
+              if (Q('rx-done-card').style.display === 'none') {
+                Q('rx-found-card').style.display = 'none';
+                Q('rx-error-card').style.display = 'block';
+                Q('rx-error-sub').textContent = CL==='fr'
+                  ? 'Connexion fermée — l\'expéditeur a quitté.'
+                  : 'Connection closed — sender left.';
+              }
+            }
+          }
+          // Binary frames handled by receiveFilesWS below
+        };
+
+        ws.onerror = () => {
+          clearTimeout(timeout);
+          Q('rx-connecting-card').style.display = 'none';
+          Q('rx-error-card').style.display = 'block';
+          Q('rx-error-sub').textContent = CL==='fr'
+            ? 'Impossible de joindre le relay.' : 'Cannot reach relay server.';
+        };
+      }
+
+      if (senderName) {
+        Q('rx-sender-name').textContent    = senderName;
+        Q('rx-sender-contact').textContent = senderContact || '';
+        Q('rx-accept-card').style.display  = 'block';
+        S._pendingConnect = doConnectRelay;
+      } else {
+        doConnectRelay();
+      }
+      return; // relay path done
+    }
 
     const peer = new Peer(undefined, {
       debug: 0,
@@ -1432,6 +1581,79 @@ function declineTransfer() {
   rxReset();
 }
 
+/* ── WebSocket receive (relay transport) ─────────────────────────────────── */
+function receiveFilesWS(ws, aesKey) {
+  let currentMeta = null, chunks = [], receivedFiles = [];
+  let totalReceived = 0, totalSize = 0;
+  const t0 = Date.now();
+
+  ws.onmessage = async (evt) => {
+    if (typeof evt.data === 'string') {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === 'meta') {
+        currentMeta = msg; chunks = [];
+        totalSize += msg.size;
+        Q('rx-fname').textContent = msg.name;
+        Q('rx-fmeta').textContent = `${fmtSize(msg.size)} · AES-256-GCM`;
+        Q('rx-file-icon').textContent = fileIcon(msg.name);
+      }
+      if (msg.type === 'fileDone' && currentMeta) {
+        const plain = new Uint8Array(chunks.reduce((a,c)=>a+c.byteLength, 0));
+        let off = 0;
+        for (const c of chunks) { plain.set(new Uint8Array(c), off); off += c.byteLength; }
+        receivedFiles.push({ name: currentMeta.name, data: plain, size: currentMeta.size });
+        currentMeta = null; chunks = [];
+      }
+      if (msg.type === 'allDone') {
+        ws.close();
+        finishReceive(receivedFiles);
+      }
+      if (msg.type === 'disconnected') {
+        ws.close();
+        if (Q('rx-done-card').style.display === 'none') {
+          Q('rx-found-card').style.display = 'none';
+          Q('rx-error-card').style.display = 'block';
+          Q('rx-error-sub').textContent = CL==='fr' ? 'Connexion fermée prématurément.' : 'Connection closed prematurely.';
+        }
+      }
+    } else {
+      // Binary frame — encrypted chunk (12B IV + ciphertext)
+      const raw = evt.data instanceof ArrayBuffer ? evt.data : await evt.data.arrayBuffer();
+      const iv  = raw.slice(0, 12);
+      const ct  = raw.slice(12);
+      try {
+        const plain = await decryptChunk(aesKey, new Uint8Array(iv), ct);
+        chunks.push(plain);
+        totalReceived += plain.byteLength;
+        if (totalSize > 0) {
+          const pct  = Math.round(totalReceived / totalSize * 100);
+          const kbps = Math.round(totalReceived / ((Date.now() - t0) || 1));
+          Q('rx-bar').style.width = pct + '%';
+          Q('rx-step-label').textContent = `${pct}% · ${fmtSize(totalReceived)}/${fmtSize(totalSize)} · ${fmtSize(kbps)}/s`;
+        }
+      } catch(e) { console.error('Decrypt error', e); }
+    }
+  };
+}
+
+/* ── Shared finish (download files) ─────────────────────────────────────── */
+function finishReceive(receivedFiles) {
+  for (const f of receivedFiles) {
+    const blob = new Blob([f.data]);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = f.name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+  const summary = receivedFiles.length === 1
+    ? `"${receivedFiles[0].name}" (${fmtSize(receivedFiles[0].size)})`
+    : `${receivedFiles.length} files (${fmtSize(receivedFiles.reduce((s,f)=>s+f.size,0))})`;
+  Q('rx-found-card').style.display = 'none';
+  Q('rx-done-card').style.display  = 'block';
+  Q('rx-done-sub').textContent = summary + ' ' + (CL==='fr'?'reçu et sauvegardé.':'received and saved.');
+}
+
+/* ── PeerJS receive ──────────────────────────────────────────────────────── */
 function receiveFiles(conn, aesKey, peer) {
   let currentMeta = null;
   let chunks = [];
