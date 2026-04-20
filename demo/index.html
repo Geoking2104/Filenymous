@@ -351,14 +351,19 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:1rem 0}
       </div>
 
       <div class="big-title" id="wait-title" style="margin-bottom:.3rem">Waiting for recipient…</div>
-      <div class="big-sub" style="margin-bottom:1.2rem">Share this link — keep this tab open until the download completes</div>
+      <div class="big-sub" id="wait-sub-msg" style="margin-bottom:1.2rem">Envoyez ce lien au destinataire — gardez cet onglet ouvert jusqu'à réception</div>
 
       <div class="frow" style="text-align:left;max-width:500px;margin:0 auto 1rem">
-        <label class="flabel">Share link</label>
+        <label class="flabel">Lien de réception</label>
         <div class="link-box">
           <span class="link-url" id="wait-link-url" style="font-size:.73rem"></span>
-          <button class="btn-outline btn-sm" onclick="copyLink('wait-link-url',this)" data-i18n="btn_copy">Copy</button>
+          <button class="btn-outline btn-sm" onclick="copyLink('wait-link-url',this)" data-i18n="btn_copy">Copier</button>
         </div>
+        <div style="display:flex;gap:.6rem;margin-top:.6rem">
+          <button class="btn-primary btn-sm" id="btn-send-email" onclick="sendLinkByEmail()" style="flex:1">📧 Envoyer par email</button>
+          <button class="btn-outline btn-sm" id="btn-send-sms" onclick="sendLinkBySms()" style="flex:1">💬 Envoyer par SMS</button>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.4rem;text-align:center" id="wait-delivery-note"></div>
       </div>
 
       <div id="wait-progress" style="display:none;max-width:380px;margin:0 auto .6rem">
@@ -1150,11 +1155,27 @@ async function doSend() {
       setTimeout(() => {
         const base = location.origin + location.pathname;
         const url = `${base}?r=${id}#${keyB64}`;
+        S.currentShareUrl      = url;
+        S.currentRecipient     = recipient;
+        S.currentSenderName    = senderName;
+        S.currentSenderEmail   = senderEmail;
         Q('send-prog-card').style.display = 'none';
         Q('send-wait-card').style.display = 'block';
         Q('wait-link-url').textContent = url;
         Q('sdot').classList.add('on');
         Q('slabel').textContent = '⏳ ' + t('wait_title');
+
+        // Show/hide buttons depending on contact type
+        const isEmailContact = isEmail(recipient);
+        const isPhoneContact  = isPhone(recipient);
+        Q('btn-send-email').style.display = isEmailContact ? '' : 'none';
+        Q('btn-send-sms').style.display   = isPhoneContact  ? '' : 'none';
+
+        // Auto-open email client if recipient is an email
+        if (isEmailContact) {
+          setTimeout(() => sendLinkByEmail(), 600);
+        }
+
         // Start ring + countdown
         startRing();
         startCountdown(() => {
@@ -1470,6 +1491,52 @@ function renderHistory() {
 }
 function updateHistDot() {
   Q('hist-dot').classList.toggle('show', S.transfers.some(tr => tr.status === 'pending'));
+}
+
+/* ── Email / SMS delivery ───────────────────────────────────────── */
+function sendLinkByEmail() {
+  const url       = S.currentShareUrl    || '';
+  const recipient = S.currentRecipient   || '';
+  const sender    = S.currentSenderName  || 'Quelqu\'un';
+  const sEmail    = S.currentSenderEmail || '';
+  const files     = S.files.map(f => f.name).join(', ') || 'fichier(s)';
+
+  const subject = encodeURIComponent(
+    CL === 'fr' ? `${sender} vous envoie un fichier via Filenymous` :
+    `${sender} is sending you a file via Filenymous`
+  );
+  const bodyFr = `Bonjour,\n\n${sender}${sEmail ? ' (' + sEmail + ')' : ''} vous envoie : ${files}\n\nCliquez ce lien pour télécharger (session valable 120 secondes — ouvrez-le maintenant) :\n\n${url}\n\n⚠️ Gardez l'onglet de l'expéditeur ouvert pendant le transfert.\n\n— Filenymous`;
+  const bodyEn = `Hi,\n\n${sender}${sEmail ? ' (' + sEmail + ')' : ''} is sending you: ${files}\n\nClick this link to download (session valid 120 seconds — open it now):\n\n${url}\n\n⚠️ Keep the sender's tab open during transfer.\n\n— Filenymous`;
+  const body = encodeURIComponent(CL === 'fr' ? bodyFr : bodyEn);
+
+  const mailto = `mailto:${encodeURIComponent(recipient)}?subject=${subject}&body=${body}`;
+  window.open(mailto, '_blank');
+
+  const note = Q('wait-delivery-note');
+  if (note) {
+    note.textContent = CL === 'fr'
+      ? '✉️ Client email ouvert — envoyez le message, puis attendez ici.'
+      : '✉️ Email client opened — send the message, then wait here.';
+  }
+}
+
+function sendLinkBySms() {
+  const url    = S.currentShareUrl   || '';
+  const sender = S.currentSenderName || 'Quelqu\'un';
+  const phone  = S.currentRecipient  || '';
+  const body   = encodeURIComponent(
+    CL === 'fr'
+      ? `${sender} vous envoie un fichier Filenymous (120s) : ${url}`
+      : `${sender} is sending you a file via Filenymous (120s): ${url}`
+  );
+  window.open(`sms:${phone}?body=${body}`, '_blank');
+
+  const note = Q('wait-delivery-note');
+  if (note) {
+    note.textContent = CL === 'fr'
+      ? '💬 SMS pré-rempli — envoyez-le, puis attendez ici.'
+      : '💬 SMS pre-filled — send it, then wait here.';
+  }
 }
 
 /* ── Copy helpers ───────────────────────────────────────────────── */
