@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Filenymous — P2P File Transfer</title>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -359,11 +360,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:1rem 0}
           <span class="link-url" id="wait-link-url" style="font-size:.73rem"></span>
           <button class="btn-outline btn-sm" onclick="copyLink('wait-link-url',this)" data-i18n="btn_copy">Copier</button>
         </div>
-        <div style="display:flex;gap:.6rem;margin-top:.6rem">
-          <button class="btn-primary btn-sm" id="btn-send-email" onclick="sendLinkByEmail()" style="flex:1">📧 Envoyer par email</button>
-          <button class="btn-outline btn-sm" id="btn-send-sms" onclick="sendLinkBySms()" style="flex:1">💬 Envoyer par SMS</button>
-        </div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:.4rem;text-align:center" id="wait-delivery-note"></div>
+        <div id="wait-email-status" style="font-size:.72rem;margin-top:.45rem;text-align:center;min-height:1.1rem"></div>
       </div>
 
       <div id="wait-progress" style="display:none;max-width:380px;margin:0 auto .6rem">
@@ -388,6 +385,21 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:1rem 0}
 
   <!-- ── RECEIVE ── -->
   <div class="panel" id="panel-receive">
+
+    <!-- Acceptance card — shown before connecting -->
+    <div class="card big-state" id="rx-accept-card" style="display:none;padding:2.2rem 1.5rem">
+      <div class="big-icon">📨</div>
+      <div class="big-title" style="margin-bottom:.4rem">Fichier entrant</div>
+      <div id="rx-sender-name" style="font-size:1.05rem;font-weight:700;color:var(--indigo);margin-bottom:.2rem"></div>
+      <div id="rx-sender-contact" style="font-size:.85rem;color:var(--muted);margin-bottom:1.5rem"></div>
+      <div class="infobox infobox-blue" style="text-align:left;max-width:380px;margin:0 auto 1.6rem;font-size:.83rem">
+        🔒 Le fichier sera chiffré de bout en bout (AES-256-GCM) et transitera directement entre vos navigateurs — aucun serveur ne le verra.
+      </div>
+      <div style="display:flex;gap:1rem;justify-content:center">
+        <button class="btn-primary" style="min-width:130px" onclick="acceptTransfer()">✅ Accepter</button>
+        <button class="btn-danger"  style="min-width:130px" onclick="declineTransfer()">❌ Refuser</button>
+      </div>
+    </div>
 
     <!-- Auto-connecting (when URL has ?r= param) -->
     <div class="card big-state" id="rx-connecting-card" style="display:none">
@@ -732,6 +744,17 @@ function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 function isPhone(v) { return /^\+[1-9]\d{7,14}$/.test(v); }
 function isContact(v) { return isEmail(v) || isPhone(v); }
 
+/* ── EmailJS config ─────────────────────────────────────────────── */
+// Create a free account at https://www.emailjs.com
+// → Add an email service (Gmail, Outlook…) → note the Service ID
+// → Create a template with variables: {{to_email}} {{from_name}} {{from_contact}} {{file_names}} {{transfer_link}}
+// → Copy your Public Key from Account → API Keys
+const EMAILJS_PUBLIC_KEY   = 'YOUR_PUBLIC_KEY';   // e.g. 'abc123XYZ'
+const EMAILJS_SERVICE_ID   = 'YOUR_SERVICE_ID';   // e.g. 'service_xxxxxx'
+const EMAILJS_TEMPLATE_ID  = 'YOUR_TEMPLATE_ID';  // e.g. 'template_xxxxxx'
+const EMAILJS_CONFIGURED   = EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY';
+if (EMAILJS_CONFIGURED) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+
 /* ── App state ──────────────────────────────────────────────────── */
 const S = {
   files: [],
@@ -743,6 +766,13 @@ const S = {
   // P2P
   senderPeer: null,
   currentAesKey: null,
+  // Share session
+  currentShareUrl:    null,
+  currentRecipient:   null,
+  currentSenderName:  null,
+  currentSenderEmail: null,
+  // Receive
+  _pendingConnect: null,
 };
 
 /* ── i18n ───────────────────────────────────────────────────────── */
@@ -1154,7 +1184,10 @@ async function doSend() {
       setProg(100, '✓ Session ready');
       setTimeout(() => {
         const base = location.origin + location.pathname;
-        const url = `${base}?r=${id}#${keyB64}`;
+        // Encode sender info in URL so receiver can show acceptance card
+        const sn  = encodeURIComponent(senderName);
+        const sc  = encodeURIComponent(senderEmail || recipient);
+        const url = `${base}?r=${id}&sn=${sn}&sc=${sc}#${keyB64}`;
         S.currentShareUrl      = url;
         S.currentRecipient     = recipient;
         S.currentSenderName    = senderName;
@@ -1165,16 +1198,9 @@ async function doSend() {
         Q('sdot').classList.add('on');
         Q('slabel').textContent = '⏳ ' + t('wait_title');
 
-        // Show/hide buttons depending on contact type
-        const isEmailContact = isEmail(recipient);
-        const isPhoneContact  = isPhone(recipient);
-        Q('btn-send-email').style.display = isEmailContact ? '' : 'none';
-        Q('btn-send-sms').style.display   = isPhoneContact  ? '' : 'none';
-
-        // Auto-open email client if recipient is an email
-        if (isEmailContact) {
-          setTimeout(() => sendLinkByEmail(), 600);
-        }
+        // Silent background email send
+        sendEmailSilent(recipient, senderName, senderEmail, url,
+          S.files.map(f => f.name).join(', '));
 
         // Start ring + countdown
         startRing();
@@ -1313,18 +1339,19 @@ function resetSend() {
 
 /* ── P2P Receive ────────────────────────────────────────────────── */
 function checkReceiveMode() {
-  const params = new URLSearchParams(location.search);
-  const peerId = params.get('r');
-  const keyB64 = location.hash.slice(1);
+  const params      = new URLSearchParams(location.search);
+  const peerId      = params.get('r');
+  const keyB64      = location.hash.slice(1);
+  const senderName  = decodeURIComponent(params.get('sn') || '');
+  const senderContact = decodeURIComponent(params.get('sc') || '');
   if (peerId && keyB64) {
     nav('receive');
     Q('rx-idle-card').style.display = 'none';
-    Q('rx-connecting-card').style.display = 'block';
-    startReceive(peerId, keyB64);
+    startReceive(peerId, keyB64, senderName, senderContact);
   }
 }
 
-async function startReceive(senderId, keyB64) {
+async function startReceive(senderId, keyB64, senderName, senderContact) {
   try {
     const keyBytes = fromB64url(keyB64);
     const aesKey = await crypto.subtle.importKey('raw', keyBytes, {name:'AES-GCM'}, false, ['decrypt']);
@@ -1335,51 +1362,80 @@ async function startReceive(senderId, keyB64) {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'turn:openrelay.metered.ca:80',           username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:443',          username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+          { urls: 'turn:openrelay.metered.ca:80',               username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443',              username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443?transport=tcp',username: 'openrelayproject', credential: 'openrelayproject' }
         ]
       }
     });
 
     peer.on('error', err => {
-      Q('rx-connecting-card').style.display = 'none';
+      ['rx-accept-card','rx-connecting-card'].forEach(id => Q(id).style.display = 'none');
       Q('rx-error-card').style.display = 'block';
       Q('rx-error-sub').textContent = err.message;
     });
 
-    peer.on('open', () => {
-      const conn = peer.connect(senderId, {reliable: true, serialization: 'binary'});
-      conn.on('open', () => {
-        Q('rx-connecting-card').style.display = 'none';
-        Q('rx-found-card').style.display = 'block';
-        Q('rx-fname').textContent = CL==='fr' ? 'Connexion établie…' : 'Connected, receiving…';
-        Q('rx-fmeta').textContent = 'AES-256-GCM';
-        receiveFiles(conn, aesKey, peer);
+    // doConnect: called after user accepts (or immediately if no sender info)
+    function doConnect() {
+      Q('rx-accept-card').style.display = 'none';
+      Q('rx-connecting-card').style.display = 'block';
+      peer.on('open', () => {
+        const conn = peer.connect(senderId, {reliable: true, serialization: 'binary'});
+        conn.on('open', () => {
+          Q('rx-connecting-card').style.display = 'none';
+          Q('rx-found-card').style.display = 'block';
+          Q('rx-fname').textContent = senderName
+            ? (CL==='fr' ? `Envoi de ${senderName}…` : `Sending from ${senderName}…`)
+            : (CL==='fr' ? 'Connexion établie…' : 'Connected, receiving…');
+          Q('rx-fmeta').textContent = 'AES-256-GCM · ' + (senderContact || '');
+          receiveFiles(conn, aesKey, peer);
+        });
+        conn.on('error', err => {
+          Q('rx-connecting-card').style.display = 'none';
+          Q('rx-error-card').style.display = 'block';
+          Q('rx-error-sub').textContent = err.message || 'Connection error';
+        });
       });
-      conn.on('error', err => {
-        Q('rx-connecting-card').style.display = 'none';
-        Q('rx-error-card').style.display = 'block';
-        Q('rx-error-sub').textContent = err.message || 'Connection error';
-      });
-    });
 
-    // Timeout: if peer can't connect in 30s
-    setTimeout(() => {
-      if (Q('rx-connecting-card').style.display !== 'none') {
-        peer.destroy();
-        Q('rx-connecting-card').style.display = 'none';
-        Q('rx-error-card').style.display = 'block';
-        Q('rx-error-sub').textContent = CL==='fr' ? 'Délai dépassé — le destinataire a peut-être fermé l\'onglet.' :
-          'Timeout — the sender may have closed their tab.';
-      }
-    }, 30000);
+      // Connection timeout (30s after accepting)
+      setTimeout(() => {
+        if (Q('rx-connecting-card').style.display !== 'none') {
+          peer.destroy();
+          Q('rx-connecting-card').style.display = 'none';
+          Q('rx-error-card').style.display = 'block';
+          Q('rx-error-sub').textContent = CL==='fr'
+            ? 'Délai dépassé — l\'expéditeur a peut-être fermé son onglet.'
+            : 'Timeout — the sender may have closed their tab.';
+        }
+      }, 30000);
+    }
+
+    if (senderName) {
+      // Show acceptance card — user must click Accept before we connect
+      Q('rx-sender-name').textContent    = senderName;
+      Q('rx-sender-contact').textContent = senderContact || '';
+      Q('rx-accept-card').style.display  = 'block';
+      S._pendingConnect = doConnect;
+    } else {
+      // No sender info in URL (old link format) — connect directly
+      doConnect();
+    }
 
   } catch(e) {
     Q('rx-connecting-card').style.display = 'none';
     Q('rx-error-card').style.display = 'block';
     Q('rx-error-sub').textContent = e.message;
   }
+}
+
+function acceptTransfer() {
+  if (S._pendingConnect) { S._pendingConnect(); S._pendingConnect = null; }
+}
+
+function declineTransfer() {
+  S._pendingConnect = null;
+  Q('rx-accept-card').style.display = 'none';
+  rxReset();
 }
 
 function receiveFiles(conn, aesKey, peer) {
@@ -1465,7 +1521,9 @@ function receiveFiles(conn, aesKey, peer) {
 }
 
 function rxReset() {
-  ['rx-connecting-card','rx-found-card','rx-done-card','rx-error-card'].forEach(id => Q(id).style.display = 'none');
+  ['rx-accept-card','rx-connecting-card','rx-found-card','rx-done-card','rx-error-card']
+    .forEach(id => Q(id).style.display = 'none');
+  S._pendingConnect = null;
   Q('rx-idle-card').style.display = 'block';
   history.replaceState(null, '', location.pathname);
 }
@@ -1493,50 +1551,38 @@ function updateHistDot() {
   Q('hist-dot').classList.toggle('show', S.transfers.some(tr => tr.status === 'pending'));
 }
 
-/* ── Email / SMS delivery ───────────────────────────────────────── */
-function sendLinkByEmail() {
-  const url       = S.currentShareUrl    || '';
-  const recipient = S.currentRecipient   || '';
-  const sender    = S.currentSenderName  || 'Quelqu\'un';
-  const sEmail    = S.currentSenderEmail || '';
-  const files     = S.files.map(f => f.name).join(', ') || 'fichier(s)';
+/* ── Silent background email (EmailJS) ──────────────────────────── */
+function sendEmailSilent(toEmail, fromName, fromContact, transferUrl, fileNames) {
+  const statusEl = Q('wait-email-status');
+  if (!isEmail(toEmail)) return; // phone number — skip email
 
-  const subject = encodeURIComponent(
-    CL === 'fr' ? `${sender} vous envoie un fichier via Filenymous` :
-    `${sender} is sending you a file via Filenymous`
-  );
-  const bodyFr = `Bonjour,\n\n${sender}${sEmail ? ' (' + sEmail + ')' : ''} vous envoie : ${files}\n\nCliquez ce lien pour télécharger (session valable 120 secondes — ouvrez-le maintenant) :\n\n${url}\n\n⚠️ Gardez l'onglet de l'expéditeur ouvert pendant le transfert.\n\n— Filenymous`;
-  const bodyEn = `Hi,\n\n${sender}${sEmail ? ' (' + sEmail + ')' : ''} is sending you: ${files}\n\nClick this link to download (session valid 120 seconds — open it now):\n\n${url}\n\n⚠️ Keep the sender's tab open during transfer.\n\n— Filenymous`;
-  const body = encodeURIComponent(CL === 'fr' ? bodyFr : bodyEn);
-
-  const mailto = `mailto:${encodeURIComponent(recipient)}?subject=${subject}&body=${body}`;
-  window.open(mailto, '_blank');
-
-  const note = Q('wait-delivery-note');
-  if (note) {
-    note.textContent = CL === 'fr'
-      ? '✉️ Client email ouvert — envoyez le message, puis attendez ici.'
-      : '✉️ Email client opened — send the message, then wait here.';
+  if (!EMAILJS_CONFIGURED) {
+    if (statusEl) statusEl.innerHTML =
+      '<span style="color:var(--warn)">⚙️ EmailJS non configuré — copiez le lien manuellement.</span>';
+    return;
   }
-}
 
-function sendLinkBySms() {
-  const url    = S.currentShareUrl   || '';
-  const sender = S.currentSenderName || 'Quelqu\'un';
-  const phone  = S.currentRecipient  || '';
-  const body   = encodeURIComponent(
-    CL === 'fr'
-      ? `${sender} vous envoie un fichier Filenymous (120s) : ${url}`
-      : `${sender} is sending you a file via Filenymous (120s): ${url}`
-  );
-  window.open(`sms:${phone}?body=${body}`, '_blank');
+  if (statusEl) statusEl.innerHTML =
+    '<span style="color:var(--muted)"><span class="spin" style="width:11px;height:11px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:5px"></span>Envoi en cours…</span>';
 
-  const note = Q('wait-delivery-note');
-  if (note) {
-    note.textContent = CL === 'fr'
-      ? '💬 SMS pré-rempli — envoyez-le, puis attendez ici.'
-      : '💬 SMS pre-filled — send it, then wait here.';
-  }
+  const params = {
+    to_email:      toEmail,
+    from_name:     fromName,
+    from_contact:  fromContact || fromName,
+    file_names:    fileNames || '—',
+    transfer_link: transferUrl
+  };
+
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params)
+    .then(() => {
+      if (statusEl) statusEl.innerHTML =
+        `<span style="color:var(--ok)">✓ Email envoyé à ${toEmail}</span>`;
+    })
+    .catch(err => {
+      console.warn('EmailJS error', err);
+      if (statusEl) statusEl.innerHTML =
+        '<span style="color:var(--err)">✗ Échec envoi email — copiez le lien manuellement.</span>';
+    });
 }
 
 /* ── Copy helpers ───────────────────────────────────────────────── */
