@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Filenymous — P2P File Transfer</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1073,6 +1073,7 @@ function playTimeout() {
 
 /* ── Countdown ──────────────────────────────────────────────────── */
 function startCountdown(onExpire) {
+  if (_countdownTimer) stopCountdown(); // prevent double-start
   let sec = 120;
   Q('countdown-num').textContent = '120';
   Q('badge-countdown').textContent = '120';
@@ -1124,7 +1125,18 @@ async function doSend() {
     setProg(40, t('prog_peer'));
     await sleep(300);
 
-    const peer = new Peer(undefined, {debug: 0});
+    const peer = new Peer(undefined, {
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'turn:openrelay.metered.ca:80',           username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443',          username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        ]
+      }
+    });
     S.senderPeer = peer;
 
     peer.on('error', err => {
@@ -1296,7 +1308,18 @@ async function startReceive(senderId, keyB64) {
     const keyBytes = fromB64url(keyB64);
     const aesKey = await crypto.subtle.importKey('raw', keyBytes, {name:'AES-GCM'}, false, ['decrypt']);
 
-    const peer = new Peer(undefined, {debug: 0});
+    const peer = new Peer(undefined, {
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'turn:openrelay.metered.ca:80',           username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443',          username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        ]
+      }
+    });
 
     peer.on('error', err => {
       Q('rx-connecting-card').style.display = 'none';
