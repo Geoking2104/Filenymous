@@ -1523,7 +1523,7 @@ async function startReceive(sessionId, keyB64, senderName, senderContact, relayU
       Q('rx-accept-card').style.display = 'none';
       Q('rx-connecting-card').style.display = 'block';
       peer.on('open', () => {
-        const conn = peer.connect(senderId, {reliable: true, serialization: 'binary'});
+        const conn = peer.connect(sessionId, {reliable: true, serialization: 'binary'});
         conn.on('open', () => {
           Q('rx-connecting-card').style.display = 'none';
           Q('rx-found-card').style.display = 'block';
@@ -1595,7 +1595,7 @@ function receiveFilesWS(ws, aesKey) {
         totalSize += msg.size;
         Q('rx-fname').textContent = msg.name;
         Q('rx-fmeta').textContent = `${fmtSize(msg.size)} · AES-256-GCM`;
-        Q('rx-file-icon').textContent = fileIcon(msg.name);
+        Q('rx-file-icon').textContent = fileEmoji(msg.name);
       }
       if (msg.type === 'fileDone' && currentMeta) {
         const plain = new Uint8Array(chunks.reduce((a,c)=>a+c.byteLength, 0));
@@ -1677,7 +1677,9 @@ function receiveFiles(conn, aesKey, peer) {
         Q('rx-bar').style.width = '95%';
         const parts = [];
         for (const chunk of chunks) {
-          const buf = chunk instanceof ArrayBuffer ? new Uint8Array(chunk) : new Uint8Array(chunk.buffer || chunk);
+          const buf = chunk instanceof ArrayBuffer
+            ? new Uint8Array(chunk)
+            : new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength);
           const iv = buf.slice(0, 12);
           const enc = buf.slice(12);
           try {

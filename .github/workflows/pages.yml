@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - 'demo/**'
+      - 'filenymous/demo/**'
       - '.github/workflows/pages.yml'
+      - 'filenymous/.github/workflows/pages.yml'
   workflow_dispatch:  # allow manual trigger from GitHub UI
 
 permissions:
