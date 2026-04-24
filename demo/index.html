@@ -747,7 +747,7 @@ function isContact(v) { return isEmail(v) || isPhone(v); }
 // Deploy mailer/ (Rust/Axum/lettre) and set the URL here.
 // See mailer/README.md for deployment instructions (Fly.io, Railway, VPS…).
 // Leave empty to disable silent email (link must be shared manually).
-const MAILER_API_URL = '';  // e.g. 'https://filenymous-mailer.fly.dev'
+const MAILER_API_URL = '';  // relay désactivé — notification client-side uniquement
 
 /* ── App state ──────────────────────────────────────────────────── */
 const S = {
@@ -1226,7 +1226,7 @@ async function doSendRelay(recipient, senderName, senderEmail, aesKey, keyB64) {
       Q('sdot').classList.add('on');
       Q('slabel').textContent = '⏳ ' + t('wait_title');
 
-      sendEmailSilent(recipient, senderName, senderEmail, url, S.files.map(f=>f.name).join(', '));
+      notifyRecipient(recipient, senderName, senderEmail, url, S.files.map(f=>f.name).join(', '));
       startRing();
       startCountdown(() => {
         playTimeout();
@@ -1290,7 +1290,7 @@ async function doSendPeerJS(recipient, senderName, senderEmail, aesKey, keyB64) 
       Q('wait-link-url').textContent = url;
       Q('sdot').classList.add('on');
       Q('slabel').textContent = '⏳ ' + t('wait_title');
-      sendEmailSilent(recipient, senderName, senderEmail, url, S.files.map(f=>f.name).join(', '));
+      notifyRecipient(recipient, senderName, senderEmail, url, S.files.map(f=>f.name).join(', '));
       startRing();
       startCountdown(() => {
         playTimeout();
@@ -1769,50 +1769,52 @@ function updateHistDot() {
   Q('hist-dot').classList.toggle('show', S.transfers.some(tr => tr.status === 'pending'));
 }
 
-/* ── Silent background email (Rust mailer via fetch) ────────────── */
-function sendEmailSilent(toEmail, fromName, fromContact, transferUrl, fileNames) {
+/* ── Notification destinataire (mailto: + Web Share API) ─────────── */
+function notifyRecipient(toEmail, fromName, fromContact, transferUrl, fileNames) {
   const statusEl = Q('wait-email-status');
-  if (!isEmail(toEmail)) return; // numéro de téléphone — pas d'email
+  if (!statusEl) return;
 
-  if (!MAILER_API_URL) {
-    if (statusEl) statusEl.innerHTML =
-      '<span style="color:var(--warn)">⚙️ Mailer non configuré — copiez le lien manuellement.</span>';
-    return;
+  const isFr = CL === 'fr';
+  const hasEmail = isEmail(toEmail);
+
+  // ── Construire le mailto: si c'est une adresse email ──────────────
+  let mailtoBtn = '';
+  if (hasEmail) {
+    const subject = encodeURIComponent(
+      isFr ? `${fromName} vous a envoyé un fichier` : `${fromName} sent you a file`
+    );
+    const body = encodeURIComponent(
+      isFr
+        ? `Bonjour,\n\n${fromName} vous a envoyé ${fileNames || 'un fichier'}.\n\nTéléchargez-le ici (lien temporaire) :\n${transferUrl}\n\n⏱ Ce lien expire dès que l'expéditeur ferme son onglet.\n🔒 Chiffrement E2E AES-256-GCM — personne d'autre ne peut lire vos fichiers.\n\n— Filenymous`
+        : `Hello,\n\n${fromName} sent you ${fileNames || 'a file'}.\n\nDownload it here (temporary link):\n${transferUrl}\n\n⏱ This link expires when the sender closes their tab.\n🔒 End-to-end AES-256-GCM — nobody else can read your files.\n\n— Filenymous`
+    );
+    const href = `mailto:${encodeURIComponent(toEmail)}?subject=${subject}&body=${body}`;
+    const label = isFr ? '📧 Ouvrir dans ma messagerie' : '📧 Open in my mail app';
+    mailtoBtn = `<a href="${href}" target="_blank" style="display:inline-block;margin-right:8px;margin-top:6px;padding:8px 14px;background:var(--accent);color:#fff;border-radius:7px;font-size:13px;font-weight:600;text-decoration:none">${label}</a>`;
   }
 
-  if (statusEl) statusEl.innerHTML =
-    '<span style="color:var(--muted)">' +
-    '<span class="spin" style="width:11px;height:11px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:5px"></span>' +
-    'Envoi en cours…</span>';
+  // ── Web Share API (mobile / navigateurs compatibles) ──────────────
+  let shareBtn = '';
+  if (navigator.share) {
+    const shareLabel = isFr ? '📤 Partager le lien' : '📤 Share link';
+    shareBtn = `<button onclick="shareTransferLink()" style="margin-top:6px;padding:8px 14px;background:var(--surface2,#334155);color:var(--fg);border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">${shareLabel}</button>`;
+  }
 
-  fetch(MAILER_API_URL + '/send-email', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({
-      to:            toEmail,
-      from_name:     fromName,
-      from_contact:  fromContact || fromName,
-      file_names:    fileNames   || '—',
-      transfer_link: transferUrl,
-      lang:          CL
-    })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (statusEl) {
-      if (data.ok) {
-        statusEl.innerHTML = `<span style="color:var(--ok)">✓ Email envoyé à ${toEmail}</span>`;
-      } else {
-        statusEl.innerHTML =
-          `<span style="color:var(--err)">✗ Échec : ${data.message} — copiez le lien manuellement.</span>`;
-      }
-    }
-  })
-  .catch(err => {
-    console.warn('Mailer fetch error', err);
-    if (statusEl) statusEl.innerHTML =
-      '<span style="color:var(--err)">✗ Mailer injoignable — copiez le lien manuellement.</span>';
-  });
+  const hint = isFr
+    ? `<div style="margin-top:8px;font-size:12px;color:var(--muted)">${hasEmail ? `📬 Cliquez pour envoyer l'email à <b>${toEmail}</b>` : '📋 Copiez le lien ci-dessus et envoyez-le.'}</div>`
+    : `<div style="margin-top:8px;font-size:12px;color:var(--muted)">${hasEmail ? `📬 Click to send the email to <b>${toEmail}</b>` : '📋 Copy the link above and send it.'}</div>`;
+
+  statusEl.innerHTML = mailtoBtn + shareBtn + hint;
+}
+
+function shareTransferLink() {
+  const url = S.currentShareUrl || Q('wait-link-url')?.textContent || location.href;
+  const isFr = CL === 'fr';
+  navigator.share({
+    title: 'Filenymous',
+    text: isFr ? 'Téléchargez votre fichier ici :' : 'Download your file here:',
+    url
+  }).catch(() => {});
 }
 
 /* ── Copy helpers ───────────────────────────────────────────────── */
@@ -1876,35 +1878,4 @@ function renderContacts() {
   Q('contact-list').innerHTML = S.contacts.map((c, i) => `
     <div class="contact-card">
       <div class="avatar">${c.contact[0].toUpperCase()}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.88rem;font-weight:500">${c.contact}</div>
-        <div class="key-mono" style="font-size:.68rem;margin-top:.25rem;padding:.25rem .5rem">SHA-256: ${c.hash}</div>
-        <div style="font-size:.72rem;color:var(--ok);margin-top:.2rem">${t('otp_verified')}</div>
-      </div>
-      <button class="btn-danger btn-sm" onclick="revokeContact(${i})">${t('revoke')}</button>
-    </div>`).join('');
-}
-
-/* ── Init ───────────────────────────────────────────────────────── */
-(async function init() {
-  // Generate a demo agent key
-  try {
-    const kp = await crypto.subtle.generateKey({name:'ECDSA', namedCurve:'P-256'}, true, ['sign']);
-    const raw = await crypto.subtle.exportKey('raw', kp.publicKey);
-    S.agentKey = toB64(new Uint8Array(raw));
-    Q('agent-key-el').textContent = S.agentKey;
-  } catch(e) { Q('agent-key-el').textContent = 'hCAk' + Math.random().toString(36).slice(2,12) + '…'; }
-
-  // Apply language
-  setLang('en');
-
-  // Render initial state
-  renderHistory();
-  renderContacts();
-
-  // Check if we're a receiver (URL has ?r= and #key)
-  checkReceiveMode();
-})();
-</script>
-</body>
-</html>
+      <div style="flex:1;min
