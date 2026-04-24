@@ -1,0 +1,36 @@
+# Fly.io — Filenymous Bridge
+# Déployer : fly launch --no-deploy  (première fois)
+#             fly deploy              (mises à jour)
+#
+# Variables d'environnement à configurer UNE SEULE FOIS :
+#   fly secrets set RESEND_API_KEY=re_xxx
+#   fly secrets set FROM_EMAIL="Filenymous <noreply@filenymous.app>"
+#   fly secrets set BRIDGE_SECRET=<32+ chars random>
+
+app            = "filenymous-mailer"
+primary_region = "cdg"   # Paris — proche des utilisateurs FR/EU
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT      = "3001"
+  HOST      = "0.0.0.0"
+  NODE_ENV  = "production"
+
+[http_service]
+  internal_port       = 3001
+  force_https         = true
+  auto_stop_machines  = false   # NE PAS éteindre — le relay WS doit rester actif
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type       = "connections"
+    hard_limit = 500
+    soft_limit = 400
+
+[[vm]]
+  memory   = "256mb"
+  cpu_kind = "shared"
+  cpus     = 1
