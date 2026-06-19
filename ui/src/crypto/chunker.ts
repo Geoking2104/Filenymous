@@ -4,6 +4,7 @@
  */
 
 import { encryptChunk, decryptChunk, sha256hex } from "./aes";
+import { toBlobPart } from "./buffer";
 
 export const CHUNK_SIZE = 256 * 1024; // 256 KB
 
@@ -48,10 +49,10 @@ export async function decryptChunks(
   mimeType = "application/octet-stream",
   opts: ChunkProgress = {}
 ): Promise<Blob> {
-  const parts: Uint8Array[] = [];
+  const parts: BlobPart[] = [];
   for (let i = 0; i < chunks.length; i++) {
     const plain = await decryptChunk(key, chunks[i]);
-    parts.push(plain);
+    parts.push(toBlobPart(plain));
     opts.onChunk?.(i, chunks.length);
   }
   return new Blob(parts, { type: mimeType });

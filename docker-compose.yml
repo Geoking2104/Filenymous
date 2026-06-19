@@ -1,38 +1,30 @@
-## Filenymous — Full stack Docker Compose (M5 — corrected)
+## Filenymous v2 — Docker Compose (sans bridge centralisé)
 ##
 ## Services:
 ##   kitsune2   — kitsune2-bootstrap-srv --features sbd
-##                Handles BOTH peer discovery (bootstrap) AND WebRTC relay
-##                (SBD signal) on a single port 443 with built-in TLS.
+##                Gère bootstrap (peer discovery) ET signal WebRTC (SBD)
+##                sur un seul port 443 avec TLS intégré.
 ##                Source: https://github.com/holochain/kitsune2
 ##
-##   bridge     — Fastify notification service (OTP · email · SMS)
-##                TLS terminated by Caddy.
-##
-##   caddy      — Reverse proxy for the bridge only (Let's Encrypt).
-##                kitsune2 handles its own TLS — do NOT proxy it.
-##
-## Architecture note:
+## Architecture v2 (plus de bridge) :
 ##   ┌─ bootstrap.filenymous.eu:443 ─┐
-##   │  kitsune2-bootstrap-srv (TLS)   │  ← agents connect directly
+##   │  kitsune2-bootstrap-srv (TLS)   │  ← agents se connectent directement
 ##   │  • HTTPS  → peer discovery      │
 ##   │  • WSS    → WebRTC signaling    │
 ##   └────────────────────────────────┘
 ##
-##   ┌─ bridge.filenymous.eu:443 ─────┐
-##   │  Caddy (Let's Encrypt)           │
-##   │  → bridge:3001 (Fastify)         │
-##   └──────────────────────────────────┘
+##   Les notifications (email/SMS) sont supprimées.
+##   La livraison se fait via :
+##     - Mode A : send_remote_signal Holochain (agent en ligne)
+##     - Mode B : lien partagé manuellement (fragment # hors-bande)
+##   Le Web Bridge HTTP est géré par l'infrastructure Holo Host — pas ici.
 ##
-## Quick start (production):
-##   cp .env.compose.example .env.compose   # fill in secrets
-##   # Obtain TLS certs first (see network/README.md)
+## Démarrage prod :
 ##   docker compose --profile prod up -d
 ##
-## Quick start (dev — no TLS):
+## Démarrage dev (sans TLS) :
 ##   docker compose --profile dev up -d
-##   # kitsune2 on http://localhost:8787
-##   # bridge   on http://localhost:3001
+##   # kitsune2 sur http://localhost:8787
 
 name: filenymous
 
@@ -41,13 +33,11 @@ networks:
     driver: bridge
 
 volumes:
-  caddy-data:
-  caddy-config:
-  kitsune2-certs:   # mount real certs here in prod (certbot / Let's Encrypt)
+  kitsune2-certs:   # monter de vrais certs ici en prod (certbot / Let's Encrypt)
 
 services:
 
-  # ── 1. kitsune2 — bootstrap + SBD signal (single binary, single port) ──────
+  # ── 1. kitsune2 prod — bootstrap + SBD signal (TLS intégré) ────────────────
   kitsune2:
     build:
       context: .
@@ -57,8 +47,6 @@ services:
     networks: [filenymous]
     environment:
       RUST_LOG: info
-    # Production: kitsune2 manages its own TLS on port 443.
-    # Mount real PEM certs into /etc/kitsune2/
     volumes:
       - kitsune2-certs:/etc/kitsune2:ro
     ports:
@@ -71,7 +59,7 @@ services:
       retries: 3
     profiles: [prod]
 
-  # ── 1b. kitsune2 dev — no TLS, custom port ─────────────────────────────────
+  # ── 1b. kitsune2 dev — sans TLS, port 8787 ─────────────────────────────────
   kitsune2-dev:
     build:
       context: .
@@ -81,55 +69,7 @@ services:
     networks: [filenymous]
     environment:
       RUST_LOG: debug
-    # Dev mode: no --production flag, no TLS certs, plain HTTP/WS on 8787
     command: ["kitsune2-bootstrap-srv", "--listen", "[::]:8787"]
     ports:
       - "8787:8787"
-    profiles: [dev]
-
-  # ── 2. Bridge (notification micro-service) ─────────────────────────────────
-  bridge:
-    build:
-      context: ./bridge
-      dockerfile: Dockerfile
-    image: ghcr.io/filenymous/filenymous-bridge:latest
-    restart: unless-stopped
-    networks: [filenymous]
-    expose: ["3001"]
-    env_file: .env.compose
-    environment:
-      PORT: "3001"
-      HOST: "0.0.0.0"
-      NODE_ENV: production
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    profiles: [prod, dev]
-
-  # ── 3. Caddy — TLS reverse proxy for bridge ONLY ───────────────────────────
-  # kitsune2 handles its own TLS; only bridge needs Caddy.
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    networks: [filenymous]
-    ports:
-      - "80:80"
-      - "8443:443"     # bridge HTTPS — do NOT use 443 (taken by kitsune2)
-      - "8443:443/udp" # HTTP/3
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    depends_on:
-      bridge:
-        condition: service_healthy
-    profiles: [prod]
-
-  # ── 4. Bridge dev — port direct, no TLS ────────────────────────────────────
-  bridge-dev:
-    extends:
-      service: bridge
-    ports: ["3001:3001"]
     profiles: [dev]

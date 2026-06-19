@@ -1,19 +1,23 @@
 /**
- * Root component — connects to Holochain on mount, renders tab shell.
+ * Composant racine — v2.
+ * Nouveaux onglets : send | inbox | history | identity | privacy
+ * - "inbox" remplace "receive" : liste les parcels entrants en attente
+ * - Le lien one-time (#fragment) est toujours géré par ReceivePanel (chargé via URL)
  */
 
 import { useEffect } from "react";
-import { getClient } from "./holochain/client";
-import { useStore }  from "./store/useStore";
-import Header        from "./components/Header";
-import Footer        from "./components/Footer";
-import SendPanel     from "./components/SendPanel";
-import ReceivePanel  from "./components/ReceivePanel";
-import HistoryPanel  from "./components/HistoryPanel";
-import IdentityPanel from "./components/IdentityPanel";
-import PrivacyPanel  from "./components/PrivacyPanel";
+import { initClient, onSignal } from "./holochain/client";
+import { useStore }       from "./store/useStore";
+import type { FilenymousSignal } from "./holochain/types";
+import Header             from "./components/Header";
+import Footer             from "./components/Footer";
+import SendPanel          from "./components/SendPanel";
+import ReceivePanel       from "./components/ReceivePanel";
+import PendingNotices     from "./components/PendingNotices";
+import HistoryPanel       from "./components/HistoryPanel";
+import IdentityPanel      from "./components/IdentityPanel";
+import PrivacyPanel       from "./components/PrivacyPanel";
 
-// Global styles (single <style> block keeps things self-contained)
 const CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -30,21 +34,14 @@ const CSS = `
   html { font-size:15px; }
   body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; line-height:1.55; }
   input,select,textarea {
-    font-family:inherit; font-size:inherit;
-    background:var(--white); color:var(--text);
+    font-family:inherit; font-size:inherit; background:var(--white); color:var(--text);
     border:1.5px solid var(--border); border-radius:var(--radius);
     padding:.6rem .9rem; outline:none; width:100%;
     transition:border-color .15s,box-shadow .15s;
   }
-  input:focus,select:focus,textarea:focus {
-    border-color:var(--g1); box-shadow:0 0 0 3px rgba(99,102,241,.15);
-  }
-  textarea { resize:vertical; min-height:76px; line-height:1.55; }
-  button {
-    font-family:inherit; font-size:inherit; cursor:pointer;
-    border:none; border-radius:var(--radius); padding:.6rem 1.2rem;
-    transition:all .15s;
-  }
+  input:focus,select:focus,textarea:focus { border-color:var(--g1); box-shadow:0 0 0 3px rgba(99,102,241,.15); }
+  textarea { resize:vertical; min-height:76px; }
+  button { font-family:inherit; font-size:inherit; cursor:pointer; border:none; border-radius:var(--radius); padding:.6rem 1.2rem; transition:all .15s; }
   button:active { transform:scale(.98); }
   button:disabled { opacity:.45; cursor:not-allowed; transform:none; }
   .btn-primary { background:var(--grad); color:#fff; font-weight:600; box-shadow:0 2px 8px rgba(99,102,241,.3); }
@@ -60,6 +57,7 @@ const CSS = `
   .form-row { margin-bottom:.9rem; }
   .form-label { display:block; font-size:.8rem; font-weight:600; color:var(--muted); margin-bottom:.35rem; }
   .info-box { background:#ede9fe; border:1px solid #c4b5fd; border-radius:10px; padding:.75rem 1rem; font-size:.82rem; color:#4c1d95; margin-bottom:1rem; display:flex; gap:.6rem; }
+  .warn-box { background:#fef3c7; border:1px solid #fcd34d; border-radius:10px; padding:.75rem 1rem; font-size:.82rem; color:#92400e; margin-bottom:1rem; display:flex; gap:.6rem; }
   .progress-bar { height:6px; border-radius:3px; background:#e5e7eb; overflow:hidden; }
   .progress-fill { height:100%; border-radius:3px; background:var(--grad); transition:width .35s ease; }
   .badge { display:inline-flex; align-items:center; font-size:.72rem; font-weight:600; padding:.18rem .55rem; border-radius:20px; }
@@ -77,14 +75,42 @@ const CSS = `
 export default function App() {
   const { tab, setNet } = useStore();
 
-  // Connect to Holochain conductor on mount
+  // Vérifier si l'URL contient un lien one-time (#parcelEh:aesKey)
+  // Si oui, basculer directement sur le panel de réception
+  const urlHash  = window.location.hash;
+  const isLinkDl = urlHash.startsWith("#") && urlHash.includes(":");
+
   useEffect(() => {
     let alive = true;
-    getClient()
-      .then(() => { if (alive) setNet({ connected: true, peers: 0 }); })
-      .catch((e) => console.error("Holochain connection failed:", e));
+    initClient().then((mode) => {
+      if (alive) setNet({ connected: mode === "websocket", mode, peers: 0 });
+    });
+
+    // Écoute les signaux Holochain (nouveau parcel entrant)
+    onSignal((raw) => {
+      const sig = raw as FilenymousSignal;
+      if (sig?.type === "IncomingParcel") {
+        // Notification toast / indicateur d'inbox (simple pour l'instant)
+        console.info("[Filenymous] Nouveau parcel recu :", sig.file_name);
+      }
+    });
+
     return () => { alive = false; };
   }, [setNet]);
+
+  // Si l'URL est un lien de téléchargement, afficher directement ReceivePanel
+  if (isLinkDl) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <div className="app">
+          <Header minimal />
+          <main className="main"><ReceivePanel /></main>
+          <Footer />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -93,7 +119,7 @@ export default function App() {
         <Header />
         <main className="main">
           {tab === "send"     && <SendPanel />}
-          {tab === "receive"  && <ReceivePanel />}
+          {tab === "inbox"    && <PendingNotices />}
           {tab === "history"  && <HistoryPanel />}
           {tab === "identity" && <IdentityPanel />}
           {tab === "privacy"  && <PrivacyPanel />}

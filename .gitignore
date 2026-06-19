@@ -29,3 +29,13 @@ databases/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local binary downloads / captures
+src-tauri/bins/
+*.msi
+*.exe
+Capture*.gif
+
+# Shuttle secrets — never commit
+mailer/Secrets.toml
+Secrets.toml

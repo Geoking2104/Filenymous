@@ -1,0 +1,95 @@
+{
+  "build": {
+    "beforeDevCommand": "npm run dev --prefix ui",
+    "beforeBuildCommand": "npm run build --prefix ui",
+    "devPath": "http://localhost:5173",
+    "distDir": "../ui/dist",
+    "withGlobalTauri": true
+  },
+  "package": {
+    "productName": "Filenymous",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "clipboard": {
+        "writeText": true
+      },
+      "shell": {
+        "all": false,
+        "open": true
+      }
+    },
+    "cli": {
+      "description": "Filenymous — P2P encrypted file transfer",
+      "args": [
+        {
+          "name": "profile",
+          "takesValue": true,
+          "multiple": false
+        }
+      ]
+    },
+    "systemTray": {
+      "iconPath": "icons/32x32.png",
+      "iconAsTemplate": true,
+      "menuOnLeftClick": false
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "io.filenymous.app",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "externalBin": [
+        "bins/holochain-v0.3.2",
+        "bins/lair-keystore-v0.4.5"
+      ],
+      "resources": [
+        "../pouch/filenymous.happ"
+      ],
+      "copyright": "© 2024 Filenymous Contributors",
+      "category": "Utility",
+      "shortDescription": "P2P encrypted file transfer",
+      "longDescription": "Send files securely peer-to-peer using Holochain — no central server, no account, just email or phone.",
+      "macOS": {
+        "frameworks": [],
+        "minimumSystemVersion": "10.13",
+        "exceptionDomain": "",
+        "signingIdentity": null,
+        "entitlements": "entitlements.plist"
+      },
+      "deb": {
+        "depends": []
+      },
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "Filenymous",
+        "width": 900,
+        "height": 680,
+        "minWidth": 700,
+        "minHeight": 520,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "url": "index.html"
+      }
+    ]
+  }
+}

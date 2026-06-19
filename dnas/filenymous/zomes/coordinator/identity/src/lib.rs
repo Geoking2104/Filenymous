@@ -11,12 +11,12 @@ pub struct ClaimContactInput {
 
 // ─── Exported functions ───────────────────────────────────────────────────
 
-/// Publish a ContactClaim linking this agent to a contact hash.
-/// Called after OTP verification (the bridge validates the OTP externally;
-/// this function trusts the caller and stores the claim on the DHT).
+/// Publie un ContactClaim liant cet agent à un hash de contact.
+/// Pas de vérification OTP centralisée — preuve cryptographique via source-chain.
+/// La résolution contact → agent est best-effort (modèle pseudonyme, sans KYC).
 #[hdk_extern]
 pub fn claim_contact(input: ClaimContactInput) -> ExternResult<ActionHash> {
-    let agent = agent_info()?.agent_latest_pubkey;
+    let agent = agent_info()?.agent_initial_pubkey;
     let claim = ContactClaim {
         contact_hash: input.contact_hash.clone(),
         agent: agent.clone(),
@@ -52,7 +52,8 @@ pub fn get_agent_for_contact(contact_hash: String) -> ExternResult<Option<AgentP
     let contact_anchor = anchor_for_contact(&contact_hash)?;
 
     let links = get_links(
-        GetLinksInputBuilder::try_new(contact_anchor, LinkTypes::ContactHashToAgent)?.build(),
+        LinkQuery::try_new(contact_anchor, LinkTypes::ContactHashToAgent)?,
+        GetStrategy::default(),
     )?;
 
     // Take the most recent claim (last link created)
@@ -75,9 +76,7 @@ pub fn get_agent_for_contact(contact_hash: String) -> ExternResult<Option<AgentP
                                 "Deserialisation failed: {e}"
                             )))
                         })?
-                        .ok_or_else(|| {
-                            wasm_error!(WasmErrorInner::Guest("Empty entry".into()))
-                        })?;
+                        .ok_or_else(|| wasm_error!(WasmErrorInner::Guest("Empty entry".into())))?;
                     Ok(Some(claim.agent))
                 }
             }
@@ -89,10 +88,11 @@ pub fn get_agent_for_contact(contact_hash: String) -> ExternResult<Option<AgentP
 /// Removes both links and the entry itself.
 #[hdk_extern]
 pub fn revoke_contact_claim(contact_hash: String) -> ExternResult<ActionHash> {
-    let agent = agent_info()?.agent_latest_pubkey;
+    let agent = agent_info()?.agent_initial_pubkey;
 
     let links = get_links(
-        GetLinksInputBuilder::try_new(agent.clone(), LinkTypes::AgentToContactClaim)?.build(),
+        LinkQuery::try_new(agent.clone(), LinkTypes::AgentToContactClaim)?,
+        GetStrategy::default(),
     )?;
 
     for link in links {
@@ -104,7 +104,7 @@ pub fn revoke_contact_claim(contact_hash: String) -> ExternResult<ActionHash> {
             if let Some(c) = claim {
                 if c.contact_hash == contact_hash {
                     delete_entry(action_hash.clone())?;
-                    delete_link(link.create_link_hash)?;
+                    delete_link(link.create_link_hash, GetOptions::default())?;
                     return Ok(action_hash);
                 }
             }
@@ -140,7 +140,7 @@ pub fn publish_x25519_key(input: PublishX25519KeyInput) -> ExternResult<ActionHa
         )));
     }
 
-    let agent = agent_info()?.agent_latest_pubkey;
+    let agent = agent_info()?.agent_initial_pubkey;
     let key_entry = AgentX25519Key {
         x25519_pubkey: raw,
         agent: agent.clone(),
@@ -151,19 +151,15 @@ pub fn publish_x25519_key(input: PublishX25519KeyInput) -> ExternResult<ActionHa
 
     // Remove any previous X25519 key links from this agent
     let old_links = get_links(
-        GetLinksInputBuilder::try_new(agent.clone(), LinkTypes::AgentToX25519Key)?.build(),
+        LinkQuery::try_new(agent.clone(), LinkTypes::AgentToX25519Key)?,
+        GetStrategy::default(),
     )?;
     for link in old_links {
-        delete_link(link.create_link_hash)?;
+        delete_link(link.create_link_hash, GetOptions::default())?;
     }
 
     // Create the canonical link: agent → this key entry
-    create_link(
-        agent,
-        action_hash.clone(),
-        LinkTypes::AgentToX25519Key,
-        (),
-    )?;
+    create_link(agent, action_hash.clone(), LinkTypes::AgentToX25519Key, ())?;
 
     Ok(action_hash)
 }
@@ -175,7 +171,8 @@ pub fn get_x25519_key(agent: AgentPubKey) -> ExternResult<Option<String>> {
     use base64::{engine::general_purpose::STANDARD, Engine as _};
 
     let links = get_links(
-        GetLinksInputBuilder::try_new(agent, LinkTypes::AgentToX25519Key)?.build(),
+        LinkQuery::try_new(agent, LinkTypes::AgentToX25519Key)?,
+        GetStrategy::default(),
     )?;
 
     // Most recent link wins
@@ -196,9 +193,7 @@ pub fn get_x25519_key(agent: AgentPubKey) -> ExternResult<Option<String>> {
                         .map_err(|e| {
                             wasm_error!(WasmErrorInner::Guest(format!("Deserialise: {e}")))
                         })?
-                        .ok_or_else(|| {
-                            wasm_error!(WasmErrorInner::Guest("Empty entry".into()))
-                        })?;
+                        .ok_or_else(|| wasm_error!(WasmErrorInner::Guest("Empty entry".into())))?;
                     Ok(Some(STANDARD.encode(&key_entry.x25519_pubkey)))
                 }
             }

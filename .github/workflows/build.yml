@@ -114,41 +114,22 @@ jobs:
         run: npx tsc --noEmit
         working-directory: bridge
 
-  # ── React UI ─────────────────────────────────────────────────────────────────
+  # ── UI single-file HTML → ui.zip ─────────────────────────────────────────────
+  # L'UI est filenymous-app.html (standalone, pas de build step Vite).
+  # Holochain Launcher + Holo Host attendent index.html à la racine du zip.
   ui:
-    name: React UI
+    name: UI zip
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: ui
-
-      - name: Type-check
-        run: npx tsc --noEmit
-        working-directory: ui
-
-      - name: Build
-        run: npm run build
-        working-directory: ui
-        env:
-          VITE_HC_URL: ws://localhost:8888
-          VITE_BRIDGE_URL: http://localhost:3001
-          VITE_BRIDGE_SECRET: ci-placeholder
-
-      - name: Zip UI dist (M4 — webhapp packaging)
+      - name: Package single-file HTML as ui.zip
         run: |
           mkdir -p workdir
-          cd ui/dist && zip -r ../../workdir/ui.zip .
+          cp filenymous-app.html /tmp/index.html
+          cd /tmp && zip -j $GITHUB_WORKSPACE/workdir/ui.zip index.html
+          echo "ui.zip: $(wc -c < $GITHUB_WORKSPACE/workdir/ui.zip) bytes"
 
       - name: Upload UI zip artifact
         uses: actions/upload-artifact@v4

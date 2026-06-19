@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@holochain/client": "^0.17.0",
+    "@holochain/client": "^0.20.5",
     "react":             "^18.3.0",
     "react-dom":         "^18.3.0",
     "zustand":           "^4.5.2"

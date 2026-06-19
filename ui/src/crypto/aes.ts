@@ -9,6 +9,8 @@
  * For M2 the key is transmitted in the link URL for simplicity (marked TODO).
  */
 
+import { toArrayBuffer } from "./buffer";
+
 const AES_ALGO  = "AES-GCM";
 const KEY_BITS  = 256;
 const NONCE_LEN = 12; // 96-bit nonce recommended for GCM
@@ -32,7 +34,7 @@ export async function exportAesKey(key: CryptoKey): Promise<Uint8Array> {
 export async function importAesKey(raw: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
-    raw,
+    toArrayBuffer(raw),
     { name: AES_ALGO, length: KEY_BITS },
     false,
     ["decrypt"]
@@ -49,9 +51,9 @@ export async function encryptChunk(
 ): Promise<Uint8Array> {
   const nonce = crypto.getRandomValues(new Uint8Array(NONCE_LEN));
   const ciphertext = await crypto.subtle.encrypt(
-    { name: AES_ALGO, iv: nonce },
+    { name: AES_ALGO, iv: toArrayBuffer(nonce) },
     key,
-    plaintext
+    toArrayBuffer(plaintext)
   );
   const result = new Uint8Array(NONCE_LEN + ciphertext.byteLength);
   result.set(nonce, 0);
@@ -70,16 +72,16 @@ export async function decryptChunk(
   const nonce      = encrypted.slice(0, NONCE_LEN);
   const ciphertext = encrypted.slice(NONCE_LEN);
   const plaintext  = await crypto.subtle.decrypt(
-    { name: AES_ALGO, iv: nonce },
+    { name: AES_ALGO, iv: toArrayBuffer(nonce) },
     key,
-    ciphertext
+    toArrayBuffer(ciphertext)
   );
   return new Uint8Array(plaintext);
 }
 
 /** SHA-256 hex of a buffer (used for chunk integrity) */
 export async function sha256hex(data: Uint8Array): Promise<string> {
-  const h = await crypto.subtle.digest("SHA-256", data);
+  const h = await crypto.subtle.digest("SHA-256", toArrayBuffer(data));
   return Array.from(new Uint8Array(h))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");

@@ -23,6 +23,7 @@ import {
   importX25519PrivateKey,
   type X25519KeyPair,
 } from "./ecies";
+import { toArrayBuffer } from "./buffer";
 
 const DB_NAME    = "filenymous-keystore";
 const DB_VERSION = 1;
@@ -97,7 +98,7 @@ export async function loadOrCreateKeyPair(): Promise<StoredKeyPair> {
   // Public key is re-imported as non-extractable (only used for ECDH by sender)
   const publicKey  = await crypto.subtle.importKey(
     "raw",
-    pubKeyRaw,
+    toArrayBuffer(pubKeyRaw),
     { name: "X25519" },
     true,
     [],

@@ -1,0 +1,177 @@
+name: Deploy to Holo Host
+
+# Déclenché manuellement ou automatiquement sur un tag de release.
+# Prérequis GitHub Secrets :
+#   HOLO_PUBLISHER_EMAIL   — email du compte publisher sur hbs.holo.host
+#   HOLO_PUBLISHER_TOKEN   — token API généré dans le dashboard publisher
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environnement cible"
+        required: true
+        default: "production"
+        type: choice
+        options: [production, staging]
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  # ── 1. Build hApp (WASM zomes + DNA pack + hApp pack) ────────────────────────
+  build-happ:
+    name: Build hApp
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Nix store (Holochain CI cache)
+        uses: cachix/cachix-action@v14
+        with:
+          name: holochain-ci
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
+
+      - name: Add wasm32 target (via Nix shell)
+        run: nix develop --command rustup target add wasm32-unknown-unknown
+
+      - name: Compile WASM zomes
+        run: nix develop --command make build-wasm
+
+      - name: Pack DNA
+        run: nix develop --command make build-dna
+
+      - name: Pack hApp
+        run: nix develop --command make build-happ
+
+      - name: Upload hApp artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filenymous-happ
+          path: workdir/filenymous.happ
+          retention-days: 1
+
+  # ── 2. Build UI zip (single-file HTML) ───────────────────────────────────────
+  build-ui:
+    name: Build UI zip
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package filenymous-app.html → ui.zip
+        run: |
+          mkdir -p workdir
+          cp filenymous-app.html /tmp/index.html
+          cd /tmp && zip -j $GITHUB_WORKSPACE/workdir/ui.zip index.html
+          echo "ui.zip size: $(wc -c < $GITHUB_WORKSPACE/workdir/ui.zip) bytes"
+
+      - name: Upload UI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filenymous-ui-zip
+          path: workdir/ui.zip
+          retention-days: 1
+
+  # ── 3. Pack .webhapp ─────────────────────────────────────────────────────────
+  pack-webhapp:
+    name: Pack .webhapp
+    needs: [build-happ, build-ui]
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Nix store
+        uses: cachix/cachix-action@v14
+        with:
+          name: holochain-ci
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
+
+      - name: Download hApp artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: filenymous-happ
+          path: workdir/
+
+      - name: Download UI zip artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: filenymous-ui-zip
+          path: workdir/
+
+      - name: Pack .webhapp
+        run: |
+          nix develop --command hc web-app pack . -o workdir/filenymous.webhapp
+          echo "webhapp size: $(wc -c < workdir/filenymous.webhapp) bytes"
+
+      - name: Upload .webhapp artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filenymous-webhapp
+          path: workdir/filenymous.webhapp
+          retention-days: 7
+
+  # ── 4. Deploy to Holo Host ───────────────────────────────────────────────────
+  deploy-holo:
+    name: Deploy to Holo Host
+    needs: [pack-webhapp]
+    runs-on: ubuntu-22.04
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: https://filenymous.holo.host
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download .webhapp artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: filenymous-webhapp
+          path: workdir/
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Holo CLI
+        run: npm install -g @holo-host/cli
+
+      - name: Authenticate with Holo Host
+        env:
+          HOLO_PUBLISHER_EMAIL: ${{ secrets.HOLO_PUBLISHER_EMAIL }}
+          HOLO_PUBLISHER_TOKEN: ${{ secrets.HOLO_PUBLISHER_TOKEN }}
+        run: |
+          holo login \
+            --email "$HOLO_PUBLISHER_EMAIL" \
+            --token "$HOLO_PUBLISHER_TOKEN"
+
+      - name: Deploy .webhapp to Holo Host
+        env:
+          HOLO_ENV: ${{ github.event.inputs.environment || 'production' }}
+        run: |
+          holo deploy \
+            --happ-id filenymous \
+            --webhapp workdir/filenymous.webhapp \
+            --env "$HOLO_ENV"
+
+      - name: Verify deployment
+        run: |
+          echo "✅ Déployé sur Holo Host"
+          echo "   URL : https://filenymous.holo.host"
+          echo "   Web-bridge : https://filenymous.holo.host/web-bridge"
+          holo status --happ-id filenymous || true

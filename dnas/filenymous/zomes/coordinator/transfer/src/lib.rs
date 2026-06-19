@@ -36,7 +36,7 @@ pub struct GetTransferOutput {
 /// Create a new TransferManifest entry and publish it on the DHT.
 #[hdk_extern]
 pub fn create_transfer(input: CreateTransferInput) -> ExternResult<ActionHash> {
-    let sender = agent_info()?.agent_latest_pubkey;
+    let sender = agent_info()?.agent_initial_pubkey;
     let manifest = TransferManifest {
         transfer_id: input.transfer_id.clone(),
         sender: sender.clone(),
@@ -87,7 +87,8 @@ pub fn create_transfer(input: CreateTransferInput) -> ExternResult<ActionHash> {
 pub fn get_transfer(transfer_id: String) -> ExternResult<Option<GetTransferOutput>> {
     let anchor = transfer_anchor(&transfer_id)?;
     let links = get_links(
-        GetLinksInputBuilder::try_new(anchor, LinkTypes::TransferIdToManifest)?.build(),
+        LinkQuery::try_new(anchor, LinkTypes::TransferIdToManifest)?,
+        GetStrategy::default(),
     )?;
 
     let latest = links.into_iter().max_by_key(|l| l.timestamp);
@@ -119,9 +120,10 @@ pub fn get_transfer(transfer_id: String) -> ExternResult<Option<GetTransferOutpu
 /// Return all transfers sent by the calling agent.
 #[hdk_extern]
 pub fn get_my_sent_transfers(_: ()) -> ExternResult<Vec<GetTransferOutput>> {
-    let agent = agent_info()?.agent_latest_pubkey;
+    let agent = agent_info()?.agent_initial_pubkey;
     let links = get_links(
-        GetLinksInputBuilder::try_new(agent, LinkTypes::SenderToTransfer)?.build(),
+        LinkQuery::try_new(agent, LinkTypes::SenderToTransfer)?,
+        GetStrategy::default(),
     )?;
     collect_manifests(links)
 }
@@ -132,7 +134,8 @@ pub fn get_my_sent_transfers(_: ()) -> ExternResult<Vec<GetTransferOutput>> {
 pub fn get_transfers_for_contact(contact_hash: String) -> ExternResult<Vec<GetTransferOutput>> {
     let anchor = recipient_contact_anchor(&contact_hash)?;
     let links = get_links(
-        GetLinksInputBuilder::try_new(anchor, LinkTypes::RecipientContactToTransfer)?.build(),
+        LinkQuery::try_new(anchor, LinkTypes::RecipientContactToTransfer)?,
+        GetStrategy::default(),
     )?;
     collect_manifests(links)
 }

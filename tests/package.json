@@ -8,8 +8,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@holochain/client": "^0.17.0",
-    "@holochain/tryorama": "^0.16.0"
+    "@holochain/client": "^0.20.5",
+    "@holochain/tryorama": "^0.19.2"
   },
   "devDependencies": {
     "vitest": "^1.0.0",

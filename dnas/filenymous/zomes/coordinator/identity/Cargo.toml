@@ -8,8 +8,8 @@ name = "identity"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-hdk = { version = "0.4" }
-serde = { version = "1", features = ["derive"] }
+hdk = { workspace = true }
+serde = { workspace = true }
 identity_integrity = { path = "../../integrity/identity_integrity" }
 # M3: base64 encoding for X25519 key transport
-base64 = "0.22"
+base64 = { workspace = true }

@@ -1,61 +1,63 @@
-import { useStore, type Tab } from "../store/useStore";
+/**
+ * Header v2 — navigation avec le nouvel onglet "inbox".
+ * Affiche le mode réseau (WebSocket / Web Bridge).
+ */
+import { useStore } from "../store/useStore";
+import type { Tab } from "../store/useStore";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "send",     label: "Envoyer" },
-  { id: "receive",  label: "Recevoir" },
-  { id: "history",  label: "Historique" },
-  { id: "identity", label: "Identité" },
-];
+interface HeaderProps { minimal?: boolean }
 
-const STYLE = `
-  .header { background:#fff; border-bottom:1px solid #e5e7eb; padding:.9rem 2rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
-  .logo { display:flex; align-items:center; gap:.6rem; font-size:1.15rem; font-weight:800; color:#6366f1; letter-spacing:-.03em; }
-  .logo-mark { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:flex; align-items:center; justify-content:center; font-size:1rem; color:#fff; box-shadow:0 2px 8px rgba(99,102,241,.4); }
-  .nav { display:flex; gap:.15rem; }
-  .nav-btn { background:transparent; color:#6b7280; padding:.4rem .85rem; font-size:.88rem; font-weight:500; border-radius:8px; border:none; }
-  .nav-btn:hover { background:#f3f4f6; color:#1e1b4b; }
-  .nav-btn.active { background:#ede9fe; color:#6366f1; font-weight:600; }
-  .peer-badge { display:flex; align-items:center; gap:.4rem; font-size:.78rem; color:#6b7280; padding:.3rem .75rem; background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:20px; }
-  .dot { width:7px; height:7px; border-radius:50%; }
-  .dot-on  { background:#059669; box-shadow:0 0 0 3px rgba(5,150,105,.15); }
-  .dot-off { background:#dc2626; }
-`;
+export default function Header({ minimal = false }: HeaderProps) {
+  const { tab, setTab, net } = useStore();
 
-export default function Header() {
-  const { tab, setTab, net, transfers } = useStore();
-  const pending = transfers.filter((t) => t.status === "pending").length;
+  const tabs: Array<{ id: Tab; label: string; icon: string }> = [
+    { id: "send",     label: "Envoyer",   icon: "📤" },
+    { id: "inbox",    label: "Reçus",     icon: "📥" },
+    { id: "history",  label: "Historique",icon: "📋" },
+    { id: "identity", label: "Identité",  icon: "🔑" },
+    { id: "privacy",  label: "Vie privée",icon: "🛡" },
+  ];
+
+  const modeLabel = net.mode === "websocket" ? "Holochain local"
+    : net.mode === "web-bridge" ? "Holo Web Bridge"
+    : "Connexion…";
+  const modeColor = net.mode === "websocket" ? "#059669"
+    : net.mode === "web-bridge" ? "#d97706"
+    : "#9ca3af";
 
   return (
-    <>
-      <style>{STYLE}</style>
-      <header className="header">
-        <div className="logo">
-          <div className="logo-mark">⟁</div>
-          Filenymous
+    <header style={{ background:"var(--grad)", color:"#fff", padding:"0", boxShadow:"0 2px 12px rgba(99,102,241,.25)" }}>
+      {/* Barre titre */}
+      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:".8rem 1.5rem" }}>
+        <div style={{ display:"flex",alignItems:"center",gap:".6rem" }}>
+          <span style={{ fontSize:"1.4rem" }}>⟁</span>
+          <span style={{ fontWeight:800,fontSize:"1.1rem",letterSpacing:"-.02em" }}>Filenymous</span>
         </div>
+        <div style={{ fontSize:".72rem",background:"rgba(255,255,255,.18)",borderRadius:"20px",padding:".2rem .65rem",display:"flex",alignItems:"center",gap:".35rem" }}>
+          <span style={{ width:"7px",height:"7px",borderRadius:"50%",background:modeColor,display:"inline-block",flexShrink:0 }} />
+          {modeLabel}
+        </div>
+      </div>
 
-        <nav className="nav">
-          {TABS.map(({ id, label }) => (
-            <button
-              key={id}
-              className={`nav-btn${tab === id ? " active" : ""}`}
+      {/* Onglets (masqués en mode minimal) */}
+      {!minimal && (
+        <nav style={{ display:"flex",borderTop:"1px solid rgba(255,255,255,.15)" }}>
+          {tabs.map(({ id, label, icon }) => (
+            <button key={id}
               onClick={() => setTab(id)}
-            >
-              {label}
-              {id === "history" && pending > 0 && (
-                <span style={{ color: "var(--g1)", marginLeft: ".2rem" }}>
-                  ({pending})
-                </span>
-              )}
+              style={{
+                flex:1, padding:".55rem .2rem", background:"transparent", color:"#fff",
+                borderRadius:0, fontWeight: tab===id ? 700 : 400,
+                borderBottom: tab===id ? "2px solid #fff" : "2px solid transparent",
+                fontSize:".75rem", display:"flex", flexDirection:"column", alignItems:"center", gap:".1rem",
+                opacity: tab===id ? 1 : 0.7, transition:"opacity .15s",
+              }}>
+              <span style={{ fontSize:"1rem" }}>{icon}</span>
+              <span>{label}</span>
             </button>
           ))}
         </nav>
-
-        <div className="peer-badge">
-          <span className={`dot ${net.connected ? "dot-on" : "dot-off"}`} />
-          {net.connected ? `${net.peers} pairs DHT` : "Hors-ligne"}
-        </div>
-      </header>
-    </>
+      )}
+    </header>
   );
 }

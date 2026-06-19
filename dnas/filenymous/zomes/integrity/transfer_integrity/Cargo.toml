@@ -8,5 +8,6 @@ name = "transfer_integrity"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-hdi = { version = "0.5" }
-serde = { version = "1", features = ["derive"] }
+hdi = { workspace = true }
+serde = { workspace = true }
+holochain_serialized_bytes = { workspace = true }

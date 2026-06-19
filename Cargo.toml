@@ -1,15 +1,42 @@
 [workspace]
 resolver = "2"
-exclude = ["mailer"]
+# src-tauri uses native Rust (Tauri) — excluded from the WASM workspace build.
+# Built separately via: cd src-tauri && cargo build --release
+# (or via `make kangaroo`)
+exclude = ["mailer", "src-tauri"]
 members = [
+  # ── Zomes custom Filenymous ───────────────────────────────────────────────
+  # Identity : ContactClaim + AgentX25519Key (inchangé)
   "dnas/filenymous/zomes/integrity/identity_integrity",
-  "dnas/filenymous/zomes/integrity/transfer_integrity",
-  "dnas/filenymous/zomes/integrity/storage_integrity",
   "dnas/filenymous/zomes/coordinator/identity",
-  "dnas/filenymous/zomes/coordinator/transfer",
-  "dnas/filenymous/zomes/coordinator/storage",
+  # Parcel : métadonnées transfert + expiry + download tracking
+  # (remplace transfer_integrity + storage_integrity + leurs coordinators)
+  "dnas/filenymous/zomes/integrity/parcel_integrity",
+  "dnas/filenymous/zomes/coordinator/parcel",
+  # ── Stubs externes : déclenchent le build WASM des crates tiers ──────────
+  # Le build produit les WASM référencés dans dna.yaml
+  "dnas/filenymous/zomes/extern/file_storage_stub",
+  "dnas/filenymous/zomes/extern/delivery_stub",
 ]
 
+# ── Dépendances workspace partagées ──────────────────────────────────────────
+[workspace.dependencies]
+hdi       = "0.7.1"
+hdk       = "0.6.1"
+serde     = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64    = "0.22"
+holochain_serialized_bytes = "0.0.57"
+
+# holochain-open-dev/file-storage — stockage public chunked sur DHT
+hc_zome_file_storage_integrity   = { git = "https://github.com/holochain-open-dev/file-storage", rev = "d6211d138ad75a4f3b09b42bff6bb44b60e3abe7" }
+hc_zome_file_storage_coordinator = { git = "https://github.com/holochain-open-dev/file-storage", rev = "d6211d138ad75a4f3b09b42bff6bb44b60e3abe7" }
+
+# ddd-mtl/delivery-zome — signaux privés agent-à-agent (remote_signal + PendingNotice)
+zome_delivery_integrity = { git = "https://github.com/ddd-mtl/delivery-zome", rev = "3cc7ca8bce70a1a7116d3d1506b34af469204011", package = "zome_delivery_integrity" }
+delivery                = { git = "https://github.com/ddd-mtl/delivery-zome", rev = "3cc7ca8bce70a1a7116d3d1506b34af469204011", package = "delivery" }
+
+# ── Profils WASM ─────────────────────────────────────────────────────────────
 [profile.dev]
 opt-level = "z"
 

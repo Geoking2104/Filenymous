@@ -53,17 +53,15 @@ pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
     match op.flattened::<EntryTypes, LinkTypes>()? {
         FlatOp::StoreEntry(store_entry) => match store_entry {
             OpEntry::CreateEntry { app_entry, action } => match app_entry {
-                EntryTypes::ContactClaim(claim) => {
-                    validate_contact_claim(&claim, &action.author)
-                }
+                EntryTypes::ContactClaim(claim) => validate_contact_claim(&claim, &action.author),
                 EntryTypes::AgentX25519Key(key_entry) => {
                     validate_x25519_key(&key_entry, &action.author)
                 }
             },
-            OpEntry::UpdateEntry { app_entry, action, .. } => match app_entry {
-                EntryTypes::ContactClaim(claim) => {
-                    validate_contact_claim(&claim, &action.author)
-                }
+            OpEntry::UpdateEntry {
+                app_entry, action, ..
+            } => match app_entry {
+                EntryTypes::ContactClaim(claim) => validate_contact_claim(&claim, &action.author),
                 EntryTypes::AgentX25519Key(key_entry) => {
                     validate_x25519_key(&key_entry, &action.author)
                 }
@@ -74,7 +72,6 @@ pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
             link_type,
             base_address,
             target_address,
-            action,
             ..
         } => match link_type {
             LinkTypes::ContactHashToAgent => {

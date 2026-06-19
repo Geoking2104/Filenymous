@@ -91,7 +91,8 @@ pub fn finalize_storage(input: FinalizeStorageInput) -> ExternResult<ActionHash>
 pub fn get_chunk_manifest(transfer_id: String) -> ExternResult<Option<ChunkManifest>> {
     let anchor = transfer_manifest_anchor(&transfer_id)?;
     let links = get_links(
-        GetLinksInputBuilder::try_new(anchor, LinkTypes::TransferIdToChunkManifest)?.build(),
+        LinkQuery::try_new(anchor, LinkTypes::TransferIdToChunkManifest)?,
+        GetStrategy::default(),
     )?;
 
     let latest = links.into_iter().max_by_key(|l| l.timestamp);
@@ -115,7 +116,8 @@ pub fn get_chunk_manifest(transfer_id: String) -> ExternResult<Option<ChunkManif
 pub fn get_chunks(transfer_id: String) -> ExternResult<GetChunksOutput> {
     let anchor = transfer_chunks_anchor(&transfer_id)?;
     let mut links = get_links(
-        GetLinksInputBuilder::try_new(anchor, LinkTypes::TransferIdToChunk)?.build(),
+        LinkQuery::try_new(anchor, LinkTypes::TransferIdToChunk)?,
+        GetStrategy::default(),
     )?;
 
     // Sort links by chunk_index embedded in the tag
@@ -148,7 +150,8 @@ pub fn get_chunks(transfer_id: String) -> ExternResult<GetChunksOutput> {
 pub fn delete_chunks(transfer_id: String) -> ExternResult<Vec<ActionHash>> {
     let anchor = transfer_chunks_anchor(&transfer_id)?;
     let links = get_links(
-        GetLinksInputBuilder::try_new(anchor.clone(), LinkTypes::TransferIdToChunk)?.build(),
+        LinkQuery::try_new(anchor.clone(), LinkTypes::TransferIdToChunk)?,
+        GetStrategy::default(),
     )?;
 
     let mut deleted = Vec::new();
@@ -156,20 +159,21 @@ pub fn delete_chunks(transfer_id: String) -> ExternResult<Vec<ActionHash>> {
         let action_hash = ActionHash::try_from(link.target)
             .map_err(|_| wasm_error!(WasmErrorInner::Guest("Invalid link target".into())))?;
         delete_entry(action_hash.clone())?;
-        delete_link(link.create_link_hash)?;
+        delete_link(link.create_link_hash, GetOptions::default())?;
         deleted.push(action_hash);
     }
 
     // Also delete the ChunkManifest if present
     let manifest_anchor = transfer_manifest_anchor(&transfer_id)?;
     let manifest_links = get_links(
-        GetLinksInputBuilder::try_new(manifest_anchor, LinkTypes::TransferIdToChunkManifest)?.build(),
+        LinkQuery::try_new(manifest_anchor, LinkTypes::TransferIdToChunkManifest)?,
+        GetStrategy::default(),
     )?;
     for link in manifest_links {
         let action_hash = ActionHash::try_from(link.target)
             .map_err(|_| wasm_error!(WasmErrorInner::Guest("Invalid link target".into())))?;
         delete_entry(action_hash.clone())?;
-        delete_link(link.create_link_hash)?;
+        delete_link(link.create_link_hash, GetOptions::default())?;
         deleted.push(action_hash);
     }
 

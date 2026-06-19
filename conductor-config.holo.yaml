@@ -1,0 +1,98 @@
+---
+# Filenymous — conductor config HOLO HOST
+#
+# Ce fichier est utilisé par les nœuds Holo Cloud (toujours-en-ligne)
+# qui hébergent l'hApp pour les utilisateurs sans Holochain Launcher.
+#
+# Documentation : https://developer.holo.host/holo-cloud
+#
+# ─── Déploiement ─────────────────────────────────────────────────────────────
+# 1. Compiler et uploader le .webhapp sur Holo Host :
+#      hc web-app pack . -o workdir/filenymous.webhapp
+#      holo-host upload filenymous.webhapp
+#
+# 2. Ce fichier est fourni au nœud Holo via la configuration de l'hApp
+#    dans le dashboard Holo Host — pas besoin de le déployer manuellement.
+#
+# 3. Le Web Bridge est géré automatiquement par l'infrastructure Holo :
+#    https://filenymous.holo.host/web-bridge
+# ─────────────────────────────────────────────────────────────────────────────
+
+environment_path: /var/lib/holochain/filenymous
+
+keystore:
+  # Holo Host gère le keystore via lair-keystore en mode serveur.
+  # Le socket est créé par l'infrastructure Holo — ne pas modifier.
+  type: lair_server
+  connection_url: "unix:///var/run/lair-keystore/filenymous.socket"
+
+admin_interfaces:
+  - driver:
+      type: websocket
+      port: 9000
+      # Sur Holo Host, l'admin interface est uniquement accessible localement.
+      # Le Web Bridge expose les zomes publics via HTTP — pas l'admin.
+      allowed_origins: "http://localhost:*"
+
+# Interface app exposée au Web Bridge Holo
+app_interfaces:
+  - driver:
+      type: websocket
+      port: 9001
+      allowed_origins: "https://filenymous.holo.host"
+
+network:
+  # Bootstrap Holo — nœuds stables fournis par Holo Cloud.
+  # Ces nœuds servent de points d'entrée fiables dans le réseau Kitsune2.
+  bootstrap_service: "https://bootstrap.holo.host"
+
+  # Signal Holo — relais WebRTC pour la signalisation NAT traversal.
+  signal_url: "wss://signal.holo.host"
+
+  transport_pool:
+    - type: webrtc
+      signal_url: "wss://signal.holo.host"
+      # STUN public Google + TURN Holo si besoin (NAT strict)
+      ice_servers_override:
+        - urls:
+            - "stun:stun.l.google.com:19302"
+            - "stun:stun1.l.google.com:19302"
+        # Décommentez si les ICE checks échouent derrière un NAT strict :
+        # - urls:
+        #     - "turn:turn.holo.host:3478"
+        #   username: "filenymous"
+        #   credential: "REPLACE_WITH_HOLO_TURN_CREDENTIAL"
+
+  tuning_params:
+    gossip_strategy: sharded-gossip
+    # Nœuds Holo Host = arc complet (full-arc) → gossip agressif acceptable
+    gossip_loop_iteration_delay_ms: 500
+    default_notify_remote_agent_count: 8
+    default_timeout_ms: 30000
+    # Full-arc : les nœuds Holo stockent toutes les entrées DHT
+    # (pas de sharding partiel — meilleure disponibilité pour les non-agents)
+    arc_clamping: "full"
+
+# ─── Holo Host Web Bridge config ─────────────────────────────────────────────
+# Ces options sont spécifiques à l'intégration Holo Host.
+# Elles définissent quelles fonctions zome sont accessibles en HTTP GET
+# sans authentification (lecture publique via le Web Bridge).
+#
+# Format : <dna_role>/<zome>/<fn>
+#
+# ATTENTION : N'exposez que les fonctions de lecture (get_*).
+# Les fonctions d'écriture (create_*, confirm_*, revoke_*) nécessitent
+# une clé agent — elles ne sont pas accessibles via le Web Bridge.
+# ─────────────────────────────────────────────────────────────────────────────
+holo_web_bridge:
+  allowed_fns:
+    # Lecture d'un parcel par EntryHash (mode lien)
+    - "filenymous/parcel/get_parcel"
+    # Lecture des métadonnées de fichier (file_storage_zome)
+    - "filenymous/file_storage/get_file_metadata"
+    # Lecture des chunks de fichier (file_storage_zome)
+    - "filenymous/file_storage/get_file"
+    # Résolution contact_hash → agent (lecture seule)
+    - "filenymous/identity/get_agent_for_contact"
+    # Lecture de la clé X25519 d'un agent
+    - "filenymous/identity/get_x25519_key"

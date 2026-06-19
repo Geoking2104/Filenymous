@@ -11,6 +11,8 @@
  *            + 16-byte authentication tag (32 + 16 = 48 bytes)
  */
 
+import { toArrayBuffer } from "./buffer";
+
 // ── Key generation ───────────────────────────────────────────────────────────
 
 export interface X25519KeyPair {
@@ -54,7 +56,7 @@ export async function exportX25519PrivateKey(key: CryptoKey): Promise<Uint8Array
 export async function importX25519PublicKey(raw: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
-    raw,
+    toArrayBuffer(raw),
     { name: "X25519" },
     false,
     [],   // public key has no usages in WebCrypto; ECDH is initiated by the private key
@@ -67,7 +69,7 @@ export async function importX25519PublicKey(raw: Uint8Array): Promise<CryptoKey>
 export async function importX25519PrivateKey(pkcs8: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "pkcs8",
-    pkcs8,
+    toArrayBuffer(pkcs8),
     { name: "X25519" },
     false,
     ["deriveKey", "deriveBits"],
@@ -115,8 +117,8 @@ export async function encryptAesKeyForRecipient(
     {
       name: "HKDF",
       hash: "SHA-256",
-      salt: ephemeralPubRaw,   // ephemeral public key as salt for domain separation
-      info: new TextEncoder().encode("filenymous-v1-key-wrap"),
+      salt: toArrayBuffer(ephemeralPubRaw),   // ephemeral public key as salt for domain separation
+      info: toArrayBuffer(new TextEncoder().encode("filenymous-v1-key-wrap")),
     },
     hkdfKey,
     { name: "AES-GCM", length: 256 },
@@ -127,9 +129,9 @@ export async function encryptAesKeyForRecipient(
   // 4. AES-GCM encrypt the 32-byte AES session key
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: nonce },
+    { name: "AES-GCM", iv: toArrayBuffer(nonce) },
     wrappingKey,
-    aesKeyBytes,
+    toArrayBuffer(aesKeyBytes),
   );
 
   // 5. Assemble blob: ephemeralPub(32) | nonce(12) | ciphertext+tag(48)
@@ -184,8 +186,8 @@ export async function decryptAesKeyFromBlob(
     {
       name: "HKDF",
       hash: "SHA-256",
-      salt: ephemeralPubRaw,
-      info: new TextEncoder().encode("filenymous-v1-key-wrap"),
+      salt: toArrayBuffer(ephemeralPubRaw),
+      info: toArrayBuffer(new TextEncoder().encode("filenymous-v1-key-wrap")),
     },
     hkdfKey,
     { name: "AES-GCM", length: 256 },
@@ -195,9 +197,9 @@ export async function decryptAesKeyFromBlob(
 
   // 5. AES-GCM decrypt
   const aesKeyBytes = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: nonce },
+    { name: "AES-GCM", iv: toArrayBuffer(nonce) },
     wrappingKey,
-    ciphertext,
+    toArrayBuffer(ciphertext),
   );
 
   return new Uint8Array(aesKeyBytes);

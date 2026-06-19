@@ -1,100 +1,174 @@
-name: Release
+name: Filenymous Release
 
+# Déclenché par un tag de version : git tag v0.1.0 && git push origin v0.1.0
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
+# Permissions pour créer la GitHub Release et uploader les assets
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build hApp
-    runs-on: ubuntu-latest
+  # ── 1. Build hApp (zomes WASM + DNA + hApp) ─────────────────────────────────
+  # Fait une seule fois sur ubuntu — artefact partagé avec les 3 runners Tauri
+  build-happ:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Holochain toolchain
+        uses: holochain/holochain-ci-workflow@v1
+        with:
+          holochain-version: "0.3"
+
+      - name: Add wasm32 target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Build hApp
+        run: make build-happ
+
+      - name: Upload hApp artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filenymous-happ
+          path: workdir/filenymous.happ
+          retention-days: 1
+
+  # ── 2. Build UI (React → ui.zip) ─────────────────────────────────────────────
+  build-ui:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package single-file HTML as ui.zip
+        run: |
+          mkdir -p workdir
+          cp filenymous-app.html /tmp/index.html
+          cd /tmp && zip -j $GITHUB_WORKSPACE/workdir/ui.zip index.html
+          echo "ui.zip: $(wc -c < $GITHUB_WORKSPACE/workdir/ui.zip) bytes"
+
+      - name: Upload UI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filenymous-ui
+          path: workdir/ui.zip
+          retention-days: 1
+
+  # ── 3. Kangaroo desktop builds (matrix) ──────────────────────────────────────
+  kangaroo:
+    needs: [build-happ, build-ui]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"     # Apple Silicon + x86_64 universal
+            target:   "universal-apple-darwin"
+            name:     "macOS"
+          - platform: "ubuntu-22.04"
+            target:   "x86_64-unknown-linux-gnu"
+            name:     "Linux"
+          - platform: "windows-latest"
+            target:   "x86_64-pc-windows-msvc"
+            name:     "Windows"
+
+    runs-on: ${{ matrix.platform }}
 
     steps:
       - uses: actions/checkout@v4
 
-      # ── Rust toolchain with wasm32 target ───────────────────────────────────
-      - name: Install Rust + wasm32 target
+      # ── Download happ + ui artifacts from previous jobs ──────────────────
+      - name: Download hApp
+        uses: actions/download-artifact@v4
+        with:
+          name: filenymous-happ
+          path: pouch/
+
+      - name: Download UI zip
+        uses: actions/download-artifact@v4
+        with:
+          name: filenymous-ui
+          path: pouch/
+
+      # ── Rust toolchain ────────────────────────────────────────────────────
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          targets: ${{ matrix.target }}
 
-      - name: Cache Cargo registry
-        uses: actions/cache@v4
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          workspaces: "./src-tauri -> target"
 
-      # ── Install hc CLI from Holochain prebuilt release ───────────────────────
-      - name: Install hc CLI
+      # ── Linux system dependencies for Tauri ──────────────────────────────
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
-          HC_TAG="holochain-0.6.1-rc.7"
-          curl -fsSL \
-            "https://github.com/holochain/holochain/releases/download/${HC_TAG}/hc-x86_64-unknown-linux-gnu" \
-            -o hc
-          chmod +x hc
-          sudo mv hc /usr/local/bin/hc
-          hc --version
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.0-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
 
-      # ── Build WASM zomes ────────────────────────────────────────────────────
-      - name: Build WASM zomes
-        run: cargo build --release --target wasm32-unknown-unknown
-
-      # ── Pack DNA + hApp ─────────────────────────────────────────────────────
-      - name: Pack DNA
-        run: |
-          mkdir -p workdir dnas/filenymous
-          hc dna pack dnas/filenymous -o dnas/filenymous/filenymous.dna
-
-      - name: Pack hApp
-        run: |
-          mkdir -p workdir
-          hc app pack . -o workdir/filenymous.happ
-
-      # ── Add demo UI to release ───────────────────────────────────────────────
-      - name: Prepare release artifacts
-        run: |
-          cp workdir/filenymous.happ filenymous.happ
-          cp demo/index.html         filenymous-demo.html
-
-      # ── GitHub Release ───────────────────────────────────────────────────────
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      # ── Node (for @tauri-apps/cli) ────────────────────────────────────────
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          name: Filenymous ${{ github.ref_name }}
-          body: |
+          node-version: "20"
+
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli@^1
+
+      # ── Download bundled Holochain binaries ───────────────────────────────
+      # Les binaires holochain + lair-keystore pour chaque plateforme sont
+      # téléchargés depuis les releases officielles Holochain.
+      # Le script ajuste le nom avec le triple cible Rust attendu par Tauri.
+      - name: Download Holochain binaries (Unix)
+        if: matrix.platform != 'windows-latest'
+        shell: bash
+        run: |
+          bash scripts/download-binaries.sh "${{ matrix.target }}"
+
+      - name: Download Holochain binaries (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          .\scripts\download-binaries.ps1 "${{ matrix.target }}"
+
+      # ── Tauri build ───────────────────────────────────────────────────────
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN:              ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing (optionnel — commenté pour v1)
+          # ENABLE_CODE_SIGNING:     ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE:       ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY:  ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID:                ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD:          ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID:           ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName:         ${{ github.ref_name }}
+          releaseName:     "Filenymous ${{ github.ref_name }}"
+          releaseBody:     |
             ## Filenymous ${{ github.ref_name }}
 
-            ### Release artifacts
+            Application desktop P2P de transfert de fichiers chiffrés, propulsée par Holochain.
 
-            | File | Usage |
-            |------|-------|
-            | `filenymous.happ` | Install in Holochain Launcher |
-            | `filenymous-demo.html` | Open in any browser — standalone demo (no install needed) |
+            ### Téléchargements
+            - **macOS** : `.dmg` (Apple Silicon + Intel universal)
+            - **Linux** : `.AppImage`
+            - **Windows** : `.exe` (NSIS installer)
 
-            ### Install via Holochain Launcher
-
-            1. Download [Holochain Launcher](https://github.com/holochain/launcher/releases)
-            2. Open Launcher → **Install hApp from filesystem**
-            3. Select `filenymous.happ`
-
-            ### Demo UI (browser only)
-
-            Open `filenymous-demo.html` in your browser — no installation required.
-            Live version: https://geoking2104.github.io/Filenymous/
-
-            ### Bootstrap server
-
-            `https://dev-test-bootstrap2.holochain.org` (Holochain public test server)
-          files: |
-            filenymous.happ
-            filenymous-demo.html
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
+            ### Première installation
+            L'application crée un profil Holochain local au premier démarrage (~30 s).
+            Aucun compte, aucun serveur central requis.
+          releaseDraft:    false
+          prerelease:      false
+          projectPath:     "./src-tauri"
+          args:            "--target ${{ matrix.target }}"

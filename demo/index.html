@@ -1878,4 +1878,35 @@ function renderContacts() {
   Q('contact-list').innerHTML = S.contacts.map((c, i) => `
     <div class="contact-card">
       <div class="avatar">${c.contact[0].toUpperCase()}</div>
-      <div style="flex:1;min
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.88rem;font-weight:500">${c.contact}</div>
+        <div class="key-mono" style="font-size:.68rem;margin-top:.25rem;padding:.25rem .5rem">SHA-256: ${c.hash}</div>
+        <div style="font-size:.72rem;color:var(--ok);margin-top:.2rem">${t('otp_verified')}</div>
+      </div>
+      <button class="btn-danger btn-sm" onclick="revokeContact(${i})">${t('revoke')}</button>
+    </div>`).join('');
+}
+
+/* ── Init ───────────────────────────────────────────────────────── */
+(async function init() {
+  // Generate a demo agent key
+  try {
+    const kp = await crypto.subtle.generateKey({name:'ECDSA', namedCurve:'P-256'}, true, ['sign']);
+    const raw = await crypto.subtle.exportKey('raw', kp.publicKey);
+    S.agentKey = toB64(new Uint8Array(raw));
+    Q('agent-key-el').textContent = S.agentKey;
+  } catch(e) { Q('agent-key-el').textContent = 'hCAk' + Math.random().toString(36).slice(2,12) + '…'; }
+
+  // Apply language
+  setLang('en');
+
+  // Render initial state
+  renderHistory();
+  renderContacts();
+
+  // Check if we're a receiver (URL has ?r= and #key)
+  checkReceiveMode();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+[package]
+name    = "file_storage_stub"
+version = "0.1.0"
+edition = "2021"
+
+# Ce crate est un stub vide dont le seul rôle est de forcer Cargo à
+# compiler les crates externes vers WASM pour le build DNA.
+# Les artefacts produits sont référencés dans dna.yaml.
+[lib]
+crate-type = ["cdylib", "rlib"]
+name       = "file_storage_stub"
+
+[dependencies]
+hc_zome_file_storage_integrity   = { workspace = true }
+hc_zome_file_storage_coordinator = { workspace = true }
