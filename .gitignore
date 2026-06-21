@@ -15,6 +15,7 @@ ui/node_modules/
 bridge/node_modules/
 dist/
 ui/dist/
+.worktrees/
 
 # Env (ne jamais committer les secrets)
 .env
