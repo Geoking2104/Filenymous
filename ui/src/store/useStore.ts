@@ -7,7 +7,7 @@ import { create } from "zustand";
 import type { LocalParcel } from "../holochain/types";
 import type { ClientMode } from "../holochain/client";
 
-export type Tab        = "send" | "inbox" | "history" | "identity" | "privacy";
+export type Tab        = "send" | "inbox" | "history" | "identity" | "privacy" | "wallet";
 export type NetInfo    = { connected: boolean; mode: ClientMode; peers: number };
 
 interface State {
