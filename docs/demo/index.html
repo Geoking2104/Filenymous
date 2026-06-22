@@ -333,6 +333,7 @@
     <button id="tab-receive"  onclick="showTab('receive')">Recevoir</button>
     <button id="tab-history"  onclick="showTab('history')">Historique<span id="hist-count"></span></button>
     <button id="tab-identity" onclick="showTab('identity')">Identité</button>
+    <button id="tab-wallet"   onclick="showTab('wallet')">Wallet</button>
     <button id="tab-privacy"  onclick="showTab('privacy')">Confidentialité</button>
   </nav>
   <span id="net-badge" class="detecting">Connexion…</span>
@@ -558,6 +559,29 @@
 </section>
 
 <!-- ══════════════════════════════════════════════════ PANEL PRIVACY -->
+<section id="panel-wallet" class="panel">
+  <div class="card">
+    <p class="card-title">Wallet local verrouille</p>
+    <div class="status info">
+      Version web: coffre local chiffre, Bitcoin Signet et Ethereum Sepolia par defaut, mainnet verrouille.
+    </div>
+  </div>
+  <div class="card">
+    <p class="card-title">Recevoir BTC / ETH</p>
+    <ul class="feature-list">
+      <li>Adresses BTC et ETH derivees localement depuis une seed BIP39.</li>
+      <li>La seed reste chiffree dans IndexedDB avec un mot de passe local.</li>
+      <li>Aucune cle privee n'est publiee sur Holochain, GitHub ou OVH.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <p class="card-title">Envoyer avec garde-fous</p>
+    <div class="status warning">
+      Les envois mainnet restent bloques tant que l'utilisateur ne les deverrouille pas explicitement dans la version React.
+    </div>
+  </div>
+</section>
+
 <section id="panel-privacy" class="panel">
 
   <div class="privacy-hero">
@@ -1087,7 +1111,7 @@ function fileIcon(name) {
 function showTab(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   $(`panel-${name}`).classList.add('active');
-  ['send', 'receive', 'history', 'identity', 'privacy'].forEach(t =>
+  ['send', 'receive', 'history', 'identity', 'wallet', 'privacy'].forEach(t =>
     $(`tab-${t}`).classList.toggle('active', t === name)
   );
   if (name === 'identity') initIdentity();
