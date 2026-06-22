@@ -412,7 +412,7 @@
   </div>
 
   <div id="p2p-result" class="card hidden">
-    <p class="card-title" style="color:var(--accent)">P2P direct - Code telephonique</p>
+    <p class="card-title" style="color:var(--accent)">P2P direct - Code a usage unique</p>
     <div class="link-box">
       <code id="p2p-code-out"></code>
       <button class="btn btn-secondary btn-sm" onclick="copyP2PCode()">Copier</button>
@@ -461,9 +461,9 @@
   </div>
 
   <div id="recv-p2p" class="card">
-    <p class="card-title">P2P direct - Code telephonique</p>
+    <p class="card-title">P2P direct - Code a usage unique</p>
     <div class="field">
-      <label for="p2p-code-input">Code telephonique</label>
+      <label for="p2p-code-input">Code a usage unique</label>
       <input type="text" id="p2p-code-input" inputmode="numeric" placeholder="123-456" />
     </div>
     <button class="btn btn-primary btn-full mt-3" onclick="joinP2PReceive()">Rejoindre P2P direct</button>
@@ -1235,14 +1235,14 @@ function updateHistBadge() {
 }
 
 // Direct WebRTC P2P transfer for oversized anonymous web files.
-function createPhoneCode() {
+function createOneTimeCode() {
   const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000;
   return String(n).padStart(6, '0').replace(/(\d{3})(\d{3})/, '$1-$2');
 }
 
-function normalizePhoneCode(value) {
+function normalizeOneTimeCode(value) {
   const digits = String(value || '').replace(/\D/g, '');
-  if (digits.length !== 6) throw new Error('Code telephonique invalide.');
+  if (digits.length !== 6) throw new Error('Code a usage unique invalide.');
   return digits.replace(/(\d{3})(\d{3})/, '$1-$2');
 }
 
@@ -1331,7 +1331,7 @@ window.startP2PSend = async function () {
   if (!S.file) throw new Error('Selectionnez un fichier.');
   if (!p2pSupported()) throw new Error('Ce navigateur ne supporte pas WebRTC DataChannel.');
 
-  const code = createPhoneCode();
+  const code = createOneTimeCode();
   const message = $('send-message').value.trim();
   $('p2p-code-out').textContent = code;
   $('p2p-result').classList.remove('hidden');
@@ -1376,7 +1376,7 @@ window.joinP2PReceive = async function () {
   }
   let code;
   try {
-    code = normalizePhoneCode($('p2p-code-input').value);
+    code = normalizeOneTimeCode($('p2p-code-input').value);
   } catch (e) {
     setStatus('p2p-recv-status', 'error', e.message);
     return;

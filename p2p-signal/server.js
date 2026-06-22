@@ -4,7 +4,7 @@ const port = Number(process.env.PORT || 8789);
 const allowedOrigin = process.env.ALLOWED_ORIGIN || "";
 const rooms = new Map();
 
-function validatePhoneCode(code) {
+function validateOneTimeCode(code) {
   return typeof code === "string" && /^\d{3}-\d{3}$/.test(code);
 }
 
@@ -57,7 +57,7 @@ wss.on("connection", ws => {
 
     if (msg.type === "join") {
       const { code, role } = msg;
-      if (!validatePhoneCode(code) || !["sender", "receiver"].includes(role)) {
+      if (!validateOneTimeCode(code) || !["sender", "receiver"].includes(role)) {
         send(ws, { type: "error", error: "invalid-room" });
         return;
       }
@@ -79,7 +79,7 @@ wss.on("connection", ws => {
 
     if (msg.type === "signal") {
       const { code, payload } = msg;
-      if (!validatePhoneCode(code) || ws.roomCode !== code || !ws.roomRole) {
+      if (!validateOneTimeCode(code) || ws.roomCode !== code || !ws.roomRole) {
         send(ws, { type: "error", error: "not-in-room" });
         return;
       }
@@ -108,5 +108,4 @@ wss.on("connection", ws => {
 
 console.log(`Filenymous p2p-signal listening on :${port}`);
 
-export { validatePhoneCode };
-
+export { validateOneTimeCode };

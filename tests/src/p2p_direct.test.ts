@@ -7,15 +7,18 @@ const root = resolve(__dirname, "..", "..");
 describe("P2P direct web mode", () => {
   const html = readFileSync(resolve(root, "docs/demo/index.html"), "utf8");
 
-  it("exposes direct WebRTC transfer controls for files above the inline limit", () => {
+  it("exposes direct WebRTC transfer controls with one-time code wording", () => {
     expect(html).toContain("P2P direct");
-    expect(html).toContain("Code telephonique");
+    expect(html).toContain("Code a usage unique");
     expect(html).toContain("p2pSignalUrl");
-    expect(html).toContain("createPhoneCode");
+    expect(html).toContain("createOneTimeCode");
     expect(html).toContain("startP2PSend");
     expect(html).toContain("joinP2PReceive");
     expect(html).toContain("RTCPeerConnection");
     expect(html).toContain("RTCDataChannel");
+    expect(html).not.toContain("Code telephonique");
+    expect(html).not.toContain("code telephonique");
+    expect(html).not.toContain("createPhoneCode");
   });
 
   it("routes oversized anonymous web files to the direct P2P flow instead of blocking send", () => {

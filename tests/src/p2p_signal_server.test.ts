@@ -6,17 +6,18 @@ const root = resolve(__dirname, "..", "..");
 const serverPath = resolve(root, "p2p-signal/server.js");
 
 describe("P2P signaling server", () => {
-  it("provides an in-memory WebSocket relay for phone-code rooms", () => {
+  it("provides an in-memory WebSocket relay for one-time code rooms", () => {
     expect(existsSync(serverPath)).toBe(true);
     const server = readFileSync(serverPath, "utf8");
 
     expect(server).toContain("WebSocketServer");
     expect(server).toContain("rooms = new Map()");
-    expect(server).toContain("validatePhoneCode");
+    expect(server).toContain("validateOneTimeCode");
     expect(server).toContain("peer-joined");
     expect(server).toContain("signal");
     expect(server).toContain("sender");
     expect(server).toContain("receiver");
+    expect(server).not.toContain("validatePhoneCode");
   });
 
   it("does not persist transferred file payloads on disk", () => {
