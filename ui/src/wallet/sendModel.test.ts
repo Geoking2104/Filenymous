@@ -28,4 +28,17 @@ describe("buildSendConfirmation", () => {
     expect(confirmation.total).toBe("0.011");
     expect(confirmation.irreversibleWarning).toContain("irreversible");
   });
+
+  it("rejects empty recipient", () => {
+    expect(() =>
+      buildSendConfirmation({
+        chain: "btc",
+        network: "btc-signet",
+        mainnetEnabled: false,
+        recipient: "",
+        amount: "0.001",
+        fee: "0.00001",
+      }),
+    ).toThrow("Recipient is required");
+  });
 });
