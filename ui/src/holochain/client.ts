@@ -1,4 +1,4 @@
-import { AppWebsocket, type AppClient, type RoleNameCallZomeRequest } from "@holochain/client";
+import { AppWebsocket, type RoleNameCallZomeRequest } from "@holochain/client";
 import { modeCapabilities, type HoloRuntimeClient, type RuntimeMode } from "./runtime";
 
 declare const __HC_URL__: string;
@@ -78,14 +78,14 @@ export async function createHoloWebRuntime(
       ) as Promise<T>;
     },
     webBridgeGet<T>(path: string) {
-      return webBridgeGet<T>(path);
+      return fetchWebBridge<T>(path);
     },
     async getMyPubKey() {
       if (!hwc.myPubKey) throw new Error("AgentPubKey non disponible via Holo Web Conductor.");
       return hwc.myPubKey;
     },
     onSignal(handler) {
-      hwc.on?.("signal", handler);
+      hwc.on?.("signal", (signal) => emitSignal(handler, signal));
     },
   };
 }
@@ -103,7 +103,7 @@ async function loadDefaultHoloWebClient(): Promise<HwcCompatibleClient> {
   });
 }
 
-let _client: AppClient | null = null;
+let _client: HoloRuntimeClient | null = null;
 let _mode: ClientMode = "detecting";
 let _connecting: Promise<void> | null = null;
 
@@ -119,24 +119,94 @@ export async function initClient(): Promise<ClientMode> {
   }
 
   _connecting = (async () => {
-    try {
-      _client = await withTimeout(
-        AppWebsocket.connect({
-          url: new URL(__HC_URL__),
-          defaultTimeout: ZOME_TIMEOUT,
-        }),
-        WS_TIMEOUT_MS,
-      );
-      _mode = "websocket";
-    } catch {
-      _client = null;
-      _mode = "web-bridge";
-    }
+    const detectRuntime = createRuntimeDetector({
+      createHoloWebClient: createHoloWebRuntime,
+      createWebsocketClient: createWebsocketRuntime,
+      createWebBridgeClient: async () => createWebBridgeRuntime(),
+      createLocalOnlyClient: createLocalOnlyRuntime,
+    });
+    _client = await detectRuntime();
+    _mode = _client.mode;
   })();
 
   await _connecting;
   _connecting = null;
   return _mode;
+}
+
+async function createWebsocketRuntime(): Promise<HoloRuntimeClient> {
+  const client = await withTimeout(
+    AppWebsocket.connect({
+      url: new URL(__HC_URL__),
+      defaultTimeout: ZOME_TIMEOUT,
+    }),
+    WS_TIMEOUT_MS,
+  );
+  const caps = modeCapabilities("websocket");
+  return {
+    mode: "websocket",
+    ...caps,
+    callZome<T>(zomeName: string, fnName: string, payload: unknown = null) {
+      return client.callZome(
+        {
+          role_name: ROLE,
+          zome_name: zomeName,
+          fn_name: fnName,
+          payload,
+        } as RoleNameCallZomeRequest,
+        ZOME_TIMEOUT,
+      ) as Promise<T>;
+    },
+    webBridgeGet<T>(path: string) {
+      return fetchWebBridge<T>(path);
+    },
+    async getMyPubKey() {
+      return client.myPubKey;
+    },
+    onSignal(handler) {
+      client.on("signal", (signal) => emitSignal(handler, signal));
+    },
+  };
+}
+
+function createWebBridgeRuntime(): HoloRuntimeClient {
+  const caps = modeCapabilities("web-bridge");
+  return {
+    mode: "web-bridge",
+    ...caps,
+    async callZome() {
+      throw new Error("callZome requiert Holo Web Conductor ou un conducteur Holochain local.");
+    },
+    webBridgeGet<T>(path: string) {
+      return fetchWebBridge<T>(path);
+    },
+    async getMyPubKey() {
+      throw new Error("AgentPubKey non disponible en mode Web Bridge.");
+    },
+    onSignal() {
+      // No-op: the HTTP bridge does not expose app signals.
+    },
+  };
+}
+
+function createLocalOnlyRuntime(): HoloRuntimeClient {
+  const caps = modeCapabilities("local-only");
+  return {
+    mode: "local-only",
+    ...caps,
+    async callZome() {
+      throw new Error("callZome indisponible sans runtime Holochain.");
+    },
+    async webBridgeGet() {
+      throw new Error("DHT inaccessible sans Holo Web Bridge.");
+    },
+    async getMyPubKey() {
+      throw new Error("AgentPubKey non disponible sans runtime Holochain.");
+    },
+    onSignal() {
+      // No-op: local-only mode has no Holochain signal source.
+    },
+  };
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -155,6 +225,46 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
+function emitSignal(handler: (signal: unknown) => void, signal: unknown): void {
+  if (
+    typeof signal === "object" &&
+    signal !== null &&
+    "type" in signal &&
+    (signal as { type?: unknown }).type === "app" &&
+    "value" in signal
+  ) {
+    handler((signal as { value?: { payload?: unknown } }).value?.payload);
+    return;
+  }
+  handler(signal);
+}
+
+async function fetchWebBridge<T>(path: string): Promise<T> {
+  const url = `${__WEB_BRIDGE_URL__}/${path}`;
+  const resp = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!resp.ok) throw new Error(`Web Bridge ${resp.status}: ${await resp.text()}`);
+  return resp.json() as Promise<T>;
+}
+
+export function canWrite(): boolean {
+  return _client?.canWrite ?? false;
+}
+
+export function canReadDht(): boolean {
+  return _client?.canReadDht ?? false;
+}
+
+export function setClientForTests(client: HoloRuntimeClient): void {
+  _client = client;
+  _mode = client.mode;
+}
+
+export function resetClientForTests(): void {
+  _client = null;
+  _mode = "detecting";
+  _connecting = null;
+}
+
 export async function callZome<T>(
   zome_name: string,
   fn_name: string,
@@ -162,50 +272,31 @@ export async function callZome<T>(
 ): Promise<T> {
   if (_mode === "detecting") await initClient();
 
-  if (_mode === "web-bridge") {
+  if (!_client || !_client.canWrite) {
     throw new Error(
       `callZome("${zome_name}", "${fn_name}") requiert un conducteur Holochain. ` +
-        "Installez Holochain Launcher pour cette fonctionnalite.",
+        "Activez Holo Web Conductor ou un conducteur Holochain local.",
     );
   }
 
-  return _client!.callZome(
-    {
-      role_name: ROLE,
-      zome_name,
-      fn_name,
-      payload,
-    } as RoleNameCallZomeRequest,
-    ZOME_TIMEOUT,
-  ) as Promise<T>;
+  return _client.callZome<T>(zome_name, fn_name, payload);
 }
 
 export async function webBridgeGet<T>(path: string): Promise<T> {
   if (_mode === "detecting") await initClient();
-  const url = `${__WEB_BRIDGE_URL__}/${path}`;
-  const resp = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!resp.ok) throw new Error(`Web Bridge ${resp.status}: ${await resp.text()}`);
-  return resp.json() as Promise<T>;
+  return _client!.webBridgeGet<T>(path);
 }
 
 export function hasConductor(): boolean {
-  return _mode === "websocket";
+  return canWrite();
 }
 
 export async function getMyPubKey(): Promise<Uint8Array> {
   if (_mode === "detecting") await initClient();
-  if (!_client || _mode !== "websocket") {
-    throw new Error("AgentPubKey non disponible en mode Web Bridge.");
-  }
-  return _client.myPubKey;
+  if (!_client) throw new Error("AgentPubKey non disponible sans runtime Holochain.");
+  return _client.getMyPubKey();
 }
 
 export function onSignal(handler: (signal: unknown) => void): void {
-  _client?.on("signal", (signal) => {
-    if (signal.type === "app") {
-      handler(signal.value.payload);
-      return;
-    }
-    handler(signal);
-  });
+  _client?.onSignal(handler);
 }

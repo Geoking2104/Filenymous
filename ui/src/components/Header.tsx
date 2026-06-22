@@ -18,10 +18,12 @@ export default function Header({ minimal = false }: HeaderProps) {
     { id: "privacy",  label: "Vie privée",icon: "🛡" },
   ];
 
-  const modeLabel = net.mode === "websocket" ? "Holochain local"
+  const modeLabel = net.mode === "holo-web" ? "Holo Web"
+    : net.mode === "websocket" ? "Holochain local"
     : net.mode === "web-bridge" ? "Holo Web Bridge"
-    : "Connexion…";
-  const modeColor = net.mode === "websocket" ? "#059669"
+    : net.mode === "local-only" ? "Local"
+    : "Connexion...";
+  const modeColor = net.mode === "holo-web" || net.mode === "websocket" ? "#059669"
     : net.mode === "web-bridge" ? "#d97706"
     : "#9ca3af";
 

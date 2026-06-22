@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { modeCapabilities } from "./runtime";
-import { createHoloWebRuntime, createRuntimeDetector } from "./client";
+import {
+  canWrite,
+  createHoloWebRuntime,
+  createRuntimeDetector,
+  resetClientForTests,
+  setClientForTests,
+} from "./client";
 
 describe("modeCapabilities", () => {
   it("allows zome writes only for holo-web and websocket modes", () => {
@@ -85,5 +91,22 @@ describe("createHoloWebRuntime", () => {
     expect(runtime.canWrite).toBe(true);
     expect(result).toBe("ok");
     expect(calls).toHaveLength(1);
+  });
+});
+
+describe("client write helper", () => {
+  it("returns true for holo-web runtime", () => {
+    setClientForTests({
+      mode: "holo-web",
+      canWrite: true,
+      canReadDht: true,
+      callZome: async <T,>() => null as T,
+      webBridgeGet: async <T,>() => null as T,
+      getMyPubKey: async () => new Uint8Array(),
+      onSignal: () => undefined,
+    });
+
+    expect(canWrite()).toBe(true);
+    resetClientForTests();
   });
 });

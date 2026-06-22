@@ -27,7 +27,7 @@ import { encryptAesKeyForRecipient, importX25519PublicKey } from "../crypto/ecie
 import { identityZome }                         from "../holochain/identity";
 import { fileStorageZome }                      from "../holochain/fileStorage";
 import { parcelZome }                           from "../holochain/delivery";
-import { hasConductor }                         from "../holochain/client";
+import { canWrite }                            from "../holochain/client";
 import { useStore }                             from "../store/useStore";
 
 const CHUNK_SIZE = 256 * 1024; // 256 KB
@@ -93,8 +93,8 @@ export default function SendPanel() {
 
   const send = async () => {
     if (!files.length || !isValidContact(recipient)) return;
-    if (!hasConductor()) {
-      alert("Envoi impossible en mode Web Bridge. Installez Holochain Launcher.");
+    if (!canWrite()) {
+      alert("Envoi impossible sans Holo Web Conductor ou conducteur Holochain local.");
       return;
     }
 

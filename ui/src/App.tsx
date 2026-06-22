@@ -83,7 +83,7 @@ export default function App() {
   useEffect(() => {
     let alive = true;
     initClient().then((mode) => {
-      if (alive) setNet({ connected: mode === "websocket", mode, peers: 0 });
+      if (alive) setNet({ connected: mode === "holo-web" || mode === "websocket", mode, peers: 0 });
     });
 
     // Écoute les signaux Holochain (nouveau parcel entrant)
