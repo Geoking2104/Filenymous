@@ -414,7 +414,7 @@
   <div class="card" style="border-color:transparent">
     <ul class="feature-list">
       <li>Chiffrement AES-256-GCM local, dans votre navigateur</li>
-      <li>Stockage P2P distribué sur Holochain DHT</li>
+      <li>Transport Holochain DHT si disponible, lien Web chiffré autonome sinon</li>
       <li>La clé de déchiffrement reste dans l'URL — aucun serveur ne la voit</li>
       <li>Aucun compte requis — pseudonyme par défaut</li>
     </ul>
@@ -701,6 +701,7 @@ const CFG = {
   appId:          'filenymous',
   role:           'filenymous',
   chunkSize:      512 * 1024,
+  webInlineMaxBytes: 8 * 1024 * 1024,
   // Holo Web Conductor — passer à true quand le hApp est déployé sur Holo Host
   // Docs : https://developer.holo.host
   holoDeployed:   true,
@@ -986,7 +987,7 @@ async function holoCall(zome, fn, payload) {
   });
 }
 
-// Web Bridge HTTP — lecture seule, fallback quand ni local ni holo
+// Web Bridge HTTP — fallback lecture DHT quand ni local ni holo
 // Transmet X-Web-Agent-ID pour attribution côté bridge
 async function bridgeCall(zome, fn, payload) {
   const headers = { 'Content-Type': 'application/json' };
@@ -1017,7 +1018,7 @@ async function bridgeCall(zome, fn, payload) {
 async function zomeCall(zomeName, fn, payload) {
   if (S.mode === 'local') return callZome(zomeName, fn, payload);
   if (S.mode === 'holo')  return holoCall(zomeName, fn, payload);
-  return bridgeCall(zomeName, fn, payload); // bridge = lecture seule HTTP
+  return bridgeCall(zomeName, fn, payload);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1052,6 +1053,44 @@ async function downloadFile(fileHash, keyBytes, onPct) {
   const plain = await aesDecrypt(keyBytes, enc);
   onPct?.(100);
   return plain;
+}
+
+// Mode web anonyme sans conducteur : le fichier chiffre est transporte dans le
+// fragment URL. Le fragment n'est jamais envoye au serveur HTTP.
+async function createWebParcelLink(file, message) {
+  if (file.size > CFG.webInlineMaxBytes) {
+    throw new Error(`Mode Web anonyme limite a ${fmtBytes(CFG.webInlineMaxBytes)}. Utilisez Holo Web Conductor ou l'app Desktop pour les fichiers plus lourds.`);
+  }
+
+  const raw      = new Uint8Array(await file.arrayBuffer());
+  const aesKey   = await genAesKey();
+  const enc      = await aesEncrypt(aesKey, raw);
+  const keyBytes = await exportKey(aesKey);
+  const payload  = {
+    v: 'web-inline',
+    name: file.name,
+    type: file.type || 'application/octet-stream',
+    size: file.size,
+    created: Date.now(),
+    sender: S.senderId || '',
+    message: message || '',
+    data: b64e(enc),
+  };
+  const parcelB64 = b64e(new TextEncoder().encode(JSON.stringify(payload)));
+  return {
+    id: `w1:${parcelB64}`,
+    keyBytes,
+    url: `${location.origin}${location.pathname}#w1:${parcelB64}:${b64e(keyBytes)}`,
+  };
+}
+
+function parseWebParcelLink(hash) {
+  if (!hash.startsWith('w1:')) return null;
+  const [, payloadB64, keyB64] = hash.split(':');
+  if (!payloadB64 || !keyB64) throw new Error('Lien Web anonyme invalide.');
+  const payload = JSON.parse(new TextDecoder().decode(b64d(payloadB64)));
+  if (payload.v !== 'web-inline' || !payload.data) throw new Error('Payload Web anonyme invalide.');
+  return { payload, keyBytes: b64d(keyB64) };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1142,7 +1181,7 @@ function updateBadge() {
   const map = {
     local:     ['local',     '⬡ P2P local'],
     holo:      ['holo',      '⬡ Holo Web'],
-    bridge:    ['bridge',    '☁ Lecture seule'],
+    bridge:    ['bridge',    '☁ Web anonyme'],
     detecting: ['detecting', 'Connexion…'],
   };
   const [cls, txt] = map[S.mode] ?? map.detecting;
@@ -1159,11 +1198,9 @@ function updateSendNotice() {
     el.className = 'status info';
     tx.innerHTML = '⬡ <strong>Holo Web Conductor actif</strong> — chiffrement local AES-256, stockage P2P via réseau Holo.';
   } else {
-    // bridge — lecture seule
-    el.className = 'status warning';
-    tx.innerHTML = `⚙️ <strong>Mode lecture seule</strong> — envoi non disponible sans conducteur Holochain. ` +
-      `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" ` +
-      `style="color:var(--accent);font-weight:600;margin-left:4px;">⬇️ App Desktop →</a>`;
+    el.className = 'status info';
+    tx.innerHTML = `☁ <strong>Mode Web anonyme</strong> — envoi et réception sans conducteur : ` +
+      `le fichier est chiffré localement puis transporté dans le lien privé.`;
   }
   el.classList.remove('hidden');
 }
@@ -1214,16 +1251,32 @@ window.handleSend = async function () {
   btn.disabled = true;
   $('link-result').classList.add('hidden');
 
-  // Mode bridge (lecture seule HTTP) : envoi impossible
   if (S.mode === 'bridge') {
-    setStatus('send-status', 'error',
-      CFG.holoDeployed
-        ? 'Holo Web Conductor non connecté — rechargez la page ou ' +
-          `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">téléchargez l'app Desktop →</a>`
-        : '⏳ Holo Web Conductor en cours de déploiement. En attendant : ' +
-          `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">⬇️ App Desktop disponible →</a>`
-    );
-    btn.disabled = false;
+    try {
+      setStatus('send-status', 'loading', 'Chiffrement local AES-256 — création du lien Web anonyme…');
+      const message = $('send-message').value.trim();
+      const out = await createWebParcelLink(S.file, message);
+      const recipRaw = $('recipient').value.trim();
+
+      S.history.unshift({
+        id: out.id, ehBytes: [],
+        name: S.file.name, size: S.file.size,
+        to: recipRaw || '(lien web anonyme)',
+        date: new Date().toLocaleDateString('fr-FR'),
+        link: out.url, status: 'pending',
+        maxDl: 0, dlCount: 0,
+      });
+      updateHistBadge();
+
+      $('link-text').textContent = out.url;
+      $('link-result').classList.remove('hidden');
+      $('send-status').classList.add('hidden');
+      toast('Lien Web anonyme créé !');
+    } catch (e) {
+      setStatus('send-status', 'error', e.message);
+    } finally {
+      btn.disabled = false;
+    }
     return;
   }
   if (S.mode === 'holo') {
@@ -1317,6 +1370,60 @@ async function checkReceiveHash() {
   if (hash === _loadedHash) return;
   _loadedHash = hash;
 
+  try {
+    const webParcel = parseWebParcelLink(hash);
+    if (webParcel) {
+      const { payload, keyBytes } = webParcel;
+      $('recv-empty').classList.add('hidden');
+      $('recv-auto').classList.remove('hidden');
+      $('recv-msg-wrap').classList.add('hidden');
+      $('recv-status').classList.add('hidden');
+      $('recv-prog').classList.add('hidden');
+      $('recv-fill').style.width = '0';
+      $('btn-download').disabled = false;
+      S.parcel = {
+        web: true,
+        keyBytes,
+        p: {
+          download_count: 0,
+          is_revoked: false,
+          manifest: {
+            file_hash: null,
+            file_name: payload.name,
+            file_size: payload.size,
+            file_type: payload.type || 'application/octet-stream',
+            chunk_count: 1,
+            max_downloads: 0,
+            expiry_us: 0,
+            encrypted_key_blob: '',
+            message: payload.message || '',
+            web_inline_data: payload.data,
+          },
+        },
+      };
+      $('recv-meta').innerHTML =
+        `<div class="meta-item"><label>Fichier</label><span>${esc(payload.name)}</span></div>` +
+        `<div class="meta-item"><label>Taille</label><span>${fmtBytes(payload.size)}</span></div>` +
+        `<div class="meta-item"><label>Mode</label><span>Web anonyme</span></div>` +
+        `<div class="meta-item"><label>Statut</label><span style="color:var(--success)">Disponible</span></div>` +
+        (payload.sender
+          ? `<div class="meta-item" style="grid-column:1/-1"><label>Expéditeur</label>` +
+            `<span class="sender-id-mono">${esc(payload.sender.slice(0, 16))}…</span></div>`
+          : '');
+      if (payload.message) {
+        $('recv-msg').textContent = payload.message;
+        $('recv-msg-wrap').classList.remove('hidden');
+      }
+      return;
+    }
+  } catch (e) {
+    $('recv-empty').classList.add('hidden');
+    $('recv-auto').classList.remove('hidden');
+    setStatus('recv-status', 'error', `Lien Web anonyme illisible : ${e.message}`);
+    $('btn-download').disabled = true;
+    return;
+  }
+
   const [ehB64, keyB64] = hash.split(':');
   if (!ehB64 || !keyB64) { $('recv-empty').classList.remove('hidden'); return; }
 
@@ -1332,7 +1439,7 @@ async function checkReceiveHash() {
   $('btn-download').disabled = false;
   S.parcel = null;
 
-  // Mode bridge sans infrastructure Holo : la réception DHT n'est pas encore possible
+  // Mode bridge sans infrastructure Holo : la réception DHT n'est pas disponible pour les anciens liens DHT
   if (S.mode === 'bridge' && !CFG.holoDeployed) {
     setStatus('recv-status', 'warning',
       '⏳ Infrastructure Holo en cours de déploiement — réception disponible prochainement. ' +
@@ -1406,13 +1513,21 @@ window.handleDownload = async function () {
   $('recv-prog').classList.remove('hidden');
 
   try {
-    $('recv-prog-label').textContent = 'Récupération depuis le DHT…';
+    $('recv-prog-label').textContent = S.parcel.web ? 'Lecture du lien chiffré…' : 'Récupération depuis le DHT…';
     $('recv-fill').style.width = '15%';
 
-    const plain = await downloadFile(p.manifest.file_hash, useKey, pct => {
-      $('recv-fill').style.width = `${15 + pct * 0.85}%`;
-      $('recv-prog-label').textContent = pct < 100 ? 'Déchiffrement…' : 'Finalisation…';
-    });
+    const plain = S.parcel.web
+      ? await (async () => {
+          $('recv-fill').style.width = '45%';
+          const out = await aesDecrypt(useKey, b64d(p.manifest.web_inline_data));
+          $('recv-fill').style.width = '100%';
+          $('recv-prog-label').textContent = 'Finalisation…';
+          return out;
+        })()
+      : await downloadFile(p.manifest.file_hash, useKey, pct => {
+          $('recv-fill').style.width = `${15 + pct * 0.85}%`;
+          $('recv-prog-label').textContent = pct < 100 ? 'Déchiffrement…' : 'Finalisation…';
+        });
 
     const url = URL.createObjectURL(new Blob([plain]));
     const a   = Object.assign(document.createElement('a'), { href: url, download: p.manifest.file_name });
@@ -1421,7 +1536,7 @@ window.handleDownload = async function () {
 
     setStatus('recv-status', 'success', `✅ ${esc(p.manifest.file_name)} téléchargé.`);
     toast('Fichier déchiffré et téléchargé !');
-    await confirmDl(ehBytes).catch(() => {});
+    if (!S.parcel.web) await confirmDl(ehBytes).catch(() => {});
   } catch (e) {
     setStatus('recv-status', 'error', `Erreur : ${e.message}`);
     btn.disabled = false;
@@ -1528,14 +1643,13 @@ async function initIdentity() {
   const ncFeatures  = $('id-nc-features');
 
   if (S.mode === 'bridge') {
-    // Mode lecture seule HTTP — fonctionnalités très limitées
-    if (ncTitle) { ncTitle.textContent = '☁ Mode lecture seule'; ncTitle.style.color = 'var(--warning)'; }
-    if (ncDesc)  ncDesc.textContent = "Aucun conducteur Holochain disponible. L'envoi et la gestion de contacts nécessitent l'app Desktop ou le Holo Web Conductor.";
+    if (ncTitle) { ncTitle.textContent = '☁ Mode Web anonyme'; ncTitle.style.color = 'var(--accent)'; }
+    if (ncDesc)  ncDesc.textContent = "Aucun conducteur Holochain disponible. Les fichiers peuvent être envoyés par lien chiffré autonome ; les contacts DHT restent réservés à Holo Web Conductor ou à l'app Desktop.";
     if (ncFeatures) ncFeatures.innerHTML = `
-      <li style="color:var(--error)">Envoi de fichiers — nécessite un conducteur</li>
-      <li style="color:var(--success)">Réception de fichiers ✓ (lecture DHT HTTP)</li>
-      <li style="color:var(--error)">Enregistrement de contact — nécessite un conducteur</li>
-      <li style="color:var(--error)">Chiffrement ECIES — nécessite un conducteur</li>`;
+      <li style="color:var(--success)">Envoi de fichiers ✓ (lien chiffré autonome)</li>
+      <li style="color:var(--success)">Réception de fichiers ✓ (sans conducteur)</li>
+      <li style="color:var(--warning)">Enregistrement de contact — nécessite un conducteur</li>
+      <li style="color:var(--warning)">Chiffrement ECIES agent — nécessite un conducteur</li>`;
     noConductor.classList.remove('hidden');
     ui.classList.add('hidden');
     return;
