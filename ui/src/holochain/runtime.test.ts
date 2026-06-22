@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { modeCapabilities } from "./runtime";
+import { createRuntimeDetector } from "./client";
 
 describe("modeCapabilities", () => {
   it("allows zome writes only for holo-web and websocket modes", () => {
@@ -14,5 +15,54 @@ describe("modeCapabilities", () => {
     expect(modeCapabilities("websocket").canReadDht).toBe(true);
     expect(modeCapabilities("web-bridge").canReadDht).toBe(true);
     expect(modeCapabilities("local-only").canReadDht).toBe(false);
+  });
+});
+
+describe("createRuntimeDetector", () => {
+  it("selects HWC before local websocket", async () => {
+    const detector = createRuntimeDetector({
+      createHoloWebClient: async () => ({ mode: "holo-web" as const }),
+      createWebsocketClient: async () => ({ mode: "websocket" as const }),
+      createWebBridgeClient: async () => ({ mode: "web-bridge" as const }),
+      createLocalOnlyClient: () => ({ mode: "local-only" as const }),
+    });
+
+    const client = await detector();
+
+    expect(client.mode).toBe("holo-web");
+  });
+
+  it("falls back to websocket when HWC fails", async () => {
+    const detector = createRuntimeDetector({
+      createHoloWebClient: async () => {
+        throw new Error("missing HWC");
+      },
+      createWebsocketClient: async () => ({ mode: "websocket" as const }),
+      createWebBridgeClient: async () => ({ mode: "web-bridge" as const }),
+      createLocalOnlyClient: () => ({ mode: "local-only" as const }),
+    });
+
+    const client = await detector();
+
+    expect(client.mode).toBe("websocket");
+  });
+
+  it("falls back to local-only when all network runtimes fail", async () => {
+    const detector = createRuntimeDetector({
+      createHoloWebClient: async () => {
+        throw new Error("missing HWC");
+      },
+      createWebsocketClient: async () => {
+        throw new Error("missing websocket");
+      },
+      createWebBridgeClient: async () => {
+        throw new Error("missing bridge");
+      },
+      createLocalOnlyClient: () => ({ mode: "local-only" as const }),
+    });
+
+    const client = await detector();
+
+    expect(client.mode).toBe("local-only");
   });
 });

@@ -1,5 +1,5 @@
 import { AppWebsocket, type AppClient, type RoleNameCallZomeRequest } from "@holochain/client";
-import type { RuntimeMode } from "./runtime";
+import type { HoloRuntimeClient, RuntimeMode } from "./runtime";
 
 declare const __HC_URL__: string;
 declare const __WEB_BRIDGE_URL__: string;
@@ -9,6 +9,45 @@ const WS_TIMEOUT_MS = 3_000;
 const ZOME_TIMEOUT = 30_000;
 
 export type ClientMode = RuntimeMode;
+
+type MinimalRuntime = Pick<HoloRuntimeClient, "mode">;
+
+export interface RuntimeFactories<
+  THoloWeb extends MinimalRuntime = HoloRuntimeClient,
+  TWebsocket extends MinimalRuntime = HoloRuntimeClient,
+  TWebBridge extends MinimalRuntime = HoloRuntimeClient,
+  TLocalOnly extends MinimalRuntime = HoloRuntimeClient,
+> {
+  createHoloWebClient(): Promise<THoloWeb>;
+  createWebsocketClient(): Promise<TWebsocket>;
+  createWebBridgeClient(): Promise<TWebBridge>;
+  createLocalOnlyClient(): TLocalOnly;
+}
+
+export function createRuntimeDetector<
+  THoloWeb extends MinimalRuntime,
+  TWebsocket extends MinimalRuntime,
+  TWebBridge extends MinimalRuntime,
+  TLocalOnly extends MinimalRuntime,
+>(
+  factories: RuntimeFactories<THoloWeb, TWebsocket, TWebBridge, TLocalOnly>,
+): () => Promise<THoloWeb | TWebsocket | TWebBridge | TLocalOnly> {
+  return async () => {
+    try {
+      return await factories.createHoloWebClient();
+    } catch {
+      try {
+        return await factories.createWebsocketClient();
+      } catch {
+        try {
+          return await factories.createWebBridgeClient();
+        } catch {
+          return factories.createLocalOnlyClient();
+        }
+      }
+    }
+  };
+}
 
 let _client: AppClient | null = null;
 let _mode: ClientMode = "detecting";
