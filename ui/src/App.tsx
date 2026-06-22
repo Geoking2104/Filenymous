@@ -17,6 +17,7 @@ import PendingNotices     from "./components/PendingNotices";
 import HistoryPanel       from "./components/HistoryPanel";
 import IdentityPanel      from "./components/IdentityPanel";
 import PrivacyPanel       from "./components/PrivacyPanel";
+import WalletPanel        from "./components/WalletPanel";
 
 const CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -123,6 +124,7 @@ export default function App() {
           {tab === "history"  && <HistoryPanel />}
           {tab === "identity" && <IdentityPanel />}
           {tab === "privacy"  && <PrivacyPanel />}
+          {tab === "wallet"   && <WalletPanel />}
         </main>
         <Footer />
       </div>
