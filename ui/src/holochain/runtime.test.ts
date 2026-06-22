@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { modeCapabilities } from "./runtime";
-import { createRuntimeDetector } from "./client";
+import { createHoloWebRuntime, createRuntimeDetector } from "./client";
 
 describe("modeCapabilities", () => {
   it("allows zome writes only for holo-web and websocket modes", () => {
@@ -64,5 +64,26 @@ describe("createRuntimeDetector", () => {
     const client = await detector();
 
     expect(client.mode).toBe("local-only");
+  });
+});
+
+describe("createHoloWebRuntime", () => {
+  it("wraps a HWC-compatible client as holo-web runtime", async () => {
+    const calls: unknown[] = [];
+    const runtime = await createHoloWebRuntime(async () => ({
+      myPubKey: new Uint8Array([1, 2, 3]),
+      callZome: async (request: unknown) => {
+        calls.push(request);
+        return "ok";
+      },
+      on: () => undefined,
+    }));
+
+    const result = await runtime.callZome("identity", "claim_contact", { contact_hash: "abc" });
+
+    expect(runtime.mode).toBe("holo-web");
+    expect(runtime.canWrite).toBe(true);
+    expect(result).toBe("ok");
+    expect(calls).toHaveLength(1);
   });
 });

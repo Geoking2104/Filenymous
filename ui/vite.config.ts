@@ -37,6 +37,11 @@ export default defineConfig({
       process.env.VITE_WEB_BRIDGE_URL ?? "https://filenymous.holo.host/web-bridge"
     ),
 
+    // URL du linker Holo Web Conductor expose par l'extension / h2hc-linker.
+    __HWC_LINKER_URL__: JSON.stringify(
+      process.env.VITE_HWC_LINKER_URL ?? "http://localhost:8090"
+    ),
+
     // App ID Holochain — doit correspondre à happ.yaml > app_name
     __APP_ID__: JSON.stringify(
       process.env.VITE_APP_ID ?? "filenymous"

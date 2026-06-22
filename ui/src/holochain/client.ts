@@ -1,8 +1,9 @@
 import { AppWebsocket, type AppClient, type RoleNameCallZomeRequest } from "@holochain/client";
-import type { HoloRuntimeClient, RuntimeMode } from "./runtime";
+import { modeCapabilities, type HoloRuntimeClient, type RuntimeMode } from "./runtime";
 
 declare const __HC_URL__: string;
 declare const __WEB_BRIDGE_URL__: string;
+declare const __HWC_LINKER_URL__: string;
 
 const ROLE = "filenymous";
 const WS_TIMEOUT_MS = 3_000;
@@ -47,6 +48,59 @@ export function createRuntimeDetector<
       }
     }
   };
+}
+
+type SignalHandler = (signal: unknown) => void;
+
+interface HwcCompatibleClient {
+  myPubKey?: Uint8Array;
+  callZome(request: unknown, timeoutMs?: number): Promise<unknown>;
+  on?(eventName: "signal", handler: SignalHandler): void;
+}
+
+export async function createHoloWebRuntime(
+  loadClient: () => Promise<HwcCompatibleClient> = loadDefaultHoloWebClient,
+): Promise<HoloRuntimeClient> {
+  const hwc = await loadClient();
+  const caps = modeCapabilities("holo-web");
+  return {
+    mode: "holo-web",
+    ...caps,
+    callZome<T>(zomeName: string, fnName: string, payload: unknown = null) {
+      return hwc.callZome(
+        {
+          role_name: ROLE,
+          zome_name: zomeName,
+          fn_name: fnName,
+          payload,
+        },
+        ZOME_TIMEOUT,
+      ) as Promise<T>;
+    },
+    webBridgeGet<T>(path: string) {
+      return webBridgeGet<T>(path);
+    },
+    async getMyPubKey() {
+      if (!hwc.myPubKey) throw new Error("AgentPubKey non disponible via Holo Web Conductor.");
+      return hwc.myPubKey;
+    },
+    onSignal(handler) {
+      hwc.on?.("signal", handler);
+    },
+  };
+}
+
+async function loadDefaultHoloWebClient(): Promise<HwcCompatibleClient> {
+  const mod = await import("@holo-host/web-conductor-client");
+  if (!mod.isWebConductorAvailable()) {
+    throw new Error("Holo Web Conductor extension non disponible.");
+  }
+  await withTimeout(mod.waitForHolochain(), WS_TIMEOUT_MS);
+  return mod.WebConductorAppClient.connect({
+    linkerUrl: __HWC_LINKER_URL__,
+    autoReconnect: true,
+    roleName: ROLE,
+  });
 }
 
 let _client: AppClient | null = null;
