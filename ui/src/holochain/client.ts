@@ -1,4 +1,5 @@
 import { AppWebsocket, type AppClient, type RoleNameCallZomeRequest } from "@holochain/client";
+import type { RuntimeMode } from "./runtime";
 
 declare const __HC_URL__: string;
 declare const __WEB_BRIDGE_URL__: string;
@@ -7,7 +8,7 @@ const ROLE = "filenymous";
 const WS_TIMEOUT_MS = 3_000;
 const ZOME_TIMEOUT = 30_000;
 
-export type ClientMode = "websocket" | "web-bridge" | "detecting";
+export type ClientMode = RuntimeMode;
 
 let _client: AppClient | null = null;
 let _mode: ClientMode = "detecting";
