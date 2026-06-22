@@ -411,6 +411,16 @@
     <p class="muted mt-2">🔑 La clé de déchiffrement est dans le fragment <code style="color:var(--accent)">#</code> — elle ne transite jamais sur le réseau.</p>
   </div>
 
+  <div id="p2p-result" class="card hidden">
+    <p class="card-title" style="color:var(--accent)">P2P direct - Code telephonique</p>
+    <div class="link-box">
+      <code id="p2p-code-out"></code>
+      <button class="btn btn-secondary btn-sm" onclick="copyP2PCode()">Copier</button>
+    </div>
+    <p class="muted mt-2">Gardez cette page ouverte. Le fichier chiffre passe directement entre navigateurs via WebRTC, sans conducteur Holochain et sans stockage serveur.</p>
+    <div id="p2p-send-status" class="status info mt-3 hidden"></div>
+  </div>
+
   <div class="card" style="border-color:transparent">
     <ul class="feature-list">
       <li>Chiffrement AES-256-GCM local, dans votre navigateur</li>
@@ -448,6 +458,16 @@
       <input type="text" id="manual-link" placeholder="https://filenymous.holo.host/#abc…:key…" />
     </div>
     <button class="btn btn-secondary btn-full mt-3" onclick="loadManual()">Charger</button>
+  </div>
+
+  <div id="recv-p2p" class="card">
+    <p class="card-title">P2P direct - Code telephonique</p>
+    <div class="field">
+      <label for="p2p-code-input">Code telephonique</label>
+      <input type="text" id="p2p-code-input" inputmode="numeric" placeholder="123-456" />
+    </div>
+    <button class="btn btn-primary btn-full mt-3" onclick="joinP2PReceive()">Rejoindre P2P direct</button>
+    <div id="p2p-recv-status" class="status info mt-3 hidden"></div>
   </div>
 
   <div id="recv-empty" class="card">
@@ -702,6 +722,10 @@ const CFG = {
   role:           'filenymous',
   chunkSize:      512 * 1024,
   webInlineMaxBytes: 8 * 1024 * 1024,
+  p2pSignalUrl:   location.hostname === '127.0.0.1' || location.hostname === 'localhost'
+    ? 'ws://127.0.0.1:8789'
+    : 'wss://signal.filenymous.eu',
+  p2pChunkSize:   64 * 1024,
   // Holo Web Conductor — passer à true quand le hApp est déployé sur Holo Host
   // Docs : https://developer.holo.host
   holoDeployed:   true,
@@ -1059,7 +1083,7 @@ async function downloadFile(fileHash, keyBytes, onPct) {
 // fragment URL. Le fragment n'est jamais envoye au serveur HTTP.
 async function createWebParcelLink(file, message) {
   if (file.size > CFG.webInlineMaxBytes) {
-    throw new Error(`Mode Web anonyme limite a ${fmtBytes(CFG.webInlineMaxBytes)}. Utilisez Holo Web Conductor ou l'app Desktop pour les fichiers plus lourds.`);
+    throw new Error(`Fichier trop volumineux pour un lien autonome (${fmtBytes(CFG.webInlineMaxBytes)} max).`);
   }
 
   const raw      = new Uint8Array(await file.arrayBuffer());
@@ -1210,6 +1234,210 @@ function updateHistBadge() {
   $('hist-count').textContent = n ? ` (${n})` : '';
 }
 
+// Direct WebRTC P2P transfer for oversized anonymous web files.
+function createPhoneCode() {
+  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000;
+  return String(n).padStart(6, '0').replace(/(\d{3})(\d{3})/, '$1-$2');
+}
+
+function normalizePhoneCode(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length !== 6) throw new Error('Code telephonique invalide.');
+  return digits.replace(/(\d{3})(\d{3})/, '$1-$2');
+}
+
+function p2pSupported() {
+  return typeof WebSocket !== 'undefined'
+    && typeof RTCPeerConnection !== 'undefined'
+    && ('RTCDataChannel' in window || typeof RTCPeerConnection.prototype.createDataChannel === 'function');
+}
+
+function openSignalSocket(code, role, onSignal, onPeerJoined, statusId) {
+  return new Promise((resolve, reject) => {
+    if (!CFG.p2pSignalUrl) return reject(new Error('Serveur de signalisation non configure.'));
+    const ws = new WebSocket(CFG.p2pSignalUrl);
+    const failTimer = setTimeout(() => reject(new Error('Signalisation P2P indisponible.')), 10000);
+
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({ type: 'join', code, role }));
+    });
+    ws.addEventListener('message', ev => {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'joined') {
+        clearTimeout(failTimer);
+        resolve(ws);
+      } else if (msg.type === 'peer-joined') {
+        onPeerJoined?.(msg.role);
+      } else if (msg.type === 'signal') {
+        onSignal?.(msg.payload);
+      } else if (msg.type === 'waiting') {
+        if (statusId) setStatus(statusId, 'info', 'En attente du pair...');
+      } else if (msg.type === 'peer-left') {
+        if (statusId) setStatus(statusId, 'warning', 'Le pair a quitte la session.');
+      } else if (msg.type === 'error') {
+        if (statusId) setStatus(statusId, 'error', `Signalisation: ${esc(msg.error)}`);
+      }
+    });
+    ws.addEventListener('error', () => {
+      clearTimeout(failTimer);
+      reject(new Error('Impossible de joindre le serveur de signalisation P2P.'));
+    });
+  });
+}
+
+function createP2PPeer(sendSignal) {
+  const pc = new RTCPeerConnection({
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+  });
+  pc.onicecandidate = ev => {
+    if (ev.candidate) sendSignal({ candidate: ev.candidate });
+  };
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === 'failed') toast('Connexion P2P impossible sans relais TURN disponible.', 'error');
+  };
+  return pc;
+}
+
+async function sendP2PFile(channel, file, message, statusId) {
+  const raw = new Uint8Array(await file.arrayBuffer());
+  const aesKey = await genAesKey();
+  const enc = await aesEncrypt(aesKey, raw);
+  const keyBytes = await exportKey(aesKey);
+  const meta = {
+    type: 'meta',
+    name: file.name,
+    mime: file.type || 'application/octet-stream',
+    size: file.size,
+    encryptedSize: enc.byteLength,
+    key: b64e(keyBytes),
+    sender: S.senderId || '',
+    message: message || '',
+  };
+
+  channel.send(JSON.stringify(meta));
+  for (let offset = 0; offset < enc.byteLength; offset += CFG.p2pChunkSize) {
+    while (channel.bufferedAmount > CFG.p2pChunkSize * 16) {
+      await new Promise(r => setTimeout(r, 30));
+    }
+    channel.send(enc.slice(offset, offset + CFG.p2pChunkSize));
+    const pct = Math.min(100, Math.round(((offset + CFG.p2pChunkSize) / enc.byteLength) * 100));
+    setStatus(statusId, 'loading', `Transfert P2P direct... ${pct}%`);
+  }
+  channel.send(JSON.stringify({ type: 'done' }));
+  setStatus(statusId, 'success', 'Transfert P2P termine. Vous pouvez fermer cette page.');
+}
+
+window.startP2PSend = async function () {
+  if (!S.file) throw new Error('Selectionnez un fichier.');
+  if (!p2pSupported()) throw new Error('Ce navigateur ne supporte pas WebRTC DataChannel.');
+
+  const code = createPhoneCode();
+  const message = $('send-message').value.trim();
+  $('p2p-code-out').textContent = code;
+  $('p2p-result').classList.remove('hidden');
+  $('link-result').classList.add('hidden');
+  setStatus('p2p-send-status', 'loading', 'Session P2P creee. Communiquez le code au destinataire.');
+
+  let ws;
+  const sendSignal = payload => ws?.send(JSON.stringify({ type: 'signal', code, payload }));
+  const pc = createP2PPeer(sendSignal);
+  const channel = pc.createDataChannel('filenymous-file');
+  channel.binaryType = 'arraybuffer';
+  channel.addEventListener('open', () => {
+    setStatus('p2p-send-status', 'loading', 'Pair connecte. Chiffrement local et transfert...');
+    sendP2PFile(channel, S.file, message, 'p2p-send-status').catch(e => setStatus('p2p-send-status', 'error', e.message));
+  });
+
+  ws = await openSignalSocket(code, 'sender', async payload => {
+    if (payload.answer) await pc.setRemoteDescription(payload.answer);
+    if (payload.candidate) await pc.addIceCandidate(payload.candidate);
+  }, async () => {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    sendSignal({ offer });
+  }, 'p2p-send-status');
+
+  S.history.unshift({
+    id: code, ehBytes: [],
+    name: S.file.name, size: S.file.size,
+    to: '(P2P direct)',
+    date: new Date().toLocaleDateString('fr-FR'),
+    link: `p2p:${code}`, status: 'pending',
+    maxDl: 1, dlCount: 0,
+  });
+  updateHistBadge();
+  return { code };
+};
+
+window.joinP2PReceive = async function () {
+  if (!p2pSupported()) {
+    setStatus('p2p-recv-status', 'error', 'Ce navigateur ne supporte pas WebRTC DataChannel.');
+    return;
+  }
+  let code;
+  try {
+    code = normalizePhoneCode($('p2p-code-input').value);
+  } catch (e) {
+    setStatus('p2p-recv-status', 'error', e.message);
+    return;
+  }
+
+  const chunks = [];
+  let meta = null;
+  let ws;
+  const sendSignal = payload => ws?.send(JSON.stringify({ type: 'signal', code, payload }));
+  const pc = createP2PPeer(sendSignal);
+  pc.ondatachannel = ev => {
+    const channel = ev.channel;
+    channel.binaryType = 'arraybuffer';
+    channel.onmessage = async msg => {
+      if (typeof msg.data === 'string') {
+        const data = JSON.parse(msg.data);
+        if (data.type === 'meta') {
+          meta = data;
+          setStatus('p2p-recv-status', 'loading', `Reception de ${esc(meta.name)} (${fmtBytes(meta.size)})...`);
+        } else if (data.type === 'done') {
+          const total = chunks.reduce((n, c) => n + c.byteLength, 0);
+          const enc = new Uint8Array(total);
+          let offset = 0;
+          for (const chunk of chunks) { enc.set(chunk, offset); offset += chunk.byteLength; }
+          const plain = await aesDecrypt(b64d(meta.key), enc);
+          const url = URL.createObjectURL(new Blob([plain], { type: meta.mime }));
+          const a = Object.assign(document.createElement('a'), { href: url, download: meta.name });
+          document.body.append(a); a.click(); a.remove();
+          URL.revokeObjectURL(url);
+          setStatus('p2p-recv-status', 'success', `${esc(meta.name)} recu et dechiffre.`);
+        }
+        return;
+      }
+      chunks.push(new Uint8Array(msg.data));
+      if (meta?.encryptedSize) {
+        const got = chunks.reduce((n, c) => n + c.byteLength, 0);
+        setStatus('p2p-recv-status', 'loading', `Reception P2P direct... ${Math.round(got / meta.encryptedSize * 100)}%`);
+      }
+    };
+  };
+
+  setStatus('p2p-recv-status', 'loading', 'Connexion au code P2P direct...');
+  try {
+    ws = await openSignalSocket(code, 'receiver', async payload => {
+      if (payload.offer) {
+        await pc.setRemoteDescription(payload.offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        sendSignal({ answer });
+      }
+      if (payload.candidate) await pc.addIceCandidate(payload.candidate);
+    }, null, 'p2p-recv-status');
+  } catch (e) {
+    setStatus('p2p-recv-status', 'error', e.message);
+  }
+};
+
+window.copyP2PCode = function () {
+  navigator.clipboard.writeText($('p2p-code-out').textContent).then(() => toast('Code P2P copie !'));
+};
+
 // ═══════════════════════════════════════════════════════════
 // SEND PANEL
 // ═══════════════════════════════════════════════════════════
@@ -1250,8 +1478,13 @@ window.handleSend = async function () {
   const btn = $('btn-send');
   btn.disabled = true;
   $('link-result').classList.add('hidden');
+  $('p2p-result').classList.add('hidden');
 
   if (S.mode === 'bridge') {
+    if (S.file.size > CFG.webInlineMaxBytes) {
+      btn.disabled = false;
+      return startP2PSend().catch(e => setStatus('send-status', 'error', e.message));
+    }
     try {
       setStatus('send-status', 'loading', 'Chiffrement local AES-256 — création du lien Web anonyme…');
       const message = $('send-message').value.trim();
