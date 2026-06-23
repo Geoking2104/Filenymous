@@ -2,14 +2,20 @@ import type { TransferActor, TransferRequestStatus } from "./types";
 
 const INVITE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-export function createInviteCode(bytes: Uint8Array = crypto.getRandomValues(new Uint8Array(9))): string {
+export function createInviteCode(bytes: Uint8Array = crypto.getRandomValues(new Uint8Array(12))): string {
   let out = "";
   for (let i = 0; i < 12; i += 1) out += INVITE_ALPHABET[bytes[i % bytes.length] % INVITE_ALPHABET.length];
   return `${out.slice(0, 4)}-${out.slice(4, 8)}-${out.slice(8, 12)}`;
 }
 
 export function normalizeInviteCode(value: string): string {
-  return value.toUpperCase().replace(/[^A-Z2-9]/g, "").replace(/(.{4})(?=.)/g, "$1-").slice(0, 14);
+  return value
+    .toUpperCase()
+    .split("")
+    .filter((char) => INVITE_ALPHABET.includes(char))
+    .join("")
+    .replace(/(.{4})(?=.)/g, "$1-")
+    .slice(0, 14);
 }
 
 export function isPresenceActive(input: { expiresAtMs: number }, nowMs = Date.now()): boolean {

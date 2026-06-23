@@ -3,6 +3,7 @@ import {
   canTransitionTransferStatus,
   createInviteCode,
   isPresenceActive,
+  normalizeInviteCode,
   roomAvatarInitials,
   sanitizeRoomText,
 } from "./roomModel";
@@ -11,6 +12,28 @@ describe("room model", () => {
   it("creates human-readable invite codes with enough entropy for V1 rooms", () => {
     const code = createInviteCode(new Uint8Array([0, 1, 2, 3, 4, 5]));
     expect(code).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  });
+
+  it("uses one random byte per invite code symbol by default", () => {
+    const originalGetRandomValues = crypto.getRandomValues;
+    let requestedBytes = 0;
+    crypto.getRandomValues = ((array: Uint8Array) => {
+      requestedBytes = array.length;
+      return originalGetRandomValues.call(crypto, array);
+    }) as Crypto["getRandomValues"];
+
+    try {
+      createInviteCode();
+    } finally {
+      crypto.getRandomValues = originalGetRandomValues;
+    }
+
+    expect(requestedBytes).toBe(12);
+  });
+
+  it("normalizes invite codes using only the generator alphabet", () => {
+    expect(normalizeInviteCode("IO10-ABCD-EFGH-JKLM")).toBe("ABCD-EFGH-JKLM");
+    expect(normalizeInviteCode("abcd efgh jklm")).toBe("ABCD-EFGH-JKLM");
   });
 
   it("treats presence as active only before expiry", () => {
