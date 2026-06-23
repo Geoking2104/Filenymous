@@ -1,5 +1,6 @@
 export const DIRECT_CHUNK_MAX_BYTES = 256 * 1024;
 const MAX_SDP_BYTES = 128 * 1024;
+const MAX_ICE_CANDIDATE_BYTES = 16 * 1024;
 const MAX_TRANSFER_ID_LENGTH = 128;
 
 export type SignalPayload =
@@ -19,7 +20,7 @@ function byteLength(value: string): number {
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isValidSdp(value: unknown): value is string {
@@ -28,6 +29,23 @@ function isValidSdp(value: unknown): value is string {
 
 function isValidTransferId(value: string): boolean {
   return value.length > 0 && value.length <= MAX_TRANSFER_ID_LENGTH && /^[a-zA-Z0-9:_-]+$/.test(value);
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, allowed: string[]): boolean {
+  return Object.keys(value).every((key) => allowed.includes(key));
+}
+
+function isValidIceCandidate(value: unknown): value is Record<string, unknown> {
+  if (!isObject(value)) return false;
+  if (!hasOnlyKeys(value, ["candidate", "sdpMid", "sdpMLineIndex", "usernameFragment"])) return false;
+  if (typeof value.candidate !== "string" || value.candidate.length === 0) return false;
+  if (byteLength(value.candidate) > MAX_ICE_CANDIDATE_BYTES) return false;
+  if ("sdpMid" in value && value.sdpMid !== null && typeof value.sdpMid !== "string") return false;
+  if ("sdpMLineIndex" in value && value.sdpMLineIndex !== null && !Number.isSafeInteger(value.sdpMLineIndex)) return false;
+  if ("usernameFragment" in value && value.usernameFragment !== null && typeof value.usernameFragment !== "string") {
+    return false;
+  }
+  return true;
 }
 
 function toBuffer(bytes: Uint8Array): ArrayBuffer {
@@ -40,8 +58,10 @@ export function assertAllowedSignalPayload(payload: unknown): asserts payload is
   }
 
   const kind = payload.kind;
-  if ((kind === "offer" || kind === "answer") && isValidSdp(payload.sdp)) return;
-  if (kind === "ice" && "candidate" in payload && isObject(payload.candidate)) return;
+  if ((kind === "offer" || kind === "answer") && hasOnlyKeys(payload, ["kind", "sdp"]) && isValidSdp(payload.sdp)) {
+    return;
+  }
+  if (kind === "ice" && hasOnlyKeys(payload, ["kind", "candidate"]) && isValidIceCandidate(payload.candidate)) return;
 
   throw new Error("unsupported signal payload");
 }

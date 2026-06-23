@@ -22,6 +22,28 @@ describe("direct transfer protocol", () => {
     );
   });
 
+  it("rejects extra fields on allowed signal payloads", () => {
+    expect(() => assertAllowedSignalPayload({ kind: "offer", sdp: "x", fileBytes: [1, 2, 3] })).toThrow(
+      "unsupported signal payload",
+    );
+    expect(() => assertAllowedSignalPayload({ kind: "answer", sdp: "x", chat: "secret" })).toThrow(
+      "unsupported signal payload",
+    );
+    expect(() =>
+      assertAllowedSignalPayload({ kind: "ice", candidate: { candidate: "x" }, fileBytes: [1, 2, 3] }),
+    ).toThrow("unsupported signal payload");
+  });
+
+  it("rejects arbitrary or oversized ICE payloads", () => {
+    expect(() => assertAllowedSignalPayload({ kind: "ice", candidate: [] })).toThrow("unsupported signal payload");
+    expect(() => assertAllowedSignalPayload({ kind: "ice", candidate: { candidate: "x", chat: "secret" } })).toThrow(
+      "unsupported signal payload",
+    );
+    expect(() => assertAllowedSignalPayload({ kind: "ice", candidate: { candidate: "x".repeat(17 * 1024) } })).toThrow(
+      "unsupported signal payload",
+    );
+  });
+
   it("detects altered chunk envelopes", async () => {
     const bytes = new Uint8Array([1, 2, 3, 4]);
     const envelope = await buildChunkEnvelope("transfer-a", 0, bytes);
