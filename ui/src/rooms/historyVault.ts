@@ -6,6 +6,7 @@ const STORE = "history";
 const KEY = "primary";
 const KDF_ITERATIONS = 310_000;
 const B64_CHUNK_SIZE = 0x8000;
+const MIN_PASSWORD_LENGTH = 12;
 
 export interface EncryptedRoomHistoryRecord {
   version: 1;
@@ -64,6 +65,12 @@ function assertEncryptedRecord(record: EncryptedRoomHistoryRecord): void {
   }
 }
 
+function assertUsablePassword(password: string): void {
+  if (password.trim().length < MIN_PASSWORD_LENGTH) {
+    throw new Error("Room history password must be at least 12 characters");
+  }
+}
+
 function assertSnapshot(value: unknown): asserts value is RoomHistorySnapshot {
   if (!value || typeof value !== "object") throw new Error("invalid room history snapshot");
 
@@ -82,6 +89,7 @@ export async function encryptRoomHistory(
   snapshot: RoomHistorySnapshot,
   password: string,
 ): Promise<EncryptedRoomHistoryRecord> {
+  assertUsablePassword(password);
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt, KDF_ITERATIONS);
@@ -106,6 +114,7 @@ export async function decryptRoomHistory(
   password: string,
 ): Promise<RoomHistorySnapshot> {
   try {
+    assertUsablePassword(password);
     assertEncryptedRecord(record);
     const salt = b64ToBytes(record.saltB64);
     const nonce = b64ToBytes(record.nonceB64);

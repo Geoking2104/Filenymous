@@ -28,6 +28,21 @@ describe("room history vault", () => {
     expect(first.ciphertextB64).not.toBe(second.ciphertextB64);
   });
 
+  it("rejects blank or weak passwords at the vault boundary", async () => {
+    await expect(encryptRoomHistory(snapshot, "")).rejects.toThrow(
+      "Room history password must be at least 12 characters",
+    );
+    await expect(encryptRoomHistory(snapshot, "    ")).rejects.toThrow(
+      "Room history password must be at least 12 characters",
+    );
+    await expect(encryptRoomHistory(snapshot, "short")).rejects.toThrow(
+      "Room history password must be at least 12 characters",
+    );
+
+    const record = await encryptRoomHistory(snapshot, "vault-password");
+    await expect(decryptRoomHistory(record, " ")).rejects.toThrow("Unable to unlock room history");
+  });
+
   it("persists and clears encrypted room history", async () => {
     await clearRoomHistory();
     const record = await encryptRoomHistory(snapshot, "vault-password");
