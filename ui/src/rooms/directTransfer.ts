@@ -1,6 +1,8 @@
 export const DIRECT_CHUNK_MAX_BYTES = 256 * 1024;
 const MAX_SDP_BYTES = 128 * 1024;
 const MAX_ICE_CANDIDATE_BYTES = 16 * 1024;
+const MAX_ICE_SDP_MID_BYTES = 256;
+const MAX_ICE_USERNAME_FRAGMENT_BYTES = 256;
 const MAX_TRANSFER_ID_LENGTH = 128;
 
 export type SignalPayload =
@@ -40,9 +42,20 @@ function isValidIceCandidate(value: unknown): value is Record<string, unknown> {
   if (!hasOnlyKeys(value, ["candidate", "sdpMid", "sdpMLineIndex", "usernameFragment"])) return false;
   if (typeof value.candidate !== "string" || value.candidate.length === 0) return false;
   if (byteLength(value.candidate) > MAX_ICE_CANDIDATE_BYTES) return false;
-  if ("sdpMid" in value && value.sdpMid !== null && typeof value.sdpMid !== "string") return false;
+  if (
+    "sdpMid" in value &&
+    value.sdpMid !== null &&
+    (typeof value.sdpMid !== "string" || byteLength(value.sdpMid) > MAX_ICE_SDP_MID_BYTES)
+  ) {
+    return false;
+  }
   if ("sdpMLineIndex" in value && value.sdpMLineIndex !== null && !Number.isSafeInteger(value.sdpMLineIndex)) return false;
-  if ("usernameFragment" in value && value.usernameFragment !== null && typeof value.usernameFragment !== "string") {
+  if (
+    "usernameFragment" in value &&
+    value.usernameFragment !== null &&
+    (typeof value.usernameFragment !== "string" ||
+      byteLength(value.usernameFragment) > MAX_ICE_USERNAME_FRAGMENT_BYTES)
+  ) {
     return false;
   }
   return true;

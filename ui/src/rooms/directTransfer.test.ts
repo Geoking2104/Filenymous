@@ -42,6 +42,15 @@ describe("direct transfer protocol", () => {
     expect(() => assertAllowedSignalPayload({ kind: "ice", candidate: { candidate: "x".repeat(17 * 1024) } })).toThrow(
       "unsupported signal payload",
     );
+    expect(() =>
+      assertAllowedSignalPayload({ kind: "ice", candidate: { candidate: "x", sdpMid: "m".repeat(257) } }),
+    ).toThrow("unsupported signal payload");
+    expect(() =>
+      assertAllowedSignalPayload({
+        kind: "ice",
+        candidate: { candidate: "x", usernameFragment: "u".repeat(257) },
+      }),
+    ).toThrow("unsupported signal payload");
   });
 
   it("detects altered chunk envelopes", async () => {
