@@ -2,10 +2,59 @@ import { WebSocketServer, WebSocket } from "ws";
 
 const port = Number(process.env.PORT || 8789);
 const allowedOrigin = process.env.ALLOWED_ORIGIN || "";
+const ROOM_TTL_MS = Number(process.env.ROOM_TTL_MS || 10 * 60 * 1000);
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 10_000);
+const RATE_LIMIT_MAX_MESSAGES = Number(process.env.RATE_LIMIT_MAX_MESSAGES || 60);
+const MAX_SIGNAL_SDP_BYTES = Number(process.env.MAX_SIGNAL_SDP_BYTES || 64_000);
+const MAX_SIGNAL_ICE_BYTES = Number(process.env.MAX_SIGNAL_ICE_BYTES || 16_000);
 const rooms = new Map();
+const rateLimits = new Map();
+
+function now() {
+  return Date.now();
+}
 
 function validateOneTimeCode(code) {
   return typeof code === "string" && /^\d{3}-\d{3}$/.test(code);
+}
+
+function hasOnlyKeys(value, allowed) {
+  return Object.keys(value).every(key => allowed.includes(key));
+}
+
+function byteLength(value) {
+  return Buffer.byteLength(value, "utf8");
+}
+
+function validateSignalPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  if (payload.kind === "offer" || payload.kind === "answer") {
+    return hasOnlyKeys(payload, ["kind", "sdp"])
+      && typeof payload.sdp === "string"
+      && payload.sdp.length > 0
+      && byteLength(payload.sdp) <= MAX_SIGNAL_SDP_BYTES;
+  }
+  if (payload.kind === "ice") {
+    return hasOnlyKeys(payload, ["kind", "candidate"])
+      && payload.candidate
+      && typeof payload.candidate === "object"
+      && !Array.isArray(payload.candidate)
+      && byteLength(JSON.stringify(payload.candidate)) <= MAX_SIGNAL_ICE_BYTES;
+  }
+  return false;
+}
+
+function checkRateLimit(ws) {
+  const key = ws._socket?.remoteAddress || "unknown";
+  const current = now();
+  const bucket = rateLimits.get(key) || { resetAt: current + RATE_LIMIT_WINDOW_MS, count: 0 };
+  if (current > bucket.resetAt) {
+    bucket.resetAt = current + RATE_LIMIT_WINDOW_MS;
+    bucket.count = 0;
+  }
+  bucket.count += 1;
+  rateLimits.set(key, bucket);
+  return bucket.count <= RATE_LIMIT_MAX_MESSAGES;
 }
 
 function isOpen(peer) {
@@ -17,8 +66,11 @@ function send(ws, msg) {
 }
 
 function roomFor(code) {
-  if (!rooms.has(code)) rooms.set(code, { sender: null, receiver: null });
-  return rooms.get(code);
+  const existing = rooms.get(code);
+  if (existing && existing.expiresAt > now()) return existing;
+  const room = { sender: null, receiver: null, createdAt: now(), expiresAt: now() + ROOM_TTL_MS };
+  rooms.set(code, room);
+  return room;
 }
 
 function otherRole(role) {
@@ -55,6 +107,11 @@ wss.on("connection", ws => {
       return;
     }
 
+    if (!checkRateLimit(ws)) {
+      send(ws, { type: "error", error: "rate-limited" });
+      return;
+    }
+
     if (msg.type === "join") {
       const { code, role } = msg;
       if (!validateOneTimeCode(code) || !["sender", "receiver"].includes(role)) {
@@ -79,6 +136,10 @@ wss.on("connection", ws => {
 
     if (msg.type === "signal") {
       const { code, payload } = msg;
+      if (!validateSignalPayload(payload)) {
+        send(ws, { type: "error", error: "unsupported-signal-payload" });
+        return;
+      }
       if (!validateOneTimeCode(code) || ws.roomCode !== code || !ws.roomRole) {
         send(ws, { type: "error", error: "not-in-room" });
         return;
@@ -108,4 +169,4 @@ wss.on("connection", ws => {
 
 console.log(`Filenymous p2p-signal listening on :${port}`);
 
-export { validateOneTimeCode };
+export { validateOneTimeCode, validateSignalPayload };
