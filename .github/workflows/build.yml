@@ -60,35 +60,19 @@ jobs:
           path: workdir/filenymous.happ
           retention-days: 7
 
-  # ── tryorama integration tests ──────────────────────────────────────────────
-  tryorama:
-    name: Tryorama tests
-    needs: rust
+  # Holochain 0.6 replaces JS Tryorama with Rust Sweettest.
+  # Keep the browser-only transfer path covered while Sweettest migration is planned.
+  web-tests:
+    name: Web/P2P tests
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v26
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Cache Nix store
-        uses: cachix/cachix-action@v14
-        with:
-          name: holochain-ci
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
-
-      - name: Download hApp artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: filenymous-happ
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: tests/package-lock.json
 
@@ -96,8 +80,14 @@ jobs:
         run: npm ci
         working-directory: tests
 
-      - name: Run tryorama tests
-        run: nix develop --command npm test
+      - name: Run standalone web tests
+        run: >
+          npx vitest run
+          src/p2p_direct.test.ts
+          src/p2p_signal_hardening.test.ts
+          src/p2p_signal_server.test.ts
+          src/static_room_demo.test.ts
+          src/web_mode_standalone.test.ts
         working-directory: tests
 
   # ── UI single-file HTML → ui.zip ─────────────────────────────────────────────
