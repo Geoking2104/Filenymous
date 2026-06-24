@@ -63,6 +63,115 @@ export interface CreateParcelInput {
   max_downloads:          number;
 }
 
+// ── room_integrity ─────────────────────────────────────────────────────────
+
+export type HoloPresenceStatus = "online" | "idle" | "leaving";
+
+export type HoloTransferRequestStatus =
+  | "pending"
+  | "accepted"
+  | "refused"
+  | "negotiating"
+  | "transferring"
+  | "done"
+  | "revoked"
+  | "expired"
+  | "failed";
+
+export interface HoloRoom {
+  room_id: string;
+  created_by: AgentPubKey;
+  created_at: Timestamp;
+  expires_at: Timestamp;
+  access_policy: "invitation_only";
+  room_label_ciphertext: string;
+}
+
+export interface HoloPresenceEvent {
+  room_id: string;
+  agent: AgentPubKey;
+  status: HoloPresenceStatus;
+  avatar_seed_commitment: string;
+  created_at: Timestamp;
+  expires_at: Timestamp;
+}
+
+export interface HoloRoomMessage {
+  room_id: string;
+  author: AgentPubKey;
+  ciphertext: string;
+  nonce: string;
+  key_id: string;
+  created_at: Timestamp;
+  previous_message_hash: EntryHash | null;
+}
+
+export interface HoloTransferRequest {
+  transfer_id: string;
+  room_id: string;
+  sender: AgentPubKey;
+  receiver: AgentPubKey;
+  file_name_ciphertext: string;
+  file_size: number;
+  file_type_ciphertext: string;
+  manifest_hash: string;
+  integrity_hash: string;
+  created_at: Timestamp;
+  expires_at: Timestamp;
+}
+
+export interface CreateRoomInput {
+  room_id: string;
+  expires_at: number;
+  access_policy: "invitation_only";
+  room_label_ciphertext: string;
+}
+
+export interface PublishPresenceInput {
+  room_id: string;
+  status: HoloPresenceStatus;
+  avatar_seed_commitment: string;
+  expires_at: number;
+}
+
+export interface SendRoomMessageInput {
+  room_id: string;
+  ciphertext: string;
+  nonce: string;
+  key_id: string;
+  previous_message_hash: EntryHash | null;
+}
+
+export interface CreateTransferRequestInput {
+  transfer_id: string;
+  room_id: string;
+  receiver: AgentPubKey;
+  file_name_ciphertext: string;
+  file_size: number;
+  file_type_ciphertext: string;
+  manifest_hash: string;
+  integrity_hash: string;
+  expires_at: number;
+}
+
+export interface UpdateTransferRequestStatusInput {
+  transfer_id: string;
+  room_id: string;
+  status: HoloTransferRequestStatus;
+}
+
+export interface HoloTransferRequestWithStatus {
+  request: HoloTransferRequest;
+  status: HoloTransferRequestStatus;
+}
+
+export interface HoloRoomSnapshot {
+  rooms: HoloRoom[];
+  presences: HoloPresenceEvent[];
+  messages: HoloRoomMessage[];
+  transfer_requests: HoloTransferRequestWithStatus[];
+}
+
 // ── file_storage (holochain-open-dev) ────────────────────────────────────────
 
 export interface FileMetadata {
