@@ -8,4 +8,4 @@ roles:
       strategy: create
       deferred: false
     dna:
-      path: "./dnas/filenymous/filenymous.dna"
+      path: "./workdir/filenymous.dna"
