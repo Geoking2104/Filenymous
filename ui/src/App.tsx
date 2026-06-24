@@ -11,6 +11,7 @@ import { useStore }       from "./store/useStore";
 import type { FilenymousSignal } from "./holochain/types";
 import Header             from "./components/Header";
 import Footer             from "./components/Footer";
+import RoomPanel          from "./components/RoomPanel";
 import SendPanel          from "./components/SendPanel";
 import ReceivePanel       from "./components/ReceivePanel";
 import PendingNotices     from "./components/PendingNotices";
@@ -69,7 +70,7 @@ const CSS = `
   .spin { display:inline-block; width:13px; height:13px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:sp .6s linear infinite; }
   @keyframes sp { to { transform:rotate(360deg); } }
   .empty { text-align:center; padding:3rem 1rem; color:var(--muted); font-size:.9rem; }
-  .main { flex:1; max-width:680px; margin:0 auto; width:100%; padding:2.5rem 1.5rem 4rem; }
+  .main { flex:1; max-width:960px; margin:0 auto; width:100%; padding:2.5rem 1.5rem 4rem; }
   .app  { display:flex; flex-direction:column; min-height:100vh; }
 `;
 
@@ -119,6 +120,7 @@ export default function App() {
       <div className="app">
         <Header />
         <main className="main">
+          {tab === "room"     && <RoomPanel />}
           {tab === "send"     && <SendPanel />}
           {tab === "inbox"    && <PendingNotices />}
           {tab === "history"  && <HistoryPanel />}
