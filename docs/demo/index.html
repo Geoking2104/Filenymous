@@ -329,7 +329,8 @@
     <span>Filenymous</span>
   </a>
   <nav>
-    <button id="tab-send"     class="active" onclick="showTab('send')">Envoyer</button>
+    <button id="tab-room"     class="active" onclick="showTab('room')">Salon</button>
+    <button id="tab-send"     onclick="showTab('send')">Envoyer</button>
     <button id="tab-receive"  onclick="showTab('receive')">Recevoir</button>
     <button id="tab-history"  onclick="showTab('history')">Historique<span id="hist-count"></span></button>
     <button id="tab-identity" onclick="showTab('identity')">Identité</button>
@@ -341,8 +342,29 @@
 
 <main>
 
+<!-- ════════════════════════════════════════════════════ PANEL ROOM -->
+<section id="panel-room" class="panel active">
+  <div class="card">
+    <p class="card-title">Salon de transfert</p>
+    <p class="muted">Mode autonome disponible sans conducteur. Les fonctions Holochain completes necessitent Holo Web Conductor.</p>
+    <div class="link-box" style="margin-top:12px">
+      <code id="room-code">Code a usage unique</code>
+      <button class="btn btn-secondary btn-sm" onclick="copyRoomCode()">Copier</button>
+    </div>
+  </div>
+  <div class="card">
+    <p class="card-title">Pairs presents</p>
+    <div id="room-peers" class="empty">Aucun pair connecte pour le moment.</div>
+  </div>
+  <div class="card">
+    <p class="card-title">Mini-chat chiffre</p>
+    <p class="muted">En mode autonome, le chat passe seulement par la connexion directe WebRTC.</p>
+    <textarea id="room-chat-input" maxlength="500" placeholder="Message court..."></textarea>
+  </div>
+</section>
+
 <!-- ════════════════════════════════════════════════════ PANEL SEND -->
-<section id="panel-send" class="panel active">
+<section id="panel-send" class="panel">
 
   <div class="card">
     <p class="card-title">Fichier à envoyer</p>
@@ -1174,7 +1196,7 @@ function fileIcon(name) {
 function showTab(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   $(`panel-${name}`).classList.add('active');
-  ['send', 'receive', 'history', 'identity', 'wallet', 'privacy'].forEach(t =>
+  ['room', 'send', 'receive', 'history', 'identity', 'wallet', 'privacy'].forEach(t =>
     $(`tab-${t}`).classList.toggle('active', t === name)
   );
   if (name === 'identity') initIdentity();
@@ -1436,6 +1458,10 @@ window.joinP2PReceive = async function () {
 
 window.copyP2PCode = function () {
   navigator.clipboard.writeText($('p2p-code-out').textContent).then(() => toast('Code P2P copie !'));
+};
+
+window.copyRoomCode = function () {
+  navigator.clipboard.writeText(document.getElementById('room-code').textContent).then(() => toast('Code copie !'));
 };
 
 // ═══════════════════════════════════════════════════════════
