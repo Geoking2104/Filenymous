@@ -10,5 +10,5 @@ ui:
   # Single-file standalone HTML — no build step required.
   path: "./workdir/ui.zip"
 
-happ_manifest:
+happ:
   path: "./workdir/filenymous.happ"
