@@ -1,69 +1,39 @@
 {
-  description = "Filenymous — P2P file transfer on Holochain";
+  description = "Filenymous - P2P file transfer on Holochain";
 
   inputs = {
-    nixpkgs.url     = "github:NixOS/nixpkgs/nixos-24.05";
-    flake-utils.url = "github:numtide/flake-utils";
-
-    # holonix — official Holochain dev environment (holochain, hc, lair-keystore)
-    holonix = {
-      url    = "github:holochain/holonix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    holonix.url = "github:holochain/holonix?ref=main-0.6";
+    nixpkgs.follows = "holonix/nixpkgs";
+    flake-parts.follows = "holonix/flake-parts";
   };
 
-  outputs = { self, nixpkgs, flake-utils, holonix }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs        = import nixpkgs { inherit system; };
-        holonixPkgs = holonix.packages.${system};
-      in
-      {
-        # `nix develop` — full dev environment
+  outputs = inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = builtins.attrNames inputs.holonix.devShells;
+
+      perSystem = { inputs', pkgs, ... }: {
+        formatter = pkgs.nixpkgs-fmt;
+
         devShells.default = pkgs.mkShell {
-          name = "filenymous-dev";
+          inputsFrom = [ inputs'.holonix.devShells.default ];
 
-          buildInputs = [
-            # ── Holochain toolchain (via holonix) ─────────────────────────
-            holonixPkgs.holochain        # conductor binary
-            holonixPkgs.hc               # CLI: dna/app/web-app pack + admin
-            holonixPkgs.lair-keystore    # keystore daemon
-
-            # ── Rust (WASM target added below) ────────────────────────────
-            pkgs.cargo
-            pkgs.rustc
-            pkgs.rustfmt
-            pkgs.clippy
-
-            # ── Node.js (bridge + tryorama) ───────────────────────────────
-            pkgs.nodejs_20
-            pkgs.nodePackages.npm
-
-            # ── Build utilities ───────────────────────────────────────────
-            pkgs.gnumake
-            pkgs.zip
-            pkgs.cacert
-
-            # ── Docker (for `make infra-*` targets) ──────────────────────
-            pkgs.docker-compose
+          packages = with pkgs; [
+            nodejs_22
+            gnumake
+            zip
+            binaryen
           ];
 
           shellHook = ''
             export CARGO_TARGET_DIR="$(pwd)/target"
-            rustup target add wasm32-unknown-unknown 2>/dev/null || true
-            echo ""
-            echo "  ⟁ Filenymous dev shell"
+            export PS1='\[\033[1;34m\][filenymous:\w]$\[\033[0m\] '
+            echo "Filenymous dev shell"
             echo "  holochain  $(holochain --version 2>/dev/null || echo 'not found')"
             echo "  hc         $(hc --version 2>/dev/null || echo 'not found')"
-            echo "  node       $(node --version)"
-            echo "  cargo      $(cargo --version)"
-            echo ""
-            echo "  make build-happ      → compile + pack .happ"
-            echo "  make tests           → tryorama integration tests"
-            echo "  make infra-up        → start bootstrap + bridge"
-            echo ""
+            echo "  node       $(node --version 2>/dev/null || echo 'not found')"
+            echo "  cargo      $(cargo --version 2>/dev/null || echo 'not found')"
           '';
         };
-      }
-    );
+      };
+    };
 }

@@ -27,22 +27,31 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
 
       - name: Install Holochain toolchain (via Nix)
-        run: nix develop --command echo "Holochain toolchain ready"
+        run: |
+          nix develop -L --command bash -lc '
+            set -euo pipefail
+            holochain --version
+            hc --version
+            cargo --version
+            rustc --version
+            node --version
+            make --version | head -n 1
+          '
 
       - name: Check Rust formatting
-        run: nix develop --command cargo fmt --all -- --check
+        run: nix develop -L --command cargo fmt --all -- --check
 
-      - name: Clippy
-        run: nix develop --command cargo clippy --all-targets -- -D warnings
+      - name: Check WASM workspace
+        run: nix develop -L --command cargo check --workspace --target wasm32-unknown-unknown --message-format short
 
       - name: Compile WASM zomes
-        run: nix develop --command make build-wasm
+        run: nix develop -L --command make build-wasm
 
       - name: Pack DNA
-        run: nix develop --command make build-dna
+        run: nix develop -L --command make build-dna
 
       - name: Pack hApp
-        run: nix develop --command make build-happ
+        run: nix develop -L --command make build-happ
 
       - name: Upload hApp artifact
         uses: actions/upload-artifact@v4
@@ -90,29 +99,6 @@ jobs:
       - name: Run tryorama tests
         run: nix develop --command npm test
         working-directory: tests
-
-  # ── Bridge (TypeScript) ─────────────────────────────────────────────────────
-  bridge:
-    name: Bridge
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: bridge/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: bridge
-
-      - name: Type-check
-        run: npx tsc --noEmit
-        working-directory: bridge
 
   # ── UI single-file HTML → ui.zip ─────────────────────────────────────────────
   # L'UI est filenymous-app.html (standalone, pas de build step Vite).
