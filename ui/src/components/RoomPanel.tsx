@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import { createInviteCode, roomAvatarInitials, sanitizeRoomText } from "../rooms/roomModel";
 import type { RoomPeer, RoomTransferRequest } from "../rooms/types";
 import { useStore } from "../store/useStore";
@@ -52,9 +52,10 @@ export default function RoomPanel() {
   } = useStore();
   const [selectedPeerId, setSelectedPeerId] = useState("");
   const [draft, setDraft] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [messages, setMessages] = useState<Array<{ id: string; author: string; text: string }>>([]);
 
-  const activeRoomId = roomId || "room-preview";
   const visiblePeers = useMemo(() => (peers.length ? peers : [localPeer]), [peers]);
   const remotePeers = visiblePeers.filter((peer) => peer.peerId !== localPeer.peerId);
   const selectedPeer = visiblePeers.find((peer) => peer.peerId === selectedPeerId);
@@ -64,6 +65,7 @@ export default function RoomPanel() {
     const nextRoomId = roomId || createRoomId();
     setRoom({ roomId: nextRoomId, inviteCode: inviteCode || createInviteCode() });
     if (!peers.length) setPeers([localPeer]);
+    return nextRoomId;
   };
 
   const addDemoPeer = () => {
@@ -82,8 +84,21 @@ export default function RoomPanel() {
 
   const queueFile = (file: File | null) => {
     if (!file || !selectedPeer) return;
-    ensureRoom();
-    setRoomTransfers([requestFromFile(file, activeRoomId, selectedPeer), ...roomTransfers]);
+    const nextRoomId = ensureRoom();
+    setRoomTransfers([requestFromFile(file, nextRoomId, selectedPeer), ...roomTransfers]);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setDragging(false);
+    if (!canSend) return;
+    queueFile(event.dataTransfer.files?.[0] ?? null);
+  };
+
+  const handleDropKeyDown = (event: KeyboardEvent<HTMLLabelElement>) => {
+    if (!canSend || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    fileInputRef.current?.click();
   };
 
   const sendMessage = () => {
@@ -112,7 +127,7 @@ export default function RoomPanel() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(280px, .8fr)", gap: "1rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,280px),1fr))", gap: "1rem" }}>
         <div className="card" style={{ borderRadius: 8, marginBottom: 0 }}>
           <div className="card-label">Pairs</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(128px,1fr))", gap: ".75rem" }}>
@@ -147,6 +162,15 @@ export default function RoomPanel() {
           </div>
 
           <label
+            role="button"
+            tabIndex={canSend ? 0 : -1}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (canSend) setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            onKeyDown={handleDropKeyDown}
             style={{
               marginTop: "1rem",
               minHeight: 136,
@@ -156,14 +180,22 @@ export default function RoomPanel() {
               placeItems: "center",
               textAlign: "center",
               color: canSend ? "var(--text)" : "var(--muted)",
-              background: canSend ? "#f0fdf4" : "#f8fafc",
+              background: dragging ? "#dcfce7" : canSend ? "#f0fdf4" : "#f8fafc",
+              cursor: canSend ? "pointer" : "not-allowed",
             }}
           >
             <input
+              ref={fileInputRef}
               type="file"
               disabled={!canSend}
               onChange={(event) => queueFile(event.currentTarget.files?.[0] ?? null)}
-              style={{ display: "none" }}
+              style={{
+                position: "absolute",
+                width: 1,
+                height: 1,
+                opacity: 0,
+                pointerEvents: "none",
+              }}
             />
             <span style={{ fontWeight: 700 }}>
               {canSend ? `Envoyer vers ${selectedPeer?.displayName}` : "Sélectionnez un pair distant"}
