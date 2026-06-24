@@ -1,0 +1,13 @@
+[package]
+name = "room"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "room"
+
+[dependencies]
+hdk = { workspace = true }
+serde = { workspace = true }
+room_integrity = { path = "../../integrity/room_integrity" }

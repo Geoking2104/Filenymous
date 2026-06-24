@@ -853,6 +853,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "room"
+version = "0.1.0"
+dependencies = [
+ "hdk",
+ "room_integrity",
+ "serde",
+]
+
+[[package]]
+name = "room_integrity"
+version = "0.1.0"
+dependencies = [
+ "hdi",
+ "holochain_serialized_bytes",
+ "serde",
+]
+
+[[package]]
 name = "rustc_version"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

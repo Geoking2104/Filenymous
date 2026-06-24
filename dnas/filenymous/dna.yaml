@@ -12,6 +12,10 @@ integrity:
     - name: identity_integrity
       path: "../../target/wasm32-unknown-unknown/release/identity_integrity.wasm"
 
+    # Room/presence/chat/direct-transfer requests (custom)
+    - name: room_integrity
+      path: "../../target/wasm32-unknown-unknown/release/room_integrity.wasm"
+
     # ── Stockage fichiers (holochain-open-dev/file-storage) ─────────────────
     # Chunks publics sur DHT — accessibles via Holo Web Bridge (HTTP GET)
     - name: file_storage_integrity
@@ -34,6 +38,11 @@ coordinator:
       path: "../../target/wasm32-unknown-unknown/release/identity.wasm"
       dependencies:
         - name: identity_integrity
+
+    - name: room
+      path: "../../target/wasm32-unknown-unknown/release/room.wasm"
+      dependencies:
+        - name: room_integrity
 
     # ── File storage ─────────────────────────────────────────────────────────
     - name: file_storage

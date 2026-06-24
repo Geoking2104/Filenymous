@@ -9,6 +9,9 @@ members = [
   # Identity : ContactClaim + AgentX25519Key (inchangé)
   "dnas/filenymous/zomes/integrity/identity_integrity",
   "dnas/filenymous/zomes/coordinator/identity",
+  # Rooms : Holochain/HWC presence, encrypted chat, direct-transfer requests
+  "dnas/filenymous/zomes/integrity/room_integrity",
+  "dnas/filenymous/zomes/coordinator/room",
   # Parcel : métadonnées transfert + expiry + download tracking
   # (remplace transfer_integrity + storage_integrity + leurs coordinators)
   "dnas/filenymous/zomes/integrity/parcel_integrity",
