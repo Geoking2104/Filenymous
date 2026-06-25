@@ -59,9 +59,9 @@ jobs:
         run: |
           mkdir -p workdir
           cp filenymous-app.html /tmp/index.html
-          cd /tmp && zip -j $GITHUB_WORKSPACE/workdir/ui.zip index.html
+          (cd /tmp && zip -j "$GITHUB_WORKSPACE/workdir/ui.zip" index.html)
           cp $GITHUB_WORKSPACE/docs/demo/index.html /tmp/filenymous-public-web.html
-          cd /tmp && zip -j $GITHUB_WORKSPACE/workdir/filenymous-public-web.zip filenymous-public-web.html
+          (cd /tmp && zip -j "$GITHUB_WORKSPACE/workdir/filenymous-public-web.zip" filenymous-public-web.html)
           for platform in windows macos linux; do
             mkdir -p "/tmp/filenymous-${platform}"
             cp "$GITHUB_WORKSPACE/docs/demo/index.html" "/tmp/filenymous-${platform}/Filenymous.html"
@@ -79,7 +79,7 @@ jobs:
           done
           echo "ui.zip: $(wc -c < $GITHUB_WORKSPACE/workdir/ui.zip) bytes"
           echo "filenymous-public-web.zip: $(wc -c < $GITHUB_WORKSPACE/workdir/filenymous-public-web.zip) bytes"
-          ls -lh workdir/*.zip
+          ls -lh "$GITHUB_WORKSPACE"/workdir/*.zip
 
       - name: Upload UI artifact
         uses: actions/upload-artifact@v4
