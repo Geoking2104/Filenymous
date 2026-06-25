@@ -158,7 +158,25 @@ jobs:
           releaseBody:     |
             ## Filenymous ${{ github.ref_name }}
 
-            Application desktop P2P de transfert de fichiers chiffrés, propulsée par Holochain.
+            Nouvelle version publique de Filenymous : plus simple pour le grand public, plus claire sur les transports P2P, et prete pour l'evolution Iroh.
+
+            ### Nouveautes principales
+            - Interface web refondue autour de 3 actions : **Envoyer**, **Recevoir**, **Retrouver mes fichiers**.
+            - Envoi sans conducteur Holochain local : code a usage unique, lien chiffre autonome, ou P2P direct WebRTC.
+            - Integration produit d'**Iroh v1** et **iroh-blobs** comme trajectoire pour les gros fichiers verifiables, les versions Rust/native et les relais chiffres.
+            - Holochain / Holo Web Conductor restent disponibles en mode avance pour l'identite, les contacts, la DHT et la coordination.
+            - Ajout d'un **repertoire public ouvert** sous forme de catalogue volontaire : pas de listing serveur brut, pas d'exposition accidentelle des fichiers.
+            - Coffre local BTC/ETH mieux separe de l'envoi de fichiers, avec mainnet verrouille par defaut.
+
+            ### Version web
+            - OVH : https://filenymous.eu/
+            - GitHub Pages : https://geoking2104.github.io/Filenymous/
+
+            ### Securite
+            - Chiffrement local AES-256-GCM dans le navigateur.
+            - Aucun compte requis.
+            - Les cles privees et seeds wallet restent locales.
+            - Iroh en navigateur est documente comme chemin relaye chiffre ; WebRTC reste le chemin direct navigateur.
 
             ### Téléchargements
             - **macOS** : `.dmg` (Apple Silicon + Intel universal)
