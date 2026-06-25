@@ -1,6 +1,6 @@
 [package]
 name        = "filenymous"
-version     = "0.2.3"
+version     = "0.2.4"
 edition     = "2021"
 description = "Filenymous – P2P encrypted file transfer powered by Holochain"
 authors     = ["Filenymous Contributors"]
@@ -21,7 +21,7 @@ toml           = "0.8"
 # ── Holochain — version must match the sidecar binary in bins/ ──────────────
 # build.rs reads this version to set HOLOCHAIN_VERSION at compile time
 holochain_client     = "0.8.1"
-holochain            = { version = "0.6.1", features = ["sqlite-encrypted"] }
+holochain            = { version = "0.6.1", default-features = false, features = ["sqlite-encrypted", "schema", "wasmer_sys"] }
 holochain_keystore   = "0.6.1"
 holochain_types      = "0.6.1"
 holochain_zome_types = "0.6.1"
@@ -65,3 +65,5 @@ chrono     = "0.4"
 [features]
 # Required by Tauri for production builds (when distDir points to filesystem)
 custom-protocol = ["tauri/custom-protocol"]
+
+[workspace]

@@ -62,8 +62,24 @@ jobs:
           cd /tmp && zip -j $GITHUB_WORKSPACE/workdir/ui.zip index.html
           cp $GITHUB_WORKSPACE/docs/demo/index.html /tmp/filenymous-public-web.html
           cd /tmp && zip -j $GITHUB_WORKSPACE/workdir/filenymous-public-web.zip filenymous-public-web.html
+          for platform in windows macos linux; do
+            mkdir -p "/tmp/filenymous-${platform}"
+            cp "$GITHUB_WORKSPACE/docs/demo/index.html" "/tmp/filenymous-${platform}/Filenymous.html"
+            printf '%s\n' \
+              "Filenymous ${platform}" \
+              "" \
+              "Version web portable sans conducteur Holochain local." \
+              "Ouvrez Filenymous.html dans un navigateur moderne." \
+              "" \
+              "Version en ligne:" \
+              "- OVH: https://filenymous.eu/" \
+              "- GitHub Pages: https://geoking2104.github.io/Filenymous/" \
+              > "/tmp/filenymous-${platform}/README.txt"
+            (cd /tmp && zip -qr "$GITHUB_WORKSPACE/workdir/filenymous-${platform}-web.zip" "filenymous-${platform}")
+          done
           echo "ui.zip: $(wc -c < $GITHUB_WORKSPACE/workdir/ui.zip) bytes"
           echo "filenymous-public-web.zip: $(wc -c < $GITHUB_WORKSPACE/workdir/filenymous-public-web.zip) bytes"
+          ls -lh workdir/*.zip
 
       - name: Upload UI artifact
         uses: actions/upload-artifact@v4
@@ -72,6 +88,9 @@ jobs:
           path: |
             workdir/ui.zip
             workdir/filenymous-public-web.zip
+            workdir/filenymous-windows-web.zip
+            workdir/filenymous-macos-web.zip
+            workdir/filenymous-linux-web.zip
           retention-days: 1
 
   # Publie la release web et les notes des que l'UI est packagée.
@@ -118,24 +137,30 @@ jobs:
 
             ### Telechargements
             - **Web public** : `filenymous-public-web.zip`
-            - **macOS** : `.dmg` ajoute automatiquement si le build desktop reussit.
-            - **Linux** : `.AppImage` ajoute automatiquement si le build desktop reussit.
-            - **Windows** : `.exe` ajoute automatiquement si le build desktop reussit.
-          files: release-assets/filenymous-public-web.zip
+            - **Windows sans conducteur** : `filenymous-windows-web.zip`
+            - **macOS sans conducteur** : `filenymous-macos-web.zip`
+            - **Linux sans conducteur** : `filenymous-linux-web.zip`
+            - **Desktop natif Holochain** : `.dmg`, `.AppImage` et `.exe` ajoutes automatiquement si les builds Tauri natifs reussissent.
+          files: release-assets/*.zip
           draft: false
           prerelease: false
 
   # ── 3. Kangaroo desktop builds (matrix) ──────────────────────────────────────
   kangaroo:
     needs: [build-happ, build-ui]
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest"     # Apple Silicon + x86_64 universal
-            target:   "universal-apple-darwin"
-            rustTargets: "aarch64-apple-darwin,x86_64-apple-darwin"
-            name:     "macOS"
+          - platform: "macos-26"
+            target:   "aarch64-apple-darwin"
+            rustTargets: "aarch64-apple-darwin"
+            name:     "macOS Apple Silicon"
+          - platform: "macos-26-intel"
+            target:   "x86_64-apple-darwin"
+            rustTargets: "x86_64-apple-darwin"
+            name:     "macOS Intel"
           - platform: "ubuntu-22.04"
             target:   "x86_64-unknown-linux-gnu"
             rustTargets: "x86_64-unknown-linux-gnu"
@@ -257,9 +282,10 @@ jobs:
             - Iroh en navigateur est documente comme chemin relaye chiffre ; WebRTC reste le chemin direct navigateur.
 
             ### Téléchargements
-            - **macOS** : `.dmg` (Apple Silicon + Intel universal)
-            - **Linux** : `.AppImage`
-            - **Windows** : `.exe` (NSIS installer)
+            - **Windows sans conducteur** : `filenymous-windows-web.zip`
+            - **macOS sans conducteur** : `filenymous-macos-web.zip`
+            - **Linux sans conducteur** : `filenymous-linux-web.zip`
+            - **Desktop natif Holochain** : `.dmg`, `.AppImage` et `.exe` si le build Tauri natif reussit.
 
             ### Première installation
             L'application crée un profil Holochain local au premier démarrage (~30 s).
