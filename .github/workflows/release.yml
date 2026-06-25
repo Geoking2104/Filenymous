@@ -47,14 +47,70 @@ jobs:
           mkdir -p workdir
           cp filenymous-app.html /tmp/index.html
           cd /tmp && zip -j $GITHUB_WORKSPACE/workdir/ui.zip index.html
+          cp $GITHUB_WORKSPACE/docs/demo/index.html /tmp/filenymous-public-web.html
+          cd /tmp && zip -j $GITHUB_WORKSPACE/workdir/filenymous-public-web.zip filenymous-public-web.html
           echo "ui.zip: $(wc -c < $GITHUB_WORKSPACE/workdir/ui.zip) bytes"
+          echo "filenymous-public-web.zip: $(wc -c < $GITHUB_WORKSPACE/workdir/filenymous-public-web.zip) bytes"
 
       - name: Upload UI artifact
         uses: actions/upload-artifact@v4
         with:
           name: filenymous-ui
-          path: workdir/ui.zip
+          path: |
+            workdir/ui.zip
+            workdir/filenymous-public-web.zip
           retention-days: 1
+
+  # Publie la release web et les notes des que l'UI est packagée.
+  # Les builds desktop peuvent ensuite ajouter leurs assets à la même release.
+  publish-web-release:
+    needs: [build-ui]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download UI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: filenymous-ui
+          path: release-assets/
+
+      - name: Publish release notes and public web asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Filenymous ${{ github.ref_name }}"
+          body: |
+            ## Filenymous ${{ github.ref_name }}
+
+            Nouvelle version publique de Filenymous : plus simple pour le grand public, plus claire sur les transports P2P, et prete pour l'evolution Iroh.
+
+            ### Nouveautes principales
+            - Interface web refondue autour de 3 actions : **Envoyer**, **Recevoir**, **Retrouver mes fichiers**.
+            - Envoi sans conducteur Holochain local : code a usage unique, lien chiffre autonome, ou P2P direct WebRTC.
+            - Integration produit d'**Iroh v1** et **iroh-blobs** comme trajectoire pour les gros fichiers verifiables, les versions Rust/native et les relais chiffres.
+            - Holochain / Holo Web Conductor restent disponibles en mode avance pour l'identite, les contacts, la DHT et la coordination.
+            - Ajout d'un **repertoire public ouvert** sous forme de catalogue volontaire : pas de listing serveur brut, pas d'exposition accidentelle des fichiers.
+            - Coffre local BTC/ETH mieux separe de l'envoi de fichiers, avec mainnet verrouille par defaut.
+
+            ### Version web
+            - OVH : https://filenymous.eu/
+            - GitHub Pages : https://geoking2104.github.io/Filenymous/
+
+            ### Securite
+            - Chiffrement local AES-256-GCM dans le navigateur.
+            - Aucun compte requis.
+            - Les cles privees et seeds wallet restent locales.
+            - Iroh en navigateur est documente comme chemin relaye chiffre ; WebRTC reste le chemin direct navigateur.
+
+            ### Telechargements
+            - **Web public** : `filenymous-public-web.zip`
+            - **macOS** : `.dmg` ajoute automatiquement si le build desktop reussit.
+            - **Linux** : `.AppImage` ajoute automatiquement si le build desktop reussit.
+            - **Windows** : `.exe` ajoute automatiquement si le build desktop reussit.
+          files: release-assets/filenymous-public-web.zip
+          draft: false
+          prerelease: false
 
   # ── 3. Kangaroo desktop builds (matrix) ──────────────────────────────────────
   kangaroo:
