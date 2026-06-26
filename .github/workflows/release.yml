@@ -1,113 +1,63 @@
-name: Filenymous Release
+name: Filenymous Web Release
 
-# Déclenché par un tag de version : git tag v0.1.0 && git push origin v0.1.0
 on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
-# Permissions pour créer la GitHub Release et uploader les assets
 permissions:
   contents: write
 
 jobs:
-  # ── 1. Build hApp (zomes WASM + DNA + hApp) ─────────────────────────────────
-  # Fait une seule fois sur ubuntu — artefact partagé avec les 3 runners Tauri
-  build-happ:
+  web-release:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v26
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Cache Nix store
-        uses: cachix/cachix-action@v14
-        with:
-          name: holochain-ci
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
-
-      - name: Check Holochain toolchain
+      - name: Package web app assets
         run: |
-          nix develop -L --command bash -lc '
-            set -euo pipefail
-            holochain --version
-            hc --version
-            cargo --version
-            rustc --version
-          '
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          from zipfile import ZIP_DEFLATED, ZipFile
 
-      - name: Build hApp
-        run: nix develop -L --command make build-happ
+          root = Path.cwd()
+          workdir = root / "workdir"
+          workdir.mkdir(exist_ok=True)
+          app_html = (root / "docs" / "demo" / "index.html").read_text(encoding="utf-8")
 
-      - name: Upload hApp artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: filenymous-happ
-          path: workdir/filenymous.happ
-          retention-days: 1
+          def write_zip(zip_name, files):
+              with ZipFile(workdir / zip_name, "w", ZIP_DEFLATED) as archive:
+                  for arcname, content in files.items():
+                      archive.writestr(arcname, content)
 
-  # ── 2. Build UI (React → ui.zip) ─────────────────────────────────────────────
-  build-ui:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
+          write_zip("ui.zip", {
+              "index.html": (root / "filenymous-app.html").read_text(encoding="utf-8"),
+          })
+          write_zip("filenymous-public-web.zip", {
+              "filenymous-public-web.html": app_html,
+          })
 
-      - name: Package single-file HTML as ui.zip
-        run: |
-          mkdir -p workdir
-          cp filenymous-app.html /tmp/index.html
-          (cd /tmp && zip -j "$GITHUB_WORKSPACE/workdir/ui.zip" index.html)
-          cp $GITHUB_WORKSPACE/docs/demo/index.html /tmp/filenymous-public-web.html
-          (cd /tmp && zip -j "$GITHUB_WORKSPACE/workdir/filenymous-public-web.zip" filenymous-public-web.html)
-          for platform in windows macos linux; do
-            mkdir -p "/tmp/filenymous-${platform}"
-            cp "$GITHUB_WORKSPACE/docs/demo/index.html" "/tmp/filenymous-${platform}/Filenymous.html"
-            printf '%s\n' \
-              "Filenymous ${platform}" \
-              "" \
-              "Version web portable sans conducteur Holochain local." \
-              "Ouvrez Filenymous.html dans un navigateur moderne." \
-              "" \
-              "Version en ligne:" \
-              "- OVH: https://filenymous.eu/" \
-              "- GitHub Pages: https://geoking2104.github.io/Filenymous/" \
-              > "/tmp/filenymous-${platform}/README.txt"
-            (cd /tmp && zip -qr "$GITHUB_WORKSPACE/workdir/filenymous-${platform}-web.zip" "filenymous-${platform}")
-          done
-          echo "ui.zip: $(wc -c < $GITHUB_WORKSPACE/workdir/ui.zip) bytes"
-          echo "filenymous-public-web.zip: $(wc -c < $GITHUB_WORKSPACE/workdir/filenymous-public-web.zip) bytes"
-          ls -lh "$GITHUB_WORKSPACE"/workdir/*.zip
+          for platform in ("windows", "macos", "linux"):
+              folder = f"filenymous-{platform}"
+              readme = f"""Filenymous {platform}
 
-      - name: Upload UI artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: filenymous-ui
-          path: |
-            workdir/ui.zip
-            workdir/filenymous-public-web.zip
-            workdir/filenymous-windows-web.zip
-            workdir/filenymous-macos-web.zip
-            workdir/filenymous-linux-web.zip
-          retention-days: 1
+          Application web P2P portable, sans installateur natif et sans conducteur Holochain local obligatoire.
+          Ouvrez Filenymous.html dans un navigateur moderne.
 
-  # Publie la release web et les notes des que l'UI est packagée.
-  # Les builds desktop peuvent ensuite ajouter leurs assets à la même release.
-  publish-web-release:
-    needs: [build-ui]
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      - name: Download UI artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: filenymous-ui
-          path: release-assets/
+          Version en ligne:
+          - OVH: https://filenymous.eu/
+          - GitHub Pages: https://geoking2104.github.io/Filenymous/
+          """
+              write_zip(f"filenymous-{platform}-web.zip", {
+                  f"{folder}/Filenymous.html": app_html,
+                  f"{folder}/README.txt": readme,
+              })
+          PY
 
-      - name: Publish release notes and public web asset
+          ls -lh workdir/*.zip
+
+      - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -115,184 +65,26 @@ jobs:
           body: |
             ## Filenymous ${{ github.ref_name }}
 
-            Nouvelle version publique de Filenymous : plus simple pour le grand public, plus claire sur les transports P2P, et prete pour l'evolution Iroh.
-
-            ### Nouveautes principales
-            - Interface web refondue autour de 3 actions : **Envoyer**, **Recevoir**, **Retrouver mes fichiers**.
-            - Envoi sans conducteur Holochain local : code a usage unique, lien chiffre autonome, ou P2P direct WebRTC.
-            - Integration produit d'**Iroh v1** et **iroh-blobs** comme trajectoire pour les gros fichiers verifiables, les versions Rust/native et les relais chiffres.
-            - Holochain / Holo Web Conductor restent disponibles en mode avance pour l'identite, les contacts, la DHT et la coordination.
-            - Ajout d'un **repertoire public ouvert** sous forme de catalogue volontaire : pas de listing serveur brut, pas d'exposition accidentelle des fichiers.
-            - Coffre local BTC/ETH mieux separe de l'envoi de fichiers, avec mainnet verrouille par defaut.
+            Filenymous est maintenant publie comme application web P2P, sans installateur natif.
 
             ### Version web
             - OVH : https://filenymous.eu/
             - GitHub Pages : https://geoking2104.github.io/Filenymous/
-
-            ### Securite
-            - Chiffrement local AES-256-GCM dans le navigateur.
-            - Aucun compte requis.
-            - Les cles privees et seeds wallet restent locales.
-            - Iroh en navigateur est documente comme chemin relaye chiffre ; WebRTC reste le chemin direct navigateur.
 
             ### Telechargements
             - **Web public** : `filenymous-public-web.zip`
-            - **Windows sans conducteur** : `filenymous-windows-web.zip`
-            - **macOS sans conducteur** : `filenymous-macos-web.zip`
-            - **Linux sans conducteur** : `filenymous-linux-web.zip`
-            - **Desktop natif Holochain** : `.dmg`, `.AppImage` et `.exe` ajoutes automatiquement si les builds Tauri natifs reussissent.
-          files: release-assets/*.zip
+            - **Windows web portable** : `filenymous-windows-web.zip`
+            - **macOS web portable** : `filenymous-macos-web.zip`
+            - **Linux web portable** : `filenymous-linux-web.zip`
+
+            Ces archives contiennent la meme application web et s'ouvrent dans un navigateur moderne. Elles ne contiennent pas de `.exe`, `.dmg`, `.AppImage` ni de conducteur Holochain local.
+
+            ### P2P et securite
+            - Envoi et reception sans compte.
+            - Code a usage unique, lien chiffre autonome ou WebRTC direct.
+            - Chiffrement local AES-256-GCM dans le navigateur.
+            - Les cles privees, seeds wallet et historiques restent locaux.
+            - Holochain / Holo Web Conductor et Iroh restent des modules avances de coordination ou de transport, pas des pre-requis d'installation.
+          files: workdir/*.zip
           draft: false
           prerelease: false
-
-  # ── 3. Kangaroo desktop builds (matrix) ──────────────────────────────────────
-  kangaroo:
-    needs: [build-happ, build-ui]
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: "macos-26"
-            target:   "aarch64-apple-darwin"
-            rustTargets: "aarch64-apple-darwin"
-            name:     "macOS Apple Silicon"
-          - platform: "macos-26-intel"
-            target:   "x86_64-apple-darwin"
-            rustTargets: "x86_64-apple-darwin"
-            name:     "macOS Intel"
-          - platform: "ubuntu-22.04"
-            target:   "x86_64-unknown-linux-gnu"
-            rustTargets: "x86_64-unknown-linux-gnu"
-            name:     "Linux"
-          - platform: "windows-latest"
-            target:   "x86_64-pc-windows-msvc"
-            rustTargets: "x86_64-pc-windows-msvc"
-            name:     "Windows"
-
-    runs-on: ${{ matrix.platform }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      # ── Download happ + ui artifacts from previous jobs ──────────────────
-      - name: Download hApp
-        uses: actions/download-artifact@v4
-        with:
-          name: filenymous-happ
-          path: pouch/
-
-      - name: Download UI zip
-        uses: actions/download-artifact@v4
-        with:
-          name: filenymous-ui
-          path: pouch/
-
-      # ── Rust toolchain ────────────────────────────────────────────────────
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rustTargets }}
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: "./src-tauri -> target"
-
-      # ── Linux system dependencies for Tauri ──────────────────────────────
-      - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.0-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf
-
-      # ── Node (for @tauri-apps/cli) ────────────────────────────────────────
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
-
-      - name: Install UI dependencies
-        run: npm ci
-        working-directory: ui
-
-      - name: Install Tauri CLI
-        run: npm install -g @tauri-apps/cli@^1
-
-      # ── Download bundled Holochain binaries ───────────────────────────────
-      # Les binaires holochain + lair-keystore pour chaque plateforme sont
-      # téléchargés depuis les releases officielles Holochain.
-      # Le script ajuste le nom avec le triple cible Rust attendu par Tauri.
-      - name: Download Holochain binaries (Unix)
-        if: matrix.platform != 'windows-latest'
-        shell: bash
-        run: |
-          bash scripts/download-binaries.sh "${{ matrix.target }}"
-
-      - name: Download Holochain binaries (Windows)
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: |
-          .\scripts\download-binaries.ps1 "${{ matrix.target }}"
-
-      # ── Tauri build ───────────────────────────────────────────────────────
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN:              ${{ secrets.GITHUB_TOKEN }}
-          # macOS code signing (optionnel — commenté pour v1)
-          # ENABLE_CODE_SIGNING:     ${{ secrets.APPLE_CERTIFICATE }}
-          # APPLE_CERTIFICATE:       ${{ secrets.APPLE_CERTIFICATE }}
-          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          # APPLE_SIGNING_IDENTITY:  ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          # APPLE_ID:                ${{ secrets.APPLE_ID }}
-          # APPLE_PASSWORD:          ${{ secrets.APPLE_PASSWORD }}
-          # APPLE_TEAM_ID:           ${{ secrets.APPLE_TEAM_ID }}
-        with:
-          tagName:         ${{ github.ref_name }}
-          releaseName:     "Filenymous ${{ github.ref_name }}"
-          releaseBody:     |
-            ## Filenymous ${{ github.ref_name }}
-
-            Nouvelle version publique de Filenymous : plus simple pour le grand public, plus claire sur les transports P2P, et prete pour l'evolution Iroh.
-
-            ### Nouveautes principales
-            - Interface web refondue autour de 3 actions : **Envoyer**, **Recevoir**, **Retrouver mes fichiers**.
-            - Envoi sans conducteur Holochain local : code a usage unique, lien chiffre autonome, ou P2P direct WebRTC.
-            - Integration produit d'**Iroh v1** et **iroh-blobs** comme trajectoire pour les gros fichiers verifiables, les versions Rust/native et les relais chiffres.
-            - Holochain / Holo Web Conductor restent disponibles en mode avance pour l'identite, les contacts, la DHT et la coordination.
-            - Ajout d'un **repertoire public ouvert** sous forme de catalogue volontaire : pas de listing serveur brut, pas d'exposition accidentelle des fichiers.
-            - Coffre local BTC/ETH mieux separe de l'envoi de fichiers, avec mainnet verrouille par defaut.
-
-            ### Version web
-            - OVH : https://filenymous.eu/
-            - GitHub Pages : https://geoking2104.github.io/Filenymous/
-
-            ### Securite
-            - Chiffrement local AES-256-GCM dans le navigateur.
-            - Aucun compte requis.
-            - Les cles privees et seeds wallet restent locales.
-            - Iroh en navigateur est documente comme chemin relaye chiffre ; WebRTC reste le chemin direct navigateur.
-
-            ### Téléchargements
-            - **Windows sans conducteur** : `filenymous-windows-web.zip`
-            - **macOS sans conducteur** : `filenymous-macos-web.zip`
-            - **Linux sans conducteur** : `filenymous-linux-web.zip`
-            - **Desktop natif Holochain** : `.dmg`, `.AppImage` et `.exe` si le build Tauri natif reussit.
-
-            ### Première installation
-            L'application crée un profil Holochain local au premier démarrage (~30 s).
-            Aucun compte, aucun serveur central requis.
-          releaseDraft:    false
-          prerelease:      false
-          projectPath:     "."
-          tauriScript:     "tauri"
-          assetNamePattern: "Filenymous_${{ github.ref_name }}_[platform]_[arch][setup][ext]"
-          args:            "--target ${{ matrix.target }}"

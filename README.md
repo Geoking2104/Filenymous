@@ -1,175 +1,73 @@
-# ⟁ Filenymous
+# Filenymous
 
-> Transfert de fichiers P2P chiffré de bout en bout — sans serveur central, sans compte, sans traçage.
+Application web P2P pour envoyer et recevoir des fichiers chiffres, sans compte, sans installateur natif et sans conducteur Holochain local obligatoire.
 
-[![CI](https://github.com/Geoking2104/filenymous/actions/workflows/build.yml/badge.svg)](https://github.com/Geoking2104/filenymous/actions/workflows/build.yml)
+- Site OVH : https://filenymous.eu/
+- GitHub Pages : https://geoking2104.github.io/Filenymous/
+- Releases : https://github.com/Geoking2104/Filenymous/releases/latest
 
----
+## Positionnement
 
-## Architecture
+Filenymous reste une application web. Les fichiers Windows, macOS et Linux publies dans les releases sont des archives web portables qui contiennent `Filenymous.html`; elles s'ouvrent dans un navigateur moderne.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Navigateur expéditeur          Navigateur destinataire      │
-│  ┌─────────────────────┐        ┌─────────────────────────┐  │
-│  │  React UI (Vite)    │        │  React UI (Vite)        │  │
-│  │  WebCrypto AES-256  │        │  WebCrypto AES-256      │  │
-│  └────────┬────────────┘        └──────────┬──────────────┘  │
-│           │ WebSocket                       │ WebSocket       │
-└───────────┼─────────────────────────────────┼────────────────┘
-            │                                 │
-    ┌───────▼──────────────────────────────────▼───────┐
-    │             Holochain Conductor                   │
-    │   DNA filenymous — 3 zomes (identity/transfer/   │
-    │   storage) — DHT P2P — aucun serveur maître      │
-    └────────────────────────┬─────────────────────────┘
-                             │ HTTP + HMAC-SHA256
-                    ┌────────▼────────┐
-                    │  Bridge (3001)  │
-                    │  Fastify        │
-                    │  OTP · Email    │
-                    │  SMS (Twilio)   │
-                    └─────────────────┘
-```
+Le projet ne publie plus de `.exe`, `.dmg` ni `.AppImage` tant que l'architecture native n'est pas redevenue necessaire et stable.
 
-## Pré-requis
+## Fonctionnement
 
-| Outil | Version |
-|-------|---------|
-| Holochain Launcher | ≥ 0.11 (pour installation .webhapp) |
-| Nix | ≥ 2.18 (pour le build depuis les sources) |
-| Node | ≥ 20 LTS |
-| Rust | via Nix (nightly ciblé WASM) |
+1. L'expediteur selectionne un fichier dans le navigateur.
+2. Le fichier est chiffre localement avec WebCrypto.
+3. Filenymous cree un code a usage unique, un lien chiffre autonome ou une session P2P WebRTC.
+4. Le destinataire ouvre le lien ou saisit le code.
+5. Le dechiffrement reste local cote navigateur.
 
-## Installation via Holochain Launcher (M4 — recommandé)
+Pour les petits fichiers, le lien autonome reste le chemin le plus simple. Pour les fichiers plus lourds, le flux P2P direct garde les deux navigateurs ouverts pendant le transfert.
 
-```bash
-# 1. Télécharger le Launcher
-#    → https://github.com/holochain/launcher/releases
+## Architecture cible
 
-# 2. Télécharger filenymous.webhapp depuis la dernière Release GitHub
-#    → https://github.com/Geoking2104/filenymous/releases/latest
+- **WebCrypto** : chiffrement local AES-256-GCM.
+- **WebRTC DataChannel** : transfert navigateur a navigateur quand les pairs peuvent se joindre.
+- **Signalisation web** : echange minimal de rendez-vous, sans stockage du fichier en clair.
+- **Iroh / iroh-blobs** : trajectoire pour les gros fichiers verifiables et les relais chiffres.
+- **Holochain / Holo Web Conductor** : option avancee pour identite, contacts, DHT et coordination, sans imposer de conducteur local au grand public.
 
-# 3. Dans le Launcher : File → Install hApp from filesystem → filenymous.webhapp
+## Telechargements
 
-# 4. (Optionnel) Lancer le bridge pour les notifications email/SMS
-cd bridge && cp .env.example .env && npm install && npm start
-```
+Les releases GitHub publient uniquement des paquets web :
 
-## Build depuis les sources
+- `filenymous-public-web.zip`
+- `filenymous-windows-web.zip`
+- `filenymous-macos-web.zip`
+- `filenymous-linux-web.zip`
+- `ui.zip`
+
+Les archives par systeme contiennent la meme application web avec un court README adapte a la plateforme.
+
+## Developpement
 
 ```bash
-# 1. Cloner
-git clone https://github.com/Geoking2104/filenymous.git
-cd filenymous
-
-# 2. Entrer dans le shell Nix (installe Holochain + Rust automatiquement)
-nix develop
-
-# 3. Compiler WASM + DNA + hApp + UI → .webhapp
-make build-webhapp
-# → workdir/filenymous.webhapp
-
-# 4. (Optionnel) Dev mode : bridge + UI en mode hot-reload
-#    Terminal A
-cd bridge && cp .env.example .env && npm install && npm run dev
-#    Terminal B
-cd ui && cp .env.example .env && npm install && npm run dev
-# → http://localhost:5173
+cd ui
+npm install
+npm run dev
 ```
 
-## Structure du projet
-
-```
-filenymous/
-├── dnas/filenymous/          # DNA manifest + zome manifests
-├── zomes/
-│   ├── integrity/
-│   │   ├── identity_integrity/   # ContactClaim (hash email/tel → AgentPubKey)
-│   │   ├── transfer_integrity/   # TransferManifest + statuts
-│   │   └── storage_integrity/    # FileChunk + ChunkManifest
-│   └── coordinator/
-│       ├── identity/             # claim_contact, get_agent_for_contact
-│       ├── transfer/             # create/get/revoke/expire transfers
-│       └── storage/              # store_chunk, finalize, get_chunks, delete
-├── tests/                    # tryorama integration tests (Node + TypeScript)
-├── ui/                       # React 18 + Vite + @holochain/client
-│   └── src/
-│       ├── crypto/           # WebCrypto: AES-256-GCM, chunker, contact hash
-│       ├── holochain/        # zome call wrappers + types
-│       ├── store/            # Zustand
-│       └── components/       # Send / Receive / History / Identity / Privacy
-├── bridge/                   # Fastify micro-service: OTP · Email · SMS
-│   └── src/
-│       ├── auth.ts           # HMAC-SHA256 verification
-│       ├── otp.ts            # TOTP in-memory (single-use, 10 min TTL)
-│       └── notify.ts         # SendGrid + Twilio
-├── .github/workflows/
-│   ├── build.yml             # CI : fmt · clippy · WASM · tryorama · tsc · vite
-│   └── release.yml           # CD : tag → GitHub Release avec artefacts
-├── Cargo.toml                # Workspace Rust
-├── Makefile                  # build-wasm | build-dna | build-happ | tests
-└── happ.yaml                 # hApp manifest
-```
-
-## Flux de transfert
-
-1. **Bob** → `identity::claim_contact(sha256("bob@example.com"))` — publie son ContactClaim sur le DHT
-2. **Alice** → `identity::get_agent_for_contact(...)` — résout la clé publique de Bob
-3. **Alice** génère une clé AES-256 dans le navigateur (WebCrypto)
-4. **Alice** → `transfer::create_transfer(...)` — crée le TransferManifest
-5. **Alice** → `storage::store_chunk(...)` × N — publie chaque chunk chiffré
-6. **Alice** → bridge `/notify/email` — envoie le lien de téléchargement à Bob
-7. **Bob** ouvre le lien, déchiffre les chunks localement
-8. **Bob** → `transfer::record_download(...)` — met à jour le statut
-
-## Déploiement réseau public (M5)
-
-```
-VPS / fly.io
-├── bootstrap.filenymous.eu  ← kitsune2-bootstrap-srv (découverte de pairs)
-├── signal.filenymous.eu     ← kitsune2-sbd-server (relay WebRTC / NAT)
-└── bridge.filenymous.eu     ← Fastify (OTP · email · SMS)
-     ↑ Caddy (TLS Let's Encrypt automatique)
-```
+Pour construire l'UI Vite :
 
 ```bash
-# Démarrer l'infra complète (TLS via Caddy)
-cp .env.compose.example .env.compose   # renseigner SENDGRID_API_KEY, TWILIO…
-docker compose --profile prod up -d
-
-# Démarrer uniquement en dev (ports directs, pas de TLS)
-make infra-up
-
-# Relancer holochain avec la config prod
-holochain -c conductor-config.prod.yaml
+cd ui
+npm run build
 ```
 
-Les images Docker sont publiées automatiquement sur GHCR à chaque push sur `main` :
+Les artefacts Holochain restent presents dans le depot pour les modules avances et les validations Rust, mais ils ne constituent plus le mode d'installation public.
 
-```
-ghcr.io/filenymous/filenymous-bootstrap:latest
-ghcr.io/filenymous/filenymous-signal:latest
-ghcr.io/filenymous/filenymous-bridge:latest
-```
+## Securite
 
-## Sécurité
-
-- **Chiffrement E2E** : AES-256-GCM dans le navigateur. Ni le bridge ni les nœuds ne voient les données en clair.
-- **Contacts pseudonymisés** : seul le SHA-256(email|téléphone) est publié sur le DHT.
-- **Bridge authentifié** : chaque requête est signée par HMAC-SHA256 (partagé entre conducteur et bridge).
-- **Expiration cryptographique** : la `DeleteAction` Holochain force les nœuds à effacer les chunks.
-
-## Roadmap
-
-| Milestone | Status |
-|-----------|--------|
-| M1 — DNA Holochain (6 zomes) + tryorama | ✅ |
-| M2 — React UI + bridge notifications | ✅ |
-| M3 — ECIES/X25519 wrapping de la clé AES | ✅ |
-| M4 — .webhapp + packaging Holochain Launcher | ✅ |
-| M5 — Réseau public + nœuds bootstrap | ✅ |
+- Chiffrement local avant transfert.
+- Aucun compte requis.
+- Code a usage unique pour les sessions de reception.
+- Historique et cles stockes localement dans le navigateur.
+- Pas de stockage serveur du fichier en clair.
+- Wallet BTC/ETH local verrouille par defaut.
 
 ## Licence
 
-MIT — voir [LICENSE](LICENSE).
+MIT.

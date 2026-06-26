@@ -466,7 +466,7 @@
       <div>
         <p class="hero-eyebrow">P2P anonyme, sans compte</p>
         <h1 class="hero-title">Partage un fichier. Donne un code. C'est fini.</h1>
-        <p class="hero-text">Filenymous chiffre le fichier dans ce navigateur, puis cherche le chemin le plus simple : WebRTC direct, Iroh pour les gros transferts et les apps natives, Holochain pour l'identité avancée.</p>
+        <p class="hero-text">Filenymous chiffre le fichier dans ce navigateur, puis cherche le chemin le plus simple : lien chiffré autonome, WebRTC direct, Iroh pour les gros transferts web et Holochain/HWC pour l'identité avancée.</p>
       </div>
       <div class="trust-row" aria-label="Garanties principales">
         <span class="trust-chip">Chiffrement local</span>
@@ -509,7 +509,7 @@
     <div class="transport-card">
       <span class="transport-tag">Iroh v1</span>
       <strong>Gros fichiers vérifiables</strong>
-      <p>Iroh et iroh-blobs apportent QUIC, dial-by-key, BLAKE3 et streaming vérifié pour les versions Rust/native et les relais chiffrés.</p>
+      <p>Iroh et iroh-blobs apportent QUIC, dial-by-key, BLAKE3 et streaming vérifié pour les futurs relais chiffrés et les gros transferts web.</p>
     </div>
     <div class="transport-card">
       <span class="transport-tag">Avancé</span>
@@ -625,7 +625,7 @@
       <code id="p2p-code-out"></code>
       <button class="btn btn-secondary btn-sm" onclick="copyP2PCode()">Copier</button>
     </div>
-    <p class="muted mt-2">Garde cette page ouverte. Le fichier chiffré passe directement entre navigateurs via WebRTC, sans conducteur Holochain et sans stockage serveur. Iroh sera utilisé en priorité dans les versions Rust/native pour les gros fichiers vérifiables.</p>
+    <p class="muted mt-2">Garde cette page ouverte. Le fichier chiffré passe directement entre navigateurs via WebRTC, sans conducteur Holochain et sans stockage serveur. Iroh reste la trajectoire prioritaire pour les gros fichiers vérifiables côté web et relais chiffré.</p>
     <div id="p2p-send-status" class="status info mt-3 hidden"></div>
   </div>
 
@@ -741,7 +741,7 @@
     <div class="transport-card">
       <span class="transport-tag">Iroh v1</span>
       <strong>Transport QUIC moderne</strong>
-      <p>Prioritaire pour les versions Rust/native : dial-by-key, relais chiffrés, NAT traversal, et transfert plus robuste hors navigateur.</p>
+      <p>Prioritaire pour l'évolution web : dial-by-key, relais chiffrés, NAT traversal, et transfert plus robuste sans imposer d'installateur natif.</p>
     </div>
     <div class="transport-card">
       <span class="transport-tag">iroh-blobs</span>
@@ -768,25 +768,25 @@
     <p class="muted mt-2">Vos destinataires verront les 16 premiers caractères de cet identifiant associés à votre envoi.</p>
   </div>
 
-  <!-- ── Toujours visible : CTA Desktop ── -->
+  <!-- ── Toujours visible : CTA web portable ── -->
   <div class="card" style="border-color:var(--success);">
-    <p class="card-title" style="color:var(--success)">🛡️ Version la plus sécurisée</p>
+    <p class="card-title" style="color:var(--success)">🛡️ Version web portable</p>
     <p style="font-size:13px; color:var(--muted); margin-bottom:14px; line-height:1.6;">
-      L'application desktop exécute un nœud Holochain <strong style="color:var(--text)">complet</strong> sur votre machine.
-      Aucun intermédiaire — vos données ne transitent que par le réseau DHT peer-to-peer.
+      Filenymous reste une application web P2P : aucun installateur natif, aucun conducteur Holochain local obligatoire.
+      Ces archives ouvrent la même application dans un navigateur moderne.
     </p>
     <a id="desktop-dl-btn" href="#" target="_blank" rel="noopener"
        class="btn btn-primary btn-full">
-      ⬇️ Télécharger Filenymous Desktop
+      ⬇️ Télécharger la version web
     </a>
     <div class="os-row">
       <span>🪟 Windows</span><span>🍎 macOS</span><span>🐧 Linux</span>
     </div>
     <div class="desktop-cta-row">
-      <div class="compare-row"><span class="cck">✓</span><span>Desktop : nœud DHT complet, zéro intermédiaire</span></div>
-      <div class="compare-row"><span class="cck">✓</span><span>Desktop : clé privée uniquement sur votre appareil</span></div>
-      <div class="compare-row"><span class="cck">✓</span><span>Desktop : chiffrement agent-à-agent ECIES disponible</span></div>
-      <div class="compare-row"><span class="ccn">~</span><span>Web Bridge : E2E AES-256 chiffré, nœuds Holo en relais</span></div>
+      <div class="compare-row"><span class="cck">✓</span><span>Web : chiffrement AES-256-GCM local</span></div>
+      <div class="compare-row"><span class="cck">✓</span><span>Web : code à usage unique et P2P direct WebRTC</span></div>
+      <div class="compare-row"><span class="cck">✓</span><span>Web : clés et historique stockés localement</span></div>
+      <div class="compare-row"><span class="ccn">~</span><span>Avancé : Holochain/HWC et Iroh restent des modules réseau optionnels</span></div>
     </div>
   </div>
 
@@ -984,7 +984,7 @@ const CFG = {
     ? 'ws://127.0.0.1:8789'
     : 'wss://signal.filenymous.eu',
   p2pChunkSize:   64 * 1024,
-  // Iroh v1 / iroh-blobs: moteur cible pour les versions Rust/native et relais chiffres.
+  // Iroh v1 / iroh-blobs: moteur cible pour les gros transferts web et relais chiffres.
   // Le navigateur public garde WebRTC direct tant que l'UDP direct reste indisponible.
   irohEnabled:    false,
   irohRelayUrl:   'https://relay.iroh.network',
@@ -993,7 +993,7 @@ const CFG = {
   // Docs : https://developer.holo.host
   holoDeployed:   true,
   chaperoneUrl:   'https://chaperone.holo.host',
-  // URL de téléchargement de l'app Desktop (fallback)
+  // URL des paquets web portables
   dlUrl:          'https://github.com/Geoking2104/Filenymous/releases',
 };
 // Vite compile-time overrides (silently ignored otherwise)
@@ -1193,7 +1193,7 @@ async function initHolochain() {
 }
 
 async function callZome(zome, fn, payload) {
-  if (!S.appWs) throw new Error('Conductor non disponible. Lancez l\'application desktop Filenymous.');
+  if (!S.appWs) throw new Error('Conductor non disponible. Utilisez le mode web public ou Holo Web Conductor pour les fonctions avancées.');
   return S.appWs.callZome({
     cell_id: S.cellId, zome_name: zome, fn_name: fn,
     payload, provenance: S.agentKey, cap_secret: null,
@@ -1942,8 +1942,8 @@ async function checkReceiveHash() {
   // Mode bridge sans infrastructure Holo : la réception DHT n'est pas disponible pour les anciens liens DHT
   if (S.mode === 'bridge' && !CFG.holoDeployed) {
     setStatus('recv-status', 'warning',
-      '⏳ Infrastructure Holo en cours de déploiement — réception disponible prochainement. ' +
-      `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">App Desktop disponible →</a>`);
+      '⏳ Infrastructure Holo en cours de déploiement — réception avancée disponible prochainement. ' +
+      `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">Paquets web portables →</a>`);
     $('btn-download').disabled = true;
     return;
   }
@@ -2144,7 +2144,7 @@ async function initIdentity() {
 
   if (S.mode === 'bridge') {
     if (ncTitle) { ncTitle.textContent = 'Mode Web public'; ncTitle.style.color = 'var(--accent)'; }
-    if (ncDesc)  ncDesc.textContent = "Aucun conducteur Holochain n'est nécessaire pour envoyer ou recevoir. Les contacts DHT restent réservés à Holo Web Conductor ou à l'app Desktop ; Iroh est préparé pour les gros transferts natifs et relais chiffrés.";
+    if (ncDesc)  ncDesc.textContent = "Aucun conducteur Holochain n'est nécessaire pour envoyer ou recevoir. Les contacts DHT restent réservés à Holo Web Conductor ; Iroh est préparé pour les gros transferts web et les relais chiffrés.";
     if (ncFeatures) ncFeatures.innerHTML = `
       <li style="color:var(--success)">Envoi de fichiers ✓ lien chiffre ou P2P direct</li>
       <li style="color:var(--success)">Reception de fichiers ✓ code a usage unique</li>
@@ -2241,7 +2241,7 @@ async function init() {
   }
   updateBadge();
 
-  // Brancher le lien de téléchargement Desktop
+  // Brancher le lien de téléchargement web portable
   const dlBtn = $('desktop-dl-btn');
   if (dlBtn) dlBtn.href = CFG.dlUrl;
 

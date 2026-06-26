@@ -1,12 +1,12 @@
-# Filenymous — build commands v3
-# Architecture : Holochain Kangaroo (Tauri desktop) + Holo Host (web fallback)
+# Filenymous — build commands v4
+# Architecture : application web P2P en premier, Holochain/HWC en option avancee.
+# Les releases publiques ne publient plus d'installateurs natifs.
 #
 # Pré-requis :
 #   - Rust + wasm32-unknown-unknown target
 #   - hc CLI  (cargo install holochain_cli)
 #   - npm ≥ 9
-#   - Tauri CLI v1  (cargo install tauri-cli --version "^1")
-#   - @tauri-apps/cli in src-tauri/..  (npm install in root or ui/)
+#   - Tauri CLI v1 uniquement pour experimentation locale Kangaroo
 #
 # Cibles principales :
 #   make all            → build-webhapp complet
@@ -15,10 +15,10 @@
 #   make build-happ     → pack le hApp
 #   make build-ui       → build l'UI React
 #   make build-webhapp  → bundle .webhapp pour Holo Host
-#   make pouch          → copie happ + ui.zip dans pouch/ (ressources Kangaroo)
-#   make kangaroo       → build le desktop app Tauri (natif courant)
-#   make kangaroo-dev   → lance Tauri en mode dev (hot-reload)
-#   make release        → build cross-platform via cargo-tauri (CI only)
+#   make pouch          → copie happ + ui.zip dans pouch/ (experimental Kangaroo)
+#   make kangaroo       → build Tauri local experimental, non publie en release
+#   make kangaroo-dev   → lance Tauri en mode dev (experimental)
+#   make release        → release web-only via GitHub Actions
 #   make tests          → tests d'intégration Tryorama
 #   make check          → type-check Rust + TypeScript (rapide, sans WASM)
 #   make clean          → supprime tous les artefacts compilés
@@ -106,8 +106,8 @@ build-webhapp: build-happ build-ui
 	@echo "✅ .webhapp prêt : $(WORKDIR)/filenymous.webhapp"
 	@echo "   → Holo Host : make upload-holo"
 
-# ── 5b. Pouch — ressources Kangaroo ──────────────────────────────────────────
-# Kangaroo attend happ + ui.zip dans pouch/ pour les bundler dans le .app/.exe.
+# ── 5b. Pouch — ressources Kangaroo experimentales ───────────────────────────
+# Kangaroo attend happ + ui.zip dans pouch/ pour un bundle local experimental.
 # Le répertoire pouch/ n'est pas versionné (gitignored).
 pouch: build-happ build-ui
 	@echo "→ Préparation du pouch Kangaroo…"
@@ -116,28 +116,28 @@ pouch: build-happ build-ui
 	cp $(WORKDIR)/ui.zip          $(POUCH_DIR)/ui.zip
 	@echo "✅ Pouch prêt : $(POUCH_DIR)/"
 
-# ── 6a. Kangaroo desktop build (plateforme courante) ─────────────────────────
-# Produit : src-tauri/target/release/bundle/{dmg|exe|AppImage}/
+# ── 6a. Kangaroo desktop build experimental (plateforme courante) ────────────
+# Produit : bundle Tauri local experimental, non publie en release.
 # Pré-requis : les binaires holochain + lair-keystore doivent être dans
 #   src-tauri/binaries/holochain-<triple> et lair-keystore-<triple>
 #   Télécharger via : scripts/download-binaries.sh
 kangaroo: pouch
 	@echo "→ Build Kangaroo (Tauri desktop)…"
 	cd $(TAURI_DIR) && cargo tauri build
-	@echo "✅ Installeur prêt dans $(TAURI_DIR)/target/release/bundle/"
+	@echo "✅ Bundle experimental prêt dans $(TAURI_DIR)/target/release/bundle/"
 
 # ── 6b. Kangaroo dev (hot-reload) ────────────────────────────────────────────
 kangaroo-dev:
 	@echo "→ Kangaroo dev (hot-reload Vite + Holochain local)…"
 	cd $(TAURI_DIR) && cargo tauri dev
 
-# ── 6c. Release cross-platform (CI GitHub Actions) ───────────────────────────
-# Ne pas lancer en local : utilise les runners macOS/Windows/Linux de GitHub CI.
+# ── 6c. Release web-only (CI GitHub Actions) ─────────────────────────────────
+# Ne pas lancer en local : GitHub Actions publie uniquement les paquets web.
 # Voir .github/workflows/release.yml
 release:
-	@echo "La cible 'release' est réservée au CI GitHub Actions."
-	@echo "Poussez un tag git pour déclencher le workflow :"
-	@echo "  git tag v0.1.0 && git push origin v0.1.0"
+	@echo "La release publique est web-only et réservée au CI GitHub Actions."
+	@echo "Poussez un tag git pour publier les paquets web portables :"
+	@echo "  git tag v0.2.6 && git push origin v0.2.6"
 	@exit 1
 
 # ── 6. Tests d'intégration Tryorama ──────────────────────────────────────────

@@ -490,25 +490,25 @@
     <p class="muted mt-2">Vos destinataires verront les 16 premiers caractères de cet identifiant associés à votre envoi.</p>
   </div>
 
-  <!-- ── Toujours visible : CTA Desktop ── -->
+  <!-- ── Toujours visible : CTA web portable ── -->
   <div class="card" style="border-color:var(--success);">
-    <p class="card-title" style="color:var(--success)">🛡️ Version la plus sécurisée</p>
+    <p class="card-title" style="color:var(--success)">🛡️ Version web portable</p>
     <p style="font-size:13px; color:var(--muted); margin-bottom:14px; line-height:1.6;">
-      L'application desktop exécute un nœud Holochain <strong style="color:var(--text)">complet</strong> sur votre machine.
-      Aucun intermédiaire — vos données ne transitent que par le réseau DHT peer-to-peer.
+      Filenymous reste une application web P2P : aucun installateur natif, aucun conducteur Holochain local obligatoire.
+      Ces archives ouvrent la même application dans un navigateur moderne.
     </p>
     <a id="desktop-dl-btn" href="#" target="_blank" rel="noopener"
        class="btn btn-primary btn-full">
-      ⬇️ Télécharger Filenymous Desktop
+      ⬇️ Télécharger la version web
     </a>
     <div class="os-row">
       <span>🪟 Windows</span><span>🍎 macOS</span><span>🐧 Linux</span>
     </div>
     <div class="desktop-cta-row">
-      <div class="compare-row"><span class="cck">✓</span><span>Desktop : nœud DHT complet, zéro intermédiaire</span></div>
-      <div class="compare-row"><span class="cck">✓</span><span>Desktop : clé privée uniquement sur votre appareil</span></div>
-      <div class="compare-row"><span class="cck">✓</span><span>Desktop : chiffrement agent-à-agent ECIES disponible</span></div>
-      <div class="compare-row"><span class="ccn">~</span><span>Web Bridge : E2E AES-256 chiffré, nœuds Holo en relais</span></div>
+      <div class="compare-row"><span class="cck">✓</span><span>Web : chiffrement AES-256-GCM local</span></div>
+      <div class="compare-row"><span class="cck">✓</span><span>Web : code à usage unique et P2P direct WebRTC</span></div>
+      <div class="compare-row"><span class="cck">✓</span><span>Web : clés et historique stockés localement</span></div>
+      <div class="compare-row"><span class="ccn">~</span><span>Avancé : Holochain/HWC et Iroh restent des modules réseau optionnels</span></div>
     </div>
   </div>
 
@@ -705,7 +705,7 @@ const CFG = {
   // Docs : https://developer.holo.host
   holoDeployed:   true,
   chaperoneUrl:   'https://chaperone.holo.host',
-  // URL de téléchargement de l'app Desktop (fallback)
+  // URL des paquets web portables
   dlUrl:          'https://github.com/Geoking2104/Filenymous/releases',
 };
 // Vite compile-time overrides (silently ignored otherwise)
@@ -905,7 +905,7 @@ async function initHolochain() {
 }
 
 async function callZome(zome, fn, payload) {
-  if (!S.appWs) throw new Error('Conductor non disponible. Lancez l\'application desktop Filenymous.');
+  if (!S.appWs) throw new Error('Conductor non disponible. Utilisez le mode web public ou Holo Web Conductor pour les fonctions avancées.');
   return S.appWs.callZome({
     cell_id: S.cellId, zome_name: zome, fn_name: fn,
     payload, provenance: S.agentKey, cap_secret: null,
@@ -1159,11 +1159,10 @@ function updateSendNotice() {
     el.className = 'status info';
     tx.innerHTML = '⬡ <strong>Holo Web Conductor actif</strong> — chiffrement local AES-256, stockage P2P via réseau Holo.';
   } else {
-    // bridge — lecture seule
-    el.className = 'status warning';
-    tx.innerHTML = `⚙️ <strong>Mode lecture seule</strong> — envoi non disponible sans conducteur Holochain. ` +
+    el.className = 'status info';
+    tx.innerHTML = `🌐 <strong>Mode web public</strong> — envoi disponible par lien chiffré autonome ou P2P direct WebRTC. ` +
       `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" ` +
-      `style="color:var(--accent);font-weight:600;margin-left:4px;">⬇️ App Desktop →</a>`;
+      `style="color:var(--accent);font-weight:600;margin-left:4px;">Paquets web portables →</a>`;
   }
   el.classList.remove('hidden');
 }
@@ -1219,9 +1218,9 @@ window.handleSend = async function () {
     setStatus('send-status', 'error',
       CFG.holoDeployed
         ? 'Holo Web Conductor non connecté — rechargez la page ou ' +
-          `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">téléchargez l'app Desktop →</a>`
+          `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">utilisez le mode web public →</a>`
         : '⏳ Holo Web Conductor en cours de déploiement. En attendant : ' +
-          `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">⬇️ App Desktop disponible →</a>`
+          `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">paquets web portables →</a>`
     );
     btn.disabled = false;
     return;
@@ -1335,8 +1334,8 @@ async function checkReceiveHash() {
   // Mode bridge sans infrastructure Holo : la réception DHT n'est pas encore possible
   if (S.mode === 'bridge' && !CFG.holoDeployed) {
     setStatus('recv-status', 'warning',
-      '⏳ Infrastructure Holo en cours de déploiement — réception disponible prochainement. ' +
-      `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">App Desktop disponible →</a>`);
+      '⏳ Infrastructure Holo en cours de déploiement — réception avancée disponible prochainement. ' +
+      `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">Paquets web portables →</a>`);
     $('btn-download').disabled = true;
     return;
   }
@@ -1528,14 +1527,14 @@ async function initIdentity() {
   const ncFeatures  = $('id-nc-features');
 
   if (S.mode === 'bridge') {
-    // Mode lecture seule HTTP — fonctionnalités très limitées
-    if (ncTitle) { ncTitle.textContent = '☁ Mode lecture seule'; ncTitle.style.color = 'var(--warning)'; }
-    if (ncDesc)  ncDesc.textContent = "Aucun conducteur Holochain disponible. L'envoi et la gestion de contacts nécessitent l'app Desktop ou le Holo Web Conductor.";
+    // Mode web public — Holochain reste optionnel pour les fonctions avancees.
+    if (ncTitle) { ncTitle.textContent = '☁ Mode Web public'; ncTitle.style.color = 'var(--accent)'; }
+    if (ncDesc)  ncDesc.textContent = "Aucun conducteur Holochain n'est nécessaire pour envoyer ou recevoir. Les contacts DHT restent réservés à Holo Web Conductor.";
     if (ncFeatures) ncFeatures.innerHTML = `
-      <li style="color:var(--error)">Envoi de fichiers — nécessite un conducteur</li>
-      <li style="color:var(--success)">Réception de fichiers ✓ (lecture DHT HTTP)</li>
-      <li style="color:var(--error)">Enregistrement de contact — nécessite un conducteur</li>
-      <li style="color:var(--error)">Chiffrement ECIES — nécessite un conducteur</li>`;
+      <li style="color:var(--success)">Envoi de fichiers ✓ lien chiffre ou P2P direct</li>
+      <li style="color:var(--success)">Réception de fichiers ✓ sans conducteur local</li>
+      <li style="color:var(--success)">Identité web temporaire ✓</li>
+      <li>Holochain/HWC reste disponible pour les contacts et la coordination avancée</li>`;
     noConductor.classList.remove('hidden');
     ui.classList.add('hidden');
     return;
@@ -1627,7 +1626,7 @@ async function init() {
   }
   updateBadge();
 
-  // Brancher le lien de téléchargement Desktop
+  // Brancher le lien de téléchargement web portable
   const dlBtn = $('desktop-dl-btn');
   if (dlBtn) dlBtn.href = CFG.dlUrl;
 
