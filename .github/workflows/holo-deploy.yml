@@ -1,6 +1,7 @@
 name: Deploy to Holo Host
 
-# Déclenché manuellement ou automatiquement sur un tag de release.
+# Déclenché manuellement uniquement.
+# Les tags publics publient maintenant une release web P2P portable via release.yml.
 # Prérequis GitHub Secrets :
 #   HOLO_PUBLISHER_EMAIL   — email du compte publisher sur hbs.holo.host
 #   HOLO_PUBLISHER_TOKEN   — token API généré dans le dashboard publisher
@@ -13,9 +14,6 @@ on:
         default: "production"
         type: choice
         options: [production, staging]
-  push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: read
