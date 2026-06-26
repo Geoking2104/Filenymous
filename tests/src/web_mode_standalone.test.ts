@@ -27,4 +27,20 @@ describe("standalone web transfer mode", () => {
     expect(packagedHtml).toContain("S.mode === 'bridge'");
     expect(packagedHtml).toContain("link-result");
   });
+
+  it("makes the home page a usable transfer entry point", () => {
+    expect(html).toContain('id="home-file-input"');
+    expect(html).toContain('id="home-send-btn"');
+    expect(html).toContain("createFromHome");
+    expect(html).toContain("Ajouter un fichier");
+    expect(packagedHtml).toContain('id="home-file-input"');
+  });
+
+  it("warns before closing the browser during an active transfer", () => {
+    expect(html).toContain("beforeunload");
+    expect(html).toContain("transferActive");
+    expect(html).toContain("markTransferActive");
+    expect(html).toContain("markTransferDone");
+    expect(packagedHtml).toContain("beforeunload");
+  });
 });

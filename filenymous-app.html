@@ -7,7 +7,7 @@
   <title>Filenymous — Envoi de fichiers P2P simple</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>" />
   <style>
-    /* Hallmark - genre: playful utility - macrostructure: task hub - design-system: public app */
+    /* Hallmark - genre: playful utility - macrostructure: transfer-first home - design-system: public app */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -201,6 +201,177 @@
       padding: 12px 14px;
       font-size: 13px;
       line-height: 1.55;
+    }
+
+    #panel-room { max-width: 1120px; gap: 20px; }
+    #panel-room > .app-hero,
+    #panel-room > .flow-steps,
+    #panel-room > .transport-grid,
+    #panel-room > .card,
+    #panel-room > .split-grid {
+      display: none;
+    }
+    .home-shell {
+      min-height: calc(100svh - 168px);
+      display: grid;
+      grid-template-columns: minmax(300px, 410px) minmax(0, 1fr);
+      gap: clamp(28px, 7vw, 92px);
+      align-items: center;
+      padding: clamp(8px, 3vw, 28px) 0 8px;
+    }
+    .home-transfer-card {
+      background: var(--surface);
+      border: 1px solid rgba(20,33,61,.12);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .home-drop {
+      display: grid;
+      place-items: center;
+      min-height: 278px;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.92), rgba(238,244,240,.72)),
+        var(--surface);
+      cursor: pointer;
+      text-align: center;
+      transition: var(--t);
+      padding: 28px 18px;
+      margin: 0;
+    }
+    .home-drop:hover,
+    .home-drop:focus-visible,
+    .home-drop.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+      outline: none;
+    }
+    .home-drop.has-file {
+      border-color: var(--success);
+      background: rgba(31,138,76,.08);
+    }
+    .home-plus {
+      width: 68px;
+      height: 68px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      background: var(--surface3);
+      color: #fff;
+      font-size: 42px;
+      line-height: 1;
+      font-weight: 300;
+    }
+    .home-drop-title {
+      display: block;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.05;
+      margin-bottom: 8px;
+    }
+    .home-drop-copy {
+      display: block;
+      max-width: 250px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .home-file-preview {
+      min-height: 38px;
+      margin: 14px 0;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .home-file-preview.has-file {
+      color: var(--text);
+      background: rgba(31,138,76,.08);
+      border-color: rgba(31,138,76,.28);
+    }
+    .home-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .home-secondary-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .home-copy {
+      min-width: 0;
+    }
+    .home-copy h1 {
+      max-width: 640px;
+      font-size: clamp(3.25rem, 8vw, 7.25rem);
+      line-height: .88;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+      margin-bottom: 24px;
+    }
+    .home-copy p {
+      max-width: 570px;
+      color: var(--muted);
+      font-size: clamp(1.02rem, 1.5vw, 1.22rem);
+      line-height: 1.55;
+    }
+    .home-proof-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+      margin-top: 30px;
+      max-width: 660px;
+    }
+    .home-proof {
+      min-height: 96px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255,255,255,.58);
+    }
+    .home-proof strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+    .home-proof span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .home-rail {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+      margin-top: -8px;
+    }
+    .home-rail button {
+      min-height: 70px;
+      padding: 14px;
+      text-align: left;
+      justify-content: flex-start;
+      background: transparent;
+    }
+    .home-rail strong {
+      display: block;
+      font-size: 13px;
+    }
+    .home-rail span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
     }
 
     /* ── Form ── */
@@ -427,6 +598,11 @@
       .logo span { display: none; }
       nav button { padding: 6px 10px; font-size: 12px; }
       main { padding: 20px 12px; }
+      .home-transfer-card { padding: 14px; border-radius: 12px; }
+      .home-drop { min-height: 224px; padding: 22px 14px; }
+      .home-plus { width: 58px; height: 58px; font-size: 36px; }
+      .home-drop-title { font-size: 19px; }
+      .home-secondary-row { grid-template-columns: 1fr; }
     }
     @media (max-width: 780px) {
       .app-hero, .split-grid { grid-template-columns: 1fr; }
@@ -434,6 +610,22 @@
       .hero-title { font-size: 2.35rem; }
       .flow-steps, .transport-grid, .detail-grid { grid-template-columns: 1fr; }
       .public-row { align-items: flex-start; flex-direction: column; }
+      .home-shell {
+        min-height: auto;
+        grid-template-columns: 1fr;
+        gap: 26px;
+        padding-top: 0;
+      }
+      .home-copy h1 {
+        font-size: clamp(2.65rem, 15vw, 4.7rem);
+        margin-bottom: 16px;
+      }
+      .home-copy p { font-size: 1rem; }
+      .home-proof-list,
+      .home-rail {
+        grid-template-columns: 1fr;
+      }
+      .home-rail { margin-top: 0; }
     }
   </style>
 </head>
@@ -461,6 +653,51 @@
 
 <!-- ════════════════════════════════════════════════════ PANEL ROOM -->
 <section id="panel-room" class="panel active">
+  <div class="home-shell">
+    <section class="home-transfer-card" aria-label="Cr&eacute;er un transfert">
+      <label class="home-drop" id="home-drop" for="home-file-input" tabindex="0">
+        <input type="file" id="home-file-input" hidden />
+        <span>
+          <span class="home-plus" aria-hidden="true">+</span>
+          <span class="home-drop-title">Ajouter un fichier</span>
+          <span class="home-drop-copy">Glissez un fichier ici ou cliquez pour le choisir.</span>
+        </span>
+      </label>
+      <div class="home-file-preview" id="home-file-preview">Aucun fichier s&eacute;lectionn&eacute;</div>
+      <div class="home-actions">
+        <button id="home-send-btn" class="btn btn-primary btn-full" onclick="createFromHome(event)" disabled>
+          Cr&eacute;er le code
+        </button>
+        <div class="home-secondary-row">
+          <button class="btn btn-secondary" onclick="showTab('receive')">Recevoir</button>
+          <button class="btn btn-secondary" onclick="openSendAdvanced(event)">Options</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="home-copy" aria-label="Pr&eacute;sentation">
+      <h1>Envoyez un fichier. Partagez un code.</h1>
+      <p>Filenymous chiffre dans votre navigateur, puis cr&eacute;e un lien autonome ou une session P2P directe pour les fichiers lourds.</p>
+      <div class="home-proof-list" aria-label="Garanties">
+        <div class="home-proof"><strong>Sans compte</strong><span>Un code &agrave; usage unique suffit.</span></div>
+        <div class="home-proof"><strong>Local d'abord</strong><span>Le fichier est chiffr&eacute; avant partage.</span></div>
+        <div class="home-proof"><strong>P2P si besoin</strong><span>Les gros fichiers gardent la page ouverte.</span></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="home-rail" aria-label="Raccourcis">
+    <button class="btn btn-secondary" onclick="showTab('receive')">
+      <span><strong>Recevoir</strong><span>Entrer un code ou coller un lien.</span></span>
+    </button>
+    <button class="btn btn-secondary" onclick="showTab('send')">
+      <span><strong>Fichier lourd</strong><span>Passer par le P2P direct.</span></span>
+    </button>
+    <button class="btn btn-secondary" onclick="showTab('history')">
+      <span><strong>R&eacute;pertoire public</strong><span>Voir les liens publi&eacute;s volontairement.</span></span>
+    </button>
+  </div>
+
   <div class="app-hero">
     <div class="hero-copy">
       <div>
@@ -1014,7 +1251,25 @@ const S = {
   parcel:    null,
   history:   [],     // [{ id, ehBytes, name, size, to, date, link, status, maxDl, dlCount }]
   histFilt:  'all',
+  transferActive: false,
+  transferLabel:  '',
 };
+
+function markTransferActive(label) {
+  S.transferActive = true;
+  S.transferLabel = label || 'Transfert en cours';
+}
+
+function markTransferDone() {
+  S.transferActive = false;
+  S.transferLabel = '';
+}
+
+window.addEventListener('beforeunload', e => {
+  if (!S.transferActive) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
 
 // ═══════════════════════════════════════════════════════════
 // CRYPTO — WebCrypto + TweetNaCl
@@ -1562,6 +1817,7 @@ function createP2PPeer(sendSignal) {
 }
 
 async function sendP2PFile(channel, file, message, statusId) {
+  markTransferActive('Envoi P2P direct');
   const raw = new Uint8Array(await file.arrayBuffer());
   const aesKey = await genAesKey();
   const enc = await aesEncrypt(aesKey, raw);
@@ -1588,12 +1844,14 @@ async function sendP2PFile(channel, file, message, statusId) {
   }
   channel.send(JSON.stringify({ type: 'done' }));
   setStatus(statusId, 'success', 'Transfert P2P termine. Vous pouvez fermer cette page.');
+  markTransferDone();
 }
 
 window.startP2PSend = async function () {
   if (!S.file) throw new Error('Selectionnez un fichier.');
   if (!p2pSupported()) throw new Error('Ce navigateur ne supporte pas WebRTC DataChannel.');
 
+  markTransferActive('Session P2P en attente');
   const code = createOneTimeCode();
   const message = $('send-message').value.trim();
   $('p2p-code-out').textContent = code;
@@ -1608,17 +1866,25 @@ window.startP2PSend = async function () {
   channel.binaryType = 'arraybuffer';
   channel.addEventListener('open', () => {
     setStatus('p2p-send-status', 'loading', 'Pair connecte. Chiffrement local et transfert...');
-    sendP2PFile(channel, S.file, message, 'p2p-send-status').catch(e => setStatus('p2p-send-status', 'error', e.message));
+    sendP2PFile(channel, S.file, message, 'p2p-send-status').catch(e => {
+      markTransferDone();
+      setStatus('p2p-send-status', 'error', e.message);
+    });
   });
 
-  ws = await openSignalSocket(code, 'sender', async payload => {
-    if (payload.answer) await pc.setRemoteDescription(payload.answer);
-    if (payload.candidate) await pc.addIceCandidate(payload.candidate);
-  }, async () => {
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    sendSignal({ offer });
-  }, 'p2p-send-status');
+  try {
+    ws = await openSignalSocket(code, 'sender', async payload => {
+      if (payload.answer) await pc.setRemoteDescription(payload.answer);
+      if (payload.candidate) await pc.addIceCandidate(payload.candidate);
+    }, async () => {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      sendSignal({ offer });
+    }, 'p2p-send-status');
+  } catch (e) {
+    markTransferDone();
+    throw e;
+  }
 
   S.history.unshift({
     id: code, ehBytes: [],
@@ -1648,6 +1914,7 @@ window.joinP2PReceive = async function () {
   const chunks = [];
   let meta = null;
   let ws;
+  markTransferActive('Reception P2P directe');
   const sendSignal = payload => ws?.send(JSON.stringify({ type: 'signal', code, payload }));
   const pc = createP2PPeer(sendSignal);
   pc.ondatachannel = ev => {
@@ -1670,6 +1937,7 @@ window.joinP2PReceive = async function () {
           document.body.append(a); a.click(); a.remove();
           URL.revokeObjectURL(url);
           setStatus('p2p-recv-status', 'success', `${esc(meta.name)} recu et dechiffre.`);
+          markTransferDone();
         }
         return;
       }
@@ -1693,6 +1961,7 @@ window.joinP2PReceive = async function () {
       if (payload.candidate) await pc.addIceCandidate(payload.candidate);
     }, null, 'p2p-recv-status');
   } catch (e) {
+    markTransferDone();
     setStatus('p2p-recv-status', 'error', e.message);
   }
 };
@@ -1710,8 +1979,11 @@ window.copyRoomCode = function () {
 // ═══════════════════════════════════════════════════════════
 const dz = $('dz');
 const fi = $('file-input');
+const homeDrop = $('home-drop');
+const homeFi = $('home-file-input');
 
 fi.addEventListener('change', () => { if (fi.files[0]) pickFile(fi.files[0]); });
+if (homeFi) homeFi.addEventListener('change', () => { if (homeFi.files[0]) pickFile(homeFi.files[0]); });
 
 dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
 dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
@@ -1720,6 +1992,24 @@ dz.addEventListener('drop', e => {
   dz.classList.remove('drag-over');
   if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
 });
+
+if (homeDrop) {
+  homeDrop.addEventListener('dragover', e => { e.preventDefault(); homeDrop.classList.add('drag-over'); });
+  homeDrop.addEventListener('dragleave', e => {
+    if (!homeDrop.contains(e.relatedTarget)) homeDrop.classList.remove('drag-over');
+  });
+  homeDrop.addEventListener('drop', e => {
+    e.preventDefault();
+    homeDrop.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
+  });
+  homeDrop.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (homeFi) homeFi.click();
+    }
+  });
+}
 
 $('send-message').addEventListener('input', () => {
   $('msg-count').textContent = $('send-message').value.length;
@@ -1732,9 +2022,38 @@ function pickFile(f) {
   badge.style.display = 'block';
   dz.classList.add('has-file');
   $('btn-send').disabled = false;
+  const homePreview = $('home-file-preview');
+  const homeBtn = $('home-send-btn');
+  if (homePreview) {
+    homePreview.textContent = `${fileIcon(f.name)} ${f.name} - ${fmtBytes(f.size)}`;
+    homePreview.classList.add('has-file');
+  }
+  if (homeDrop) homeDrop.classList.add('has-file');
+  if (homeBtn) homeBtn.disabled = false;
   // Afficher notice mode web si applicable
   updateSendNotice();
 }
+
+window.openSendAdvanced = function (event) {
+  if (event) event.preventDefault();
+  showTab('send');
+};
+
+window.createFromHome = async function (event) {
+  if (event) event.preventDefault();
+  if (!S.file) {
+    if (homeFi) homeFi.click();
+    return;
+  }
+  const homeBtn = $('home-send-btn');
+  if (homeBtn) homeBtn.disabled = true;
+  try {
+    showTab('send');
+    await window.handleSend();
+  } finally {
+    if (homeBtn && S.file) homeBtn.disabled = false;
+  }
+};
 
 window.handleSend = async function () {
   if (!S.file) {
@@ -1752,6 +2071,7 @@ window.handleSend = async function () {
       btn.disabled = false;
       return startP2PSend().catch(e => setStatus('send-status', 'error', e.message));
     }
+    markTransferActive('Creation du lien Web');
     try {
       setStatus('send-status', 'loading', 'Chiffrement local AES-256 — création du lien Web anonyme…');
       const message = $('send-message').value.trim();
@@ -1776,9 +2096,11 @@ window.handleSend = async function () {
       setStatus('send-status', 'error', e.message);
     } finally {
       btn.disabled = false;
+      markTransferDone();
     }
     return;
   }
+  markTransferActive(S.mode === 'holo' ? 'Envoi via Holo Web Conductor' : 'Creation du partage chiffre');
   if (S.mode === 'holo') {
     setStatus('send-status', 'loading', '⬡ Chiffrement local AES-256 — envoi via Holo Web Conductor…');
   }
@@ -1848,6 +2170,7 @@ window.handleSend = async function () {
     setStatus('send-status', 'error', e.message);
   } finally {
     btn.disabled = false;
+    markTransferDone();
   }
 };
 
