@@ -80,10 +80,15 @@ jobs:
         run: npm ci
         working-directory: tests
 
+      - name: Install signaling relay dependencies
+        run: npm ci
+        working-directory: p2p-signal
+
       - name: Run standalone web tests
         run: >
           npx vitest run
           src/p2p_direct.test.ts
+          src/p2p_signal_relay.test.ts
           src/p2p_signal_hardening.test.ts
           src/p2p_signal_server.test.ts
           src/static_room_demo.test.ts

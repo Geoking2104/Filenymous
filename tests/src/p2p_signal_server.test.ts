@@ -28,4 +28,13 @@ describe("P2P signaling server", () => {
     expect(server).not.toContain("createWriteStream");
     expect(server).not.toContain("appendFile");
   });
+
+  it("supports a comma-separated production origin allowlist", () => {
+    expect(existsSync(serverPath)).toBe(true);
+    const server = readFileSync(serverPath, "utf8");
+
+    expect(server).toContain("allowedOrigins");
+    expect(server).toContain(".split(\",\")");
+    expect(server).toContain("allowedOrigins.includes(info.origin)");
+  });
 });

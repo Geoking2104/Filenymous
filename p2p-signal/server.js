@@ -1,7 +1,10 @@
 import { WebSocketServer, WebSocket } from "ws";
 
 const port = Number(process.env.PORT || 8789);
-const allowedOrigin = process.env.ALLOWED_ORIGIN || "";
+const allowedOrigins = (process.env.ALLOWED_ORIGIN || "")
+  .split(",")
+  .map(origin => origin.trim())
+  .filter(Boolean);
 const ROOM_TTL_MS = Number(process.env.ROOM_TTL_MS || 10 * 60 * 1000);
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 10_000);
 const RATE_LIMIT_MAX_MESSAGES = Number(process.env.RATE_LIMIT_MAX_MESSAGES || 60);
@@ -92,8 +95,8 @@ function leave(ws) {
 const wss = new WebSocketServer({
   port,
   verifyClient(info, done) {
-    if (!allowedOrigin) return done(true);
-    done(info.origin === allowedOrigin);
+    if (!allowedOrigins.length) return done(true);
+    done(allowedOrigins.includes(info.origin));
   },
 });
 
@@ -118,6 +121,7 @@ wss.on("connection", ws => {
         send(ws, { type: "error", error: "invalid-room" });
         return;
       }
+      leave(ws);
       const room = roomFor(code);
       const stale = room[role] && room[role].readyState !== WebSocket.OPEN;
       if (room[role] && !stale && room[role] !== ws) {
@@ -125,7 +129,6 @@ wss.on("connection", ws => {
         return;
       }
 
-      leave(ws);
       room[role] = ws;
       ws.roomCode = code;
       ws.roomRole = role;

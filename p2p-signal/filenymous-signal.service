@@ -1,0 +1,35 @@
+[Unit]
+Description=Filenymous P2P signaling relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=filenymous-signal
+Group=filenymous-signal
+WorkingDirectory=/opt/filenymous-signal/app
+Environment=NODE_ENV=production
+Environment=PORT=8789
+Environment=ALLOWED_ORIGIN=https://filenymous.eu,https://geoking2104.github.io
+ExecStart=/usr/bin/node /opt/filenymous-signal/app/server.js
+Restart=on-failure
+RestartSec=3
+UMask=027
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

@@ -27,6 +27,11 @@ describe("P2P direct web mode", () => {
     expect(html).not.toContain("Mode Web anonyme limite a");
   });
 
+  it("uses the OpenDPE VPS WebSocket relay in public web mode", () => {
+    expect(html).toContain("wss://opendpe.net/filenymous-signal/");
+    expect(html).not.toContain("wss://signal.filenymous.eu");
+  });
+
   it("uses the hardened signaling payload contract expected by the relay", () => {
     expect(html).toContain("sendSignal({ kind: 'ice', candidate: ev.candidate })");
     expect(html).toContain("sendSignal({ kind: 'offer', sdp: offer.sdp })");
