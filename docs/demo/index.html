@@ -1808,7 +1808,7 @@ function createP2PPeer(sendSignal) {
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
   });
   pc.onicecandidate = ev => {
-    if (ev.candidate) sendSignal({ candidate: ev.candidate });
+    if (ev.candidate) sendSignal({ kind: 'ice', candidate: ev.candidate });
   };
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === 'failed') toast('Connexion P2P impossible sans relais TURN disponible.', 'error');
@@ -1874,12 +1874,12 @@ window.startP2PSend = async function () {
 
   try {
     ws = await openSignalSocket(code, 'sender', async payload => {
-      if (payload.answer) await pc.setRemoteDescription(payload.answer);
-      if (payload.candidate) await pc.addIceCandidate(payload.candidate);
+      if (payload.kind === 'answer') await pc.setRemoteDescription({ type: 'answer', sdp: payload.sdp });
+      if (payload.kind === 'ice') await pc.addIceCandidate(payload.candidate);
     }, async () => {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      sendSignal({ offer });
+      sendSignal({ kind: 'offer', sdp: offer.sdp });
     }, 'p2p-send-status');
   } catch (e) {
     markTransferDone();
@@ -1952,13 +1952,13 @@ window.joinP2PReceive = async function () {
   setStatus('p2p-recv-status', 'loading', 'Connexion au code P2P direct...');
   try {
     ws = await openSignalSocket(code, 'receiver', async payload => {
-      if (payload.offer) {
-        await pc.setRemoteDescription(payload.offer);
+      if (payload.kind === 'offer') {
+        await pc.setRemoteDescription({ type: 'offer', sdp: payload.sdp });
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        sendSignal({ answer });
+        sendSignal({ kind: 'answer', sdp: answer.sdp });
       }
-      if (payload.candidate) await pc.addIceCandidate(payload.candidate);
+      if (payload.kind === 'ice') await pc.addIceCandidate(payload.candidate);
     }, null, 'p2p-recv-status');
   } catch (e) {
     markTransferDone();

@@ -26,4 +26,13 @@ describe("P2P direct web mode", () => {
     expect(html).toContain("return startP2PSend()");
     expect(html).not.toContain("Mode Web anonyme limite a");
   });
+
+  it("uses the hardened signaling payload contract expected by the relay", () => {
+    expect(html).toContain("sendSignal({ kind: 'ice', candidate: ev.candidate })");
+    expect(html).toContain("sendSignal({ kind: 'offer', sdp: offer.sdp })");
+    expect(html).toContain("sendSignal({ kind: 'answer', sdp: answer.sdp })");
+    expect(html).toContain("payload.kind === 'offer'");
+    expect(html).toContain("payload.kind === 'answer'");
+    expect(html).toContain("payload.kind === 'ice'");
+  });
 });
