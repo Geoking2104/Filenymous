@@ -215,7 +215,7 @@
       min-height: calc(100svh - 168px);
       display: grid;
       grid-template-columns: minmax(300px, 410px) minmax(0, 1fr);
-      gap: clamp(28px, 7vw, 92px);
+      gap: 56px;
       align-items: center;
       padding: clamp(8px, 3vw, 28px) 0 8px;
     }
@@ -311,9 +311,9 @@
       min-width: 0;
     }
     .home-copy h1 {
-      max-width: 640px;
-      font-size: clamp(3.25rem, 8vw, 7.25rem);
-      line-height: .88;
+      max-width: 720px;
+      font-size: 4.7rem;
+      line-height: .92;
       letter-spacing: 0;
       overflow-wrap: anywhere;
       margin-bottom: 24px;
@@ -373,6 +373,18 @@
       font-size: 12px;
       line-height: 1.35;
     }
+    .context-note {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface2);
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .context-note strong { color: var(--text); }
+    #panel-receive { max-width: 760px; }
+    .secondary-nav { display: none; }
 
     /* ── Form ── */
     label { display: block; font-size: 13px; font-weight: 650; color: var(--text); margin-bottom: 6px; }
@@ -592,6 +604,15 @@
       border-top: 1px solid var(--border);
     }
     footer a { color: var(--muted); }
+    .footer-link {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      text-decoration: underline;
+      padding: 0;
+    }
 
     @media (max-width: 540px) {
       header { padding: 8px 12px; gap: 10px; }
@@ -617,7 +638,7 @@
         padding-top: 0;
       }
       .home-copy h1 {
-        font-size: clamp(2.65rem, 15vw, 4.7rem);
+        font-size: 3rem;
         margin-bottom: 16px;
       }
       .home-copy p { font-size: 1rem; }
@@ -642,9 +663,9 @@
     <button id="tab-send"     onclick="showTab('send')">Envoyer</button>
     <button id="tab-receive"  onclick="showTab('receive')">Recevoir</button>
     <button id="tab-history"  onclick="showTab('history')">Fichiers<span id="hist-count"></span></button>
-    <button id="tab-wallet"   onclick="showTab('wallet')">Coffre</button>
-    <button id="tab-privacy"  onclick="showTab('privacy')">Sécurité</button>
-    <button id="tab-identity" onclick="showTab('identity')">Avancé</button>
+    <button id="tab-wallet"   class="secondary-nav" onclick="showTab('wallet')">Coffre</button>
+    <button id="tab-privacy"  class="secondary-nav" onclick="showTab('privacy')">Sécurité</button>
+    <button id="tab-identity" class="secondary-nav" onclick="showTab('identity')">Avancé</button>
   </nav>
   <span id="net-badge" class="detecting">Connexion…</span>
 </header>
@@ -676,8 +697,8 @@
     </section>
 
     <section class="home-copy" aria-label="Pr&eacute;sentation">
-      <h1>Envoyez un fichier. Partagez un code.</h1>
-      <p>Filenymous chiffre dans votre navigateur, puis cr&eacute;e un lien autonome ou une session P2P directe pour les fichiers lourds.</p>
+      <h1>Envoyez un fichier gr&acirc;ce &agrave; un code unique</h1>
+      <p>Pas de cloud, pas de compte. Filenymous chiffre dans votre navigateur, puis cr&eacute;e un lien autonome ou une session P2P directe pour les fichiers lourds.</p>
       <div class="home-proof-list" aria-label="Garanties">
         <div class="home-proof"><strong>Sans compte</strong><span>Un code &agrave; usage unique suffit.</span></div>
         <div class="home-proof"><strong>Local d'abord</strong><span>Le fichier est chiffr&eacute; avant partage.</span></div>
@@ -879,11 +900,6 @@
 <!-- ═════════════════════════════════════════════════ PANEL RECEIVE -->
 <section id="panel-receive" class="panel">
 
-  <div class="card">
-    <h2 class="section-title">Recevoir en deux gestes</h2>
-    <p class="muted">Entre le code à usage unique, garde la page ouverte, puis télécharge le fichier une fois le transfert terminé. Un lien Filenymous fonctionne aussi si l'expéditeur t'en a donné un.</p>
-  </div>
-
   <div id="recv-auto" class="card hidden">
     <p class="card-title">📥 Fichier détecté</p>
     <div id="recv-meta" class="meta-grid mt-2"></div>
@@ -902,16 +918,18 @@
   </div>
 
   <div id="recv-p2p" class="card">
-    <p class="card-title">P2P direct - Code a usage unique</p>
+    <p class="card-title">Recevoir un fichier</p>
+    <p class="muted">Collez un lien Filenymous ou entrez le code a usage unique donne par l'expediteur. Filenymous choisit automatiquement le bon mode.</p>
     <div class="field">
-      <label for="p2p-code-input">Code a usage unique</label>
-      <input type="text" id="p2p-code-input" inputmode="numeric" placeholder="123-456" />
+      <label for="p2p-code-input">Code ou lien Filenymous</label>
+      <input type="text" id="p2p-code-input" inputmode="text" placeholder="123-456 ou https://filenymous.eu/#..." />
     </div>
-    <button class="btn btn-primary btn-full mt-3" onclick="joinP2PReceive()">Recevoir avec ce code</button>
+    <button class="btn btn-primary btn-full mt-3" onclick="receiveFromSingleInput()">Continuer</button>
     <div id="p2p-recv-status" class="status info mt-3 hidden"></div>
+    <p class="context-note mt-3"><strong>Apres validation :</strong> gardez cette page ouverte. Pour les gros fichiers, le transfert continue en direct avec l'expediteur. Le fichier telecharge apparaitra dans le dossier Telechargements de votre navigateur, sauf si celui-ci vous demande de choisir un emplacement.</p>
   </div>
 
-  <div id="recv-manual" class="card">
+  <div id="recv-manual" class="card hidden">
     <p class="card-title">Entrer un lien manuellement</p>
     <div class="field">
       <label for="manual-link">Lien Filenymous</label>
@@ -920,7 +938,7 @@
     <button class="btn btn-secondary btn-full mt-3" onclick="loadManual()">Charger</button>
   </div>
 
-  <div id="recv-empty" class="card">
+  <div id="recv-empty" class="card hidden">
     <p style="text-align:center; color:var(--muted); font-size:13px; padding:12px 0;">
       Entre un code a usage unique ou colle un lien Filenymous pour recevoir un fichier.
     </p>
@@ -1200,7 +1218,10 @@
 <footer>
   <p>Filenymous — P2P chiffré avec WebRTC, Iroh et <a href="https://holochain.org" target="_blank" rel="noopener">Holochain</a> ·
      <a href="https://github.com/Geoking2104/Filenymous" target="_blank" rel="noopener">Code source</a> ·
-     <a href="https://www.iroh.computer/" target="_blank" rel="noopener">Iroh</a></p>
+     <a href="https://www.iroh.computer/" target="_blank" rel="noopener">Iroh</a> -
+     <button type="button" class="footer-link" onclick="showTab('wallet')">Coffre local</button> -
+     <button type="button" class="footer-link" onclick="showTab('privacy')">Securite</button> -
+     <button type="button" class="footer-link" onclick="showTab('identity')">Avance</button></p>
 </footer>
 
 <!-- TweetNaCl (X25519 / ECIES + Ed25519 sender ID) — chargé avant le module -->
@@ -1936,7 +1957,7 @@ window.joinP2PReceive = async function () {
           const a = Object.assign(document.createElement('a'), { href: url, download: meta.name });
           document.body.append(a); a.click(); a.remove();
           URL.revokeObjectURL(url);
-          setStatus('p2p-recv-status', 'success', `${esc(meta.name)} recu et dechiffre.`);
+          setStatus('p2p-recv-status', 'success', `${esc(meta.name)} recu et dechiffre. Le navigateur l'a place dans Telechargements, sauf si vous avez choisi un autre dossier.`);
           markTransferDone();
         }
         return;
@@ -1960,10 +1981,26 @@ window.joinP2PReceive = async function () {
       }
       if (payload.kind === 'ice') await pc.addIceCandidate(payload.candidate);
     }, null, 'p2p-recv-status');
+    setStatus('p2p-recv-status', 'success', 'Code accepte. En attente de l expediteur : gardez cette page ouverte.');
   } catch (e) {
     markTransferDone();
     setStatus('p2p-recv-status', 'error', e.message);
   }
+};
+
+window.receiveFromSingleInput = function () {
+  const raw = $('p2p-code-input').value.trim();
+  if (!raw) {
+    setStatus('p2p-recv-status', 'error', 'Entrez un code a usage unique ou collez un lien Filenymous.');
+    return;
+  }
+  if (raw.includes('#') || raw.startsWith('http') || raw.startsWith('w1:') || raw.includes(':')) {
+    $('manual-link').value = raw;
+    setStatus('p2p-recv-status', 'loading', 'Lien detecte. Verification du fichier chiffre...');
+    loadManual();
+    return;
+  }
+  joinP2PReceive();
 };
 
 window.copyP2PCode = function () {
@@ -2186,7 +2223,7 @@ let _loadedHash = null;
 async function checkReceiveHash() {
   const hash = decodeURIComponent(location.hash.slice(1));
   if (!hash || !hash.includes(':')) {
-    $('recv-empty').classList.remove('hidden');
+    $('recv-empty').classList.add('hidden');
     $('recv-auto').classList.add('hidden');
     return;
   }
@@ -2248,7 +2285,7 @@ async function checkReceiveHash() {
   }
 
   const [ehB64, keyB64] = hash.split(':');
-  if (!ehB64 || !keyB64) { $('recv-empty').classList.remove('hidden'); return; }
+  if (!ehB64 || !keyB64) { $('recv-empty').classList.add('hidden'); return; }
 
   const ehBytes  = b64d(ehB64);
   const keyBytes = b64d(keyB64);
@@ -2357,8 +2394,8 @@ window.handleDownload = async function () {
     document.body.append(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
 
-    setStatus('recv-status', 'success', `✅ ${esc(p.manifest.file_name)} téléchargé.`);
-    toast('Fichier déchiffré et téléchargé !');
+    setStatus('recv-status', 'success', `OK ${esc(p.manifest.file_name)} telecharge. Retrouvez-le dans le dossier Telechargements du navigateur, sauf si vous avez choisi un autre emplacement.`);
+    toast('Fichier dechiffre et envoye vers Telechargements.');
     if (!S.parcel.web) await confirmDl(ehBytes).catch(() => {});
   } catch (e) {
     setStatus('recv-status', 'error', `Erreur : ${e.message}`);

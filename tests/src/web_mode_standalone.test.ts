@@ -43,4 +43,34 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain("markTransferDone");
     expect(packagedHtml).toContain("beforeunload");
   });
+
+  it("keeps the public receive flow to a single code-or-link input", () => {
+    expect(html).toContain("Code ou lien Filenymous");
+    expect(html).toContain("receiveFromSingleInput");
+    expect(html).toContain("Filenymous choisit automatiquement le bon mode");
+    expect(html).toContain('id="recv-manual" class="card hidden"');
+    expect(html).toContain('id="recv-empty" class="card hidden"');
+    expect(html).toContain("$('recv-empty').classList.add('hidden')");
+    expect(packagedHtml).toContain("Code ou lien Filenymous");
+  });
+
+  it("uses the simplified public home message", () => {
+    expect(html).toContain("Envoyez un fichier gr&acirc;ce &agrave; un code unique");
+    expect(html).toContain("Pas de cloud, pas de compte");
+    expect(packagedHtml).toContain("Envoyez un fichier gr&acirc;ce &agrave; un code unique");
+  });
+
+  it("explains where received browser downloads are saved", () => {
+    expect(html).toContain("dossier Telechargements du navigateur");
+    expect(html).toContain("Le navigateur l'a place dans Telechargements");
+    expect(packagedHtml).toContain("dossier Telechargements du navigateur");
+  });
+
+  it("keeps advanced panels out of the primary navigation", () => {
+    expect(html).toContain('id="tab-wallet"   class="secondary-nav"');
+    expect(html).toContain('id="tab-privacy"  class="secondary-nav"');
+    expect(html).toContain('id="tab-identity" class="secondary-nav"');
+    expect(html).toContain("Coffre local");
+    expect(packagedHtml).toContain('class="secondary-nav"');
+  });
 });
