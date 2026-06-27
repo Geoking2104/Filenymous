@@ -88,7 +88,7 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain('"fr"');
     expect(html).toContain('"ko"');
     expect(html).toContain("Send a file with one unique code");
-    expect(html).toContain("Envoyez un fichier grace a un code unique");
+    expect(html).toContain("Envoyez un fichier grâce à un code unique");
     expect(html).toContain("고유 코드 하나로 파일을 보내세요");
     expect(packagedHtml).toContain('id="language-select"');
     expect(packagedHtml).toContain("FILENYMOUS_I18N");
