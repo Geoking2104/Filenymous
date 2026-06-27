@@ -23,9 +23,11 @@ describe("P2P direct web mode", () => {
     expect(html).not.toContain("createPhoneCode");
   });
 
-  it("routes oversized anonymous web files to the direct P2P flow instead of blocking send", () => {
-    expect(html).toContain("S.file.size > CFG.webInlineMaxBytes");
-    expect(html).toContain("return startP2PSend()");
+  it("routes anonymous web sends to the direct P2P code flow before falling back to links", () => {
+    expect(html).toContain("if (p2pSupported())");
+    expect(html).toContain("return await startP2PSend()");
+    expect(html).toContain("P2P direct indisponible");
+    expect(html).not.toContain("S.file.size > CFG.webInlineMaxBytes");
     expect(html).not.toContain("Mode Web anonyme limite a");
   });
 

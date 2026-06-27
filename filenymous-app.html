@@ -3918,9 +3918,14 @@ window.handleSend = async function (event) {
   }
 
   if (S.mode === 'bridge') {
-    if (S.file.size > CFG.webInlineMaxBytes) {
+    if (p2pSupported()) {
       btn.disabled = false;
-      return startP2PSend().catch(e => setStatus('send-status', 'error', e.message));
+      try {
+        return await startP2PSend();
+      } catch (e) {
+        btn.disabled = true;
+        setStatus('send-status', 'warning', `P2P direct indisponible : ${esc(e.message)}. Creation d'un lien autonome en secours.`);
+      }
     }
     markTransferActive('Creation du lien Web');
     try {
