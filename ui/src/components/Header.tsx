@@ -12,7 +12,6 @@ export default function Header({ minimal = false }: HeaderProps) {
 
   const tabs: Array<{ id: Tab; label: string; icon: string }> = [
     { id: "room",     label: "Room",      icon: "◎" },
-    { id: "wallet",   label: "Wallet",    icon: "BTC" },
     { id: "send",     label: "Envoyer",   icon: "📤" },
     { id: "inbox",    label: "Reçus",     icon: "📥" },
     { id: "history",  label: "Historique",icon: "📋" },

@@ -12,6 +12,8 @@ describe("P2P direct web mode", () => {
     expect(html).toContain("Code a usage unique");
     expect(html).toContain("p2pSignalUrl");
     expect(html).toContain("createOneTimeCode");
+    expect(html).toContain("randomLetters");
+    expect(html).toContain("\\d{3}-\\d{3}-[A-Z]{3}");
     expect(html).toContain("startP2PSend");
     expect(html).toContain("joinP2PReceive");
     expect(html).toContain("RTCPeerConnection");
@@ -39,5 +41,13 @@ describe("P2P direct web mode", () => {
     expect(html).toContain("payload.kind === 'offer'");
     expect(html).toContain("payload.kind === 'answer'");
     expect(html).toContain("payload.kind === 'ice'");
+  });
+
+  it("keeps P2P file keys protected by the full human-readable code", () => {
+    expect(html).toContain("wrapP2PTransferKey");
+    expect(html).toContain("unwrapP2PTransferKey");
+    expect(html).toContain("p2p-code-v1");
+    expect(html).toContain("legacySignalRoomCode");
+    expect(html).toContain("openSignalSocketWithFallback");
   });
 });

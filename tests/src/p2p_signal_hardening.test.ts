@@ -25,4 +25,11 @@ describe("P2P signal hardening", () => {
     expect(server).toContain("RATE_LIMIT_MAX_MESSAGES");
     expect(server).toContain("rate-limited");
   });
+
+  it("requires three random letters in addition to the six digit room code", () => {
+    const server = readFileSync(serverPath, "utf8");
+
+    expect(server).toContain("\\d{3}-\\d{3}-[A-Z]{3}");
+    expect(server).not.toContain("^\\d{3}-\\d{3}$");
+  });
 });

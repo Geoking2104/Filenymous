@@ -51,13 +51,47 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain('id="recv-manual" class="card hidden"');
     expect(html).toContain('id="recv-empty" class="card hidden"');
     expect(html).toContain("$('recv-empty').classList.add('hidden')");
+    expect(html).toContain("123-456-ABC");
     expect(packagedHtml).toContain("Code ou lien Filenymous");
+  });
+
+  it("requires a human gesture before creating or joining a P2P code", () => {
+    expect(html).toContain("verifyHumanGesture");
+    expect(html).toContain("human-proof");
+    expect(html).toContain("Je suis humain");
+    expect(html).toContain("event?.isTrusted");
+    expect(html).toContain("await window.handleSend(event)");
+    expect(packagedHtml).toContain("verifyHumanGesture");
+  });
+
+  it("supports local QR sharing and QR scanning for long links", () => {
+    expect(html).toContain('id="qr-panel"');
+    expect(html).toContain('id="qr-canvas"');
+    expect(html).toContain("renderQrForCurrentLink");
+    expect(html).toContain("scanQrCode");
+    expect(html).toContain("BarcodeDetector");
+    expect(html).toContain("navigator.share");
+    expect(packagedHtml).toContain('id="qr-panel"');
   });
 
   it("uses the simplified public home message", () => {
     expect(html).toContain("Envoyez un fichier gr&acirc;ce &agrave; un code unique");
     expect(html).toContain("Pas de cloud, pas de compte");
     expect(packagedHtml).toContain("Envoyez un fichier gr&acirc;ce &agrave; un code unique");
+  });
+
+  it("ships English, French, and Korean public website copy", () => {
+    expect(html).toContain('id="language-select"');
+    expect(html).toContain('data-i18n="home.title"');
+    expect(html).toContain("FILENYMOUS_I18N");
+    expect(html).toContain('"en"');
+    expect(html).toContain('"fr"');
+    expect(html).toContain('"ko"');
+    expect(html).toContain("Send a file with one unique code");
+    expect(html).toContain("Envoyez un fichier grace a un code unique");
+    expect(html).toContain("고유 코드 하나로 파일을 보내세요");
+    expect(packagedHtml).toContain('id="language-select"');
+    expect(packagedHtml).toContain("FILENYMOUS_I18N");
   });
 
   it("explains where received browser downloads are saved", () => {
@@ -67,10 +101,10 @@ describe("standalone web transfer mode", () => {
   });
 
   it("keeps advanced panels out of the primary navigation", () => {
-    expect(html).toContain('id="tab-wallet"   class="secondary-nav"');
     expect(html).toContain('id="tab-privacy"  class="secondary-nav"');
     expect(html).toContain('id="tab-identity" class="secondary-nav"');
-    expect(html).toContain("Coffre local");
+    expect(html).not.toContain("Coffre local");
+    expect(html).not.toContain("showTab('wallet')");
     expect(packagedHtml).toContain('class="secondary-nav"');
   });
 });

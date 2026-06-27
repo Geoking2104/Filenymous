@@ -84,7 +84,7 @@ describe("P2P signaling relay integration", () => {
     const port = await freePort();
     await startRelay(port);
 
-    const code = "456-789";
+    const code = "456-789-QTZ";
     const sender = await join(`ws://127.0.0.1:${port}`, "sender", code);
     const receiver = await join(`ws://127.0.0.1:${port}`, "receiver", code);
 

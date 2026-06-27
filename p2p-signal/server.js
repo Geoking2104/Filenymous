@@ -18,7 +18,7 @@ function now() {
 }
 
 function validateOneTimeCode(code) {
-  return typeof code === "string" && /^\d{3}-\d{3}$/.test(code);
+  return typeof code === "string" && /^\d{3}-\d{3}-[A-Z]{3}$/.test(code);
 }
 
 function hasOnlyKeys(value, allowed) {
