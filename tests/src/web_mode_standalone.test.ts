@@ -20,6 +20,18 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain("web-inline");
   });
 
+  it("compresses autonomous web links with a shorter versioned payload", () => {
+    expect(html).toContain("compressWebInlineBytes");
+    expect(html).toContain("decompressWebInlineBytes");
+    expect(html).toContain("web-inline-z");
+    expect(html).toContain("w2:${metaB64}:${dataB64}");
+    expect(html).toContain("new CompressionStream('gzip')");
+    expect(html).toContain("new DecompressionStream('gzip')");
+    expect(html).toContain("web_inline_compression");
+    expect(html).toContain("await decompressWebInlineBytes");
+    expect(packagedHtml).toContain("web-inline-z");
+  });
+
   it("keeps the packaged release HTML send flow writable without a local conductor", () => {
     expect(packagedHtml).not.toContain("Mode bridge (lecture seule HTTP) : envoi impossible");
     expect(packagedHtml).not.toContain("Holo Web Conductor non connecté");

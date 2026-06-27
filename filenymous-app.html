@@ -3016,39 +3016,96 @@ async function downloadFile(fileHash, keyBytes, onPct) {
 
 // Mode web anonyme sans conducteur : le fichier chiffre est transporte dans le
 // fragment URL. Le fragment n'est jamais envoye au serveur HTTP.
+async function transformWebInlineBytes(bytes, mode) {
+  const stream = mode === 'compress'
+    ? new CompressionStream('gzip')
+    : new DecompressionStream('gzip');
+  const writer = stream.writable.getWriter();
+  await writer.write(bytes);
+  await writer.close();
+  return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+}
+
+async function compressWebInlineBytes(bytes) {
+  if (typeof CompressionStream !== 'function') return { bytes, compression: 'none' };
+  try {
+    const compressed = await transformWebInlineBytes(bytes, 'compress');
+    return compressed.byteLength + 64 < bytes.byteLength
+      ? { bytes: compressed, compression: 'gzip' }
+      : { bytes, compression: 'none' };
+  } catch (_) {
+    return { bytes, compression: 'none' };
+  }
+}
+
+async function decompressWebInlineBytes(bytes, compression) {
+  if (!compression || compression === 'none') return bytes;
+  if (compression !== 'gzip') throw new Error('Compression de lien Filenymous non supportee.');
+  if (typeof DecompressionStream !== 'function') {
+    throw new Error('Ce navigateur ne sait pas decomprimer ce lien Filenymous.');
+  }
+  return transformWebInlineBytes(bytes, 'decompress');
+}
+
 async function createWebParcelLink(file, message) {
   if (file.size > CFG.webInlineMaxBytes) {
     throw new Error(`Fichier trop volumineux pour un lien autonome (${fmtBytes(CFG.webInlineMaxBytes)} max).`);
   }
 
   const raw      = new Uint8Array(await file.arrayBuffer());
+  const compact  = await compressWebInlineBytes(raw);
   const aesKey   = await genAesKey();
-  const enc      = await aesEncrypt(aesKey, raw);
+  const enc      = await aesEncrypt(aesKey, compact.bytes);
   const keyBytes = await exportKey(aesKey);
-  const payload  = {
-    v: 'web-inline',
-    name: file.name,
-    type: file.type || 'application/octet-stream',
-    size: file.size,
-    created: Date.now(),
-    sender: S.senderId || '',
-    message: message || '',
-    data: b64e(enc),
+  const meta = {
+    v: compact.compression === 'gzip' ? 'web-inline-z' : 'web-inline',
+    n: file.name,
+    t: file.type || 'application/octet-stream',
+    s: file.size,
+    z: compact.compression,
+    cs: compact.bytes.byteLength,
+    d: Date.now(),
+    r: S.senderId || '',
+    m: message || '',
   };
-  const parcelB64 = b64e(new TextEncoder().encode(JSON.stringify(payload)));
+  const metaB64 = b64e(new TextEncoder().encode(JSON.stringify(meta)));
+  const dataB64 = b64e(enc);
   return {
-    id: `w1:${parcelB64}`,
+    id: `w2:${metaB64}:${dataB64}`,
     keyBytes,
-    url: `${location.origin}${location.pathname}#w1:${parcelB64}:${b64e(keyBytes)}`,
+    url: `${location.origin}${location.pathname}#w2:${metaB64}:${dataB64}:${b64e(keyBytes)}`,
   };
 }
 
 function parseWebParcelLink(hash) {
+  if (hash.startsWith('w2:')) {
+    const [, metaB64, dataB64, keyB64] = hash.split(':');
+    if (!metaB64 || !dataB64 || !keyB64) throw new Error('Lien Web anonyme invalide.');
+    const meta = JSON.parse(new TextDecoder().decode(b64d(metaB64)));
+    if (!['web-inline', 'web-inline-z'].includes(meta.v) || !dataB64) {
+      throw new Error('Payload Web anonyme invalide.');
+    }
+    return {
+      payload: {
+        name: meta.n,
+        type: meta.t || 'application/octet-stream',
+        size: meta.s,
+        created: meta.d,
+        sender: meta.r || '',
+        message: meta.m || '',
+        data: dataB64,
+        compression: meta.z || 'none',
+        compressedSize: meta.cs || 0,
+      },
+      keyBytes: b64d(keyB64),
+    };
+  }
   if (!hash.startsWith('w1:')) return null;
   const [, payloadB64, keyB64] = hash.split(':');
   if (!payloadB64 || !keyB64) throw new Error('Lien Web anonyme invalide.');
   const payload = JSON.parse(new TextDecoder().decode(b64d(payloadB64)));
   if (payload.v !== 'web-inline' || !payload.data) throw new Error('Payload Web anonyme invalide.');
+  payload.compression = 'none';
   return { payload, keyBytes: b64d(keyB64) };
 }
 
@@ -4208,6 +4265,7 @@ async function checkReceiveHash() {
             encrypted_key_blob: '',
             message: payload.message || '',
             web_inline_data: payload.data,
+            web_inline_compression: payload.compression || 'none',
           },
         },
       };
@@ -4329,7 +4387,8 @@ window.handleDownload = async function () {
     const plain = S.parcel.web
       ? await (async () => {
           $('recv-fill').style.width = '45%';
-          const out = await aesDecrypt(useKey, b64d(p.manifest.web_inline_data));
+          const decrypted = await aesDecrypt(useKey, b64d(p.manifest.web_inline_data));
+          const out = await decompressWebInlineBytes(decrypted, p.manifest.web_inline_compression);
           $('recv-fill').style.width = '100%';
           $('recv-prog-label').textContent = 'Finalisation…';
           return out;
