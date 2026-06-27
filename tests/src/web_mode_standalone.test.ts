@@ -6,8 +6,18 @@ import path from "node:path";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(path.join(__dirname, "../../docs/demo/index.html"), "utf8");
 const packagedHtml = readFileSync(path.join(__dirname, "../../filenymous-app.html"), "utf8");
+const i18nMatch = html.match(/window\.FILENYMOUS_I18N = (\{[\s\S]*?\n\});/);
+const i18n = JSON.parse(i18nMatch?.[1] ?? "{}") as Record<string, Record<string, string>>;
 
 describe("standalone web transfer mode", () => {
+  it("keeps all public website language dictionaries aligned", () => {
+    expect(Object.keys(i18n).sort()).toEqual(["en", "fr", "ko"]);
+    const baseKeys = Object.keys(i18n.en).sort();
+    for (const lang of ["fr", "ko"]) {
+      expect(Object.keys(i18n[lang]).sort()).toEqual(baseKeys);
+    }
+  });
+
   it("does not block sends when no Holochain conductor is available", () => {
     expect(html).not.toContain("Mode lecture seule");
     expect(html).not.toContain("envoi non disponible sans conducteur Holochain");
@@ -106,10 +116,26 @@ describe("standalone web transfer mode", () => {
     expect(packagedHtml).toContain("FILENYMOUS_I18N");
   });
 
-  it("explains where received browser downloads are saved", () => {
-    expect(html).toContain("dossier Telechargements du navigateur");
-    expect(html).toContain("Le navigateur l'a place dans Telechargements");
-    expect(packagedHtml).toContain("dossier Telechargements du navigateur");
+  it("localizes received download confirmations and progress messages", () => {
+    for (const key of [
+      "receive.downloadSuccess",
+      "receive.downloadToast",
+      "receive.p2pSuccess",
+      "receive.progressWeb",
+      "receive.progressDht",
+      "receive.progressDecrypt",
+      "receive.progressFinalizing",
+      "receive.metaDownloads",
+      "receive.statusAvailable",
+    ]) {
+      expect(html).toContain(`"${key}"`);
+      expect(packagedHtml).toContain(`"${key}"`);
+    }
+    expect(html).toContain("trFormat('receive.downloadSuccess'");
+    expect(html).toContain("trFormat('receive.p2pSuccess'");
+    expect(html).not.toContain("Le navigateur l'a place dans Telechargements");
+    expect(html).not.toContain("OK ${esc(p.manifest.file_name)} telecharge");
+    expect(html).not.toContain("Fichier dechiffre et envoye vers Telechargements.");
   });
 
   it("keeps advanced panels out of the primary navigation", () => {
