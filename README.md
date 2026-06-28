@@ -1,38 +1,38 @@
 # Filenymous
 
-Application web P2P pour envoyer et recevoir des fichiers chiffres, sans compte, sans installateur natif et sans conducteur Holochain local obligatoire.
+P2P web app for sending and receiving encrypted files without an account, without a native installer, and without requiring a local Holochain conductor.
 
-- Site OVH : https://filenymous.eu/
-- GitHub Pages : https://geoking2104.github.io/Filenymous/
-- Releases : https://github.com/Geoking2104/Filenymous/releases/latest
+- OVH site: https://filenymous.eu/
+- GitHub Pages: https://geoking2104.github.io/Filenymous/
+- Releases: https://github.com/Geoking2104/Filenymous/releases/latest
 
-## Positionnement
+## Positioning
 
-Filenymous reste une application web. Les fichiers Windows, macOS et Linux publies dans les releases sont des archives web portables qui contiennent `Filenymous.html`; elles s'ouvrent dans un navigateur moderne.
+Filenymous remains a web application. The Windows, macOS, and Linux files published in releases are portable web archives that contain `Filenymous.html`; they open in a modern browser.
 
-Le projet ne publie plus de `.exe`, `.dmg` ni `.AppImage` tant que l'architecture native n'est pas redevenue necessaire et stable.
+The project no longer publishes `.exe`, `.dmg`, or `.AppImage` files while the native architecture is not necessary and stable again.
 
-## Fonctionnement
+## How It Works
 
-1. L'expediteur selectionne un fichier dans le navigateur.
-2. Le fichier est chiffre localement avec WebCrypto.
-3. Filenymous cree un code a usage unique, un lien chiffre autonome ou une session P2P WebRTC.
-4. Le destinataire ouvre le lien ou saisit le code.
-5. Le dechiffrement reste local cote navigateur.
+1. The sender selects a file in the browser.
+2. The file is encrypted locally with WebCrypto.
+3. Filenymous creates a one-time code, a self-contained encrypted link, or a WebRTC P2P session.
+4. The recipient opens the link or enters the code.
+5. Decryption stays local in the recipient's browser.
 
-Pour les petits fichiers, le lien autonome reste le chemin le plus simple. Pour les fichiers plus lourds, le flux P2P direct garde les deux navigateurs ouverts pendant le transfert.
+For small files, the self-contained link remains the simplest path. For larger files, the direct P2P flow keeps both browsers open during the transfer.
 
-## Architecture cible
+## Target Architecture
 
-- **WebCrypto** : chiffrement local AES-256-GCM.
-- **WebRTC DataChannel** : transfert navigateur a navigateur quand les pairs peuvent se joindre.
-- **Signalisation web** : echange minimal de rendez-vous, sans stockage du fichier en clair.
-- **Iroh / iroh-blobs** : trajectoire pour les gros fichiers verifiables et les relais chiffres.
-- **Holochain / Holo Web Conductor** : option avancee pour identite, contacts, DHT et coordination, sans imposer de conducteur local au grand public.
+- **WebCrypto**: local AES-256-GCM encryption.
+- **WebRTC DataChannel**: browser-to-browser transfer when peers can reach each other.
+- **Web signaling**: minimal rendezvous exchange, without storing the plaintext file.
+- **Iroh / iroh-blobs**: path for verifiable large files and encrypted relays.
+- **Holochain / Holo Web Conductor**: advanced option for identity, contacts, DHT, and coordination without forcing the general public to run a local conductor.
 
-## Telechargements
+## Downloads
 
-Les releases GitHub publient uniquement des paquets web :
+GitHub releases publish web packages only:
 
 - `filenymous-public-web.zip`
 - `filenymous-windows-web.zip`
@@ -40,9 +40,9 @@ Les releases GitHub publient uniquement des paquets web :
 - `filenymous-linux-web.zip`
 - `ui.zip`
 
-Les archives par systeme contiennent la meme application web avec un court README adapte a la plateforme.
+The platform-specific archives contain the same web application with a short README adapted to the platform.
 
-## Developpement
+## Development
 
 ```bash
 cd ui
@@ -50,24 +50,24 @@ npm install
 npm run dev
 ```
 
-Pour construire l'UI Vite :
+To build the Vite UI:
 
 ```bash
 cd ui
 npm run build
 ```
 
-Les artefacts Holochain restent presents dans le depot pour les modules avances et les validations Rust, mais ils ne constituent plus le mode d'installation public.
+Holochain artifacts remain in the repository for advanced modules and Rust validation, but they are no longer the public installation mode.
 
-## Securite
+## Security
 
-- Chiffrement local avant transfert.
-- Aucun compte requis.
-- Code a usage unique pour les sessions de reception.
-- Historique et cles stockes localement dans le navigateur.
-- Pas de stockage serveur du fichier en clair.
-- Wallet BTC/ETH local verrouille par defaut.
+- Local encryption before transfer.
+- No account required.
+- One-time code for receive sessions.
+- History and keys stored locally in the browser.
+- No server-side storage of the plaintext file.
+- Local BTC/ETH wallet locked by default.
 
-## Licence
+## License
 
 MIT.
