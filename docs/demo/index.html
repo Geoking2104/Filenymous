@@ -721,15 +721,15 @@
     <span>Filenymous</span>
   </a>
   <nav>
-    <button id="tab-room"     class="active" onclick="showTab('room')" data-i18n="nav.home">Accueil</button>
-    <button id="tab-send"     onclick="showTab('send')" data-i18n="nav.send">Envoyer</button>
-    <button id="tab-receive"  onclick="showTab('receive')" data-i18n="nav.receive">Recevoir</button>
-    <button id="tab-history"  onclick="showTab('history')"><span data-i18n="nav.files">Fichiers</span><span id="hist-count"></span></button>
-    <button id="tab-privacy"  class="secondary-nav" onclick="showTab('privacy')" data-i18n="nav.security">Sécurité</button>
-    <button id="tab-identity" class="secondary-nav" onclick="showTab('identity')" data-i18n="nav.advanced">Avancé</button>
+    <button id="tab-room"     class="active" onclick="showTab('room')" data-i18n="nav.home">Home</button>
+    <button id="tab-send"     onclick="showTab('send')" data-i18n="nav.send">Send</button>
+    <button id="tab-receive"  onclick="showTab('receive')" data-i18n="nav.receive">Receive</button>
+    <button id="tab-history"  onclick="showTab('history')"><span data-i18n="nav.files">Files</span><span id="hist-count"></span></button>
+    <button id="tab-privacy"  class="secondary-nav" onclick="showTab('privacy')" data-i18n="nav.security">Security</button>
+    <button id="tab-identity" class="secondary-nav" onclick="showTab('identity')" data-i18n="nav.advanced">Advanced</button>
   </nav>
   <label class="language-picker" for="language-select">
-    <span data-i18n="nav.language">Langue</span>
+    <span data-i18n="nav.language">Language</span>
     <select id="language-select" onchange="setLanguage(this.value)" aria-label="Language">
       <option value="en">EN</option>
       <option value="fr">FR</option>
@@ -744,128 +744,128 @@
 <!-- ════════════════════════════════════════════════════ PANEL ROOM -->
 <section id="panel-room" class="panel active">
   <div class="home-shell">
-    <section class="home-transfer-card" aria-label="Cr&eacute;er un transfert" data-i18n-aria-label="home.transferCard">
+    <section class="home-transfer-card" aria-label="Create a transfer" data-i18n-aria-label="home.transferCard">
       <label class="home-drop" id="home-drop" for="home-file-input" tabindex="0">
         <input type="file" id="home-file-input" hidden />
         <span>
           <span class="home-plus" aria-hidden="true">+</span>
-          <span class="home-drop-title" data-i18n="home.addFile">Ajouter un fichier</span>
-          <span class="home-drop-copy" data-i18n="home.dropHint">Glissez un fichier ici ou cliquez pour le choisir.</span>
+          <span class="home-drop-title" data-i18n="home.addFile">Add a file</span>
+          <span class="home-drop-copy" data-i18n="home.dropHint">Drop a file here or click to choose it.</span>
         </span>
       </label>
-      <div class="home-file-preview" id="home-file-preview" data-i18n="home.noFile">Aucun fichier s&eacute;lectionn&eacute;</div>
+      <div class="home-file-preview" id="home-file-preview" data-i18n="home.noFile">No file selected</div>
       <div class="home-actions">
         <button id="home-send-btn" class="btn btn-primary btn-full" onclick="createFromHome(event)" disabled>
-          <span data-i18n="home.createCode">Cr&eacute;er le code</span>
+          <span data-i18n="home.createCode">Create code</span>
         </button>
         <label class="human-proof" for="home-human-proof">
           <input type="checkbox" id="home-human-proof" />
-          <span data-i18n="human.send">Je suis humain et je lance ce partage moi-m&ecirc;me.</span>
+          <span data-i18n="human.send">I am human and I am starting this share myself.</span>
         </label>
         <div class="home-secondary-row">
-          <button class="btn btn-secondary" onclick="showTab('receive')" data-i18n="nav.receive">Recevoir</button>
+          <button class="btn btn-secondary" onclick="showTab('receive')" data-i18n="nav.receive">Receive</button>
           <button class="btn btn-secondary" onclick="openSendAdvanced(event)" data-i18n="home.options">Options</button>
         </div>
       </div>
     </section>
 
-    <section class="home-copy" aria-label="Pr&eacute;sentation" data-i18n-aria-label="home.presentation">
-      <h1 data-i18n="home.title">Envoyez un fichier gr&acirc;ce &agrave; un code unique</h1>
-      <p data-i18n="home.subtitle">Pas de cloud, pas de compte. Filenymous chiffre dans votre navigateur, puis cr&eacute;e un lien autonome ou une session P2P directe pour les fichiers lourds.</p>
-      <div class="home-proof-list" aria-label="Garanties" data-i18n-aria-label="home.guarantees">
-        <div class="home-proof"><strong data-i18n="home.proof1Title">Sans compte</strong><span data-i18n="home.proof1Copy">Un code &agrave; usage unique suffit.</span></div>
-        <div class="home-proof"><strong data-i18n="home.proof2Title">Local d'abord</strong><span data-i18n="home.proof2Copy">Le fichier est chiffr&eacute; avant partage.</span></div>
-        <div class="home-proof"><strong data-i18n="home.proof3Title">P2P si besoin</strong><span data-i18n="home.proof3Copy">Les gros fichiers gardent la page ouverte.</span></div>
+    <section class="home-copy" aria-label="Overview" data-i18n-aria-label="home.presentation">
+      <h1 data-i18n="home.title">Send a file with one unique code</h1>
+      <p data-i18n="home.subtitle">No cloud, no account. Filenymous encrypts in your browser, then creates a self-contained link or a direct P2P session for large files.</p>
+      <div class="home-proof-list" aria-label="Guarantees" data-i18n-aria-label="home.guarantees">
+        <div class="home-proof"><strong data-i18n="home.proof1Title">No account</strong><span data-i18n="home.proof1Copy">A one-time code is enough.</span></div>
+        <div class="home-proof"><strong data-i18n="home.proof2Title">Local first</strong><span data-i18n="home.proof2Copy">The file is encrypted before sharing.</span></div>
+        <div class="home-proof"><strong data-i18n="home.proof3Title">P2P when needed</strong><span data-i18n="home.proof3Copy">Large files keep both pages open.</span></div>
       </div>
     </section>
   </div>
 
-  <div class="home-rail" aria-label="Raccourcis" data-i18n-aria-label="home.shortcuts">
+  <div class="home-rail" aria-label="Shortcuts" data-i18n-aria-label="home.shortcuts">
     <button class="btn btn-secondary" onclick="showTab('receive')">
-      <span><strong data-i18n="nav.receive">Recevoir</strong><span data-i18n="home.receiveHint">Entrer un code ou coller un lien.</span></span>
+      <span><strong data-i18n="nav.receive">Receive</strong><span data-i18n="home.receiveHint">Enter a code or paste a link.</span></span>
     </button>
     <button class="btn btn-secondary" onclick="showTab('send')">
-      <span><strong data-i18n="home.largeFile">Fichier lourd</strong><span data-i18n="home.largeFileHint">Passer par le P2P direct.</span></span>
+      <span><strong data-i18n="home.largeFile">Large file</strong><span data-i18n="home.largeFileHint">Use direct P2P.</span></span>
     </button>
     <button class="btn btn-secondary" onclick="showTab('history')">
-      <span><strong data-i18n="home.publicDirectory">R&eacute;pertoire public</strong><span data-i18n="home.publicDirectoryHint">Voir les liens publi&eacute;s volontairement.</span></span>
+      <span><strong data-i18n="home.publicDirectory">Public directory</strong><span data-i18n="home.publicDirectoryHint">See voluntarily published links.</span></span>
     </button>
   </div>
 
   <div class="app-hero">
     <div class="hero-copy">
       <div>
-        <p class="hero-eyebrow">P2P anonyme, sans compte</p>
-        <h1 class="hero-title">Partage un fichier. Donne un code. C'est fini.</h1>
-        <p class="hero-text">Filenymous chiffre le fichier dans ce navigateur, puis cherche le chemin le plus simple : lien chiffré autonome, WebRTC direct, Iroh pour les gros transferts web et Holochain/HWC pour l'identité avancée.</p>
+        <p class="hero-eyebrow">Anonymous P2P, no account</p>
+        <h1 class="hero-title">Share a file. Give a code. Done.</h1>
+        <p class="hero-text">Filenymous encrypts the file in this browser, then chooses the simplest available path: a self-contained encrypted link, direct WebRTC, Iroh-ready large web transfers, or Holochain/HWC for advanced identity.</p>
       </div>
-      <div class="trust-row" aria-label="Garanties principales">
-        <span class="trust-chip">Chiffrement local</span>
-        <span class="trust-chip">Code à usage unique</span>
-        <span class="trust-chip">Aucun compte</span>
+      <div class="trust-row" aria-label="Main guarantees">
+        <span class="trust-chip">Local encryption</span>
+        <span class="trust-chip">One-time code</span>
+        <span class="trust-chip">No account</span>
       </div>
     </div>
 
-    <div class="quick-actions" aria-label="Actions principales">
+    <div class="quick-actions" aria-label="Main actions">
       <button class="action-tile" onclick="showTab('send')">
         <span class="action-icon">1</span>
-        <span><span class="action-title">Envoyer un fichier</span><span class="action-copy">Dépose le fichier et crée un code privé.</span></span>
-        <span class="action-arrow">→</span>
+        <span><span class="action-title">Send a file</span><span class="action-copy">Drop the file and create a private code.</span></span>
+        <span class="action-arrow">-&gt;</span>
       </button>
       <button class="action-tile" onclick="showTab('receive')">
         <span class="action-icon">2</span>
-        <span><span class="action-title">Recevoir avec un code</span><span class="action-copy">Colle un lien ou entre le code reçu.</span></span>
-        <span class="action-arrow">→</span>
+        <span><span class="action-title">Receive with a code</span><span class="action-copy">Paste a link or enter the received code.</span></span>
+        <span class="action-arrow">-&gt;</span>
       </button>
       <button class="action-tile" onclick="showTab('history')">
         <span class="action-icon">3</span>
-        <span><span class="action-title">Retrouver mes fichiers</span><span class="action-copy">Historique local et répertoire public choisi.</span></span>
-        <span class="action-arrow">→</span>
+        <span><span class="action-title">Find my files</span><span class="action-copy">Local history and chosen public directory.</span></span>
+        <span class="action-arrow">-&gt;</span>
       </button>
     </div>
   </div>
 
   <div class="flow-steps">
-    <div class="step-card"><span class="step-num">1</span><strong>Choisis</strong><span>Un fichier, un message optionnel, une durée.</span></div>
-    <div class="step-card"><span class="step-num">2</span><strong>Partage</strong><span>Un code à usage unique ou un lien chiffré.</span></div>
-    <div class="step-card"><span class="step-num">3</span><strong>Garde ouvert</strong><span>Pour le P2P direct, les deux pages restent actives.</span></div>
+    <div class="step-card"><span class="step-num">1</span><strong>Choose</strong><span>A file, an optional message, and a duration.</span></div>
+    <div class="step-card"><span class="step-num">2</span><strong>Share</strong><span>A one-time code or encrypted link.</span></div>
+    <div class="step-card"><span class="step-num">3</span><strong>Keep open</strong><span>For direct P2P, both pages stay active.</span></div>
   </div>
 
   <div class="transport-grid">
     <div class="transport-card">
-      <span class="transport-tag">Aujourd'hui</span>
-      <strong>WebRTC direct</strong>
-      <p>P2P navigateur avec DataChannel. C'est le chemin prioritaire quand deux navigateurs peuvent se joindre directement.</p>
+      <span class="transport-tag">Today</span>
+      <strong>Direct WebRTC</strong>
+      <p>Browser P2P with DataChannel. It is the priority path when two browsers can reach each other directly.</p>
     </div>
     <div class="transport-card">
       <span class="transport-tag">Iroh v1</span>
-      <strong>Gros fichiers vérifiables</strong>
-      <p>Iroh et iroh-blobs apportent QUIC, dial-by-key, BLAKE3 et streaming vérifié pour les futurs relais chiffrés et les gros transferts web.</p>
+      <strong>Verifiable large files</strong>
+      <p>Iroh and iroh-blobs bring QUIC, dial-by-key, BLAKE3, and verified streaming for future encrypted relays and large web transfers.</p>
     </div>
     <div class="transport-card">
-      <span class="transport-tag">Avancé</span>
+      <span class="transport-tag">Advanced</span>
       <strong>Holochain / HWC</strong>
-      <p>Holo Web Conductor ajoute identité, contacts, DHT et coordination sans imposer de conducteur local au grand public.</p>
+      <p>Holo Web Conductor adds identity, contacts, DHT, and coordination without requiring a local conductor for the public web experience.</p>
     </div>
   </div>
 
   <div class="card">
-    <p class="card-title">Salon de transfert</p>
-    <p class="muted">Mode autonome disponible sans conducteur. Les fonctions Holochain completes necessitent Holo Web Conductor.</p>
+    <p class="card-title">Transfer room</p>
+    <p class="muted">Standalone mode is available without a conductor. Full Holochain features require Holo Web Conductor.</p>
     <div class="link-box" style="margin-top:12px">
-      <code id="room-code">Code a usage unique</code>
-      <button class="btn btn-secondary btn-sm" onclick="copyRoomCode()">Copier</button>
+      <code id="room-code">One-time code</code>
+      <button class="btn btn-secondary btn-sm" onclick="copyRoomCode()">Copy</button>
     </div>
   </div>
   <div class="split-grid">
     <div class="card">
-      <p class="card-title">Pairs presents</p>
-      <div id="room-peers" class="empty">Aucun pair connecte pour le moment.</div>
+      <p class="card-title">Peers present</p>
+      <div id="room-peers" class="empty">No peer connected yet.</div>
     </div>
     <div class="card">
-      <p class="card-title">Mini-chat chiffre</p>
-      <p class="muted">En mode autonome, le chat passe seulement par la connexion directe WebRTC.</p>
-      <textarea id="room-chat-input" maxlength="500" placeholder="Message court..."></textarea>
+      <p class="card-title">Encrypted mini-chat</p>
+      <p class="muted">In standalone mode, chat only travels through the direct WebRTC connection.</p>
+      <textarea id="room-chat-input" maxlength="500" placeholder="Short message..."></textarea>
     </div>
   </div>
 </section>
@@ -874,39 +874,39 @@
 <section id="panel-send" class="panel">
 
   <div class="card">
-    <h2 class="section-title" data-i18n="send.title">Envoyer sans expliquer la technique</h2>
-    <p class="muted" data-i18n="send.intro">Depose un fichier, Filenymous le chiffre ici, puis propose le meilleur chemin disponible. Pour les gros fichiers, le mode P2P direct prend le relais au lieu de bloquer l'envoi.</p>
+    <h2 class="section-title" data-i18n="send.title">Send without explaining the tech</h2>
+    <p class="muted" data-i18n="send.intro">Drop a file, Filenymous encrypts it here, then offers the best available path. For large files, direct P2P takes over instead of blocking the send.</p>
     <div class="flow-steps mt-3">
-      <div class="step-card"><span class="step-num">1</span><strong data-i18n="send.step1Title">Deposer</strong><span data-i18n="send.step1Copy">Glisse le fichier dans la zone.</span></div>
-      <div class="step-card"><span class="step-num">2</span><strong data-i18n="send.step2Title">Creer le code</strong><span data-i18n="send.step2Copy">Un code court suffit au destinataire.</span></div>
-      <div class="step-card"><span class="step-num">3</span><strong data-i18n="send.step3Title">Rester connecte</strong><span data-i18n="send.step3Copy">Le transfert direct continue tant que les pages sont ouvertes.</span></div>
+      <div class="step-card"><span class="step-num">1</span><strong data-i18n="send.step1Title">Drop</strong><span data-i18n="send.step1Copy">Place the file in the drop zone.</span></div>
+      <div class="step-card"><span class="step-num">2</span><strong data-i18n="send.step2Title">Create the code</strong><span data-i18n="send.step2Copy">A short code is enough for the recipient.</span></div>
+      <div class="step-card"><span class="step-num">3</span><strong data-i18n="send.step3Title">Stay connected</strong><span data-i18n="send.step3Copy">Direct transfer continues while both pages stay open.</span></div>
     </div>
   </div>
 
   <div class="card">
-    <p class="card-title" data-i18n="send.fileTitle">Fichier à envoyer</p>
+    <p class="card-title" data-i18n="send.fileTitle">File to send</p>
     <label class="dropzone" id="dz" for="file-input">
       <input type="file" id="file-input" style="display:none" />
       <div class="dz-icon">📂</div>
-      <p class="dz-hint"><strong data-i18n="send.choose">Choisir</strong> <span data-i18n="send.dropFile">ou déposer un fichier ici</span></p>
+      <p class="dz-hint"><strong data-i18n="send.choose">Choose</strong> <span data-i18n="send.dropFile">or drop a file here</span></p>
       <div id="file-badge" style="display:none; margin-top:10px; padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; font-size:13px; font-weight:500;"></div>
     </label>
   </div>
 
   <div class="card">
-    <p class="card-title"><span data-i18n="send.recipient">Destinataire</span> <span class="muted" data-i18n="common.optional">(facultatif)</span></p>
+    <p class="card-title"><span data-i18n="send.recipient">Recipient</span> <span class="muted" data-i18n="common.optional">(optional)</span></p>
     <div class="field">
-      <label for="recipient" data-i18n="send.recipientLabel">Email ou téléphone</label>
-      <input type="text" id="recipient" placeholder="alice@example.com ou +33612345678" />
+      <label for="recipient" data-i18n="send.recipientLabel">Email or phone</label>
+      <input type="text" id="recipient" placeholder="alice@example.com or +33612345678" />
     </div>
-    <p class="muted mt-2" data-i18n="send.recipientHelp">Tu peux laisser vide : Filenymous génère un code ou un lien que tu partages toi-même.</p>
+    <p class="muted mt-2" data-i18n="send.recipientHelp">You can leave this empty: Filenymous creates a code or link you share yourself.</p>
   </div>
 
   <div class="card">
-    <p class="card-title"><span data-i18n="send.message">Message</span> <span class="muted" data-i18n="common.optional">(facultatif)</span></p>
+    <p class="card-title"><span data-i18n="send.message">Message</span> <span class="muted" data-i18n="common.optional">(optional)</span></p>
     <div class="field">
-      <label for="send-message" data-i18n="send.messageLabel">Message pour le destinataire</label>
-      <textarea id="send-message" maxlength="500" placeholder="Ex : Voici le document dont nous avons parlé." data-i18n-placeholder="send.messagePlaceholder"></textarea>
+      <label for="send-message" data-i18n="send.messageLabel">Message for the recipient</label>
+      <textarea id="send-message" maxlength="500" placeholder="Example: Here is the document we discussed." data-i18n-placeholder="send.messagePlaceholder"></textarea>
       <p class="char-count"><span id="msg-count">0</span> / 500</p>
     </div>
   </div>
@@ -917,15 +917,15 @@
       <div>
         <label for="expiry" data-i18n="send.expiry">Expiration</label>
         <select id="expiry">
-          <option value="0">Jamais</option>
-          <option value="86400000000">24 heures</option>
-          <option value="604800000000" selected>7 jours</option>
-          <option value="2592000000000">30 jours</option>
+          <option value="0">Never</option>
+          <option value="86400000000">24 hours</option>
+          <option value="604800000000" selected>7 days</option>
+          <option value="2592000000000">30 days</option>
         </select>
       </div>
       <div>
-        <label for="max-dl" data-i18n="send.maxDownloads">Téléchargements max</label>
-        <input type="number" id="max-dl" value="1" min="0" placeholder="0 = illimité" data-i18n-placeholder="send.unlimitedPlaceholder" />
+        <label for="max-dl" data-i18n="send.maxDownloads">Max downloads</label>
+        <input type="number" id="max-dl" value="1" min="0" placeholder="0 = unlimited" data-i18n-placeholder="send.unlimitedPlaceholder" />
       </div>
     </div>
   </div>
@@ -939,46 +939,46 @@
 
   <label class="human-proof" for="send-human-proof">
     <input type="checkbox" id="send-human-proof" />
-    <span data-i18n="human.send">Je suis humain et je lance ce partage moi-m&ecirc;me.</span>
+    <span data-i18n="human.send">I am human and I am starting this share myself.</span>
   </label>
 
   <button id="btn-send" class="btn btn-primary btn-full mt-3" onclick="handleSend(event)" disabled>
-    <span data-i18n="send.createEncrypted">Créer le partage chiffré</span>
+    <span data-i18n="send.createEncrypted">Create encrypted share</span>
   </button>
 
   <div id="link-result" class="card hidden">
-    <p class="card-title" style="color:var(--success)" data-i18n="send.linkReady">Lien prêt à partager</p>
+    <p class="card-title" style="color:var(--success)" data-i18n="send.linkReady">Link ready to share</p>
     <div class="link-box">
       <code id="link-text"></code>
-      <button class="btn btn-secondary btn-sm" onclick="copyLink()" data-i18n="common.copy">Copier</button>
+      <button class="btn btn-secondary btn-sm" onclick="copyLink()" data-i18n="common.copy">Copy</button>
     </div>
     <div class="share-actions">
-      <button class="btn btn-secondary btn-sm" onclick="shareLink()" data-i18n="common.share">Partager</button>
+      <button class="btn btn-secondary btn-sm" onclick="shareLink()" data-i18n="common.share">Share</button>
       <button class="btn btn-secondary btn-sm" onclick="renderQrForCurrentLink()" data-i18n="common.qrCode">QR code</button>
     </div>
     <div id="qr-panel" class="qr-panel hidden" aria-live="polite">
-      <canvas id="qr-canvas" width="260" height="260" aria-label="QR code du lien Filenymous"></canvas>
-      <p id="qr-status" class="muted" data-i18n="qr.local">QR local : le lien et sa cle ne quittent pas ce navigateur.</p>
+      <canvas id="qr-canvas" width="260" height="260" aria-label="Filenymous link QR code"></canvas>
+      <p id="qr-status" class="muted" data-i18n="qr.local">Local QR: the link and key do not leave this browser.</p>
     </div>
-    <p class="muted mt-2" data-i18n="send.keyFragment">La clé de déchiffrement reste dans le fragment # : elle ne transite pas sur le réseau.</p>
+    <p class="muted mt-2" data-i18n="send.keyFragment">The decryption key stays in the # fragment: it does not travel over the network.</p>
   </div>
 
   <div id="p2p-result" class="card hidden">
-    <p class="card-title" style="color:var(--accent)" data-i18n="send.p2pTitle">P2P direct - Code a usage unique</p>
+    <p class="card-title" style="color:var(--accent)" data-i18n="send.p2pTitle">Direct P2P - One-time code</p>
     <div class="link-box">
       <code id="p2p-code-out"></code>
-      <button class="btn btn-secondary btn-sm" onclick="copyP2PCode()" data-i18n="common.copy">Copier</button>
+      <button class="btn btn-secondary btn-sm" onclick="copyP2PCode()" data-i18n="common.copy">Copy</button>
     </div>
-    <p class="muted mt-2" data-i18n="send.p2pHelp">Garde cette page ouverte. Le fichier chiffré passe directement entre navigateurs via WebRTC, sans conducteur Holochain et sans stockage serveur. Iroh reste la trajectoire prioritaire pour les gros fichiers vérifiables côté web et relais chiffré.</p>
+    <p class="muted mt-2" data-i18n="send.p2pHelp">Keep this page open. The encrypted file passes directly between browsers via WebRTC, without a Holochain conductor and without server storage. Iroh remains the priority path for verifiable large web files and encrypted relays.</p>
     <div id="p2p-send-status" class="status info mt-3 hidden"></div>
   </div>
 
   <div class="card" style="border-color:transparent">
     <ul class="feature-list">
-      <li>Chiffrement AES-256-GCM local, dans votre navigateur</li>
-      <li>WebRTC direct pour le navigateur, Iroh v1 pour le futur transport vérifié</li>
-      <li>Holochain/HWC reste disponible en mode avancé</li>
-      <li>Aucun compte requis, pseudonyme par défaut</li>
+      <li>Local AES-256-GCM encryption in your browser</li>
+      <li>Direct WebRTC for browsers, Iroh v1 for future verified transport</li>
+      <li>Holochain/HWC remains available in advanced mode</li>
+      <li>No account required, pseudonym by default</li>
     </ul>
   </div>
 </section>
@@ -987,55 +987,55 @@
 <section id="panel-receive" class="panel">
 
   <div id="recv-auto" class="card hidden">
-    <p class="card-title" data-i18n="receive.detected">Fichier détecté</p>
+    <p class="card-title" data-i18n="receive.detected">File detected</p>
     <div id="recv-meta" class="meta-grid mt-2"></div>
     <div id="recv-msg-wrap" class="hidden mt-3">
-      <p class="msg-box-label" data-i18n="receive.senderMessage">Message de l'expéditeur</p>
+      <p class="msg-box-label" data-i18n="receive.senderMessage">Sender message</p>
       <div id="recv-msg" class="msg-box"></div>
     </div>
     <div id="recv-prog" class="prog-wrap hidden">
       <div class="prog-bar"><div class="prog-fill" id="recv-fill" style="width:0"></div></div>
-      <p class="prog-label" id="recv-prog-label" data-i18n="common.loading">Chargement…</p>
+      <p class="prog-label" id="recv-prog-label" data-i18n="common.loading">Loading...</p>
     </div>
     <div id="recv-status" class="hidden mt-3"></div>
     <button id="btn-download" class="btn btn-primary btn-full mt-3" onclick="handleDownload()">
-      <span data-i18n="receive.download">Télécharger et déchiffrer</span>
+      <span data-i18n="receive.download">Download and decrypt</span>
     </button>
   </div>
 
   <div id="recv-p2p" class="card">
-    <p class="card-title" data-i18n="receive.title">Recevoir un fichier</p>
-    <p class="muted" data-i18n="receive.intro">Collez un lien Filenymous ou entrez le code a usage unique donne par l'expediteur. Filenymous choisit automatiquement le bon mode.</p>
+    <p class="card-title" data-i18n="receive.title">Receive a file</p>
+    <p class="muted" data-i18n="receive.intro">Paste a Filenymous link or enter the one-time code given by the sender. Filenymous chooses the right mode automatically.</p>
     <div class="field">
-      <label for="p2p-code-input" data-i18n="receive.codeOrLink">Code ou lien Filenymous</label>
-      <input type="text" id="p2p-code-input" inputmode="text" placeholder="123-456-ABC ou https://filenymous.eu/#..." data-i18n-placeholder="receive.placeholder" />
+      <label for="p2p-code-input" data-i18n="receive.codeOrLink">Filenymous code or link</label>
+      <input type="text" id="p2p-code-input" inputmode="text" placeholder="123-456-ABC or https://filenymous.eu/#..." data-i18n-placeholder="receive.placeholder" />
     </div>
     <label class="human-proof" for="recv-human-proof">
       <input type="checkbox" id="recv-human-proof" />
-      <span data-i18n="human.receive">Je suis humain et je saisis ce code moi-m&ecirc;me.</span>
+      <span data-i18n="human.receive">I am human and I am entering this code myself.</span>
     </label>
     <div class="share-actions">
-      <button class="btn btn-secondary btn-sm" onclick="scanQrCode(event)" data-i18n="receive.scanQr">Lire un QR code</button>
+      <button class="btn btn-secondary btn-sm" onclick="scanQrCode(event)" data-i18n="receive.scanQr">Read a QR code</button>
       <input id="qr-file-input" class="hidden" type="file" accept="image/*" onchange="readQrFile(event)" />
     </div>
     <video id="qr-video" class="qr-video hidden" muted playsinline></video>
-    <button class="btn btn-primary btn-full mt-3" onclick="receiveFromSingleInput(event)" data-i18n="common.continue">Continuer</button>
+    <button class="btn btn-primary btn-full mt-3" onclick="receiveFromSingleInput(event)" data-i18n="common.continue">Continue</button>
     <div id="p2p-recv-status" class="status info mt-3 hidden"></div>
-    <p class="context-note mt-3"><strong data-i18n="receive.afterValidationTitle">Apres validation :</strong> <span data-i18n="receive.afterValidationCopy">gardez cette page ouverte. Pour les gros fichiers, le transfert continue en direct avec l'expediteur. Le fichier telecharge apparaitra dans le dossier Telechargements de votre navigateur, sauf si celui-ci vous demande de choisir un emplacement.</span></p>
+    <p class="context-note mt-3"><strong data-i18n="receive.afterValidationTitle">After validation:</strong> <span data-i18n="receive.afterValidationCopy">keep this page open. For large files, transfer continues directly with the sender. The downloaded file will appear in your browser Downloads folder, unless your browser asks you to choose a location.</span></p>
   </div>
 
   <div id="recv-manual" class="card hidden">
-    <p class="card-title" data-i18n="receive.manualTitle">Entrer un lien manuellement</p>
+    <p class="card-title" data-i18n="receive.manualTitle">Enter a link manually</p>
     <div class="field">
-      <label for="manual-link" data-i18n="receive.manualLabel">Lien Filenymous</label>
+      <label for="manual-link" data-i18n="receive.manualLabel">Filenymous link</label>
       <input type="text" id="manual-link" placeholder="https://filenymous.holo.host/#abc…:key…" />
     </div>
-    <button class="btn btn-secondary btn-full mt-3" onclick="loadManual()" data-i18n="common.load">Charger</button>
+    <button class="btn btn-secondary btn-full mt-3" onclick="loadManual()" data-i18n="common.load">Load</button>
   </div>
 
   <div id="recv-empty" class="card hidden">
     <p style="text-align:center; color:var(--muted); font-size:13px; padding:12px 0;">
-      <span data-i18n="receive.empty">Entre un code a usage unique ou colle un lien Filenymous pour recevoir un fichier.</span>
+      <span data-i18n="receive.empty">Enter a one-time code or paste a Filenymous link to receive a file.</span>
     </p>
   </div>
 </section>
@@ -1043,169 +1043,163 @@
 <!-- ══════════════════════════════════════════════════ PANEL HISTORY -->
 <section id="panel-history" class="panel">
   <div class="card">
-    <h2 class="section-title">Mes fichiers et liens publics</h2>
-    <p class="muted">Tout reste local par défaut. Le répertoire public ouvert liste seulement les liens que tu choisis de publier, jamais les clés privées ni un dossier serveur brut.</p>
+    <h2 class="section-title">My files and public links</h2>
+    <p class="muted">Everything stays local by default. The public open directory lists only links you explicitly publish, never private keys or a raw server folder.</p>
     <div class="public-list">
       <div class="public-row">
         <div>
-          <strong>Répertoire public ouvert</strong>
-          <span>Visible sur le web, alimenté uniquement par des liens explicitement publiés.</span>
+          <strong>Public open directory</strong>
+          <span>Visible on the web, fed only by explicitly published links.</span>
         </div>
-        <a class="btn btn-secondary btn-sm" href="https://filenymous.eu/" target="_blank" rel="noopener">Ouvrir</a>
+        <a class="btn btn-secondary btn-sm" href="https://filenymous.eu/" target="_blank" rel="noopener">Open</a>
       </div>
       <div class="public-row">
         <div>
-          <strong>Boîte locale</strong>
-          <span>Historique stocké dans ce navigateur, sans synchronisation automatique.</span>
+          <strong>Local inbox</strong>
+          <span>History stored in this browser, without automatic sync.</span>
         </div>
-        <button class="btn btn-secondary btn-sm" onclick="renderHistory()">Rafraîchir</button>
+        <button class="btn btn-secondary btn-sm" onclick="renderHistory()">Refresh</button>
       </div>
     </div>
-    <p class="callout mt-3">Important : "public ouvert" signifie catalogue volontaire. On n'active pas l'indexation automatique d'un dossier OVH, afin d'éviter la publication accidentelle de fichiers ou métadonnées.</p>
+    <p class="callout mt-3">Important: "public open" means a voluntary catalog. Automatic OVH directory indexing is not enabled, preventing accidental publication of files or metadata.</p>
   </div>
 
   <div class="card">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-      <p class="card-title" style="margin-bottom:0">Historique local</p>
+      <p class="card-title" style="margin-bottom:0">Local history</p>
       <div class="filter-row">
-        <button class="filter-btn active" id="filt-all"     onclick="setFilter('all')">Tous</button>
-        <button class="filter-btn"        id="filt-pending" onclick="setFilter('pending')">En attente</button>
-        <button class="filter-btn"        id="filt-done"    onclick="setFilter('done')">Téléchargés</button>
+        <button class="filter-btn active" id="filt-all"     onclick="setFilter('all')">All</button>
+        <button class="filter-btn"        id="filt-pending" onclick="setFilter('pending')">Pending</button>
+        <button class="filter-btn"        id="filt-done"    onclick="setFilter('done')">Downloaded</button>
       </div>
     </div>
     <div id="history-list">
-      <p style="text-align:center; color:var(--muted); font-size:13px; padding:24px 0;">Aucun transfert pour l'instant.</p>
+      <p style="text-align:center; color:var(--muted); font-size:13px; padding:24px 0;">No transfer yet.</p>
     </div>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════ PANEL IDENTITY -->
 <section id="panel-identity" class="panel">
 
   <div class="card">
-    <h2 class="section-title">Réseaux avancés</h2>
-    <p class="muted">Le grand public peut utiliser Filenymous sans conducteur. Cette zone sert à comprendre et activer les moteurs plus puissants : Iroh pour les gros fichiers vérifiables, Holochain pour l'identité et la coordination.</p>
+    <h2 class="section-title">Advanced networks</h2>
+    <p class="muted">The public can use Filenymous without a conductor. This area explains and activates stronger engines: Iroh for verifiable large files, Holochain for identity and coordination.</p>
   </div>
 
   <div class="transport-grid">
     <div class="transport-card">
       <span class="transport-tag">Iroh v1</span>
-      <strong>Transport QUIC moderne</strong>
-      <p>Prioritaire pour l'évolution web : dial-by-key, relais chiffrés, NAT traversal, et transfert plus robuste sans imposer d'installateur natif.</p>
+      <strong>Modern QUIC transport</strong>
+      <p>Priority for the web roadmap: dial-by-key, encrypted relays, NAT traversal, and more robust transfer without a native installer.</p>
     </div>
     <div class="transport-card">
       <span class="transport-tag">iroh-blobs</span>
-      <strong>Fichiers par hash BLAKE3</strong>
-      <p>Permet le streaming vérifié, les reprises partielles et une meilleure expérience pour les fichiers lourds.</p>
+      <strong>BLAKE3-addressed files</strong>
+      <p>Enables verified streaming, partial resumes, and a better experience for large files.</p>
     </div>
     <div class="transport-card">
-      <span class="transport-tag">Navigateur</span>
-      <strong>WebRTC reste direct</strong>
-      <p>Iroh en WASM navigateur passe aujourd'hui par relais ; WebRTC DataChannel reste donc le chemin direct sans téléchargement.</p>
+      <span class="transport-tag">Browser</span>
+      <strong>WebRTC remains direct</strong>
+      <p>Iroh in browser WASM currently goes through relays; WebRTC DataChannel remains the direct no-download path.</p>
     </div>
   </div>
 
-  <!-- ── Toujours visible : identifiant expéditeur ── -->
   <div class="card">
-    <p class="card-title">Identifiant expéditeur</p>
+    <p class="card-title">Sender identifier</p>
     <div id="sender-mode-badge" class="status info" style="margin-bottom:12px; font-size:12px;">
-      <span id="sender-mode-label">Chargement…</span>
+      <span id="sender-mode-label">Loading...</span>
     </div>
     <div class="link-box">
-      <code id="sender-id-display" class="sender-id-mono">Chargement…</code>
-      <button class="btn btn-secondary btn-sm" onclick="copySenderId()">Copier</button>
+      <code id="sender-id-display" class="sender-id-mono">Loading...</code>
+      <button class="btn btn-secondary btn-sm" onclick="copySenderId()">Copy</button>
     </div>
-    <p class="muted mt-2">Vos destinataires verront les 16 premiers caractères de cet identifiant associés à votre envoi.</p>
+    <p class="muted mt-2">Recipients will see the first 16 characters of this identifier with your transfer.</p>
   </div>
 
-  <!-- ── Toujours visible : CTA web portable ── -->
   <div class="card" style="border-color:var(--success);">
-    <p class="card-title" style="color:var(--success)">🛡️ Version web portable</p>
+    <p class="card-title" style="color:var(--success)">Portable web version</p>
     <p style="font-size:13px; color:var(--muted); margin-bottom:14px; line-height:1.6;">
-      Filenymous reste une application web P2P : aucun installateur natif, aucun conducteur Holochain local obligatoire.
-      Ces archives ouvrent la même application dans un navigateur moderne.
+      Filenymous remains a P2P web app: no native installer, no mandatory local Holochain conductor.
+      These archives open the same app in a modern browser.
     </p>
     <a id="desktop-dl-btn" href="#" target="_blank" rel="noopener"
        class="btn btn-primary btn-full">
-      ⬇️ Télécharger la version web
+      Download the web version
     </a>
     <div class="os-row">
-      <span>🪟 Windows</span><span>🍎 macOS</span><span>🐧 Linux</span>
+      <span>Windows</span><span>macOS</span><span>Linux</span>
     </div>
     <div class="desktop-cta-row">
-      <div class="compare-row"><span class="cck">✓</span><span>Web : chiffrement AES-256-GCM local</span></div>
-      <div class="compare-row"><span class="cck">✓</span><span>Web : code à usage unique et P2P direct WebRTC</span></div>
-      <div class="compare-row"><span class="cck">✓</span><span>Web : clés et historique stockés localement</span></div>
-      <div class="compare-row"><span class="ccn">~</span><span>Avancé : Holochain/HWC et Iroh restent des modules réseau optionnels</span></div>
+      <div class="compare-row"><span class="cck">?</span><span>Web: local AES-256-GCM encryption</span></div>
+      <div class="compare-row"><span class="cck">?</span><span>Web: one-time code and direct WebRTC P2P</span></div>
+      <div class="compare-row"><span class="cck">?</span><span>Web: keys and history stored locally</span></div>
+      <div class="compare-row"><span class="ccn">~</span><span>Advanced: Holochain/HWC and Iroh remain optional network modules</span></div>
     </div>
   </div>
 
-  <!-- ── Mode Web (holo / bridge) — contenu injecté par initIdentity() ── -->
   <div id="id-no-conductor" class="card hidden">
-    <p id="id-nc-title" class="card-title">☁ Mode Web actif</p>
+    <p id="id-nc-title" class="card-title">Web mode active</p>
     <p id="id-nc-desc" style="font-size:13px; color:var(--muted); line-height:1.6;"></p>
     <ul id="id-nc-features" class="feature-list mt-3"></ul>
   </div>
 
-  <!-- ── Mode local (conductor connecté) ── -->
   <div id="id-ui" class="hidden">
 
     <div class="card">
-      <p class="card-title">Agent Holochain</p>
+      <p class="card-title">Holochain agent</p>
       <div class="link-box">
-        <code id="agent-key" style="font-size:11px">Chargement…</code>
-        <button class="btn btn-secondary btn-sm" onclick="copyAgent()">Copier</button>
+        <code id="agent-key" style="font-size:11px">Loading...</code>
+        <button class="btn btn-secondary btn-sm" onclick="copyAgent()">Copy</button>
       </div>
     </div>
 
     <div class="card">
-      <p class="card-title">Enregistrer votre contact</p>
+      <p class="card-title">Register your contact</p>
       <div class="field">
-        <label for="contact-input">Email ou numéro de téléphone</label>
-        <input type="text" id="contact-input" placeholder="vous@exemple.com" />
+        <label for="contact-input">Email or phone number</label>
+        <input type="text" id="contact-input" placeholder="you@example.com" />
       </div>
-      <p class="muted mt-2">Un hash SHA-256 de votre contact normalisé est publié sur le DHT, permettant aux expéditeurs de vous trouver.</p>
-      <button class="btn btn-primary btn-full mt-3" onclick="claimContact()">Publier sur le DHT</button>
+      <p class="muted mt-2">A SHA-256 hash of your normalized contact is published on the DHT so senders can find you.</p>
+      <button class="btn btn-primary btn-full mt-3" onclick="claimContact()">Publish on the DHT</button>
       <div id="claim-status" class="hidden mt-3"></div>
     </div>
 
     <div class="card">
-      <p class="card-title">Clé X25519 (chiffrement agent-à-agent)</p>
+      <p class="card-title">X25519 key (agent-to-agent encryption)</p>
       <p class="muted" style="font-size:13px; margin-bottom:12px;">
-        Votre clé publique X25519 permet aux expéditeurs de chiffrer la clé AES directement pour vous via ECIES, sans passer par le fragment URL.
+        Your X25519 public key lets senders encrypt the AES key directly for you through ECIES, without using the URL fragment.
       </p>
       <div id="x25519-status" class="status loading">
         <div class="spinner"></div>
-        <span>Vérification…</span>
+        <span>Checking...</span>
       </div>
       <div class="row mt-3">
-        <button class="btn btn-secondary flex-1" onclick="genX25519()">Générer et publier</button>
+        <button class="btn btn-secondary flex-1" onclick="genX25519()">Generate and publish</button>
       </div>
     </div>
 
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════ PANEL PRIVACY -->
 <section id="panel-wallet" class="panel">
   <div class="card">
-    <h2 class="section-title">Wallet avance</h2>
+    <h2 class="section-title">Advanced wallet</h2>
     <div class="status info">
-      Version web : wallet local chiffré, Bitcoin Signet et Ethereum Sepolia par défaut, mainnet verrouillé.
+      Web version: encrypted local wallet, Bitcoin Signet and Ethereum Sepolia by default, mainnet locked.
     </div>
   </div>
   <div class="card">
-    <p class="card-title">Recevoir BTC / ETH</p>
+    <p class="card-title">Receive BTC / ETH</p>
     <ul class="feature-list">
-      <li>Adresses BTC et ETH dérivées localement depuis une seed BIP39.</li>
-      <li>La seed reste chiffrée dans IndexedDB avec un mot de passe local.</li>
-      <li>Aucune clé privée n'est publiée sur Holochain, GitHub ou OVH.</li>
+      <li>BTC and ETH addresses are derived locally from a BIP39 seed.</li>
+      <li>The seed stays encrypted in IndexedDB with a local password.</li>
+      <li>No private key is published on Holochain, GitHub, or OVH.</li>
     </ul>
   </div>
   <div class="card">
-    <p class="card-title">Envoyer avec garde-fous</p>
+    <p class="card-title">Send with guardrails</p>
     <div class="status warning">
-      Les envois mainnet restent bloques tant que l'utilisateur ne les deverrouille pas explicitement dans la version React.
+      Mainnet sends remain blocked until the user explicitly unlocks them in the React version.
     </div>
   </div>
 </section>
@@ -1213,109 +1207,109 @@
 <section id="panel-privacy" class="panel">
 
   <div class="privacy-hero">
-    <h2>🔒 Confidentialité par conception</h2>
-    <p>Filenymous n'est pas juste conforme au RGPD. Il est conçu de façon à ce qu'il soit <em>structurellement impossible</em> pour un opérateur de lire vos fichiers — par architecture, pas par promesse.</p>
+    <h2>Privacy by design</h2>
+    <p>Filenymous is not only GDPR-aware. Its architecture is designed so an operator cannot read your files by structure, not by promise.</p>
   </div>
 
   <div class="card">
-    <p class="card-title">Comparatif des solutions de transfert</p>
+    <p class="card-title">Transfer solution comparison</p>
     <div class="compare-grid">
       <div class="compare-card">
-        <p class="compare-title">WeTransfer 🇳🇱</p>
-        <div class="compare-row"><span class="ccx">✗</span><span>Fichiers stockés sur serveurs AWS centralisés</span></div>
-        <div class="compare-row"><span class="ccx">✗</span><span>Analyse pour ciblage publicitaire (plan gratuit)</span></div>
-        <div class="compare-row"><span class="ccx">✗</span><span>Compte obligatoire pour +2 Go</span></div>
-        <div class="compare-row"><span class="ccx">✗</span><span>Serveurs US — soumis au Cloud Act</span></div>
-        <div class="compare-row"><span class="ccn">~</span><span>Chiffrement HTTPS en transit uniquement</span></div>
+        <p class="compare-title">WeTransfer</p>
+        <div class="compare-row"><span class="ccx">?</span><span>Files stored on centralized AWS servers</span></div>
+        <div class="compare-row"><span class="ccx">?</span><span>Analysis for ad targeting on the free plan</span></div>
+        <div class="compare-row"><span class="ccx">?</span><span>Account required above 2 GB</span></div>
+        <div class="compare-row"><span class="ccx">?</span><span>US servers subject to Cloud Act exposure</span></div>
+        <div class="compare-row"><span class="ccn">~</span><span>HTTPS transit encryption only</span></div>
       </div>
       <div class="compare-card">
-        <p class="compare-title">SwissTransfer 🇨🇭</p>
-        <div class="compare-row"><span class="ccn">~</span><span>Serveurs en Suisse — meilleure protection légale</span></div>
-        <div class="compare-row"><span class="ccx">✗</span><span>Fichiers stockés en clair chez Infomaniak</span></div>
-        <div class="compare-row"><span class="cck">✓</span><span>Pas de publicité</span></div>
-        <div class="compare-row"><span class="ccx">✗</span><span>Infomaniak peut techniquement lire vos fichiers</span></div>
-        <div class="compare-row"><span class="cck">✓</span><span>Gratuit jusqu'à 50 Go</span></div>
+        <p class="compare-title">SwissTransfer</p>
+        <div class="compare-row"><span class="ccn">~</span><span>Swiss servers with stronger legal protection</span></div>
+        <div class="compare-row"><span class="ccx">?</span><span>Files stored in cleartext by Infomaniak</span></div>
+        <div class="compare-row"><span class="cck">?</span><span>No advertising</span></div>
+        <div class="compare-row"><span class="ccx">?</span><span>Infomaniak can technically read files</span></div>
+        <div class="compare-row"><span class="cck">?</span><span>Free up to 50 GB</span></div>
       </div>
       <div class="compare-card hl">
-        <p class="compare-title" style="color:var(--accent)">Filenymous ⬡</p>
-        <div class="compare-row"><span class="cck">✓</span><span>Aucun fichier sur un serveur tiers</span></div>
-        <div class="compare-row"><span class="cck">✓</span><span>Chiffrement E2E AES-256 dans le navigateur</span></div>
-        <div class="compare-row"><span class="cck">✓</span><span>Pas de compte, pas de pub, pas de traçage</span></div>
-        <div class="compare-row"><span class="cck">✓</span><span>Réseau P2P — pas de Cloud Act applicable</span></div>
-        <div class="compare-row"><span class="cck">✓</span><span>Expiration &amp; révocation cryptographiques</span></div>
+        <p class="compare-title" style="color:var(--accent)">Filenymous</p>
+        <div class="compare-row"><span class="cck">?</span><span>No file on a third-party server</span></div>
+        <div class="compare-row"><span class="cck">?</span><span>Browser-side AES-256 end-to-end encryption</span></div>
+        <div class="compare-row"><span class="cck">?</span><span>No account, no ads, no tracking</span></div>
+        <div class="compare-row"><span class="cck">?</span><span>P2P network with reduced centralized exposure</span></div>
+        <div class="compare-row"><span class="cck">?</span><span>Cryptographic expiry and revocation</span></div>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <p class="card-title">Les piliers de sécurité Holochain</p>
+    <p class="card-title">Holochain security pillars</p>
     <div class="pillar-grid">
       <div class="pillar">
-        <div class="pillar-icon">🔑</div>
-        <p class="pillar-title">Identité cryptographique</p>
-        <p class="pillar-text">Chaque participant est une paire de clés Ed25519 générée localement. Aucune autorité centrale ne délivre d'identité. Votre clé privée ne quitte jamais votre appareil.</p>
+        <div class="pillar-icon">Key</div>
+        <p class="pillar-title">Cryptographic identity</p>
+        <p class="pillar-text">Each participant is a locally generated Ed25519 key pair. No central authority issues identity, and your private key never leaves your device.</p>
       </div>
       <div class="pillar">
-        <div class="pillar-icon">🧩</div>
-        <p class="pillar-title">Fragmentation chiffrée</p>
-        <p class="pillar-text">Les fichiers sont découpés en chunks de 512 Ko, chiffrés AES-256-GCM, puis distribués sur des nœuds différents du DHT. Aucun nœud ne possède un fichier complet.</p>
+        <div class="pillar-icon">Chunks</div>
+        <p class="pillar-title">Encrypted fragmentation</p>
+        <p class="pillar-text">Files are split into 512 KB chunks, encrypted with AES-256-GCM, then distributed across different DHT nodes. No node holds a complete file.</p>
       </div>
       <div class="pillar">
-        <div class="pillar-icon">🌐</div>
-        <p class="pillar-title">DHT sans coordinateur</p>
-        <p class="pillar-text">La DHT Holochain stocke les données de façon redondante sans serveur maître. Pas de point unique d'attaque, de saisie, ou de censure.</p>
+        <div class="pillar-icon">DHT</div>
+        <p class="pillar-title">Coordinator-free DHT</p>
+        <p class="pillar-text">The Holochain DHT stores data redundantly without a master server. There is no single attack, seizure, or censorship point.</p>
       </div>
       <div class="pillar">
-        <div class="pillar-icon">⏱</div>
-        <p class="pillar-title">Expiration garantie</p>
-        <p class="pillar-text">L'expiration publie une DeleteAction sur le DHT. Les nœuds sont contractuellement obligés de supprimer les données — règle cryptographiquement validée par la DNA.</p>
+        <div class="pillar-icon">TTL</div>
+        <p class="pillar-title">Enforced expiry</p>
+        <p class="pillar-text">Expiry publishes a DeleteAction on the DHT. Participating nodes are required by DNA validation rules to remove the data.</p>
       </div>
       <div class="pillar">
-        <div class="pillar-icon">🕵️</div>
-        <p class="pillar-title">Contacts minimalistes</p>
-        <p class="pillar-text">Votre email ou téléphone n'est jamais publié sur le réseau. Seul son hash SHA-256 est stocké, associé à votre clé publique.</p>
+        <div class="pillar-icon">Hash</div>
+        <p class="pillar-title">Minimal contacts</p>
+        <p class="pillar-text">Your email or phone number is never published on the network. Only its SHA-256 hash is stored with your public key.</p>
       </div>
       <div class="pillar">
-        <div class="pillar-icon">📜</div>
-        <p class="pillar-title">Source chain immuable</p>
-        <p class="pillar-text">Chaque agent tient un journal local signé et chaîné. La falsification d'une action est détectable par l'ensemble du réseau, sans blockchain ni consensus global.</p>
+        <div class="pillar-icon">Log</div>
+        <p class="pillar-title">Immutable source chain</p>
+        <p class="pillar-text">Each agent keeps a signed local chain. Forging an action is detectable by the network without blockchain consensus.</p>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <p class="card-title">Mentions légales &amp; RGPD</p>
+    <p class="card-title">Legal and GDPR notes</p>
     <div class="legal-block">
-      <h4>Responsable de traitement</h4>
-      <p>Filenymous est un protocole décentralisé open-source. En l'absence de base de données centrale, il n'existe pas de "responsable de traitement" au sens classique du RGPD pour les fichiers transférés. Chaque utilisateur est responsable des données qu'il publie sur le DHT.</p>
-      <h4>Données collectées</h4>
-      <p>Le bridge de notification (envoi email/SMS) reçoit temporairement l'adresse de destination et le lien de transfert. Ces données ne sont pas persistées au-delà de l'envoi (TTL : 0). Aucun cookie de traçage, aucune analytics, aucune publicité.</p>
-      <h4>Droit à l'effacement</h4>
-      <p>L'expéditeur peut révoquer un transfert depuis l'onglet Historique. La révocation publie une suppression cryptographique sur le DHT. Les chunks sont effacés par les nœuds participants sous 24h maximum.</p>
-      <h4>Hébergement des données</h4>
-      <p>Les chunks chiffrés sont distribués sur les nœuds actifs du réseau Holochain Filenymous. Aucun chunk n'est localisé sur un serveur géré par l'éditeur. La localisation géographique des nœuds est inconnue par conception.</p>
+      <h4>Data controller</h4>
+      <p>Filenymous is a decentralized open-source protocol. Without a central file database, there is no classic data controller for transferred files. Each user is responsible for the data they publish to the DHT.</p>
+      <h4>Collected data</h4>
+      <p>The notification bridge may temporarily receive the destination address and transfer link for email/SMS delivery. This data is not persisted beyond sending. There are no tracking cookies, analytics, or advertising.</p>
+      <h4>Right to erasure</h4>
+      <p>The sender can revoke a transfer from the History tab. Revocation publishes a cryptographic delete action on the DHT, and participating nodes remove chunks under the app rules.</p>
+      <h4>Data hosting</h4>
+      <p>Encrypted chunks are distributed across active Holochain Filenymous network nodes. No chunk is located on an editor-managed file server, and node geography is unknown by design.</p>
     </div>
   </div>
 
   <div style="text-align:center; padding-bottom:4px;">
     <p style="font-size:12px; color:var(--muted);">
-      Code source open-source ·
+      Open-source code ?
       <a href="https://github.com/Geoking2104/Filenymous" target="_blank" rel="noopener" style="color:var(--accent)">github.com/Geoking2104/Filenymous</a>
     </p>
   </div>
 
 </section>
 
-</main>
+</main></main>
 
 <div id="toasts"></div>
 
 <footer>
-  <p>Filenymous — P2P chiffré avec WebRTC, Iroh et <a href="https://holochain.org" target="_blank" rel="noopener">Holochain</a> ·
-     <a href="https://github.com/Geoking2104/Filenymous" target="_blank" rel="noopener">Code source</a> ·
+  <p>Filenymous - encrypted P2P with WebRTC, Iroh, and <a href="https://holochain.org" target="_blank" rel="noopener">Holochain</a> ?
+     <a href="https://github.com/Geoking2104/Filenymous" target="_blank" rel="noopener">Source code</a> ?
      <a href="https://www.iroh.computer/" target="_blank" rel="noopener">Iroh</a> -
-     <button type="button" class="footer-link" onclick="showTab('privacy')">Securite</button> -
-     <button type="button" class="footer-link" onclick="showTab('identity')">Avance</button></p>
+     <button type="button" class="footer-link" onclick="showTab('privacy')">Security</button> -
+     <button type="button" class="footer-link" onclick="showTab('identity')">Advanced</button></p>
 </footer>
 
 <!-- TweetNaCl (X25519 / ECIES + Ed25519 sender ID) — chargé avant le module -->
@@ -2674,7 +2668,7 @@ const S = {
 
 function markTransferActive(label) {
   S.transferActive = true;
-  S.transferLabel = label || 'Transfert en cours';
+  S.transferLabel = label || 'Transfer in progress';
 }
 
 function markTransferDone() {
@@ -2811,8 +2805,8 @@ async function initSenderId() {
     S.senderId = b64e(new Uint8Array(S.agentKey));
     const lbl = $('sender-mode-label');
     if (lbl) lbl.textContent = S.mode === 'local'
-      ? '⬡ Agent Holochain — clé certifiée par votre conductor local'
-      : '⬡ Agent Holo — clé certifiée par le conducteur Holo hébergé';
+      ? '⬡ Holochain agent - key certified by your local conductor'
+      : '⬡ Holo agent - key certified by the hosted Holo conductor';
     const badge = $('sender-mode-badge');
     if (badge) { badge.className = 'status success'; badge.style.marginBottom = '12px'; }
   } else {
@@ -2831,7 +2825,7 @@ async function initSenderId() {
       S.senderId = b64e(crypto.getRandomValues(new Uint8Array(32)));
     }
     const lbl = $('sender-mode-label');
-    if (lbl) lbl.textContent = '☁ Pseudonyme Web — clé Ed25519 générée et stockée dans ce navigateur';
+    if (lbl) lbl.textContent = '☁ Web pseudonym - Ed25519 key generated and stored in this browser';
   }
   // Mettre à jour l'affichage
   const el = $('sender-id-display');
@@ -2839,7 +2833,7 @@ async function initSenderId() {
 }
 
 window.copySenderId = () => {
-  if (S.senderId) navigator.clipboard.writeText(S.senderId).then(() => toast('ID expéditeur copié !'));
+  if (S.senderId) navigator.clipboard.writeText(S.senderId).then(() => toast('Sender ID copied.'));
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -2850,9 +2844,9 @@ async function initHolochain() {
     const { AppWebsocket } = await import('https://esm.sh/@holochain/client@0.17');
     const ws   = await AppWebsocket.connect({ url: CFG.hcUrl, defaultTimeout: 4000 });
     const info = await ws.appInfo({ installed_app_id: CFG.appId });
-    if (!info) throw new Error('App non installée');
+    if (!info) throw new Error('App not installed');
     const cells  = info.cell_info[CFG.role];
-    if (!cells?.length) throw new Error('Rôle introuvable');
+    if (!cells?.length) throw new Error('Role not found');
     const cell   = cells[0];
     const cellId = cell.provisioned?.cell_id ?? cell[1]?.cell_id;
     if (!cellId) throw new Error('cell_id introuvable');
@@ -2865,7 +2859,7 @@ async function initHolochain() {
 }
 
 async function callZome(zome, fn, payload) {
-  if (!S.appWs) throw new Error('Conductor non disponible. Utilisez le mode web public ou Holo Web Conductor pour les fonctions avancées.');
+  if (!S.appWs) throw new Error('Conductor unavailable. Use public web mode or Holo Web Conductor for advanced features.');
   return S.appWs.callZome({
     cell_id: S.cellId, zome_name: zome, fn_name: fn,
     payload, provenance: S.agentKey, cap_secret: null,
@@ -2918,7 +2912,7 @@ async function initHoloWebConductor() {
 
 // Déclenche l'authentification Chaperone si agent anonyme
 async function ensureHoloAuth() {
-  if (!holoClient) throw new Error('Holo Web Conductor non initialisé.');
+  if (!holoClient) throw new Error('Holo Web Conductor is not initialized.');
   const isAnon = holoClient.agent?.isAnonymous ?? (holoClient.agent?.id == null);
   if (!isAnon) return; // déjà authentifié
   // Ouvre le formulaire Chaperone (sign-in / sign-up) dans un iframe
@@ -2960,14 +2954,14 @@ async function bridgeCall(zome, fn, payload) {
     });
   } catch (_) {
     // Erreur réseau (DNS, CORS, pas de connexion)
-    throw new Error('Bridge HTTP inaccessible — vérifiez votre connexion réseau.');
+    throw new Error('HTTP bridge unreachable - check your network connection.');
   }
   if (!res.ok) {
     const detail = await res.text().catch(() => res.statusText);
     if (res.status === 404)
-      throw new Error('Web Bridge : endpoint introuvable (404). Vérifiez la configuration.');
+      throw new Error('Web Bridge: endpoint not found (404). Check the configuration.');
     if (res.status >= 500)
-      throw new Error(`Web Bridge : erreur serveur (${res.status}). Réessayez dans quelques instants.`);
+      throw new Error(`Web Bridge: server error (${res.status}). Try again in a moment.`);
     throw new Error(`Web Bridge [${res.status}] : ${detail}`);
   }
   return res.json();
@@ -2984,7 +2978,7 @@ async function zomeCall(zomeName, fn, payload) {
 // FILE STORAGE ZOME
 // ═══════════════════════════════════════════════════════════
 async function uploadFile(file) {
-  setStatus('send-status', 'loading', 'Chiffrement AES-256-GCM…');
+  setStatus('send-status', 'loading', 'AES-256-GCM encryption...');
   const raw      = new Uint8Array(await file.arrayBuffer());
   const aesKey   = await genAesKey();
   const enc      = await aesEncrypt(aesKey, raw);
@@ -2994,7 +2988,7 @@ async function uploadFile(file) {
   for (let i = 0; i < enc.length; i += CFG.chunkSize)
     chunks.push([...enc.slice(i, i + CFG.chunkSize)]);
 
-  setStatus('send-status', 'loading', `Upload DHT — ${chunks.length} chunk(s) chiffrés…`);
+  setStatus('send-status', 'loading', `DHT upload - ${chunks.length} encrypted chunk(s)...`);
   // zomeCall → route vers local, holo ou bridge selon S.mode
   const fileHash = await zomeCall('file_storage', 'create_file', {
     name:      file.name,
@@ -3006,7 +3000,7 @@ async function uploadFile(file) {
 
 async function downloadFile(fileHash, keyBytes, onPct) {
   const data = await zomeCall('file_storage', 'get_file', fileHash);
-  if (!data) throw new Error('Fichier introuvable sur le DHT');
+  if (!data) throw new Error('File not found on the DHT');
   const enc   = new Uint8Array(data.chunks.flat());
   onPct?.(50);
   const plain = await aesDecrypt(keyBytes, enc);
@@ -3042,14 +3036,14 @@ async function decompressWebInlineBytes(bytes, compression) {
   if (!compression || compression === 'none') return bytes;
   if (compression !== 'gzip') throw new Error('Compression de lien Filenymous non supportee.');
   if (typeof DecompressionStream !== 'function') {
-    throw new Error('Ce navigateur ne sait pas decomprimer ce lien Filenymous.');
+    throw new Error('This browser cannot decompress this Filenymous link.');
   }
   return transformWebInlineBytes(bytes, 'decompress');
 }
 
 async function createWebParcelLink(file, message) {
   if (file.size > CFG.webInlineMaxBytes) {
-    throw new Error(`Fichier trop volumineux pour un lien autonome (${fmtBytes(CFG.webInlineMaxBytes)} max).`);
+    throw new Error(`File too large for a self-contained link (${fmtBytes(CFG.webInlineMaxBytes)} max).`);
   }
 
   const raw      = new Uint8Array(await file.arrayBuffer());
@@ -3080,10 +3074,10 @@ async function createWebParcelLink(file, message) {
 function parseWebParcelLink(hash) {
   if (hash.startsWith('w2:')) {
     const [, metaB64, dataB64, keyB64] = hash.split(':');
-    if (!metaB64 || !dataB64 || !keyB64) throw new Error('Lien Web anonyme invalide.');
+    if (!metaB64 || !dataB64 || !keyB64) throw new Error('Invalid anonymous web link.');
     const meta = JSON.parse(new TextDecoder().decode(b64d(metaB64)));
     if (!['web-inline', 'web-inline-z'].includes(meta.v) || !dataB64) {
-      throw new Error('Payload Web anonyme invalide.');
+      throw new Error('Invalid anonymous web payload.');
     }
     return {
       payload: {
@@ -3102,9 +3096,9 @@ function parseWebParcelLink(hash) {
   }
   if (!hash.startsWith('w1:')) return null;
   const [, payloadB64, keyB64] = hash.split(':');
-  if (!payloadB64 || !keyB64) throw new Error('Lien Web anonyme invalide.');
+  if (!payloadB64 || !keyB64) throw new Error('Invalid anonymous web link.');
   const payload = JSON.parse(new TextDecoder().decode(b64d(payloadB64)));
-  if (payload.v !== 'web-inline' || !payload.data) throw new Error('Payload Web anonyme invalide.');
+  if (payload.v !== 'web-inline' || !payload.data) throw new Error('Invalid anonymous web payload.');
   payload.compression = 'none';
   return { payload, keyBytes: b64d(keyB64) };
 }
@@ -3616,11 +3610,11 @@ function updateSendNotice() {
   if (S.mode === 'local') { el.classList.add('hidden'); return; }
   if (S.mode === 'holo') {
     el.className = 'status info';
-    tx.innerHTML = '<strong>Holo Web Conductor actif</strong> : chiffrement local AES-256, stockage P2P via reseau Holo.';
+    tx.innerHTML = '<strong>Holo Web Conductor active</strong>: local AES-256 encryption and P2P storage through the Holo network.';
   } else {
     el.className = 'status info';
-    tx.innerHTML = `<strong>Mode Web public</strong> : envoi et reception sans conducteur. ` +
-      `Les petits fichiers passent par lien chiffre, les gros fichiers par P2P direct avec code a usage unique.`;
+    tx.innerHTML = `<strong>Public web mode</strong>: send and receive without a conductor. ` +
+      `Small files use an encrypted link; large files use direct P2P with a one-time code.`;
   }
   el.classList.remove('hidden');
 }
@@ -3649,7 +3643,7 @@ function createOneTimeCode() {
 function normalizeOneTimeCode(value) {
   const compact = String(value || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
   const match = compact.match(/^(\d{3})(\d{3})([A-Z]{3})$/);
-  if (!match) throw new Error('Code a usage unique invalide. Format attendu : 123-456-ABC.');
+  if (!match) throw new Error('Invalid one-time code. Expected format: 123-456-ABC.');
   return `${match[1]}-${match[2]}-${match[3]}`;
 }
 
@@ -3658,8 +3652,8 @@ function verifyHumanGesture(event, statusId, checkboxIds) {
   const activationOk = !navigator.userActivation || navigator.userActivation.isActive || navigator.userActivation.hasBeenActive;
   const checked = checkboxIds.some(id => $(id)?.checked);
   if (trusted && activationOk && checked) return true;
-  setStatus(statusId, 'error', tr('status.humanRequired', 'Verification humaine requise : cochez "Je suis humain", puis relancez depuis ce bouton.'));
-  toast(tr('status.humanToast', 'Verification humaine requise.'), 'warning');
+  setStatus(statusId, 'error', tr('status.humanRequired', 'Human verification required: check "I am human", then start again from this button.'));
+  toast(tr('status.humanToast', 'Human verification required.'), 'warning');
   return false;
 }
 
@@ -3694,7 +3688,7 @@ async function wrapP2PTransferKey(code, keyBytes) {
 
 async function unwrapP2PTransferKey(code, wrapped) {
   const [ivB64, cipherB64] = String(wrapped || '').split('.');
-  if (!ivB64 || !cipherB64) throw new Error('Cle P2P protegee invalide.');
+  if (!ivB64 || !cipherB64) throw new Error('Invalid protected P2P key.');
   const wrappingKey = await deriveP2PCodeKey(code);
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(ivB64) }, wrappingKey, b64d(cipherB64));
   return new Uint8Array(plain);
@@ -3713,9 +3707,9 @@ function p2pSupported() {
 
 function openSignalSocket(code, role, onSignal, onPeerJoined, statusId) {
   return new Promise((resolve, reject) => {
-    if (!CFG.p2pSignalUrl) return reject(new Error('Serveur de signalisation non configure.'));
+    if (!CFG.p2pSignalUrl) return reject(new Error('Signaling server is not configured.'));
     const ws = new WebSocket(CFG.p2pSignalUrl);
-    const failTimer = setTimeout(() => reject(new Error('Signalisation P2P indisponible.')), 10000);
+    const failTimer = setTimeout(() => reject(new Error('P2P signaling is unavailable.')), 10000);
     let joined = false;
 
     ws.addEventListener('open', () => {
@@ -3732,22 +3726,22 @@ function openSignalSocket(code, role, onSignal, onPeerJoined, statusId) {
       } else if (msg.type === 'signal') {
         onSignal?.(msg.payload);
       } else if (msg.type === 'waiting') {
-        if (statusId) setStatus(statusId, 'info', 'En attente du pair...');
+        if (statusId) setStatus(statusId, 'info', 'Waiting for the peer...');
       } else if (msg.type === 'peer-left') {
-        if (statusId) setStatus(statusId, 'warning', 'Le pair a quitte la session.');
+        if (statusId) setStatus(statusId, 'warning', 'The peer left the session.');
       } else if (msg.type === 'error') {
         if (!joined) {
           clearTimeout(failTimer);
           ws.close();
-          reject(new Error(`Signalisation: ${msg.error}`));
+          reject(new Error(`Signaling: ${msg.error}`));
           return;
         }
-        if (statusId) setStatus(statusId, 'error', `Signalisation: ${esc(msg.error)}`);
+        if (statusId) setStatus(statusId, 'error', `Signaling: ${esc(msg.error)}`);
       }
     });
     ws.addEventListener('error', () => {
       clearTimeout(failTimer);
-      reject(new Error('Impossible de joindre le serveur de signalisation P2P.'));
+      reject(new Error('Unable to reach the P2P signaling server.'));
     });
   });
 }
@@ -3759,7 +3753,7 @@ async function openSignalSocketWithFallback(code, role, onSignal, onPeerJoined, 
   } catch (e) {
     const legacyCode = legacySignalRoomCode(code);
     if (!String(e.message || '').includes('invalid-room') || legacyCode === code) throw e;
-    if (statusId) setStatus(statusId, 'warning', 'Relais en mode compatibilite : suffixe lettres conserve pour proteger la cle du fichier.');
+    if (statusId) setStatus(statusId, 'warning', 'Compatibility relay mode: the letter suffix is kept to protect the file key.');
     const ws = await openSignalSocket(legacyCode, role, onSignal, onPeerJoined, statusId);
     return { ws, signalCode: legacyCode };
   }
@@ -3773,13 +3767,13 @@ function createP2PPeer(sendSignal) {
     if (ev.candidate) sendSignal({ kind: 'ice', candidate: ev.candidate });
   };
   pc.onconnectionstatechange = () => {
-    if (pc.connectionState === 'failed') toast('Connexion P2P impossible sans relais TURN disponible.', 'error');
+    if (pc.connectionState === 'failed') toast('P2P connection failed without an available TURN relay.', 'error');
   };
   return pc;
 }
 
 async function sendP2PFile(channel, file, message, statusId, code) {
-  markTransferActive('Envoi P2P direct');
+  markTransferActive('Direct P2P send');
   const raw = new Uint8Array(await file.arrayBuffer());
   const aesKey = await genAesKey();
   const enc = await aesEncrypt(aesKey, raw);
@@ -3804,24 +3798,24 @@ async function sendP2PFile(channel, file, message, statusId, code) {
     }
     channel.send(enc.slice(offset, offset + CFG.p2pChunkSize));
     const pct = Math.min(100, Math.round(((offset + CFG.p2pChunkSize) / enc.byteLength) * 100));
-    setStatus(statusId, 'loading', `Transfert P2P direct... ${pct}%`);
+    setStatus(statusId, 'loading', `Direct P2P transfer... ${pct}%`);
   }
   channel.send(JSON.stringify({ type: 'done' }));
-  setStatus(statusId, 'success', 'Transfert P2P termine. Vous pouvez fermer cette page.');
+  setStatus(statusId, 'success', 'Direct P2P transfer complete. You can close this page.');
   markTransferDone();
 }
 
 window.startP2PSend = async function () {
-  if (!S.file) throw new Error('Selectionnez un fichier.');
-  if (!p2pSupported()) throw new Error('Ce navigateur ne supporte pas WebRTC DataChannel.');
+  if (!S.file) throw new Error('Select a file.');
+  if (!p2pSupported()) throw new Error('This browser does not support WebRTC DataChannel.');
 
-  markTransferActive('Session P2P en attente');
+  markTransferActive('P2P session waiting');
   const code = createOneTimeCode();
   const message = $('send-message').value.trim();
   $('p2p-code-out').textContent = code;
   $('p2p-result').classList.remove('hidden');
   $('link-result').classList.add('hidden');
-  setStatus('p2p-send-status', 'loading', 'Session P2P creee. Communiquez le code au destinataire.');
+  setStatus('p2p-send-status', 'loading', 'Session created. Share this code with the recipient.');
 
   let ws;
   let signalCode = code;
@@ -3830,7 +3824,7 @@ window.startP2PSend = async function () {
   const channel = pc.createDataChannel('filenymous-file');
   channel.binaryType = 'arraybuffer';
   channel.addEventListener('open', () => {
-    setStatus('p2p-send-status', 'loading', 'Pair connecte. Chiffrement local et transfert...');
+    setStatus('p2p-send-status', 'loading', 'Peer connected. Local encryption and transfer are running...');
     sendP2PFile(channel, S.file, message, 'p2p-send-status', code).catch(e => {
       markTransferDone();
       setStatus('p2p-send-status', 'error', e.message);
@@ -4056,7 +4050,7 @@ window.createFromHome = async function (event) {
 
 window.handleSend = async function (event) {
   if (!S.file) {
-    setStatus('send-status', 'warning', 'Sélectionnez d\'abord un fichier.');
+    setStatus('send-status', 'warning', 'Select a file first.');
     return;
   }
 
@@ -4076,12 +4070,12 @@ window.handleSend = async function (event) {
         return await startP2PSend();
       } catch (e) {
         btn.disabled = true;
-        setStatus('send-status', 'warning', `P2P direct indisponible : ${esc(e.message)}. Creation d'un lien autonome en secours.`);
+        setStatus('send-status', 'warning', `Direct P2P is unavailable: ${esc(e.message)}. Creating a self-contained fallback link.`);
       }
     }
-    markTransferActive('Creation du lien Web');
+    markTransferActive('Creating web link');
     try {
-      setStatus('send-status', 'loading', 'Chiffrement local AES-256 — création du lien Web anonyme…');
+      setStatus('send-status', 'loading', 'Local AES-256 encryption - creating the anonymous web link...');
       const message = $('send-message').value.trim();
       const out = await createWebParcelLink(S.file, message);
       const recipRaw = $('recipient').value.trim();
@@ -4089,8 +4083,8 @@ window.handleSend = async function (event) {
       S.history.unshift({
         id: out.id, ehBytes: [],
         name: S.file.name, size: S.file.size,
-        to: recipRaw || '(lien web anonyme)',
-        date: new Date().toLocaleDateString('fr-FR'),
+        to: recipRaw || '(anonymous web link)',
+        date: new Date().toLocaleDateString('en-US'),
         link: out.url, status: 'pending',
         maxDl: 0, dlCount: 0,
       });
@@ -4100,7 +4094,7 @@ window.handleSend = async function (event) {
       $('qr-panel').classList.add('hidden');
       $('link-result').classList.remove('hidden');
       $('send-status').classList.add('hidden');
-      toast('Lien Web anonyme créé !');
+      toast('Anonymous web link created.');
     } catch (e) {
       setStatus('send-status', 'error', e.message);
     } finally {
@@ -4109,9 +4103,9 @@ window.handleSend = async function (event) {
     }
     return;
   }
-  markTransferActive(S.mode === 'holo' ? 'Envoi via Holo Web Conductor' : 'Creation du partage chiffre');
+  markTransferActive(S.mode === 'holo' ? 'Sending through Holo Web Conductor' : 'Creating encrypted share');
   if (S.mode === 'holo') {
-    setStatus('send-status', 'loading', '⬡ Chiffrement local AES-256 — envoi via Holo Web Conductor…');
+    setStatus('send-status', 'loading', '⬡ Local AES-256 encryption - sending through Holo Web Conductor...');
   }
 
   try {
@@ -4122,11 +4116,11 @@ window.handleSend = async function (event) {
     let contactHash = '0'.repeat(64);
     let encKeyBlob  = '';
 
-    // Lookup destinataire en mode local ET holo (conducteur disponible)
+    // Lookup recipient in local and holo modes when a conductor is available.
     if (recipRaw && S.mode !== 'bridge') {
       const norm  = recipRaw.includes('@') ? recipRaw.toLowerCase() : recipRaw;
       contactHash = await sha256hex(norm);
-      setStatus('send-status', 'loading', 'Recherche de la clé du destinataire…');
+      setStatus('send-status', 'loading', 'Looking up the recipient key...');
       try {
         const agent = await zomeCall('identity', 'get_agent_for_contact', contactHash);
         if (agent) {
@@ -4134,7 +4128,7 @@ window.handleSend = async function (event) {
           if (x25519B64) {
             const recipPub = b64d(x25519B64);
             encKeyBlob     = await eciesWrap(keyBytes, recipPub);
-            toast('Clé chiffrée directement pour le destinataire (ECIES)');
+            toast('Key encrypted directly for the recipient (ECIES).');
           }
         }
       } catch (_) { /* agent inconnu — mode lien universel */ }
@@ -4149,7 +4143,7 @@ window.handleSend = async function (event) {
     const senderTag  = S.senderId ? '[from:' + S.senderId.slice(0, 16) + ']\n' : '';
     const fullMessage = senderTag + message;
 
-    setStatus('send-status', 'loading', 'Création du parcel sur le DHT…');
+    setStatus('send-status', 'loading', 'Creating the parcel on the DHT...');
     const out = await createParcel({
       fileHash, fileName: S.file.name, fileSize: S.file.size, chunkCount,
       contactHash, encKeyBlob, message: fullMessage,
@@ -4164,8 +4158,8 @@ window.handleSend = async function (event) {
     S.history.unshift({
       id: ehB64, ehBytes: out.parcel_eh,
       name: S.file.name, size: S.file.size,
-      to: recipRaw || '(lien universel)',
-      date: new Date().toLocaleDateString('fr-FR'),
+      to: recipRaw || '(universal link)',
+      date: new Date().toLocaleDateString('en-US'),
       link: url, status: 'pending',
       maxDl: parseInt($('max-dl').value) || 0, dlCount: 0,
     });
@@ -4175,7 +4169,7 @@ window.handleSend = async function (event) {
     $('qr-panel').classList.add('hidden');
     $('link-result').classList.remove('hidden');
     $('send-status').classList.add('hidden');
-    toast('Fichier envoyé !');
+    toast('File sent.');
   } catch (e) {
     setStatus('send-status', 'error', e.message);
   } finally {
@@ -4185,7 +4179,7 @@ window.handleSend = async function (event) {
 };
 
 window.copyLink = () => {
-  navigator.clipboard.writeText($('link-text').textContent).then(() => toast('Lien copié !'));
+  navigator.clipboard.writeText($('link-text').textContent).then(() => toast('Link copied.'));
 };
 
 function currentShareLink() {
@@ -4197,14 +4191,14 @@ window.shareLink = async function () {
   if (!url) return;
   if (navigator.share) {
     try {
-      await navigator.share({ title: 'Filenymous', text: 'Lien de partage Filenymous', url });
+      await navigator.share({ title: 'Filenymous', text: 'Filenymous share link', url });
       return;
     } catch (e) {
       if (e?.name === 'AbortError') return;
     }
   }
   await navigator.clipboard.writeText(url);
-  toast('Lien copie : partage manuel possible.');
+  toast('Link copied: manual sharing is available.');
 };
 
 window.renderQrForCurrentLink = function () {
@@ -4213,18 +4207,18 @@ window.renderQrForCurrentLink = function () {
   const status = $('qr-status');
   panel.classList.remove('hidden');
   if (!url) {
-    status.textContent = 'Aucun lien a encoder.';
+    status.textContent = 'No link to encode.';
     return;
   }
   if (!window.FilenymousQRCode?.renderCanvas) {
-    status.textContent = tr('qr.unavailable', 'Generateur QR local indisponible. Copiez ou partagez le lien.');
+    status.textContent = tr('qr.unavailable', 'Local QR generator unavailable. Copy or share the link.');
     return;
   }
   try {
     window.FilenymousQRCode.renderCanvas($('qr-canvas'), url);
-    status.textContent = tr('qr.generated', 'QR genere localement. Le lien et sa cle ne quittent pas ce navigateur.');
+    status.textContent = tr('qr.generated', 'QR generated locally. The link and key do not leave this browser.');
   } catch (e) {
-    status.textContent = tr('qr.tooLong', 'Lien trop long pour un QR unique. Utilisez Copier ou Partager pour garder la cle intacte.');
+    status.textContent = tr('qr.tooLong', 'Link too long for a single QR code. Use Copy or Share to keep the key intact.');
   }
 };
 
@@ -4234,26 +4228,26 @@ function acceptQrValue(value) {
   if ($('recv-human-proof')) $('recv-human-proof').checked = true;
   if (value.includes('#') || value.startsWith('http') || value.startsWith('w1:') || value.includes(':')) {
     $('manual-link').value = value;
-    setStatus('p2p-recv-status', 'success', tr('qr.loaded', 'QR lu. Lien detecte et charge.'));
+    setStatus('p2p-recv-status', 'success', tr('qr.loaded', 'QR read. Link detected and loaded.'));
     loadManual();
   } else {
-    setStatus('p2p-recv-status', 'success', tr('qr.join', 'QR lu. Cliquez sur Continuer pour rejoindre la session.'));
+    setStatus('p2p-recv-status', 'success', tr('qr.join', 'QR read. Click Continue to join the session.'));
   }
 }
 
 window.scanQrCode = async function (event) {
   if (event?.isTrusted !== true) {
-    setStatus('p2p-recv-status', 'error', 'Lecture QR refusee : action utilisateur requise.');
+    setStatus('p2p-recv-status', 'error', 'QR scanning refused: user action required.');
     return;
   }
   if (!('BarcodeDetector' in window)) {
     $('qr-file-input').click();
-    setStatus('p2p-recv-status', 'warning', 'Camera QR non disponible ici. Importez une image QR ou collez le lien.');
+    setStatus('p2p-recv-status', 'warning', 'QR camera is unavailable here. Import a QR image or paste the link.');
     return;
   }
   if (!navigator.mediaDevices?.getUserMedia) {
     $('qr-file-input').click();
-    setStatus('p2p-recv-status', 'warning', 'Camera indisponible. Importez une image QR ou collez le lien.');
+    setStatus('p2p-recv-status', 'warning', 'Camera unavailable. Import a QR image or paste the link.');
     return;
   }
   const video = $('qr-video');
@@ -4264,7 +4258,7 @@ window.scanQrCode = async function (event) {
     video.srcObject = stream;
     video.classList.remove('hidden');
     await video.play();
-    setStatus('p2p-recv-status', 'loading', tr('qr.camera', 'Camera ouverte. Cadrez le QR code.'));
+    setStatus('p2p-recv-status', 'loading', tr('qr.camera', 'Camera open. Frame the QR code.'));
     const started = Date.now();
     const stop = () => {
       stream?.getTracks().forEach(track => track.stop());
@@ -4283,7 +4277,7 @@ window.scanQrCode = async function (event) {
       } catch (_) {}
       if (Date.now() - started > 30000) {
         stop();
-        setStatus('p2p-recv-status', 'warning', tr('qr.none', 'Aucun QR detecte. Vous pouvez importer une image ou coller le lien.'));
+        setStatus('p2p-recv-status', 'warning', tr('qr.none', 'No QR code detected. You can import an image or paste the link.'));
         return;
       }
       requestAnimationFrame(tick);
@@ -4293,7 +4287,7 @@ window.scanQrCode = async function (event) {
     stream?.getTracks().forEach(track => track.stop());
     video.classList.add('hidden');
     $('qr-file-input').click();
-    setStatus('p2p-recv-status', 'warning', 'Camera non autorisee. Importez une image QR ou collez le lien.');
+    setStatus('p2p-recv-status', 'warning', 'Camera permission denied. Import a QR image or paste the link.');
   }
 };
 
@@ -4301,17 +4295,17 @@ window.readQrFile = async function (event) {
   const file = event.target.files?.[0];
   if (!file) return;
   if (!('BarcodeDetector' in window) || typeof createImageBitmap !== 'function') {
-    setStatus('p2p-recv-status', 'error', 'Lecture QR image non supportee par ce navigateur. Collez le lien manuellement.');
+    setStatus('p2p-recv-status', 'error', 'QR image reading is not supported by this browser. Paste the link manually.');
     return;
   }
   try {
     const detector = new BarcodeDetector({ formats: ['qr_code'] });
     const bitmap = await createImageBitmap(file);
     const codes = await detector.detect(bitmap);
-    if (!codes[0]?.rawValue) throw new Error('Aucun QR detecte.');
+    if (!codes[0]?.rawValue) throw new Error('No QR code detected.');
     acceptQrValue(codes[0].rawValue);
   } catch (e) {
-    setStatus('p2p-recv-status', 'error', `QR illisible : ${e.message}`);
+    setStatus('p2p-recv-status', 'error', `Unreadable QR: ${e.message}`);
   } finally {
     event.target.value = '';
   }
@@ -4407,8 +4401,8 @@ async function checkReceiveHash() {
   // Mode bridge sans infrastructure Holo : la réception DHT n'est pas disponible pour les anciens liens DHT
   if (S.mode === 'bridge' && !CFG.holoDeployed) {
     setStatus('recv-status', 'warning',
-      '⏳ Infrastructure Holo en cours de déploiement — réception avancée disponible prochainement. ' +
-      `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">Paquets web portables →</a>`);
+      'Holo infrastructure deployment is in progress. Advanced receiving will be available soon. ' +
+      `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">Portable web package</a>`);
     $('btn-download').disabled = true;
     return;
   }
@@ -4416,7 +4410,7 @@ async function checkReceiveHash() {
 
   try {
     const p = await getParcel(ehBytes);
-    if (!p) throw new Error('Parcel introuvable sur le DHT');
+    if (!p) throw new Error('Parcel not found on the DHT');
     S.parcel = { p, ehBytes, keyBytes };
 
     const m   = p.manifest;
@@ -4534,7 +4528,7 @@ window.loadManual = function () {
       location.hash = part;
     }
   } else {
-    toast('Lien invalide — format attendu : …#parcelId:aesKey', 'error');
+    toast('Invalid link - expected format: ...#parcelId:aesKey', 'error');
   }
 };
 
@@ -4549,12 +4543,12 @@ function renderHistory() {
 
   if (!filtered.length) {
     list.innerHTML = `<p style="text-align:center;color:var(--muted);font-size:13px;padding:24px 0;">
-      ${S.histFilt === 'all' ? 'Aucun transfert pour l\'instant.' : 'Aucun transfert dans cette catégorie.'}
+      ${S.histFilt === 'all' ? 'No transfer yet.' : 'No transfer in this category.'}
     </p>`;
     return;
   }
 
-  const lbl = { pending: 'En attente', done: 'Téléchargé', revoked: 'Révoqué' };
+  const lbl = { pending: 'Waiting', done: 'Downloaded', revoked: 'Revoked' };
 
   list.innerHTML = filtered.map(h => `
     <div class="hist-row">
@@ -4568,9 +4562,9 @@ function renderHistory() {
         </div>
       </div>
       <div class="hist-actions">
-        <button class="btn btn-secondary btn-sm" onclick="copyHistLink('${esc(h.id)}')" title="Copier le lien">🔗</button>
+        <button class="btn btn-secondary btn-sm" onclick="copyHistLink('${esc(h.id)}')" title="Copy link">🔗</button>
         ${h.status === 'pending' && S.mode !== 'bridge'
-          ? `<button class="btn btn-danger btn-sm" onclick="revokeHistItem('${esc(h.id)}')">Révoquer</button>`
+          ? `<button class="btn btn-danger btn-sm" onclick="revokeHistItem('${esc(h.id)}')">Revoke</button>`
           : ''}
       </div>
     </div>
@@ -4588,21 +4582,21 @@ window.setFilter = function (f) {
 window.copyHistLink = function (id) {
   const h = S.history.find(x => x.id === id);
   if (!h) return;
-  navigator.clipboard.writeText(h.link).then(() => toast('Lien copié !'));
+  navigator.clipboard.writeText(h.link).then(() => toast('Link copied.'));
 };
 
 window.revokeHistItem = async function (id) {
   const h = S.history.find(x => x.id === id);
   if (!h) return;
-  if (!confirm(`Révoquer «${h.name}» ? Le destinataire ne pourra plus télécharger.`)) return;
+  if (!confirm(`Revoke "${h.name}"? The recipient will no longer be able to download it.`)) return;
   try {
     await revokeParcel(h.ehBytes);
     h.status = 'revoked';
     renderHistory();
     updateHistBadge();
-    toast('Transfert révoqué — chunks supprimés du DHT');
+    toast('Transfer revoked - chunks removed from the DHT.');
   } catch (e) {
-    toast(`Erreur révocation : ${e.message}`, 'error');
+    toast(`Revocation error: ${e.message}`, 'error');
   }
 };
 
@@ -4621,13 +4615,13 @@ async function initIdentity() {
   const ncFeatures  = $('id-nc-features');
 
   if (S.mode === 'bridge') {
-    if (ncTitle) { ncTitle.textContent = 'Mode Web public'; ncTitle.style.color = 'var(--accent)'; }
-    if (ncDesc)  ncDesc.textContent = "Aucun conducteur Holochain n'est nécessaire pour envoyer ou recevoir. Les contacts DHT restent réservés à Holo Web Conductor ; Iroh est préparé pour les gros transferts web et les relais chiffrés.";
+    if (ncTitle) { ncTitle.textContent = 'Public web mode'; ncTitle.style.color = 'var(--accent)'; }
+    if (ncDesc)  ncDesc.textContent = "No Holochain conductor is required to send or receive. DHT contacts stay reserved for Holo Web Conductor; Iroh is prepared for large web transfers and encrypted relays.";
     if (ncFeatures) ncFeatures.innerHTML = `
-      <li style="color:var(--success)">Envoi de fichiers ✓ lien chiffre ou P2P direct</li>
-      <li style="color:var(--success)">Reception de fichiers ✓ code a usage unique</li>
-      <li style="color:var(--warning)">Iroh navigateur — relais chiffre, pas UDP direct</li>
-      <li style="color:var(--warning)">Contacts DHT — necessitent Holo Web Conductor</li>`;
+      <li style="color:var(--success)">File sending: encrypted link or direct P2P</li>
+      <li style="color:var(--success)">File receiving: one-time code</li>
+      <li style="color:var(--warning)">Browser Iroh: encrypted relay, no direct UDP</li>
+      <li style="color:var(--warning)">DHT contacts: require Holo Web Conductor</li>`;
     noConductor.classList.remove('hidden');
     ui.classList.add('hidden');
     return;
@@ -4635,13 +4629,13 @@ async function initIdentity() {
 
   if (S.mode === 'holo') {
     // Mode Holo Web Conductor — fonctionnalités complètes en navigateur
-    if (ncTitle) { ncTitle.textContent = '⬡ Holo Web Conductor actif'; ncTitle.style.color = 'var(--success)'; }
-    if (ncDesc)  ncDesc.textContent = 'Vous opérez via le réseau Holo hébergé. Toutes les fonctionnalités sont disponibles directement dans votre navigateur.';
+    if (ncTitle) { ncTitle.textContent = '⬡ Holo Web Conductor active'; ncTitle.style.color = 'var(--success)'; }
+    if (ncDesc)  ncDesc.textContent = 'You are operating through the hosted Holo network. All features are available directly in your browser.';
     if (ncFeatures) ncFeatures.innerHTML = `
-      <li style="color:var(--success)">Envoi de fichiers ✓ (chiffrement local + Holo DHT)</li>
-      <li style="color:var(--success)">Réception de fichiers ✓</li>
-      <li style="color:var(--success)">Enregistrement de contact ✓</li>
-      <li style="color:var(--success)">Chiffrement ECIES ✓ (après génération clé X25519)</li>`;
+      <li style="color:var(--success)">File sending (local encryption + Holo DHT)</li>
+      <li style="color:var(--success)">File receiving</li>
+      <li style="color:var(--success)">Contact registration</li>
+      <li style="color:var(--success)">ECIES encryption (after X25519 key generation)</li>`;
     noConductor.classList.remove('hidden');
   } else {
     // Mode local — pas besoin du bandeau
@@ -4654,7 +4648,7 @@ async function initIdentity() {
   // Titre du card Agent selon le mode
   const agentCardTitle = document.querySelector('#id-ui > .card > .card-title');
   if (agentCardTitle) agentCardTitle.textContent =
-    S.mode === 'holo' ? 'Agent Holo (conducteur hébergé)' : 'Agent Holochain';
+    S.mode === 'holo' ? 'Holo agent (hosted conductor)' : 'Holochain agent';
 
   if (S.agentKey) $('agent-key').textContent = b64e(new Uint8Array(S.agentKey));
 
@@ -4662,10 +4656,10 @@ async function initIdentity() {
   const x25519El = $('x25519-status');
   if (sk) {
     x25519El.className = 'status success';
-    x25519El.innerHTML = '✅ Clé X25519 présente dans ce navigateur';
+    x25519El.innerHTML = 'X25519 key is present in this browser';
   } else {
     x25519El.className = 'status warning';
-    x25519El.innerHTML = '⚠️ Aucune clé X25519 — générez-en une pour recevoir en mode agent';
+    x25519El.innerHTML = 'No X25519 key yet - generate one to receive in agent mode';
   }
 }
 
@@ -4676,8 +4670,8 @@ window.claimContact = async function () {
     const norm = raw.includes('@') ? raw.toLowerCase() : raw;
     const hash = await sha256hex(norm);
     await zomeCall('identity', 'claim_contact', { contact_hash: hash });
-    setStatus('claim-status', 'success', `Publié : ${norm} → ${hash.slice(0, 16)}…`);
-    toast('Contact enregistré sur le DHT');
+    setStatus('claim-status', 'success', `Published: ${norm} -> ${hash.slice(0, 16)}...`);
+    toast('Contact saved on the DHT.');
   } catch (e) { setStatus('claim-status', 'error', e.message); }
 };
 
@@ -4688,8 +4682,8 @@ window.genX25519 = async function () {
     const b64 = b64e(kp.publicKey);
     await zomeCall('identity', 'publish_x25519_key', { x25519_pubkey_b64: b64 });
     $('x25519-status').className = 'status success';
-    $('x25519-status').innerHTML = '✅ Clé X25519 générée et publiée sur le DHT';
-    toast('Clé X25519 publiée !');
+    $('x25519-status').innerHTML = 'X25519 key generated and published on the DHT';
+    toast('X25519 key published.');
   } catch (e) {
     $('x25519-status').className = 'status error';
     $('x25519-status').innerHTML = `❌ ${esc(e.message)}`;
@@ -4697,7 +4691,7 @@ window.genX25519 = async function () {
 };
 
 window.copyAgent = () => {
-  navigator.clipboard.writeText($('agent-key').textContent).then(() => toast('Clé agent copiée'));
+  navigator.clipboard.writeText($('agent-key').textContent).then(() => toast('Agent key copied.'));
 };
 
 // ═══════════════════════════════════════════════════════════

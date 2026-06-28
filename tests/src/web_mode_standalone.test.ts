@@ -8,6 +8,14 @@ const html = readFileSync(path.join(__dirname, "../../docs/demo/index.html"), "u
 const packagedHtml = readFileSync(path.join(__dirname, "../../filenymous-app.html"), "utf8");
 const i18nMatch = html.match(/window\.FILENYMOUS_I18N = (\{[\s\S]*?\n\});/);
 const i18n = JSON.parse(i18nMatch?.[1] ?? "{}") as Record<string, Record<string, string>>;
+const visibleHtml = html
+  .replace(/<script(?:[^>]*)>[\s\S]*?<\/script>/g, "")
+  .replace(/<style(?:[^>]*)>[\s\S]*?<\/style>/g, "");
+const visiblePackagedHtml = packagedHtml
+  .replace(/<script(?:[^>]*)>[\s\S]*?<\/script>/g, "")
+  .replace(/<style(?:[^>]*)>[\s\S]*?<\/style>/g, "");
+const runtimeHtml = html.replace(/window\.FILENYMOUS_I18N = \{[\s\S]*?\n\};/, "");
+const runtimePackagedHtml = packagedHtml.replace(/window\.FILENYMOUS_I18N = \{[\s\S]*?\n\};/, "");
 
 describe("standalone web transfer mode", () => {
   it("keeps all public website language dictionaries aligned", () => {
@@ -54,7 +62,7 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain('id="home-file-input"');
     expect(html).toContain('id="home-send-btn"');
     expect(html).toContain("createFromHome");
-    expect(html).toContain("Ajouter un fichier");
+    expect(visibleHtml).toContain("Add a file");
     expect(packagedHtml).toContain('id="home-file-input"');
   });
 
@@ -67,20 +75,20 @@ describe("standalone web transfer mode", () => {
   });
 
   it("keeps the public receive flow to a single code-or-link input", () => {
-    expect(html).toContain("Code ou lien Filenymous");
+    expect(visibleHtml).toContain("Filenymous code or link");
     expect(html).toContain("receiveFromSingleInput");
-    expect(html).toContain("Filenymous choisit automatiquement le bon mode");
+    expect(visibleHtml).toContain("Filenymous chooses the right mode automatically");
     expect(html).toContain('id="recv-manual" class="card hidden"');
     expect(html).toContain('id="recv-empty" class="card hidden"');
     expect(html).toContain("$('recv-empty').classList.add('hidden')");
     expect(html).toContain("123-456-ABC");
-    expect(packagedHtml).toContain("Code ou lien Filenymous");
+    expect(visiblePackagedHtml).toContain("Filenymous code or link");
   });
 
   it("requires a human gesture before creating or joining a P2P code", () => {
     expect(html).toContain("verifyHumanGesture");
     expect(html).toContain("human-proof");
-    expect(html).toContain("Je suis humain");
+    expect(visibleHtml).toContain("I am human");
     expect(html).toContain("event?.isTrusted");
     expect(html).toContain("await window.handleSend(event)");
     expect(packagedHtml).toContain("verifyHumanGesture");
@@ -97,9 +105,65 @@ describe("standalone web transfer mode", () => {
   });
 
   it("uses the simplified public home message", () => {
-    expect(html).toContain("Envoyez un fichier gr&acirc;ce &agrave; un code unique");
-    expect(html).toContain("Pas de cloud, pas de compte");
-    expect(packagedHtml).toContain("Envoyez un fichier gr&acirc;ce &agrave; un code unique");
+    expect(visibleHtml).toContain("Send a file with one unique code");
+    expect(visibleHtml).toContain("No cloud, no account");
+    expect(visiblePackagedHtml).toContain("Send a file with one unique code");
+  });
+
+  it("serves English public fallback copy before JavaScript translations run", () => {
+    for (const phrase of [
+      "Home",
+      "Send",
+      "Receive",
+      "Language",
+      "Create code",
+      "Download and decrypt",
+      "After validation:",
+      "Public open directory",
+      "No transfer yet.",
+      "Download the web version",
+    ]) {
+      expect(visibleHtml).toContain(phrase);
+      expect(visiblePackagedHtml).toContain(phrase);
+    }
+    for (const phrase of [
+      "Accueil",
+      "Envoyez un fichier",
+      "Pas de cloud",
+      "Je suis humain",
+      "Télécharger et déchiffrer",
+      "Aucun transfert pour l'instant",
+    ]) {
+      expect(visibleHtml).not.toContain(phrase);
+      expect(visiblePackagedHtml).not.toContain(phrase);
+    }
+  });
+
+  it("keeps public runtime fallback messages in English outside translation dictionaries", () => {
+    for (const phrase of [
+      "Sender ID copied.",
+      "Public web mode",
+      "Session created. Share this code with the recipient.",
+      "Anonymous web link created.",
+      "No link to encode.",
+      "No transfer yet.",
+      "Revoke",
+    ]) {
+      expect(runtimeHtml).toContain(phrase);
+      expect(runtimePackagedHtml).toContain(phrase);
+    }
+    for (const phrase of [
+      "Lien Web anonyme",
+      "Session P2P creee",
+      "Aucun lien a encoder",
+      "Aucun transfert pour l'instant",
+      "Révoquer",
+      "Fichier envoyé",
+      "Sélectionnez d'abord un fichier",
+    ]) {
+      expect(runtimeHtml).not.toContain(phrase);
+      expect(runtimePackagedHtml).not.toContain(phrase);
+    }
   });
 
   it("ships English, French, and Korean public website copy", () => {
