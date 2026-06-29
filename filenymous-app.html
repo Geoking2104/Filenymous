@@ -6,6 +6,14 @@
   <meta name="description" content="Send and receive encrypted P2P files with one-time codes, direct WebRTC, Iroh-ready transport, and advanced Holochain mode." />
   <title>Filenymous - Simple P2P file transfer</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#006d77" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Filenymous" />
+  <link rel="apple-touch-icon" href="data:image/png;base64,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" />
   <style>
     /* Hallmark - genre: playful utility - macrostructure: transfer-first home - design-system: public app */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -746,7 +754,7 @@
   <div class="home-shell">
     <section class="home-transfer-card" aria-label="Create a transfer" data-i18n-aria-label="home.transferCard">
       <label class="home-drop" id="home-drop" for="home-file-input" tabindex="0">
-        <input type="file" id="home-file-input" hidden />
+        <input type="file" id="home-file-input" multiple hidden />
         <span>
           <span class="home-plus" aria-hidden="true">+</span>
           <span class="home-drop-title" data-i18n="home.addFile">Add a file</span>
@@ -797,7 +805,7 @@
       <div>
         <p class="hero-eyebrow">Anonymous P2P, no account</p>
         <h1 class="hero-title">Share a file. Give a code. Done.</h1>
-        <p class="hero-text">Filenymous encrypts the file in this browser, then chooses the simplest available path: a self-contained encrypted link, direct WebRTC, Iroh-ready large web transfers, or Holochain/HWC for advanced identity.</p>
+        <p class="hero-text">Filenymous encrypts your file in this browser, then picks the simplest way to deliver it — a private link or a one-time code. No account, no install.</p>
       </div>
       <div class="trust-row" aria-label="Main guarantees">
         <span class="trust-chip">Local encryption</span>
@@ -831,6 +839,8 @@
     <div class="step-card"><span class="step-num">3</span><strong>Keep open</strong><span>For direct P2P, both pages stay active.</span></div>
   </div>
 
+  <details class="transport-advanced">
+    <summary class="muted" style="cursor:pointer; margin:8px 0; font-weight:600;">Advanced — how your file travels (technical)</summary>
   <div class="transport-grid">
     <div class="transport-card">
       <span class="transport-tag">Today</span>
@@ -848,6 +858,7 @@
       <p>Holo Web Conductor adds identity, contacts, DHT, and coordination without requiring a local conductor for the public web experience.</p>
     </div>
   </div>
+  </details>
 
   <div class="card">
     <p class="card-title">Transfer room</p>
@@ -886,11 +897,17 @@
   <div class="card">
     <p class="card-title" data-i18n="send.fileTitle">File to send</p>
     <label class="dropzone" id="dz" for="file-input">
-      <input type="file" id="file-input" style="display:none" />
+      <input type="file" id="file-input" multiple style="display:none" />
       <div class="dz-icon">📂</div>
       <p class="dz-hint"><strong data-i18n="send.choose">Choose</strong> <span data-i18n="send.dropFile">or drop a file here</span></p>
       <div id="file-badge" style="display:none; margin-top:10px; padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; font-size:13px; font-weight:500;"></div>
     </label>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('folder-input').click()">Add a folder</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('file-input').click()">Add several files</button>
+      <input type="file" id="folder-input" webkitdirectory directory multiple style="display:none" />
+    </div>
+    <p id="file-fingerprint" class="muted hidden" style="margin-top:8px; font-family:monospace; font-size:11px; word-break:break-all;"></p>
   </div>
 
   <div class="card">
@@ -969,16 +986,17 @@
       <code id="p2p-code-out"></code>
       <button class="btn btn-secondary btn-sm" onclick="copyP2PCode()" data-i18n="common.copy">Copy</button>
     </div>
-    <p class="muted mt-2" data-i18n="send.p2pHelp">Keep this page open. The encrypted file passes directly between browsers via WebRTC, without a Holochain conductor and without server storage. Iroh remains the priority path for verifiable large web files and encrypted relays.</p>
+    <p class="muted mt-2" data-i18n="send.p2pHelp">Keep this page open. The encrypted file goes straight from your browser to the recipient's — nothing is stored on a server.</p>
     <div id="p2p-send-status" class="status info mt-3 hidden"></div>
   </div>
 
   <div class="card" style="border-color:transparent">
     <ul class="feature-list">
       <li>Local AES-256-GCM encryption in your browser</li>
-      <li>Direct WebRTC for browsers, Iroh v1 for future verified transport</li>
-      <li>Holochain/HWC remains available in advanced mode</li>
+      <li>Direct browser-to-browser transfer, no server storage</li>
+      <li>SHA-256 fingerprint so the recipient can verify integrity</li>
       <li>No account required, pseudonym by default</li>
+      <li>Advanced transports (Iroh, Holochain/HWC) live in the Advanced tab</li>
     </ul>
   </div>
 </section>
@@ -998,6 +1016,15 @@
       <p class="prog-label" id="recv-prog-label" data-i18n="common.loading">Loading...</p>
     </div>
     <div id="recv-status" class="hidden mt-3"></div>
+    <div id="recv-verify" class="hidden mt-3">
+      <p class="msg-box-label">Integrity (SHA-256)</p>
+      <p id="recv-fp" class="muted" style="font-family:monospace; font-size:11px; word-break:break-all;"></p>
+      <div class="field mt-2">
+        <input type="text" id="recv-fp-expected" placeholder="Paste the sender's SHA-256 to verify (optional)" />
+      </div>
+      <button class="btn btn-secondary btn-sm mt-2" onclick="verifyReceiveFingerprint()">Verify</button>
+      <p id="recv-fp-result" class="muted mt-2"></p>
+    </div>
     <button id="btn-download" class="btn btn-primary btn-full mt-3" onclick="handleDownload()">
       <span data-i18n="receive.download">Download and decrypt</span>
     </button>
@@ -2664,6 +2691,8 @@ const S = {
   histFilt:  'all',
   transferActive: false,
   transferLabel:  '',
+  fileHashHex: null,
+  recvHashHex: null,
 };
 
 function markTransferActive(label) {
@@ -3549,6 +3578,109 @@ function fmtBytes(b) {
   return `${(b / 1073741824).toFixed(2)} Go`;
 }
 
+// ── Progress / speed / ETA helpers ──
+function fmtSpeed(bps) {
+  if (!bps || !isFinite(bps) || bps <= 0) return '';
+  return fmtBytes(bps) + '/s';
+}
+function fmtEta(seconds) {
+  if (!isFinite(seconds) || seconds < 0) return '';
+  seconds = Math.round(seconds);
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60), sec = seconds % 60;
+  if (m < 60) return `${m}m ${sec.toString().padStart(2, '0')}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${(m % 60).toString().padStart(2, '0')}m`;
+}
+function progressText(prefix, done, total, startMs) {
+  const pct = total ? Math.min(100, Math.round(done / total * 100)) : 0;
+  let line = `${prefix} ${pct}%`;
+  const elapsed = (Date.now() - startMs) / 1000;
+  if (elapsed > 0.4 && done > 0 && total) {
+    const speed = done / elapsed;
+    const sp = fmtSpeed(speed), et = fmtEta((total - done) / speed);
+    if (sp) line += ` · ${sp}`;
+    if (et && pct < 100) line += ` · ~${et} ${tr('common.remaining', 'left')}`;
+  }
+  return line;
+}
+
+// ── Integrity (SHA-256) helpers ──
+async function sha256hexBytes(bytes) {
+  const buf = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function showReceiveFingerprint(plain) {
+  const el = $('recv-verify');
+  if (!el) return;
+  const bytes = plain instanceof Uint8Array ? plain : new Uint8Array(plain);
+  S.recvHashHex = await sha256hexBytes(bytes);
+  const fpEl = $('recv-fp');
+  if (fpEl) fpEl.textContent = 'SHA-256: ' + S.recvHashHex;
+  el.classList.remove('hidden');
+  const exp = $('recv-fp-expected');
+  if (exp && exp.value.trim()) window.verifyReceiveFingerprint();
+}
+window.verifyReceiveFingerprint = function () {
+  const res = $('recv-fp-result');
+  if (!res) return;
+  const exp = ($('recv-fp-expected').value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '');
+  if (!S.recvHashHex) { res.textContent = ''; return; }
+  if (!exp) {
+    res.textContent = tr('receive.pasteFpHint', 'Paste the sender fingerprint to compare.');
+    res.style.color = 'var(--muted)';
+    return;
+  }
+  if (exp === S.recvHashHex) {
+    res.textContent = '✅ ' + tr('receive.verifyOk', 'Match — the file is intact and authentic.');
+    res.style.color = 'var(--success)';
+  } else {
+    res.textContent = '❌ ' + tr('receive.verifyFail', 'No match — the file differs from the sender fingerprint.');
+    res.style.color = 'var(--error)';
+  }
+};
+
+// ── Minimal store-only ZIP writer (no dependencies) ──
+const _crcTable = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = _crcTable[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+async function zipFiles(files, zipName) {
+  const enc = new TextEncoder();
+  const u16 = n => new Uint8Array([n & 0xFF, (n >>> 8) & 0xFF]);
+  const u32 = n => new Uint8Array([n & 0xFF, (n >>> 8) & 0xFF, (n >>> 16) & 0xFF, (n >>> 24) & 0xFF]);
+  const body = [], central = [];
+  let offset = 0;
+  for (const file of files) {
+    const name = enc.encode(file.webkitRelativePath || file.name);
+    const data = new Uint8Array(await file.arrayBuffer());
+    const crc = crc32(data);
+    const local = [u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0),
+      u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0), name, data];
+    let localLen = 0; local.forEach(p => localLen += p.length);
+    body.push(...local);
+    central.push(u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
+      u32(crc), u32(data.length), u32(data.length), u16(name.length),
+      u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), name);
+    offset += localLen;
+  }
+  let cenLen = 0; central.forEach(p => cenLen += p.length);
+  const end = [u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+    u32(cenLen), u32(offset), u16(0)];
+  return new File([new Blob([...body, ...central, ...end], { type: 'application/zip' })],
+    zipName, { type: 'application/zip' });
+}
+
 function fileIcon(name) {
   const e = (name.split('.').pop() || '').toLowerCase();
   return ({
@@ -3774,6 +3906,7 @@ function createP2PPeer(sendSignal) {
 
 async function sendP2PFile(channel, file, message, statusId, code) {
   markTransferActive('Direct P2P send');
+  const _t0 = Date.now();
   const raw = new Uint8Array(await file.arrayBuffer());
   const aesKey = await genAesKey();
   const enc = await aesEncrypt(aesKey, raw);
@@ -3797,8 +3930,8 @@ async function sendP2PFile(channel, file, message, statusId, code) {
       await new Promise(r => setTimeout(r, 30));
     }
     channel.send(enc.slice(offset, offset + CFG.p2pChunkSize));
-    const pct = Math.min(100, Math.round(((offset + CFG.p2pChunkSize) / enc.byteLength) * 100));
-    setStatus(statusId, 'loading', `Direct P2P transfer... ${pct}%`);
+    const sent = Math.min(enc.byteLength, offset + CFG.p2pChunkSize);
+    setStatus(statusId, 'loading', progressText('Direct P2P transfer…', sent, enc.byteLength, _t0));
   }
   channel.send(JSON.stringify({ type: 'done' }));
   setStatus(statusId, 'success', 'Direct P2P transfer complete. You can close this page.');
@@ -3874,6 +4007,7 @@ window.joinP2PReceive = async function () {
 
   const chunks = [];
   let meta = null;
+  let _rt0 = 0;
   let ws;
   let signalCode = code;
   markTransferActive(tr('receive.p2pConnecting', 'Connecting to the direct P2P code...'));
@@ -3900,23 +4034,23 @@ window.joinP2PReceive = async function () {
             ? await unwrapP2PTransferKey(code, meta.key)
             : b64d(meta.key);
           const plain = await aesDecrypt(transferKey, enc);
+          const _fp = await sha256hexBytes(plain instanceof Uint8Array ? plain : new Uint8Array(plain));
           const url = URL.createObjectURL(new Blob([plain], { type: meta.mime }));
           const a = Object.assign(document.createElement('a'), { href: url, download: meta.name });
           document.body.append(a); a.click(); a.remove();
           URL.revokeObjectURL(url);
           setStatus('p2p-recv-status', 'success', trFormat('receive.p2pSuccess', {
             name: meta.name,
-          }, '{name} received and decrypted. Your browser placed it in Downloads unless you chose another folder.'));
+          }, '{name} received and decrypted. Your browser placed it in Downloads unless you chose another folder.') + ` · SHA-256: ${_fp}`);
           markTransferDone();
         }
         return;
       }
       chunks.push(new Uint8Array(msg.data));
+      if (!_rt0) _rt0 = Date.now();
       if (meta?.encryptedSize) {
         const got = chunks.reduce((n, c) => n + c.byteLength, 0);
-        setStatus('p2p-recv-status', 'loading', trFormat('receive.p2pProgress', {
-          percent: Math.round(got / meta.encryptedSize * 100),
-        }, 'Direct P2P transfer... {percent}%'));
+        setStatus('p2p-recv-status', 'loading', progressText(tr('receive.p2pTransfer', 'Direct P2P transfer…'), got, meta.encryptedSize, _rt0));
       }
     };
   };
@@ -3973,15 +4107,35 @@ const fi = $('file-input');
 const homeDrop = $('home-drop');
 const homeFi = $('home-file-input');
 
-fi.addEventListener('change', () => { if (fi.files[0]) pickFile(fi.files[0]); });
-if (homeFi) homeFi.addEventListener('change', () => { if (homeFi.files[0]) pickFile(homeFi.files[0]); });
+const folderFi = $('folder-input');
+
+async function handlePicked(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  if (files.length === 1 && !files[0].webkitRelativePath) { pickFile(files[0]); return; }
+  try {
+    setStatus('send-status', 'loading', tr('send.zipping', 'Packing your selection into a single .zip…'));
+    const folderName = files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] : '';
+    const zipName = (folderName || 'filenymous-bundle') + '.zip';
+    const zip = await zipFiles(files, zipName);
+    $('send-status').classList.add('hidden');
+    pickFile(zip);
+    toast(trFormat('send.zipDone', { n: files.length }, '{n} items packed into one .zip.'));
+  } catch (e) {
+    setStatus('send-status', 'error', 'Zip failed: ' + e.message);
+  }
+}
+
+fi.addEventListener('change', () => handlePicked(fi.files));
+if (homeFi) homeFi.addEventListener('change', () => handlePicked(homeFi.files));
+if (folderFi) folderFi.addEventListener('change', () => handlePicked(folderFi.files));
 
 dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
 dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
 dz.addEventListener('drop', e => {
   e.preventDefault();
   dz.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
+  if (e.dataTransfer.files.length) handlePicked(e.dataTransfer.files);
 });
 
 if (homeDrop) {
@@ -3992,7 +4146,7 @@ if (homeDrop) {
   homeDrop.addEventListener('drop', e => {
     e.preventDefault();
     homeDrop.classList.remove('drag-over');
-    if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length) handlePicked(e.dataTransfer.files);
   });
   homeDrop.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -4021,6 +4175,17 @@ function pickFile(f) {
   }
   if (homeDrop) homeDrop.classList.add('has-file');
   if (homeBtn) homeBtn.disabled = false;
+  // Compute a visible SHA-256 content fingerprint (async, non-blocking)
+  S.fileHashHex = null;
+  const fpEl = $('file-fingerprint');
+  if (fpEl) {
+    fpEl.textContent = tr('send.fpComputing', 'SHA-256 fingerprint: computing…');
+    fpEl.classList.remove('hidden');
+    f.arrayBuffer()
+      .then(buf => sha256hexBytes(new Uint8Array(buf)))
+      .then(hex => { S.fileHashHex = hex; fpEl.textContent = 'SHA-256: ' + hex; })
+      .catch(() => { fpEl.classList.add('hidden'); });
+  }
   // Afficher notice mode web si applicable
   updateSendNotice();
 }
@@ -4497,6 +4662,7 @@ window.handleDownload = async function () {
             : tr('receive.progressFinalizing', 'Finalizing...');
         });
 
+    await showReceiveFingerprint(plain);
     const url = URL.createObjectURL(new Blob([plain]));
     const a   = Object.assign(document.createElement('a'), { href: url, download: p.manifest.file_name });
     document.body.append(a); a.click(); a.remove();
@@ -4735,5 +4901,14 @@ async function init() {
 
 init().catch(console.error);
 </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function (e) {
+          console.warn('Filenymous: service worker registration failed', e);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
