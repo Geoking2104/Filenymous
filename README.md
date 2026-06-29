@@ -24,10 +24,12 @@ For small files, the self-contained link remains the simplest path. For larger f
 
 ## Public app features
 
+- **Folder & multi-file sharing**: select a whole folder or several files; Filenymous packs them into a single `.zip` in the browser before encrypting and sending.
 - **Magic-link QR**: any share link can be shown as a QR code generated locally in the browser; the link and key never leave the page.
-- **Live progress**: send and receive show a percentage progress bar during the transfer.
+- **Live progress**: send and receive show the percentage, transfer speed, and an estimated time remaining.
+- **Integrity verification**: every transfer exposes a SHA-256 content fingerprint. The sender can share it and the recipient can paste it and click **Verify** to confirm the file is intact. (BLAKE3, the Iroh hash, will replace SHA-256 once the Iroh transport lands.)
 - **Installable PWA**: Filenymous can be installed on iOS, Android, and desktop from the browser ("Add to Home Screen"), with no app store, and its shell opens offline.
-- **Plain-language UI**: the home and send screens avoid networking jargon; the technical transports (WebRTC, Iroh, Holochain/HWC, BLAKE3) live in the **Advanced** tab.
+- **Plain-language UI**: the home and send screens avoid networking jargon; the technical transports (WebRTC, Iroh, Holochain/HWC, BLAKE3) are tucked behind an **Advanced** disclosure.
 
 ### PWA assets
 
