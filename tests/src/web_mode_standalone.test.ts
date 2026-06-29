@@ -62,7 +62,8 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain('id="home-file-input"');
     expect(html).toContain('id="home-send-btn"');
     expect(html).toContain("createFromHome");
-    expect(visibleHtml).toContain("Add a file");
+    expect(visibleHtml).toContain("Add files or folder");
+    expect(visibleHtml).toContain("Create Magic Link");
     expect(packagedHtml).toContain('id="home-file-input"');
   });
 
@@ -105,9 +106,9 @@ describe("standalone web transfer mode", () => {
   });
 
   it("uses the simplified public home message", () => {
-    expect(visibleHtml).toContain("Send a file with one unique code");
+    expect(visibleHtml).toContain("Send files with one private link");
     expect(visibleHtml).toContain("No cloud, no account");
-    expect(visiblePackagedHtml).toContain("Send a file with one unique code");
+    expect(visiblePackagedHtml).toContain("Send files with one private link");
   });
 
   it("serves English public fallback copy before JavaScript translations run", () => {
