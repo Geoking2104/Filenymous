@@ -754,7 +754,7 @@
   <div class="home-shell">
     <section class="home-transfer-card" aria-label="Create a transfer" data-i18n-aria-label="home.transferCard">
       <label class="home-drop" id="home-drop" for="home-file-input" tabindex="0">
-        <input type="file" id="home-file-input" hidden />
+        <input type="file" id="home-file-input" multiple hidden />
         <span>
           <span class="home-plus" aria-hidden="true">+</span>
           <span class="home-drop-title" data-i18n="home.addFile">Add a file</span>
@@ -805,7 +805,7 @@
       <div>
         <p class="hero-eyebrow">Anonymous P2P, no account</p>
         <h1 class="hero-title">Share a file. Give a code. Done.</h1>
-        <p class="hero-text">Filenymous encrypts the file in this browser, then chooses the simplest available path: a self-contained encrypted link, direct WebRTC, Iroh-ready large web transfers, or Holochain/HWC for advanced identity.</p>
+        <p class="hero-text">Filenymous encrypts your file in this browser, then picks the simplest way to deliver it — a private link or a one-time code. No account, no install.</p>
       </div>
       <div class="trust-row" aria-label="Main guarantees">
         <span class="trust-chip">Local encryption</span>
@@ -839,6 +839,8 @@
     <div class="step-card"><span class="step-num">3</span><strong>Keep open</strong><span>For direct P2P, both pages stay active.</span></div>
   </div>
 
+  <details class="transport-advanced">
+    <summary class="muted" style="cursor:pointer; margin:8px 0; font-weight:600;">Advanced — how your file travels (technical)</summary>
   <div class="transport-grid">
     <div class="transport-card">
       <span class="transport-tag">Today</span>
@@ -856,6 +858,7 @@
       <p>Holo Web Conductor adds identity, contacts, DHT, and coordination without requiring a local conductor for the public web experience.</p>
     </div>
   </div>
+  </details>
 
   <div class="card">
     <p class="card-title">Transfer room</p>
@@ -894,11 +897,17 @@
   <div class="card">
     <p class="card-title" data-i18n="send.fileTitle">File to send</p>
     <label class="dropzone" id="dz" for="file-input">
-      <input type="file" id="file-input" style="display:none" />
+      <input type="file" id="file-input" multiple style="display:none" />
       <div class="dz-icon">📂</div>
       <p class="dz-hint"><strong data-i18n="send.choose">Choose</strong> <span data-i18n="send.dropFile">or drop a file here</span></p>
       <div id="file-badge" style="display:none; margin-top:10px; padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; font-size:13px; font-weight:500;"></div>
     </label>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('folder-input').click()">Add a folder</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('file-input').click()">Add several files</button>
+      <input type="file" id="folder-input" webkitdirectory directory multiple style="display:none" />
+    </div>
+    <p id="file-fingerprint" class="muted hidden" style="margin-top:8px; font-family:monospace; font-size:11px; word-break:break-all;"></p>
   </div>
 
   <div class="card">
@@ -977,16 +986,17 @@
       <code id="p2p-code-out"></code>
       <button class="btn btn-secondary btn-sm" onclick="copyP2PCode()" data-i18n="common.copy">Copy</button>
     </div>
-    <p class="muted mt-2" data-i18n="send.p2pHelp">Keep this page open. The encrypted file passes directly between browsers via WebRTC, without a Holochain conductor and without server storage. Iroh remains the priority path for verifiable large web files and encrypted relays.</p>
+    <p class="muted mt-2" data-i18n="send.p2pHelp">Keep this page open. The encrypted file goes straight from your browser to the recipient's — nothing is stored on a server.</p>
     <div id="p2p-send-status" class="status info mt-3 hidden"></div>
   </div>
 
   <div class="card" style="border-color:transparent">
     <ul class="feature-list">
       <li>Local AES-256-GCM encryption in your browser</li>
-      <li>Direct WebRTC for browsers, Iroh v1 for future verified transport</li>
-      <li>Holochain/HWC remains available in advanced mode</li>
+      <li>Direct browser-to-browser transfer, no server storage</li>
+      <li>SHA-256 fingerprint so the recipient can verify integrity</li>
       <li>No account required, pseudonym by default</li>
+      <li>Advanced transports (Iroh, Holochain/HWC) live in the Advanced tab</li>
     </ul>
   </div>
 </section>
@@ -1006,6 +1016,15 @@
       <p class="prog-label" id="recv-prog-label" data-i18n="common.loading">Loading...</p>
     </div>
     <div id="recv-status" class="hidden mt-3"></div>
+    <div id="recv-verify" class="hidden mt-3">
+      <p class="msg-box-label">Integrity (SHA-256)</p>
+      <p id="recv-fp" class="muted" style="font-family:monospace; font-size:11px; word-break:break-all;"></p>
+      <div class="field mt-2">
+        <input type="text" id="recv-fp-expected" placeholder="Paste the sender's SHA-256 to verify (optional)" />
+      </div>
+      <button class="btn btn-secondary btn-sm mt-2" onclick="verifyReceiveFingerprint()">Verify</button>
+      <p id="recv-fp-result" class="muted mt-2"></p>
+    </div>
     <button id="btn-download" class="btn btn-primary btn-full mt-3" onclick="handleDownload()">
       <span data-i18n="receive.download">Download and decrypt</span>
     </button>
@@ -2672,6 +2691,8 @@ const S = {
   histFilt:  'all',
   transferActive: false,
   transferLabel:  '',
+  fileHashHex: null,
+  recvHashHex: null,
 };
 
 function markTransferActive(label) {
@@ -3557,6 +3578,109 @@ function fmtBytes(b) {
   return `${(b / 1073741824).toFixed(2)} Go`;
 }
 
+// ── Progress / speed / ETA helpers ──
+function fmtSpeed(bps) {
+  if (!bps || !isFinite(bps) || bps <= 0) return '';
+  return fmtBytes(bps) + '/s';
+}
+function fmtEta(seconds) {
+  if (!isFinite(seconds) || seconds < 0) return '';
+  seconds = Math.round(seconds);
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60), sec = seconds % 60;
+  if (m < 60) return `${m}m ${sec.toString().padStart(2, '0')}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${(m % 60).toString().padStart(2, '0')}m`;
+}
+function progressText(prefix, done, total, startMs) {
+  const pct = total ? Math.min(100, Math.round(done / total * 100)) : 0;
+  let line = `${prefix} ${pct}%`;
+  const elapsed = (Date.now() - startMs) / 1000;
+  if (elapsed > 0.4 && done > 0 && total) {
+    const speed = done / elapsed;
+    const sp = fmtSpeed(speed), et = fmtEta((total - done) / speed);
+    if (sp) line += ` · ${sp}`;
+    if (et && pct < 100) line += ` · ~${et} ${tr('common.remaining', 'left')}`;
+  }
+  return line;
+}
+
+// ── Integrity (SHA-256) helpers ──
+async function sha256hexBytes(bytes) {
+  const buf = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function showReceiveFingerprint(plain) {
+  const el = $('recv-verify');
+  if (!el) return;
+  const bytes = plain instanceof Uint8Array ? plain : new Uint8Array(plain);
+  S.recvHashHex = await sha256hexBytes(bytes);
+  const fpEl = $('recv-fp');
+  if (fpEl) fpEl.textContent = 'SHA-256: ' + S.recvHashHex;
+  el.classList.remove('hidden');
+  const exp = $('recv-fp-expected');
+  if (exp && exp.value.trim()) window.verifyReceiveFingerprint();
+}
+window.verifyReceiveFingerprint = function () {
+  const res = $('recv-fp-result');
+  if (!res) return;
+  const exp = ($('recv-fp-expected').value || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '');
+  if (!S.recvHashHex) { res.textContent = ''; return; }
+  if (!exp) {
+    res.textContent = tr('receive.pasteFpHint', 'Paste the sender fingerprint to compare.');
+    res.style.color = 'var(--muted)';
+    return;
+  }
+  if (exp === S.recvHashHex) {
+    res.textContent = '✅ ' + tr('receive.verifyOk', 'Match — the file is intact and authentic.');
+    res.style.color = 'var(--success)';
+  } else {
+    res.textContent = '❌ ' + tr('receive.verifyFail', 'No match — the file differs from the sender fingerprint.');
+    res.style.color = 'var(--error)';
+  }
+};
+
+// ── Minimal store-only ZIP writer (no dependencies) ──
+const _crcTable = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = _crcTable[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+async function zipFiles(files, zipName) {
+  const enc = new TextEncoder();
+  const u16 = n => new Uint8Array([n & 0xFF, (n >>> 8) & 0xFF]);
+  const u32 = n => new Uint8Array([n & 0xFF, (n >>> 8) & 0xFF, (n >>> 16) & 0xFF, (n >>> 24) & 0xFF]);
+  const body = [], central = [];
+  let offset = 0;
+  for (const file of files) {
+    const name = enc.encode(file.webkitRelativePath || file.name);
+    const data = new Uint8Array(await file.arrayBuffer());
+    const crc = crc32(data);
+    const local = [u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0),
+      u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0), name, data];
+    let localLen = 0; local.forEach(p => localLen += p.length);
+    body.push(...local);
+    central.push(u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
+      u32(crc), u32(data.length), u32(data.length), u16(name.length),
+      u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), name);
+    offset += localLen;
+  }
+  let cenLen = 0; central.forEach(p => cenLen += p.length);
+  const end = [u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+    u32(cenLen), u32(offset), u16(0)];
+  return new File([new Blob([...body, ...central, ...end], { type: 'application/zip' })],
+    zipName, { type: 'application/zip' });
+}
+
 function fileIcon(name) {
   const e = (name.split('.').pop() || '').toLowerCase();
   return ({
@@ -3782,6 +3906,7 @@ function createP2PPeer(sendSignal) {
 
 async function sendP2PFile(channel, file, message, statusId, code) {
   markTransferActive('Direct P2P send');
+  const _t0 = Date.now();
   const raw = new Uint8Array(await file.arrayBuffer());
   const aesKey = await genAesKey();
   const enc = await aesEncrypt(aesKey, raw);
@@ -3805,8 +3930,8 @@ async function sendP2PFile(channel, file, message, statusId, code) {
       await new Promise(r => setTimeout(r, 30));
     }
     channel.send(enc.slice(offset, offset + CFG.p2pChunkSize));
-    const pct = Math.min(100, Math.round(((offset + CFG.p2pChunkSize) / enc.byteLength) * 100));
-    setStatus(statusId, 'loading', `Direct P2P transfer... ${pct}%`);
+    const sent = Math.min(enc.byteLength, offset + CFG.p2pChunkSize);
+    setStatus(statusId, 'loading', progressText('Direct P2P transfer…', sent, enc.byteLength, _t0));
   }
   channel.send(JSON.stringify({ type: 'done' }));
   setStatus(statusId, 'success', 'Direct P2P transfer complete. You can close this page.');
@@ -3882,6 +4007,7 @@ window.joinP2PReceive = async function () {
 
   const chunks = [];
   let meta = null;
+  let _rt0 = 0;
   let ws;
   let signalCode = code;
   markTransferActive(tr('receive.p2pConnecting', 'Connecting to the direct P2P code...'));
@@ -3908,23 +4034,23 @@ window.joinP2PReceive = async function () {
             ? await unwrapP2PTransferKey(code, meta.key)
             : b64d(meta.key);
           const plain = await aesDecrypt(transferKey, enc);
+          const _fp = await sha256hexBytes(plain instanceof Uint8Array ? plain : new Uint8Array(plain));
           const url = URL.createObjectURL(new Blob([plain], { type: meta.mime }));
           const a = Object.assign(document.createElement('a'), { href: url, download: meta.name });
           document.body.append(a); a.click(); a.remove();
           URL.revokeObjectURL(url);
           setStatus('p2p-recv-status', 'success', trFormat('receive.p2pSuccess', {
             name: meta.name,
-          }, '{name} received and decrypted. Your browser placed it in Downloads unless you chose another folder.'));
+          }, '{name} received and decrypted. Your browser placed it in Downloads unless you chose another folder.') + ` · SHA-256: ${_fp}`);
           markTransferDone();
         }
         return;
       }
       chunks.push(new Uint8Array(msg.data));
+      if (!_rt0) _rt0 = Date.now();
       if (meta?.encryptedSize) {
         const got = chunks.reduce((n, c) => n + c.byteLength, 0);
-        setStatus('p2p-recv-status', 'loading', trFormat('receive.p2pProgress', {
-          percent: Math.round(got / meta.encryptedSize * 100),
-        }, 'Direct P2P transfer... {percent}%'));
+        setStatus('p2p-recv-status', 'loading', progressText(tr('receive.p2pTransfer', 'Direct P2P transfer…'), got, meta.encryptedSize, _rt0));
       }
     };
   };
@@ -3981,15 +4107,35 @@ const fi = $('file-input');
 const homeDrop = $('home-drop');
 const homeFi = $('home-file-input');
 
-fi.addEventListener('change', () => { if (fi.files[0]) pickFile(fi.files[0]); });
-if (homeFi) homeFi.addEventListener('change', () => { if (homeFi.files[0]) pickFile(homeFi.files[0]); });
+const folderFi = $('folder-input');
+
+async function handlePicked(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  if (files.length === 1 && !files[0].webkitRelativePath) { pickFile(files[0]); return; }
+  try {
+    setStatus('send-status', 'loading', tr('send.zipping', 'Packing your selection into a single .zip…'));
+    const folderName = files[0].webkitRelativePath ? files[0].webkitRelativePath.split('/')[0] : '';
+    const zipName = (folderName || 'filenymous-bundle') + '.zip';
+    const zip = await zipFiles(files, zipName);
+    $('send-status').classList.add('hidden');
+    pickFile(zip);
+    toast(trFormat('send.zipDone', { n: files.length }, '{n} items packed into one .zip.'));
+  } catch (e) {
+    setStatus('send-status', 'error', 'Zip failed: ' + e.message);
+  }
+}
+
+fi.addEventListener('change', () => handlePicked(fi.files));
+if (homeFi) homeFi.addEventListener('change', () => handlePicked(homeFi.files));
+if (folderFi) folderFi.addEventListener('change', () => handlePicked(folderFi.files));
 
 dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
 dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
 dz.addEventListener('drop', e => {
   e.preventDefault();
   dz.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
+  if (e.dataTransfer.files.length) handlePicked(e.dataTransfer.files);
 });
 
 if (homeDrop) {
@@ -4000,7 +4146,7 @@ if (homeDrop) {
   homeDrop.addEventListener('drop', e => {
     e.preventDefault();
     homeDrop.classList.remove('drag-over');
-    if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length) handlePicked(e.dataTransfer.files);
   });
   homeDrop.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -4029,6 +4175,17 @@ function pickFile(f) {
   }
   if (homeDrop) homeDrop.classList.add('has-file');
   if (homeBtn) homeBtn.disabled = false;
+  // Compute a visible SHA-256 content fingerprint (async, non-blocking)
+  S.fileHashHex = null;
+  const fpEl = $('file-fingerprint');
+  if (fpEl) {
+    fpEl.textContent = tr('send.fpComputing', 'SHA-256 fingerprint: computing…');
+    fpEl.classList.remove('hidden');
+    f.arrayBuffer()
+      .then(buf => sha256hexBytes(new Uint8Array(buf)))
+      .then(hex => { S.fileHashHex = hex; fpEl.textContent = 'SHA-256: ' + hex; })
+      .catch(() => { fpEl.classList.add('hidden'); });
+  }
   // Afficher notice mode web si applicable
   updateSendNotice();
 }
@@ -4505,6 +4662,7 @@ window.handleDownload = async function () {
             : tr('receive.progressFinalizing', 'Finalizing...');
         });
 
+    await showReceiveFingerprint(plain);
     const url = URL.createObjectURL(new Blob([plain]));
     const a   = Object.assign(document.createElement('a'), { href: url, download: p.manifest.file_name });
     document.body.append(a); a.click(); a.remove();
