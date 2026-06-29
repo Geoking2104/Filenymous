@@ -322,6 +322,53 @@
       grid-template-columns: 1fr;
       gap: 10px;
     }
+    .magic-drop-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .magic-folder-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .magic-progress {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface2);
+    }
+    .magic-progress-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .magic-progress-track {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(20,33,61,.1);
+    }
+    .magic-progress-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent);
+      transition: width .2s ease;
+    }
+    .magic-download-location {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
     .home-secondary-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -744,19 +791,35 @@
 <!-- ════════════════════════════════════════════════════ PANEL ROOM -->
 <section id="panel-room" class="panel active">
   <div class="home-shell">
-    <section class="home-transfer-card" aria-label="Create a transfer" data-i18n-aria-label="home.transferCard">
+    <section class="home-transfer-card" aria-label="Create Magic Link" data-i18n-aria-label="home.transferCard">
+      <input type="file" id="home-file-input" hidden multiple />
+      <input type="file" id="home-folder-input" hidden webkitdirectory directory multiple />
       <label class="home-drop" id="home-drop" for="home-file-input" tabindex="0">
-        <input type="file" id="home-file-input" hidden />
         <span>
           <span class="home-plus" aria-hidden="true">+</span>
-          <span class="home-drop-title" data-i18n="home.addFile">Add a file</span>
-          <span class="home-drop-copy" data-i18n="home.dropHint">Drop a file here or click to choose it.</span>
+          <span class="home-drop-title" data-i18n="home.addFile">Add files or folder</span>
+          <span class="home-drop-copy" data-i18n="home.dropHint">Share by link, code, or QR.</span>
         </span>
       </label>
       <div class="home-file-preview" id="home-file-preview" data-i18n="home.noFile">No file selected</div>
+      <div class="magic-drop-actions">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('home-file-input').click()" data-i18n="home.chooseFiles">Choose files</button>
+        <button type="button" id="home-folder-btn" class="btn btn-secondary" onclick="chooseFolderFromHome(event)" data-i18n="home.chooseFolder">Choose folder</button>
+      </div>
+      <p class="magic-folder-note" data-i18n="home.folderNote">Folder support depends on your browser. If it is unavailable, choose files instead.</p>
+      <div class="magic-progress" id="magic-progress" aria-live="polite">
+        <div class="magic-progress-top">
+          <span id="magic-progress-label" data-i18n="home.progressReady">Keep this page open during direct transfer.</span>
+          <span id="magic-progress-estimate" data-i18n="home.progressEstimate">No upload needed.</span>
+        </div>
+        <div class="magic-progress-track" aria-hidden="true">
+          <div class="magic-progress-fill" id="magic-progress-fill"></div>
+        </div>
+        <div class="magic-download-location" id="magic-download-location" data-i18n="home.downloadLocation">Received files appear where your browser saves downloads.</div>
+      </div>
       <div class="home-actions">
         <button id="home-send-btn" class="btn btn-primary btn-full" onclick="createFromHome(event)" disabled>
-          <span data-i18n="home.createCode">Create code</span>
+          <span data-i18n="home.createMagicLink">Create Magic Link</span>
         </button>
         <label class="human-proof" for="home-human-proof">
           <input type="checkbox" id="home-human-proof" />
@@ -770,12 +833,12 @@
     </section>
 
     <section class="home-copy" aria-label="Overview" data-i18n-aria-label="home.presentation">
-      <h1 data-i18n="home.title">Send a file with one unique code</h1>
-      <p data-i18n="home.subtitle">No cloud, no account. Filenymous encrypts in your browser, then creates a self-contained link or a direct P2P session for large files.</p>
+      <h1 data-i18n="home.title">Send files with one private link</h1>
+      <p data-i18n="home.subtitle">No cloud, no account. Choose files, then share a Magic Link, one-time code, or QR with the person receiving them.</p>
       <div class="home-proof-list" aria-label="Guarantees" data-i18n-aria-label="home.guarantees">
-        <div class="home-proof"><strong data-i18n="home.proof1Title">No account</strong><span data-i18n="home.proof1Copy">A one-time code is enough.</span></div>
-        <div class="home-proof"><strong data-i18n="home.proof2Title">Local first</strong><span data-i18n="home.proof2Copy">The file is encrypted before sharing.</span></div>
-        <div class="home-proof"><strong data-i18n="home.proof3Title">P2P when needed</strong><span data-i18n="home.proof3Copy">Large files keep both pages open.</span></div>
+        <div class="home-proof"><strong data-i18n="home.proof1Title">One gesture</strong><span data-i18n="home.proof1Copy">Pick files and create the private link.</span></div>
+        <div class="home-proof"><strong data-i18n="home.proof2Title">Local first</strong><span data-i18n="home.proof2Copy">Your browser prepares the share before you send it.</span></div>
+        <div class="home-proof"><strong data-i18n="home.proof3Title">Clear progress</strong><span data-i18n="home.proof3Copy">See what is ready, moving, or complete.</span></div>
       </div>
     </section>
   </div>
@@ -784,14 +847,16 @@
     <button class="btn btn-secondary" onclick="showTab('receive')">
       <span><strong data-i18n="nav.receive">Receive</strong><span data-i18n="home.receiveHint">Enter a code or paste a link.</span></span>
     </button>
-    <button class="btn btn-secondary" onclick="showTab('send')">
-      <span><strong data-i18n="home.largeFile">Large file</strong><span data-i18n="home.largeFileHint">Use direct P2P.</span></span>
+    <button class="btn btn-secondary" onclick="showTab('send'); if (window.renderQrForCurrentLink) renderQrForCurrentLink();">
+      <span><strong data-i18n="common.qrCode">QR code</strong><span data-i18n="home.qrHint">Show a QR for the current link.</span></span>
     </button>
     <button class="btn btn-secondary" onclick="showTab('history')">
-      <span><strong data-i18n="home.publicDirectory">Public directory</strong><span data-i18n="home.publicDirectoryHint">See voluntarily published links.</span></span>
+      <span><strong data-i18n="nav.files">Files</strong><span data-i18n="home.filesHint">View files you shared or received.</span></span>
     </button>
   </div>
+</section>
 
+<section id="room-technical-details" class="hidden" aria-hidden="true">
   <div class="app-hero">
     <div class="hero-copy">
       <div>
@@ -3154,24 +3219,33 @@ window.FILENYMOUS_I18N = {
     "badge.holo": "Holo Web",
     "badge.bridge": "Public web",
     "badge.detecting": "Connecting...",
-    "home.transferCard": "Create a transfer",
+    "home.transferCard": "Create Magic Link",
     "home.presentation": "Overview",
     "home.guarantees": "Guarantees",
     "home.shortcuts": "Shortcuts",
-    "home.addFile": "Add a file",
-    "home.dropHint": "Drop a file here or click to choose it.",
+    "home.addFile": "Add files or folder",
+    "home.dropHint": "Share by link, code, or QR.",
     "home.noFile": "No file selected",
     "home.createCode": "Create code",
+    "home.createMagicLink": "Create Magic Link",
+    "home.chooseFiles": "Choose files",
+    "home.chooseFolder": "Choose folder",
+    "home.folderNote": "Folder support depends on your browser. If it is unavailable, choose files instead.",
+    "home.progressReady": "Keep this page open during direct transfer.",
+    "home.progressEstimate": "No upload needed.",
+    "home.downloadLocation": "Received files appear where your browser saves downloads.",
     "home.options": "Options",
-    "home.title": "Send a file with one unique code",
-    "home.subtitle": "No cloud, no account. Filenymous encrypts in your browser, then creates a self-contained link or a direct P2P session for large files.",
-    "home.proof1Title": "No account",
-    "home.proof1Copy": "A one-time code is enough.",
+    "home.title": "Send files with one private link",
+    "home.subtitle": "No cloud, no account. Choose files, then share a Magic Link, one-time code, or QR with the person receiving them.",
+    "home.proof1Title": "One gesture",
+    "home.proof1Copy": "Pick files and create the private link.",
     "home.proof2Title": "Local first",
-    "home.proof2Copy": "The file is encrypted before sharing.",
-    "home.proof3Title": "P2P when needed",
-    "home.proof3Copy": "Large files keep both pages open.",
+    "home.proof2Copy": "Your browser prepares the share before you send it.",
+    "home.proof3Title": "Clear progress",
+    "home.proof3Copy": "See what is ready, moving, or complete.",
     "home.receiveHint": "Enter a code or paste a link.",
+    "home.qrHint": "Show a QR for the current link.",
+    "home.filesHint": "View files you shared or received.",
     "home.largeFile": "Large file",
     "home.largeFileHint": "Use direct P2P.",
     "home.publicDirectory": "Public directory",
@@ -3283,6 +3357,13 @@ window.FILENYMOUS_I18N = {
     "home.dropHint": "Glissez un fichier ici ou cliquez pour le choisir.",
     "home.noFile": "Aucun fichier sélectionné",
     "home.createCode": "Créer le code",
+    "home.createMagicLink": "Créer le Magic Link",
+    "home.chooseFiles": "Choisir des fichiers",
+    "home.chooseFolder": "Choisir un dossier",
+    "home.folderNote": "La prise en charge des dossiers dépend de votre navigateur. Si elle est indisponible, choisissez les fichiers à la place.",
+    "home.progressReady": "Gardez cette page ouverte pendant le transfert direct.",
+    "home.progressEstimate": "Aucun téléversement nécessaire.",
+    "home.downloadLocation": "Les fichiers reçus apparaissent là où votre navigateur enregistre les téléchargements.",
     "home.options": "Options",
     "home.title": "Envoyez un fichier grâce à un code unique",
     "home.subtitle": "Pas de cloud, pas de compte. Filenymous chiffre dans votre navigateur, puis crée un lien autonome ou une session P2P directe pour les fichiers lourds.",
@@ -3293,6 +3374,8 @@ window.FILENYMOUS_I18N = {
     "home.proof3Title": "P2P si besoin",
     "home.proof3Copy": "Les gros fichiers gardent la page ouverte.",
     "home.receiveHint": "Entrer un code ou coller un lien.",
+    "home.qrHint": "Afficher un QR pour le lien actuel.",
+    "home.filesHint": "Voir les fichiers partagés ou reçus.",
     "home.largeFile": "Fichier lourd",
     "home.largeFileHint": "Passer par le P2P direct.",
     "home.publicDirectory": "Répertoire public",
@@ -3404,6 +3487,13 @@ window.FILENYMOUS_I18N = {
     "home.dropHint": "파일을 여기에 놓거나 클릭해서 선택하세요.",
     "home.noFile": "선택된 파일 없음",
     "home.createCode": "코드 만들기",
+    "home.createMagicLink": "Magic Link 만들기",
+    "home.chooseFiles": "파일 선택",
+    "home.chooseFolder": "폴더 선택",
+    "home.folderNote": "폴더 지원은 브라우저에 따라 다릅니다. 사용할 수 없으면 파일을 선택하세요.",
+    "home.progressReady": "직접 전송 중에는 이 페이지를 열어 두세요.",
+    "home.progressEstimate": "업로드가 필요 없습니다.",
+    "home.downloadLocation": "받은 파일은 브라우저가 다운로드를 저장하는 위치에 나타납니다.",
     "home.options": "옵션",
     "home.title": "고유 코드 하나로 파일을 보내세요",
     "home.subtitle": "클라우드도 계정도 필요 없습니다. Filenymous는 브라우저 안에서 암호화한 뒤, 독립 링크나 큰 파일용 직접 P2P 세션을 만듭니다.",
@@ -3414,6 +3504,8 @@ window.FILENYMOUS_I18N = {
     "home.proof3Title": "필요 시 P2P",
     "home.proof3Copy": "큰 파일은 양쪽 페이지를 열어 둡니다.",
     "home.receiveHint": "코드를 입력하거나 링크를 붙여넣으세요.",
+    "home.qrHint": "현재 링크의 QR을 표시합니다.",
+    "home.filesHint": "공유하거나 받은 파일을 봅니다.",
     "home.largeFile": "큰 파일",
     "home.largeFileHint": "직접 P2P를 사용합니다.",
     "home.publicDirectory": "공개 디렉터리",
@@ -3972,16 +4064,58 @@ const dz = $('dz');
 const fi = $('file-input');
 const homeDrop = $('home-drop');
 const homeFi = $('home-file-input');
+const homeFolderInput = $('home-folder-input');
 
-fi.addEventListener('change', () => { if (fi.files[0]) pickFile(fi.files[0]); });
-if (homeFi) homeFi.addEventListener('change', () => { if (homeFi.files[0]) pickFile(homeFi.files[0]); });
+function clearSelectedFileForNow(inputToClear) {
+  S.file = null;
+  const badge = $('file-badge');
+  if (badge) {
+    badge.textContent = '';
+    badge.style.display = 'none';
+  }
+  const homePreview = $('home-file-preview');
+  if (homePreview) {
+    homePreview.textContent = tr('home.noFile', 'No file selected');
+    homePreview.classList.remove('has-file');
+  }
+  if (homeDrop) homeDrop.classList.remove('has-file');
+  if (dz) dz.classList.remove('has-file');
+  const btnSend = $('btn-send');
+  if (btnSend) btnSend.disabled = true;
+  const homeBtn = $('home-send-btn');
+  if (homeBtn) homeBtn.disabled = true;
+  if (inputToClear) inputToClear.value = '';
+  if (fi) fi.value = '';
+  if (homeFi) homeFi.value = '';
+  if (homeFolderInput) homeFolderInput.value = '';
+  updateSendNotice();
+}
+
+function pickSingleFileForNow(files, inputToClear) {
+  const list = Array.from(files || []);
+  if (!list.length) return;
+  if (list.length === 1 && !list[0].webkitRelativePath) {
+    pickFile(list[0]);
+    return;
+  }
+  clearSelectedFileForNow(inputToClear);
+  toast('Folder and multi-file sharing is being prepared. Select one file for now.', 'warning');
+}
+
+fi.addEventListener('change', () => pickSingleFileForNow(fi.files, fi));
+if (homeFi) homeFi.addEventListener('change', () => pickSingleFileForNow(homeFi.files, homeFi));
+if (homeFolderInput) homeFolderInput.addEventListener('change', () => {
+  if (!homeFolderInput.files.length) return;
+  toast('Folder sharing is being prepared. For now, choose files individually.', 'warning');
+  clearSelectedFileForNow(homeFolderInput);
+});
 
 dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
 dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
 dz.addEventListener('drop', e => {
   e.preventDefault();
   dz.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
+  pickSingleFileForNow(e.dataTransfer.files);
 });
 
 if (homeDrop) {
@@ -3992,7 +4126,7 @@ if (homeDrop) {
   homeDrop.addEventListener('drop', e => {
     e.preventDefault();
     homeDrop.classList.remove('drag-over');
-    if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
+    pickSingleFileForNow(e.dataTransfer.files);
   });
   homeDrop.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -4028,6 +4162,15 @@ function pickFile(f) {
 window.openSendAdvanced = function (event) {
   if (event) event.preventDefault();
   showTab('send');
+};
+
+window.chooseFolderFromHome = function (event) {
+  if (event) event.preventDefault();
+  if (!homeFolderInput) {
+    toast('Folder selection is not available in this browser. Choose files individually.', 'warning');
+    return;
+  }
+  homeFolderInput.click();
 };
 
 window.createFromHome = async function (event) {
