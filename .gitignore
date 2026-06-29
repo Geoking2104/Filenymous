@@ -16,6 +16,7 @@ bridge/node_modules/
 dist/
 ui/dist/
 .worktrees/
+.superpowers/
 
 # Env (ne jamais committer les secrets)
 .env
