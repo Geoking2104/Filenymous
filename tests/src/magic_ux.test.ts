@@ -69,6 +69,25 @@ describe("Magic UX public transfer workspace", () => {
     }
   });
 
+  it("defines stored ZIP fallback helpers for folder and multi-file selections", () => {
+    for (const token of [
+      "createStoredZip",
+      "safeZipPath",
+      "ZIP32_MAX",
+      "ZIP_MAX_TOTAL_BYTES",
+      "handleSelectedFiles",
+      "fileSelectionToken",
+      "selectionToken !== S.fileSelectionToken",
+      "dosDateTime",
+      "crc32",
+      "prepareSelectedPayload",
+      "chooseFolderFromHome",
+    ]) {
+      expect(html).toContain(token);
+      expect(packagedHtml).toContain(token);
+    }
+  });
+
   it("shows progress, speed, estimate, and download-location guidance", () => {
     for (const id of [
       'id="magic-progress"',

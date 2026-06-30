@@ -951,7 +951,7 @@
   <div class="card">
     <p class="card-title" data-i18n="send.fileTitle">File to send</p>
     <label class="dropzone" id="dz" for="file-input">
-      <input type="file" id="file-input" style="display:none" />
+      <input type="file" id="file-input" style="display:none" multiple />
       <div class="dz-icon">📂</div>
       <p class="dz-hint"><strong data-i18n="send.choose">Choose</strong> <span data-i18n="send.dropFile">or drop a file here</span></p>
       <div id="file-badge" style="display:none; margin-top:10px; padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; font-size:13px; font-weight:500;"></div>
@@ -2751,6 +2751,7 @@ Object.assign(S, {
   selectedFiles: [],
   preparedPayload: null,
   lastShareArtifact: null,
+  fileSelectionToken: 0,
 });
 
 function markTransferActive(label) {
@@ -3785,15 +3786,201 @@ function setTransferState(nextState, detail = {}) {
   );
 }
 
-function prepareSelectedPayload() {
-  const files = S.selectedFiles?.length ? S.selectedFiles : (S.file ? [S.file] : []);
-  S.preparedPayload = {
-    kind: files.length <= 1 ? 'single-file' : 'multi-file-pending',
-    files,
-    file: files[0] || null,
-    totalBytes: files.reduce((sum, file) => sum + (file?.size || 0), 0),
+function dosDateTime(date = new Date()) {
+  const year = Math.max(1980, date.getFullYear());
+  return {
+    time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2),
+    date: ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate(),
   };
-  return S.preparedPayload;
+}
+
+function crc32(bytes) {
+  if (!crc32.table) {
+    crc32.table = Array.from({ length: 256 }, (_, n) => {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      return c >>> 0;
+    });
+  }
+  let c = 0xffffffff;
+  for (const byte of bytes) c = crc32.table[(c ^ byte) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function writeU16(out, value) {
+  out.push(value & 0xff, (value >>> 8) & 0xff);
+}
+
+function writeU32(out, value) {
+  out.push(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
+}
+
+const ZIP32_MAX = 0xffffffff;
+const ZIP16_MAX = 0xffff;
+const ZIP_MAX_ENTRIES = 10000;
+const ZIP_MAX_TOTAL_BYTES = 512 * 1024 * 1024;
+const ZIP_TOO_LARGE_MESSAGE = 'This folder is too large for browser ZIP mode. Send one file or split it into smaller batches.';
+
+function assertZip32Limit(condition, message = ZIP_TOO_LARGE_MESSAGE) {
+  if (!condition) throw new Error(message);
+}
+
+function dedupeZipPath(path, usedNames) {
+  let candidate = path || 'file';
+  const seen = usedNames.get(candidate) || 0;
+  if (!seen) {
+    usedNames.set(candidate, 1);
+    return candidate;
+  }
+
+  const slash = candidate.lastIndexOf('/');
+  const dir = slash >= 0 ? candidate.slice(0, slash + 1) : '';
+  const base = slash >= 0 ? candidate.slice(slash + 1) : candidate;
+  const dot = base.lastIndexOf('.');
+  const hasExtension = dot > 0;
+  const stem = hasExtension ? base.slice(0, dot) : base;
+  const extension = hasExtension ? base.slice(dot) : '';
+  let next = seen + 1;
+  do {
+    candidate = `${dir}${stem || 'file'} (${next})${extension}`;
+    next += 1;
+  } while (usedNames.has(candidate));
+  usedNames.set(path, next - 1);
+  usedNames.set(candidate, 1);
+  return candidate;
+}
+
+function safeZipPath(file, usedNames) {
+  let raw = String(file?.webkitRelativePath || file?.name || 'file')
+    .replace(/\\/g, '/')
+    .replace(/[\x00-\x1f\x7f]/g, '');
+  raw = raw.replace(/^\/+/, '').replace(/^[A-Za-z]:(?=\/|$)/, '').replace(/^\/+/, '');
+  const segments = raw.split('/')
+    .map(segment => segment.trim().replace(/:/g, '_'))
+    .filter(segment => segment && segment !== '.' && segment !== '..')
+    .map(segment => segment.replace(/[<>|"*?]/g, '_').replace(/[ .]+$/g, ''))
+    .filter(Boolean);
+  return dedupeZipPath(segments.join('/') || 'file', usedNames);
+}
+
+function assertZipSelectionFits(files) {
+  const maxEntries = Math.min(ZIP16_MAX, ZIP_MAX_ENTRIES);
+  assertZip32Limit(files.length <= maxEntries, `This selection has too many files. Send ${maxEntries} files or fewer at once.`);
+  const enc = new TextEncoder();
+  const usedNames = new Map();
+  let totalBytes = 0;
+  let projectedBytes = 22;
+  for (const file of files) {
+    const size = Number(file?.size) || 0;
+    assertZip32Limit(size < ZIP32_MAX, 'One file is too large for browser ZIP mode. Send it as a single file instead.');
+    const path = safeZipPath(file, usedNames);
+    const nameBytes = enc.encode(path).byteLength;
+    assertZip32Limit(nameBytes <= ZIP16_MAX, 'One file path is too long for browser ZIP mode.');
+    totalBytes += size;
+    assertZip32Limit(totalBytes <= ZIP_MAX_TOTAL_BYTES, ZIP_TOO_LARGE_MESSAGE);
+    projectedBytes += size + 76 + (nameBytes * 2);
+    assertZip32Limit(projectedBytes <= ZIP32_MAX, ZIP_TOO_LARGE_MESSAGE);
+  }
+}
+
+async function createStoredZip(files) {
+  const list = Array.from(files || []).filter(Boolean);
+  assertZipSelectionFits(list);
+  const enc = new TextEncoder();
+  const localParts = [];
+  const central = [];
+  const entries = [];
+  const usedNames = new Map();
+  let offset = 0;
+
+  for (const file of list) {
+    const path = safeZipPath(file, usedNames);
+    const nameBytes = enc.encode(path);
+    assertZip32Limit(nameBytes.byteLength <= ZIP16_MAX, 'One file path is too long for browser ZIP mode.');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const crc = crc32(bytes);
+    const stamp = dosDateTime(file.lastModified ? new Date(file.lastModified) : new Date());
+    const local = [];
+
+    writeU32(local, 0x04034b50);
+    writeU16(local, 20);
+    writeU16(local, 0x0800);
+    writeU16(local, 0);
+    writeU16(local, stamp.time);
+    writeU16(local, stamp.date);
+    writeU32(local, crc);
+    writeU32(local, bytes.byteLength);
+    writeU32(local, bytes.byteLength);
+    writeU16(local, nameBytes.byteLength);
+    writeU16(local, 0);
+    assertZip32Limit(offset + local.length + nameBytes.byteLength + bytes.byteLength <= ZIP32_MAX, ZIP_TOO_LARGE_MESSAGE);
+    localParts.push(new Uint8Array(local), nameBytes, bytes);
+    entries.push({ nameBytes, crc, size: bytes.byteLength, stamp, offset });
+    offset += local.length + nameBytes.byteLength + bytes.byteLength;
+  }
+
+  const centralStart = offset;
+  assertZip32Limit(centralStart <= ZIP32_MAX, ZIP_TOO_LARGE_MESSAGE);
+  for (const entry of entries) {
+    const header = [];
+    writeU32(header, 0x02014b50);
+    writeU16(header, 20);
+    writeU16(header, 20);
+    writeU16(header, 0x0800);
+    writeU16(header, 0);
+    writeU16(header, entry.stamp.time);
+    writeU16(header, entry.stamp.date);
+    writeU32(header, entry.crc);
+    writeU32(header, entry.size);
+    writeU32(header, entry.size);
+    writeU16(header, entry.nameBytes.byteLength);
+    writeU16(header, 0);
+    writeU16(header, 0);
+    writeU16(header, 0);
+    writeU16(header, 0);
+    writeU32(header, 0);
+    writeU32(header, entry.offset);
+    assertZip32Limit(offset + header.length + entry.nameBytes.byteLength <= ZIP32_MAX, ZIP_TOO_LARGE_MESSAGE);
+    central.push(new Uint8Array(header), entry.nameBytes);
+    offset += header.length + entry.nameBytes.byteLength;
+  }
+
+  const centralSize = offset - centralStart;
+  assertZip32Limit(entries.length <= ZIP16_MAX, 'This selection has too many files for browser ZIP mode.');
+  assertZip32Limit(centralSize <= ZIP32_MAX && offset <= ZIP32_MAX, ZIP_TOO_LARGE_MESSAGE);
+  const end = [];
+  writeU32(end, 0x06054b50);
+  writeU16(end, 0);
+  writeU16(end, 0);
+  writeU16(end, entries.length);
+  writeU16(end, entries.length);
+  writeU32(end, centralSize);
+  writeU32(end, centralStart);
+  writeU16(end, 0);
+
+  return new File([...localParts, ...central, new Uint8Array(end)], 'filenymous-selection.zip', {
+    type: 'application/zip',
+    lastModified: Date.now(),
+  });
+}
+
+async function prepareSelectedPayload(files, selectionToken = S.fileSelectionToken) {
+  const list = Array.from(files || []).filter(Boolean);
+  if (!list.length) return null;
+  setTransferState(TRANSFER_STATES.SELECTING);
+
+  if (list.length === 1 && !list[0].webkitRelativePath) {
+    if (selectionToken !== S.fileSelectionToken) return null;
+    S.selectedFiles = [list[0]];
+    S.preparedPayload = list[0];
+    return list[0];
+  }
+
+  const zip = await createStoredZip(list);
+  if (selectionToken !== S.fileSelectionToken) return null;
+  S.selectedFiles = list;
+  S.preparedPayload = zip;
+  return zip;
 }
 
 function toast(msg, type = 'success') {
@@ -4223,7 +4410,10 @@ const homeFi = $('home-file-input');
 const homeFolderInput = $('home-folder-input');
 
 function clearSelectedFileForNow(inputToClear) {
+  S.fileSelectionToken += 1;
   S.file = null;
+  S.selectedFiles = [];
+  S.preparedPayload = null;
   const badge = $('file-badge');
   if (badge) {
     badge.textContent = '';
@@ -4247,31 +4437,36 @@ function clearSelectedFileForNow(inputToClear) {
   updateSendNotice();
 }
 
-function pickSingleFileForNow(files, inputToClear) {
-  const list = Array.from(files || []);
-  if (!list.length) return;
-  if (list.length === 1 && !list[0].webkitRelativePath) {
-    pickFile(list[0]);
-    return;
+async function handleSelectedFiles(files, inputToClear) {
+  const selectionToken = S.fileSelectionToken + 1;
+  S.fileSelectionToken = selectionToken;
+  try {
+    const payload = await prepareSelectedPayload(files, selectionToken);
+    if (selectionToken !== S.fileSelectionToken) return;
+    if (payload) pickFile(payload);
+  } catch (err) {
+    if (selectionToken !== S.fileSelectionToken) return;
+    clearSelectedFileForNow(inputToClear);
+    setTransferState(TRANSFER_STATES.FAILED, {
+      percent: Math.min(S.transferProgressPercent || 15, 95),
+      label: tr('home.progressFailed', 'Transfer failed.'),
+    });
+    toast(err?.message || 'Unable to prepare this selection.', 'error');
   }
-  clearSelectedFileForNow(inputToClear);
-  toast('Folder and multi-file sharing is being prepared. Select one file for now.', 'warning');
 }
 
-fi.addEventListener('change', () => pickSingleFileForNow(fi.files, fi));
-if (homeFi) homeFi.addEventListener('change', () => pickSingleFileForNow(homeFi.files, homeFi));
-if (homeFolderInput) homeFolderInput.addEventListener('change', () => {
-  if (!homeFolderInput.files.length) return;
-  toast('Folder sharing is being prepared. For now, choose files individually.', 'warning');
-  clearSelectedFileForNow(homeFolderInput);
-});
+fi.addEventListener('change', () => handleSelectedFiles(fi.files, fi));
+if (homeFi) homeFi.addEventListener('change', () => handleSelectedFiles(homeFi.files, homeFi));
+if (homeFolderInput) homeFolderInput.addEventListener('change', () => handleSelectedFiles(homeFolderInput.files, homeFolderInput));
 
 dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
 dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
 dz.addEventListener('drop', e => {
   e.preventDefault();
   dz.classList.remove('drag-over');
-  pickSingleFileForNow(e.dataTransfer.files);
+  if (e.dataTransfer.files?.length) {
+    handleSelectedFiles(e.dataTransfer.files);
+  }
 });
 
 if (homeDrop) {
@@ -4282,7 +4477,9 @@ if (homeDrop) {
   homeDrop.addEventListener('drop', e => {
     e.preventDefault();
     homeDrop.classList.remove('drag-over');
-    pickSingleFileForNow(e.dataTransfer.files);
+    if (e.dataTransfer.files?.length) {
+      handleSelectedFiles(e.dataTransfer.files);
+    }
   });
   homeDrop.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -4297,16 +4494,19 @@ $('send-message').addEventListener('input', () => {
 });
 
 function pickFile(f) {
+  if (!f) return;
   S.file = f;
+  const selectedCount = S.selectedFiles?.length || 1;
+  const fileLabel = selectedCount > 1 ? `${selectedCount} files - ${f.name}` : f.name;
   const badge = $('file-badge');
-  badge.textContent  = `📄 ${f.name} — ${fmtBytes(f.size)}`;
+  badge.textContent  = `${fileIcon(f.name)} ${fileLabel} - ${fmtBytes(f.size)}`;
   badge.style.display = 'block';
   dz.classList.add('has-file');
   $('btn-send').disabled = false;
   const homePreview = $('home-file-preview');
   const homeBtn = $('home-send-btn');
   if (homePreview) {
-    homePreview.textContent = `${fileIcon(f.name)} ${f.name} - ${fmtBytes(f.size)}`;
+    homePreview.textContent = `${fileIcon(f.name)} ${fileLabel} - ${fmtBytes(f.size)}`;
     homePreview.classList.add('has-file');
   }
   if (homeDrop) homeDrop.classList.add('has-file');
@@ -4322,11 +4522,16 @@ window.openSendAdvanced = function (event) {
 
 window.chooseFolderFromHome = function (event) {
   if (event) event.preventDefault();
-  if (!homeFolderInput) {
-    toast('Folder selection is not available in this browser. Choose files individually.', 'warning');
+  if (homeFolderInput && 'webkitdirectory' in homeFolderInput) {
+    homeFolderInput.click();
     return;
   }
-  homeFolderInput.click();
+  if (homeFi) {
+    toast('Folder selection is not available in this browser. Choose files individually.', 'warning');
+    homeFi.click();
+    return;
+  }
+  toast('Folder selection is not available in this browser.', 'warning');
 };
 
 window.createFromHome = async function (event) {
