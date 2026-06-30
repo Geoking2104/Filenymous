@@ -117,7 +117,7 @@ describe("standalone web transfer mode", () => {
       "Send",
       "Receive",
       "Language",
-      "Create code",
+      "Create Magic Link",
       "Download and decrypt",
       "After validation:",
       "Public open directory",
@@ -174,7 +174,7 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain('"en"');
     expect(html).toContain('"fr"');
     expect(html).toContain('"ko"');
-    expect(html).toContain("Send a file with one unique code");
+    expect(html).toContain("Send files with one private link");
     expect(html).toContain("Envoyez un fichier grâce à un code unique");
     expect(html).toContain("고유 코드 하나로 파일을 보내세요");
     expect(packagedHtml).toContain('id="language-select"');
@@ -192,6 +192,19 @@ describe("standalone web transfer mode", () => {
       "receive.progressFinalizing",
       "receive.metaDownloads",
       "receive.statusAvailable",
+      "home.magicLinkCreated",
+      "home.progressCancelled",
+      "home.progressCancelledEstimate",
+      "home.progressComplete",
+      "home.progressEncrypting",
+      "home.progressFailed",
+      "home.progressFailedEstimate",
+      "home.progressReadyToShare",
+      "home.progressRemaining",
+      "home.progressSelecting",
+      "home.progressTransferring",
+      "home.progressVerifying",
+      "home.progressWaitingPeer",
     ]) {
       expect(html).toContain(`"${key}"`);
       expect(packagedHtml).toContain(`"${key}"`);
