@@ -75,6 +75,13 @@ describe("standalone web transfer mode", () => {
     expect(packagedHtml).toContain("beforeunload");
   });
 
+  it("creates Magic Links directly from the public home without waiting on P2P signaling", () => {
+    expect(html).toContain("await window.handleSend(event, { preferWebLink: true })");
+    expect(html).toContain("if (!options.preferWebLink && p2pSupported())");
+    expect(packagedHtml).toContain("await window.handleSend(event, { preferWebLink: true })");
+    expect(packagedHtml).toContain("if (!options.preferWebLink && p2pSupported())");
+  });
+
   it("keeps the public receive flow to a single code-or-link input", () => {
     expect(visibleHtml).toContain("Filenymous code or link");
     expect(html).toContain("receiveFromSingleInput");
@@ -91,7 +98,7 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain("human-proof");
     expect(visibleHtml).toContain("I am human");
     expect(html).toContain("event?.isTrusted");
-    expect(html).toContain("await window.handleSend(event)");
+    expect(html).toContain("await window.handleSend(event, { preferWebLink: true })");
     expect(packagedHtml).toContain("verifyHumanGesture");
   });
 

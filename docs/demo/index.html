@@ -4585,13 +4585,13 @@ window.createFromHome = async function (event) {
   if (homeBtn) homeBtn.disabled = true;
   try {
     showTab('send');
-    await window.handleSend(event);
+    await window.handleSend(event, { preferWebLink: true });
   } finally {
     if (homeBtn && S.file) homeBtn.disabled = false;
   }
 };
 
-window.handleSend = async function (event) {
+window.handleSend = async function (event, options = {}) {
   if (!S.file) {
     setStatus('send-status', 'warning', 'Select a file first.');
     return;
@@ -4607,7 +4607,7 @@ window.handleSend = async function (event) {
   }
 
   if (S.mode === 'bridge') {
-    if (p2pSupported()) {
+    if (!options.preferWebLink && p2pSupported()) {
       btn.disabled = false;
       try {
         return await startP2PSend();
