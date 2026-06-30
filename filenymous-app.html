@@ -2731,6 +2731,28 @@ const S = {
   transferLabel:  '',
 };
 
+const TRANSFER_STATES = Object.freeze({
+  IDLE: 'IDLE',
+  SELECTING: 'SELECTING',
+  ENCRYPTING: 'ENCRYPTING',
+  READY_TO_SHARE: 'READY_TO_SHARE',
+  WAITING_FOR_PEER: 'WAITING_FOR_PEER',
+  TRANSFERRING: 'TRANSFERRING',
+  VERIFYING: 'VERIFYING',
+  COMPLETE: 'COMPLETE',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED',
+});
+
+Object.assign(S, {
+  transferState: TRANSFER_STATES.IDLE,
+  transferStartedAt: 0,
+  transferProgressPercent: 0,
+  selectedFiles: [],
+  preparedPayload: null,
+  lastShareArtifact: null,
+});
+
 function markTransferActive(label) {
   S.transferActive = true;
   S.transferLabel = label || 'Transfer in progress';
@@ -3674,6 +3696,106 @@ function setStatus(id, type, msg) {
   el.innerHTML = `${icons[type] ?? ''} <span>${msg}</span>`;
 }
 
+function estimateTransferTime(doneBytes, totalBytes, startedAt = S.transferStartedAt) {
+  if (S.transferState === TRANSFER_STATES.FAILED) {
+    return tr('home.progressFailedEstimate', 'Transfer stopped before completion.');
+  }
+  if (S.transferState === TRANSFER_STATES.CANCELLED) {
+    return tr('home.progressCancelledEstimate', 'Transfer cancelled.');
+  }
+  const done = Number(doneBytes) || 0;
+  const total = Number(totalBytes) || 0;
+  if (!done || !total || done >= total || !startedAt) {
+    return done >= total && total
+      ? tr('home.progressComplete', 'Complete')
+      : tr('home.progressEstimate', 'No upload needed.');
+  }
+  const elapsedSec = Math.max(0.5, (Date.now() - startedAt) / 1000);
+  const bytesPerSec = done / elapsedSec;
+  if (!bytesPerSec) return tr('home.progressEstimate', 'No upload needed.');
+  const remainingSec = Math.max(1, Math.round((total - done) / bytesPerSec));
+  const mins = Math.floor(remainingSec / 60);
+  const secs = remainingSec % 60;
+  const time = mins ? `${mins}m ${secs}s` : `${secs}s`;
+  return `${time} ${tr('home.progressRemaining', 'remaining')}`;
+}
+
+function setMagicProgress(percent, label, doneBytes = 0, totalBytes = 0) {
+  const progress = $('magic-progress');
+  const fill = $('magic-progress-fill');
+  const labelEl = $('magic-progress-label');
+  const estimateEl = $('magic-progress-estimate');
+  const pct = Math.max(0, Math.min(100, Number(percent) || 0));
+  S.transferProgressPercent = pct;
+  if (progress) {
+    progress.classList.remove('hidden');
+    progress.hidden = false;
+    progress.setAttribute('role', 'progressbar');
+    progress.setAttribute('aria-valuemin', '0');
+    progress.setAttribute('aria-valuemax', '100');
+    progress.setAttribute('aria-valuenow', String(Math.round(pct)));
+  }
+  if (fill) fill.style.width = `${pct}%`;
+  if (labelEl) labelEl.textContent = label || tr('home.progressReady', 'Keep this page open during direct transfer.');
+  if (estimateEl) {
+    const bytes = totalBytes ? `${fmtBytes(doneBytes)} / ${fmtBytes(totalBytes)} · ` : '';
+    estimateEl.textContent = `${bytes}${estimateTransferTime(doneBytes, totalBytes)}`;
+  }
+}
+
+function setTransferState(nextState, detail = {}) {
+  S.transferState = nextState;
+  if (!S.transferStartedAt && nextState !== TRANSFER_STATES.IDLE) S.transferStartedAt = Date.now();
+  if ([TRANSFER_STATES.IDLE, TRANSFER_STATES.COMPLETE, TRANSFER_STATES.FAILED, TRANSFER_STATES.CANCELLED].includes(nextState)) {
+    S.transferStartedAt = nextState === TRANSFER_STATES.IDLE ? 0 : S.transferStartedAt;
+  }
+
+  const labels = {
+    [TRANSFER_STATES.IDLE]: tr('home.progressReady', 'Keep this page open during direct transfer.'),
+    [TRANSFER_STATES.SELECTING]: tr('home.progressSelecting', 'Preparing your selection...'),
+    [TRANSFER_STATES.ENCRYPTING]: tr('home.progressEncrypting', 'Encrypting locally...'),
+    [TRANSFER_STATES.READY_TO_SHARE]: tr('home.progressReadyToShare', 'Ready to share.'),
+    [TRANSFER_STATES.WAITING_FOR_PEER]: tr('home.progressWaitingPeer', 'Waiting for the peer...'),
+    [TRANSFER_STATES.TRANSFERRING]: tr('home.progressTransferring', 'Direct transfer in progress...'),
+    [TRANSFER_STATES.VERIFYING]: tr('home.progressVerifying', 'Verifying transfer...'),
+    [TRANSFER_STATES.COMPLETE]: tr('home.progressComplete', 'Complete'),
+    [TRANSFER_STATES.FAILED]: tr('home.progressFailed', 'Transfer failed.'),
+    [TRANSFER_STATES.CANCELLED]: tr('home.progressCancelled', 'Transfer cancelled.'),
+  };
+  const fallbackPercent = {
+    [TRANSFER_STATES.IDLE]: 0,
+    [TRANSFER_STATES.SELECTING]: 2,
+    [TRANSFER_STATES.ENCRYPTING]: 15,
+    [TRANSFER_STATES.READY_TO_SHARE]: 100,
+    [TRANSFER_STATES.WAITING_FOR_PEER]: 5,
+    [TRANSFER_STATES.TRANSFERRING]: 50,
+    [TRANSFER_STATES.VERIFYING]: 90,
+    [TRANSFER_STATES.COMPLETE]: 100,
+    [TRANSFER_STATES.FAILED]: Math.min(S.transferProgressPercent || 15, 95),
+    [TRANSFER_STATES.CANCELLED]: 0,
+  };
+
+  setMagicProgress(
+    nextState === TRANSFER_STATES.FAILED && detail.percent === undefined
+      ? fallbackPercent[TRANSFER_STATES.FAILED]
+      : detail.percent ?? fallbackPercent[nextState] ?? 0,
+    detail.label || labels[nextState] || String(nextState),
+    detail.doneBytes ?? 0,
+    detail.totalBytes ?? 0
+  );
+}
+
+function prepareSelectedPayload() {
+  const files = S.selectedFiles?.length ? S.selectedFiles : (S.file ? [S.file] : []);
+  S.preparedPayload = {
+    kind: files.length <= 1 ? 'single-file' : 'multi-file-pending',
+    files,
+    file: files[0] || null,
+    totalBytes: files.reduce((sum, file) => sum + (file?.size || 0), 0),
+  };
+  return S.preparedPayload;
+}
+
 function toast(msg, type = 'success') {
   const el = document.createElement('div');
   el.className  = `toast ${type}`;
@@ -3859,7 +3981,13 @@ function createP2PPeer(sendSignal) {
     if (ev.candidate) sendSignal({ kind: 'ice', candidate: ev.candidate });
   };
   pc.onconnectionstatechange = () => {
-    if (pc.connectionState === 'failed') toast('P2P connection failed without an available TURN relay.', 'error');
+    if (pc.connectionState === 'failed') {
+      setTransferState(TRANSFER_STATES.FAILED, {
+        percent: Math.min(S.transferProgressPercent || 15, 95),
+        label: tr('home.progressFailed', 'Transfer failed.'),
+      });
+      toast('P2P connection failed without an available TURN relay.', 'error');
+    }
   };
   return pc;
 }
@@ -3890,9 +4018,21 @@ async function sendP2PFile(channel, file, message, statusId, code) {
     }
     channel.send(enc.slice(offset, offset + CFG.p2pChunkSize));
     const pct = Math.min(100, Math.round(((offset + CFG.p2pChunkSize) / enc.byteLength) * 100));
+    setTransferState(TRANSFER_STATES.TRANSFERRING, {
+      percent: pct,
+      label: tr('home.progressTransferring', 'Direct transfer in progress...'),
+      doneBytes: Math.min(offset + CFG.p2pChunkSize, enc.byteLength),
+      totalBytes: enc.byteLength,
+    });
     setStatus(statusId, 'loading', `Direct P2P transfer... ${pct}%`);
   }
   channel.send(JSON.stringify({ type: 'done' }));
+  setTransferState(TRANSFER_STATES.COMPLETE, {
+    percent: 100,
+    label: tr('home.progressComplete', 'Complete'),
+    doneBytes: enc.byteLength,
+    totalBytes: enc.byteLength,
+  });
   setStatus(statusId, 'success', 'Direct P2P transfer complete. You can close this page.');
   markTransferDone();
 }
@@ -3904,9 +4044,17 @@ window.startP2PSend = async function () {
   markTransferActive('P2P session waiting');
   const code = createOneTimeCode();
   const message = $('send-message').value.trim();
-  $('p2p-code-out').textContent = code;
-  $('p2p-result').classList.remove('hidden');
+  renderShareArtifact(createShareArtifact({
+    kind: 'p2p-code',
+    code,
+    transportHint: 'direct-p2p',
+  }));
   $('link-result').classList.add('hidden');
+  setTransferState(TRANSFER_STATES.WAITING_FOR_PEER, {
+    percent: 5,
+    label: tr('home.progressWaitingPeer', 'Waiting for the peer...'),
+    totalBytes: S.file.size,
+  });
   setStatus('p2p-send-status', 'loading', 'Session created. Share this code with the recipient.');
 
   let ws;
@@ -3918,6 +4066,10 @@ window.startP2PSend = async function () {
   channel.addEventListener('open', () => {
     setStatus('p2p-send-status', 'loading', 'Peer connected. Local encryption and transfer are running...');
     sendP2PFile(channel, S.file, message, 'p2p-send-status', code).catch(e => {
+      setTransferState(TRANSFER_STATES.FAILED, {
+        percent: Math.min(S.transferProgressPercent || 15, 95),
+        label: tr('home.progressFailed', 'Transfer failed.'),
+      });
       markTransferDone();
       setStatus('p2p-send-status', 'error', e.message);
     });
@@ -3935,6 +4087,10 @@ window.startP2PSend = async function () {
     ws = opened.ws;
     signalCode = opened.signalCode;
   } catch (e) {
+    setTransferState(TRANSFER_STATES.FAILED, {
+      percent: Math.min(S.transferProgressPercent || 15, 95),
+      label: tr('home.progressFailed', 'Transfer failed.'),
+    });
     markTransferDone();
     throw e;
   }
@@ -4218,6 +4374,12 @@ window.handleSend = async function (event) {
     }
     markTransferActive('Creating web link');
     try {
+      setTransferState(TRANSFER_STATES.ENCRYPTING, {
+        percent: 15,
+        label: tr('home.progressEncrypting', 'Encrypting locally...'),
+        doneBytes: 0,
+        totalBytes: S.file.size,
+      });
       setStatus('send-status', 'loading', 'Local AES-256 encryption - creating the anonymous web link...');
       const message = $('send-message').value.trim();
       const out = await createWebParcelLink(S.file, message);
@@ -4233,12 +4395,18 @@ window.handleSend = async function (event) {
       });
       updateHistBadge();
 
-      $('link-text').textContent = out.url;
       $('qr-panel').classList.add('hidden');
-      $('link-result').classList.remove('hidden');
+      renderShareArtifact(createShareArtifact({
+        kind: 'magic-link',
+        url: out.url,
+        transportHint: 'web-link',
+        humanMessage: tr('home.magicLinkCreated', 'Anonymous web link created.'),
+      }));
       $('send-status').classList.add('hidden');
-      toast('Anonymous web link created.');
     } catch (e) {
+      setTransferState(TRANSFER_STATES.FAILED, {
+        label: tr('home.progressFailed', 'Transfer failed.'),
+      });
       setStatus('send-status', 'error', e.message);
     } finally {
       btn.disabled = false;
@@ -4324,6 +4492,31 @@ window.handleSend = async function (event) {
 window.copyLink = () => {
   navigator.clipboard.writeText($('link-text').textContent).then(() => toast('Link copied.'));
 };
+
+function createShareArtifact({ kind, url = '', code = '', expiresAt = 0, transportHint = '', humanMessage = '' }) {
+  const artifact = { kind, url, code, expiresAt, transportHint, humanMessage };
+  S.lastShareArtifact = artifact;
+  return artifact;
+}
+
+function renderShareArtifact(artifact) {
+  if (!artifact) return null;
+  S.lastShareArtifact = artifact;
+  if (artifact.url) {
+    $('link-text').textContent = artifact.url;
+    $('link-result').classList.remove('hidden');
+  }
+  if (artifact.code) {
+    $('p2p-code-out').textContent = artifact.code;
+    $('p2p-result').classList.remove('hidden');
+  }
+  if (artifact.humanMessage) toast(artifact.humanMessage);
+  setTransferState(TRANSFER_STATES.READY_TO_SHARE, {
+    percent: 100,
+    label: tr('home.progressReadyToShare', 'Ready to share.'),
+  });
+  return artifact;
+}
 
 function currentShareLink() {
   return $('link-text')?.textContent?.trim() || '';
