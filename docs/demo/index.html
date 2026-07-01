@@ -565,6 +565,42 @@
       border-radius: 7px;
     }
     .link-box code { flex: 1; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .magic-result-card {
+      border-color: rgba(0,109,119,.24);
+      box-shadow: 0 16px 48px rgba(20,33,61,.12);
+    }
+    .magic-result-card .card-title {
+      color: var(--accent);
+      font-size: 18px;
+      margin-bottom: 6px;
+    }
+    .magic-code-hero {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+      padding: 18px;
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      background: #f7fffd;
+      text-align: center;
+    }
+    .magic-code-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .magic-code-value {
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: clamp(2rem, 8vw, 4.1rem);
+      font-weight: 900;
+      letter-spacing: .05em;
+      line-height: 1;
+      overflow-wrap: anywhere;
+    }
+    .magic-link-value code { font-size: 12px; color: var(--text); }
 
     /* ── Status messages ── */
     .status {
@@ -1008,12 +1044,13 @@
   </label>
 
   <button id="btn-send" class="btn btn-primary btn-full mt-3" onclick="handleSend(event)" disabled>
-    <span data-i18n="send.createEncrypted">Create encrypted share</span>
+    <span data-i18n="send.createEncrypted">Create Magic Link</span>
   </button>
 
-  <div id="link-result" class="card hidden">
-    <p class="card-title" style="color:var(--success)" data-i18n="send.linkReady">Link ready to share</p>
-    <div class="link-box">
+  <div id="link-result" class="card magic-result-card hidden">
+    <p class="card-title" data-i18n="send.magicReady">Magic Link ready</p>
+    <p class="muted" data-i18n="send.magicLinkPrimary">Share this Magic Link. Filenymous opens the right receive flow automatically.</p>
+    <div class="link-box magic-link-value">
       <code id="link-text"></code>
       <button class="btn btn-secondary btn-sm" onclick="copyLink()" data-i18n="common.copy">Copy</button>
     </div>
@@ -1028,13 +1065,17 @@
     <p class="muted mt-2" data-i18n="send.keyFragment">The decryption key stays in the # fragment: it does not travel over the network.</p>
   </div>
 
-  <div id="p2p-result" class="card hidden">
-    <p class="card-title" style="color:var(--accent)" data-i18n="send.p2pTitle">Direct P2P - One-time code</p>
-    <div class="link-box">
-      <code id="p2p-code-out"></code>
-      <button class="btn btn-secondary btn-sm" onclick="copyP2PCode()" data-i18n="common.copy">Copy</button>
+  <div id="p2p-result" class="card magic-result-card hidden">
+    <p class="card-title" data-i18n="send.magicReady">Magic Link ready</p>
+    <p class="muted" data-i18n="send.magicCodePrimary">Share this code. The receiver enters it and Filenymous starts the transfer.</p>
+    <div class="magic-code-hero" aria-label="Magic Link one-time code">
+      <span class="magic-code-label" data-i18n="send.magicCodeLabel">Your code</span>
+      <code id="p2p-code-out" class="magic-code-value"></code>
     </div>
-    <p class="muted mt-2" data-i18n="send.p2pHelp">Keep this page open. The encrypted file passes directly between browsers via WebRTC, without a Holochain conductor and without server storage. Iroh remains the priority path for verifiable large web files and encrypted relays.</p>
+    <div class="share-actions">
+      <button class="btn btn-secondary btn-sm" onclick="copyP2PCode()" data-i18n="send.copyCode">Copy code</button>
+    </div>
+    <p class="muted mt-2" data-i18n="send.magicKeepOpen">Keep this tab open until the receiver has finished downloading.</p>
     <div id="p2p-send-status" class="status info mt-3 hidden"></div>
   </div>
 
@@ -3315,11 +3356,17 @@ window.FILENYMOUS_I18N = {
     "send.expiry": "Expiration",
     "send.maxDownloads": "Max downloads",
     "send.unlimitedPlaceholder": "0 = unlimited",
-    "send.createEncrypted": "Create encrypted share",
+    "send.createEncrypted": "Create Magic Link",
     "send.linkReady": "Link ready to share",
     "send.keyFragment": "The decryption key stays in the # fragment: it does not travel over the network.",
     "send.p2pTitle": "Direct P2P - One-time code",
     "send.p2pHelp": "Keep this page open. The encrypted file passes directly between browsers via WebRTC, without a Holochain conductor and without server storage. Iroh remains the priority path for verifiable large web files and encrypted relays.",
+    "send.magicReady": "Magic Link ready",
+    "send.magicLinkPrimary": "Share this Magic Link. Filenymous opens the right receive flow automatically.",
+    "send.magicCodePrimary": "Share this code. The receiver enters it and Filenymous starts the transfer.",
+    "send.magicCodeLabel": "Your code",
+    "send.copyCode": "Copy code",
+    "send.magicKeepOpen": "Keep this tab open until the receiver has finished downloading.",
     "qr.local": "Local QR: the link and key do not leave this browser.",
     "qr.generated": "QR generated locally. The link and key do not leave this browser.",
     "qr.tooLong": "Link too long for one QR. Use Copy or Share to preserve the key.",
@@ -3458,11 +3505,17 @@ window.FILENYMOUS_I18N = {
     "send.expiry": "Expiration",
     "send.maxDownloads": "Téléchargements max",
     "send.unlimitedPlaceholder": "0 = illimité",
-    "send.createEncrypted": "Créer le partage chiffré",
+    "send.createEncrypted": "Créer le Magic Link",
     "send.linkReady": "Lien prêt à partager",
     "send.keyFragment": "La clé de déchiffrement reste dans le fragment # : elle ne transite pas sur le réseau.",
     "send.p2pTitle": "P2P direct - Code à usage unique",
     "send.p2pHelp": "Garde cette page ouverte. Le fichier chiffré passe directement entre navigateurs via WebRTC, sans conducteur Holochain et sans stockage serveur. Iroh reste la trajectoire prioritaire pour les gros fichiers vérifiables côté web et relais chiffré.",
+    "send.magicReady": "Magic Link prêt",
+    "send.magicLinkPrimary": "Partage ce Magic Link. Filenymous ouvre automatiquement le bon parcours de réception.",
+    "send.magicCodePrimary": "Partage ce code. Le destinataire le saisit et Filenymous lance le transfert.",
+    "send.magicCodeLabel": "Votre code",
+    "send.copyCode": "Copier le code",
+    "send.magicKeepOpen": "Garde cet onglet ouvert jusqu’à la fin du téléchargement côté destinataire.",
     "qr.local": "QR local : le lien et sa clé ne quittent pas ce navigateur.",
     "qr.generated": "QR généré localement. Le lien et sa clé ne quittent pas ce navigateur.",
     "qr.tooLong": "Lien trop long pour un QR unique. Utilisez Copier ou Partager pour garder la clé intacte.",
@@ -3601,11 +3654,17 @@ window.FILENYMOUS_I18N = {
     "send.expiry": "만료",
     "send.maxDownloads": "최대 다운로드",
     "send.unlimitedPlaceholder": "0 = 무제한",
-    "send.createEncrypted": "암호화 공유 만들기",
+    "send.createEncrypted": "Magic Link 만들기",
     "send.linkReady": "공유 링크 준비됨",
     "send.keyFragment": "복호화 키는 # 조각에 남아 네트워크로 전송되지 않습니다.",
     "send.p2pTitle": "직접 P2P - 일회용 코드",
     "send.p2pHelp": "이 페이지를 열어 두세요. 암호화된 파일은 Holochain 컨덕터나 서버 저장소 없이 WebRTC로 브라우저 사이를 직접 이동합니다. Iroh는 검증 가능한 큰 웹 파일과 암호화 릴레이를 위한 우선 경로입니다.",
+    "send.magicReady": "Magic Link 준비됨",
+    "send.magicLinkPrimary": "이 Magic Link를 공유하세요. Filenymous가 올바른 수신 흐름을 자동으로 엽니다.",
+    "send.magicCodePrimary": "이 코드를 공유하세요. 받는 사람이 입력하면 Filenymous가 전송을 시작합니다.",
+    "send.magicCodeLabel": "내 코드",
+    "send.copyCode": "코드 복사",
+    "send.magicKeepOpen": "받는 사람의 다운로드가 끝날 때까지 이 탭을 열어 두세요.",
     "qr.local": "로컬 QR: 링크와 키는 이 브라우저를 떠나지 않습니다.",
     "qr.generated": "QR이 로컬에서 생성되었습니다. 링크와 키는 이 브라우저를 떠나지 않습니다.",
     "qr.tooLong": "링크가 하나의 QR에 담기에는 너무 깁니다. 키를 보존하려면 복사 또는 공유를 사용하세요.",
@@ -3766,6 +3825,7 @@ function setMagicProgress(percent, label, doneBytes = 0, totalBytes = 0) {
   const labelEl = $('magic-progress-label');
   const estimateEl = $('magic-progress-estimate');
   const pct = Math.max(0, Math.min(100, Number(percent) || 0));
+  const progressDetail = formatProgressDetail(doneBytes, totalBytes, pct);
   S.transferProgressPercent = pct;
   if (progress) {
     progress.classList.remove('hidden');
@@ -3778,9 +3838,14 @@ function setMagicProgress(percent, label, doneBytes = 0, totalBytes = 0) {
   if (fill) fill.style.width = `${pct}%`;
   if (labelEl) labelEl.textContent = label || tr('home.progressReady', 'Keep this page open during direct transfer.');
   if (estimateEl) {
-    const bytes = totalBytes ? `${fmtBytes(doneBytes)} / ${fmtBytes(totalBytes)} · ` : '';
-    estimateEl.textContent = `${bytes}${estimateTransferTime(doneBytes, totalBytes)}`;
+    estimateEl.textContent = `${progressDetail} - ${estimateTransferTime(doneBytes, totalBytes)}`;
   }
+}
+
+function formatProgressDetail(doneBytes = 0, totalBytes = 0, percent = 0) {
+  const pct = `${Math.max(0, Math.min(100, Math.round(Number(percent) || 0)))}%`;
+  if (!totalBytes) return pct;
+  return `${fmtBytes(Math.min(doneBytes || 0, totalBytes))} / ${fmtBytes(totalBytes)} - ${pct}`;
 }
 
 function setTransferState(nextState, detail = {}) {
@@ -3807,7 +3872,7 @@ function setTransferState(nextState, detail = {}) {
     [TRANSFER_STATES.SELECTING]: 2,
     [TRANSFER_STATES.ENCRYPTING]: 15,
     [TRANSFER_STATES.READY_TO_SHARE]: 100,
-    [TRANSFER_STATES.WAITING_FOR_PEER]: 5,
+    [TRANSFER_STATES.WAITING_FOR_PEER]: 0,
     [TRANSFER_STATES.TRANSFERRING]: 50,
     [TRANSFER_STATES.VERIFYING]: 90,
     [TRANSFER_STATES.COMPLETE]: 100,
@@ -4220,6 +4285,12 @@ function createP2PPeer(sendSignal) {
 
 async function sendP2PFile(channel, file, message, statusId, code) {
   markTransferActive('Direct P2P send');
+  setTransferState(TRANSFER_STATES.ENCRYPTING, {
+    percent: 0,
+    label: tr('home.progressEncrypting', 'Encrypting locally...'),
+    doneBytes: 0,
+    totalBytes: file.size,
+  });
   const raw = new Uint8Array(await file.arrayBuffer());
   const aesKey = await genAesKey();
   const enc = await aesEncrypt(aesKey, raw);
@@ -4244,22 +4315,23 @@ async function sendP2PFile(channel, file, message, statusId, code) {
     }
     channel.send(enc.slice(offset, offset + CFG.p2pChunkSize));
     const pct = Math.min(100, Math.round(((offset + CFG.p2pChunkSize) / enc.byteLength) * 100));
+    const displayDoneBytes = Math.min(file.size, Math.round((file.size * pct) / 100));
     setTransferState(TRANSFER_STATES.TRANSFERRING, {
       percent: pct,
       label: tr('home.progressTransferring', 'Direct transfer in progress...'),
-      doneBytes: Math.min(offset + CFG.p2pChunkSize, enc.byteLength),
-      totalBytes: enc.byteLength,
+      doneBytes: displayDoneBytes,
+      totalBytes: file.size,
     });
-    setStatus(statusId, 'loading', `Direct P2P transfer... ${pct}%`);
+    setStatus(statusId, 'loading', `Direct P2P transfer... Progress: ${formatProgressDetail(displayDoneBytes, file.size, pct)}`);
   }
   channel.send(JSON.stringify({ type: 'done' }));
   setTransferState(TRANSFER_STATES.COMPLETE, {
     percent: 100,
     label: tr('home.progressComplete', 'Complete'),
-    doneBytes: enc.byteLength,
-    totalBytes: enc.byteLength,
+    doneBytes: file.size,
+    totalBytes: file.size,
   });
-  setStatus(statusId, 'success', 'Direct P2P transfer complete. You can close this page.');
+  setStatus(statusId, 'success', `Direct P2P transfer complete. Progress: ${formatProgressDetail(file.size, file.size, 100)}. You can close this page.`);
   markTransferDone();
 }
 
@@ -4277,11 +4349,12 @@ window.startP2PSend = async function () {
   }));
   $('link-result').classList.add('hidden');
   setTransferState(TRANSFER_STATES.WAITING_FOR_PEER, {
-    percent: 5,
+    percent: 0,
     label: tr('home.progressWaitingPeer', 'Waiting for the peer...'),
+    doneBytes: 0,
     totalBytes: S.file.size,
   });
-  setStatus('p2p-send-status', 'loading', 'Session created. Share this code with the recipient.');
+  setStatus('p2p-send-status', 'loading', `Session created. Share this code with the recipient. Progress: ${formatProgressDetail(0, S.file.size, 0)}`);
 
   let ws;
   let signalCode = code;
@@ -4585,7 +4658,7 @@ window.createFromHome = async function (event) {
   if (homeBtn) homeBtn.disabled = true;
   try {
     showTab('send');
-    await window.handleSend(event, { preferWebLink: true });
+    await window.handleSend(event, { preferP2PCode: true });
   } finally {
     if (homeBtn && S.file) homeBtn.disabled = false;
   }
@@ -4612,9 +4685,30 @@ window.handleSend = async function (event, options = {}) {
       try {
         return await startP2PSend();
       } catch (e) {
+        if (options.preferP2PCode) {
+          setTransferState(TRANSFER_STATES.FAILED, {
+            percent: Math.min(S.transferProgressPercent || 0, 95),
+            label: tr('home.progressFailed', 'Transfer failed.'),
+            doneBytes: 0,
+            totalBytes: S.file.size,
+          });
+          setStatus('send-status', 'error', `Direct WebRTC code unavailable: ${esc(e.message)}`);
+          return;
+        }
         btn.disabled = true;
         setStatus('send-status', 'warning', `Direct P2P is unavailable: ${esc(e.message)}. Creating a self-contained fallback link.`);
       }
+    }
+    if (options.preferP2PCode && !p2pSupported()) {
+      setTransferState(TRANSFER_STATES.FAILED, {
+        percent: 0,
+        label: tr('home.progressFailed', 'Transfer failed.'),
+        doneBytes: 0,
+        totalBytes: S.file.size,
+      });
+      setStatus('send-status', 'error', 'This browser does not support WebRTC DataChannel.');
+      btn.disabled = false;
+      return;
     }
     markTransferActive('Creating web link');
     try {
@@ -4755,9 +4849,12 @@ function renderShareArtifact(artifact) {
     $('p2p-result').classList.remove('hidden');
   }
   if (artifact.humanMessage) toast(artifact.humanMessage);
+  const isDirectCode = artifact.kind === 'p2p-code';
   setTransferState(TRANSFER_STATES.READY_TO_SHARE, {
-    percent: 100,
+    percent: isDirectCode ? 0 : 100,
     label: tr('home.progressReadyToShare', 'Ready to share.'),
+    doneBytes: isDirectCode ? 0 : (S.file?.size || 0),
+    totalBytes: S.file?.size || 0,
   });
   return artifact;
 }

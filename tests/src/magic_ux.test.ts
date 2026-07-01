@@ -34,6 +34,8 @@ describe("Magic UX public transfer workspace", () => {
     ]) {
       expect(primaryHome).toContain(phrase);
     }
+    expect(visibleHtml).not.toContain("Create encrypted share");
+    expect(visiblePackagedHtml).not.toContain("Create encrypted share");
   });
 
   it("keeps technical network jargon out of the primary home workspace", () => {
@@ -88,7 +90,7 @@ describe("Magic UX public transfer workspace", () => {
     }
   });
 
-  it("shows progress, speed, estimate, and download-location guidance", () => {
+  it("shows progress percentage, file size, estimate, and download-location guidance", () => {
     for (const id of [
       'id="magic-progress"',
       'id="magic-progress-fill"',
@@ -99,6 +101,27 @@ describe("Magic UX public transfer workspace", () => {
       expect(html).toContain(id);
       expect(packagedHtml).toContain(id);
     }
+    expect(html).toContain("formatProgressDetail");
+    expect(html).toContain("Progress: ${formatProgressDetail");
+    expect(packagedHtml).toContain("formatProgressDetail");
     expect(visibleHtml).toContain("Downloads folder");
+  });
+
+  it("makes the generated Magic Link code the dominant share result", () => {
+    for (const token of [
+      'class="card magic-result-card hidden"',
+      'data-i18n="send.magicReady"',
+      'data-i18n="send.magicCodePrimary"',
+      'class="magic-code-hero"',
+      'class="magic-code-value"',
+      'aria-label="Magic Link one-time code"',
+    ]) {
+      expect(html).toContain(token);
+      expect(packagedHtml).toContain(token);
+    }
+    expect(visibleHtml).toContain("Magic Link ready");
+    expect(visibleHtml).toContain("Share this code");
+    expect(visibleHtml).not.toContain("Direct P2P - One-time code");
+    expect(visiblePackagedHtml).not.toContain("Direct P2P - One-time code");
   });
 });
