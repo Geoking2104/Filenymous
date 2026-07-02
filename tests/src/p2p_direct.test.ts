@@ -39,7 +39,7 @@ describe("P2P direct web mode", () => {
 
   it("uses the hardened signaling payload contract expected by the relay", () => {
     expect(html).toContain("sendSignal({ kind: 'ice', candidate: ev.candidate })");
-    expect(html).toContain("sendSignal({ kind: 'offer', sdp: offer.sdp })");
+    expect(html).toContain("sendSignal({ kind: 'offer', sdp })");
     expect(html).toContain("sendSignal({ kind: 'answer', sdp: answer.sdp })");
     expect(html).toContain("payload.kind === 'offer'");
     expect(html).toContain("payload.kind === 'answer'");
@@ -60,5 +60,15 @@ describe("P2P direct web mode", () => {
     expect(html).toContain("closeActiveP2PSession('complete', session)");
     expect(html).toContain("role-taken");
     expect(html).toContain("Previous code was still active. A fresh code was created automatically.");
+  });
+
+  it("lets the sender initiate when the receiver joined the code first", () => {
+    expect(html).toContain("let lastOfferSdp = null");
+    expect(html).toContain("const sendOffer = async () =>");
+    expect(html).toContain("lastOfferSdp = offer.sdp");
+    expect(html).toContain("const sdp = pc.localDescription?.sdp || lastOfferSdp");
+    expect(html).toContain("if (sdp) sendSignal({ kind: 'offer', sdp })");
+    expect(html).toContain("for (const ice of localIceSignals) sendSignal(ice)");
+    expect(html).toContain("await sendOffer();");
   });
 });

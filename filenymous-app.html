@@ -4582,11 +4582,45 @@ window.startP2PSend = async function () {
     closeActiveP2PSession('replace');
     let ws;
     let signalCode = code;
-    const sendSignal = payload => ws?.send(JSON.stringify({ type: 'signal', code: signalCode, payload }));
+    const pendingSignals = [];
+    const localIceSignals = [];
+    const sendSignal = payload => {
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'signal', code: signalCode, payload }));
+        return;
+      }
+      pendingSignals.push(payload);
+    };
+    const flushPendingSignals = () => {
+      if (ws?.readyState !== WebSocket.OPEN) return;
+      while (pendingSignals.length) {
+        const payload = pendingSignals.shift();
+        ws.send(JSON.stringify({ type: 'signal', code: signalCode, payload }));
+      }
+    };
     const pc = createP2PPeer(sendSignal);
     const channel = pc.createDataChannel('filenymous-file');
     const session = { code, role: 'sender', pc, channel, ws: null, signalCode };
     S.activeP2PSession = session;
+    let lastOfferSdp = null;
+    const sendOffer = async () => {
+      if (pc.signalingState === 'closed') return;
+      if (pc.signalingState === 'stable') {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        lastOfferSdp = offer.sdp;
+      }
+      const sdp = pc.localDescription?.sdp || lastOfferSdp;
+      if (sdp) sendSignal({ kind: 'offer', sdp });
+      for (const ice of localIceSignals) sendSignal(ice);
+      flushPendingSignals();
+    };
+    pc.onicecandidate = ev => {
+      if (!ev.candidate) return;
+      const payload = { kind: 'ice', candidate: ev.candidate };
+      localIceSignals.push(payload);
+      sendSignal(payload);
+    };
     channel.binaryType = 'arraybuffer';
     channel.addEventListener('open', () => {
       setStatus('p2p-send-status', 'loading', 'Peer connected. Local encryption and transfer are running...');
@@ -4606,15 +4640,13 @@ window.startP2PSend = async function () {
     const opened = await openSignalSocketWithFallback(code, 'sender', async payload => {
       if (payload.kind === 'answer') await pc.setRemoteDescription({ type: 'answer', sdp: payload.sdp });
       if (payload.kind === 'ice') await pc.addIceCandidate(payload.candidate);
-    }, async () => {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      sendSignal({ kind: 'offer', sdp: offer.sdp });
-    }, 'p2p-send-status');
+    }, sendOffer, 'p2p-send-status');
     ws = opened.ws;
     session.ws = ws;
     signalCode = opened.signalCode;
     session.signalCode = signalCode;
+    flushPendingSignals();
+    await sendOffer();
     return opened;
   };
 
