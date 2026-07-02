@@ -317,6 +317,32 @@
       background: rgba(31,138,76,.08);
       border-color: rgba(31,138,76,.28);
     }
+    .home-magic-code-card {
+      display: grid;
+      gap: 10px;
+      margin: 12px 0;
+      padding: 14px;
+      border: 2px solid rgba(0,109,119,.3);
+      border-radius: 12px;
+      background: #f7fffd;
+    }
+    .home-magic-code-label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .home-magic-code-value {
+      display: block;
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: clamp(1.75rem, 7vw, 3.5rem);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: .04em;
+      overflow-wrap: anywhere;
+    }
     .home-actions {
       display: grid;
       grid-template-columns: 1fr;
@@ -838,6 +864,20 @@
         </span>
       </label>
       <div class="home-file-preview" id="home-file-preview" data-i18n="home.noFile">No file selected</div>
+      <div id="home-magic-code-card" class="home-magic-code-card hidden" aria-live="polite">
+        <span class="home-magic-code-label" data-i18n="home.magicCodeLabel">Your Magic Link number</span>
+        <code id="home-magic-code-out" class="home-magic-code-value"></code>
+        <p class="muted" data-i18n="home.magicCodeHelp">Share this code by email, copy-paste, or QR. The QR opens Filenymous with this code already attached.</p>
+        <div class="share-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="emailHomeMagicCode(event)" data-i18n="home.emailCode">Email</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="copyHomeMagicCode()" data-i18n="home.copyCode">Copy code</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="renderHomeMagicQr()" data-i18n="home.showQr">Show QR</button>
+        </div>
+        <div id="home-qr-panel" class="qr-panel hidden" aria-live="polite">
+          <canvas id="home-qr-canvas" width="260" height="260" aria-label="Filenymous Magic Link QR code"></canvas>
+          <p id="home-qr-status" class="muted" data-i18n="home.qrContainsCode">QR contains the Filenymous site and this one-time code.</p>
+        </div>
+      </div>
       <div class="magic-drop-actions">
         <button type="button" class="btn btn-secondary" onclick="document.getElementById('home-file-input').click()" data-i18n="home.chooseFiles">Choose files</button>
         <button type="button" id="home-folder-btn" class="btn btn-secondary" onclick="chooseFolderFromHome(event)" data-i18n="home.chooseFolder">Choose folder</button>
@@ -855,7 +895,7 @@
       </div>
       <div class="home-actions">
         <button id="home-send-btn" class="btn btn-primary btn-full" onclick="createFromHome(event)" disabled>
-          <span data-i18n="home.createMagicLink">Create Magic Link</span>
+          <span data-i18n="home.startTransfer">Start transfer</span>
         </button>
         <label class="human-proof" for="home-human-proof">
           <input type="checkbox" id="home-human-proof" />
@@ -2791,6 +2831,7 @@ Object.assign(S, {
   transferProgressPercent: 0,
   selectedFiles: [],
   preparedPayload: null,
+  preparedMagicCode: '',
   lastShareArtifact: null,
   fileSelectionToken: 0,
 });
@@ -3292,6 +3333,14 @@ window.FILENYMOUS_I18N = {
     "home.noFile": "No file selected",
     "home.createCode": "Create code",
     "home.createMagicLink": "Create Magic Link",
+    "home.startTransfer": "Start transfer",
+    "home.magicCodeLabel": "Your Magic Link number",
+    "home.magicCodeHelp": "Share this code by email, copy-paste, or QR. The QR opens Filenymous with this code already attached.",
+    "home.emailCode": "Email",
+    "home.copyCode": "Copy code",
+    "home.showQr": "Show QR",
+    "home.qrContainsCode": "QR contains the Filenymous site and this one-time code.",
+    "home.codeCopied": "Code copied.",
     "home.chooseFiles": "Choose files",
     "home.chooseFolder": "Choose folder",
     "home.folderNote": "Folder support depends on your browser. If it is unavailable, choose files instead.",
@@ -3441,6 +3490,14 @@ window.FILENYMOUS_I18N = {
     "home.noFile": "Aucun fichier sélectionné",
     "home.createCode": "Créer le code",
     "home.createMagicLink": "Créer le Magic Link",
+    "home.startTransfer": "Démarrer le transfert",
+    "home.magicCodeLabel": "Votre numéro Magic Link",
+    "home.magicCodeHelp": "Partagez ce code par email, copier-coller ou QR. Le QR ouvre Filenymous avec ce code déjà attaché.",
+    "home.emailCode": "Email",
+    "home.copyCode": "Copier le code",
+    "home.showQr": "Afficher le QR",
+    "home.qrContainsCode": "Le QR contient le site Filenymous et ce code à usage unique.",
+    "home.codeCopied": "Code copié.",
     "home.chooseFiles": "Choisir des fichiers",
     "home.chooseFolder": "Choisir un dossier",
     "home.folderNote": "La prise en charge des dossiers dépend de votre navigateur. Si elle est indisponible, choisissez les fichiers à la place.",
@@ -3590,6 +3647,14 @@ window.FILENYMOUS_I18N = {
     "home.noFile": "선택된 파일 없음",
     "home.createCode": "코드 만들기",
     "home.createMagicLink": "Magic Link 만들기",
+    "home.startTransfer": "전송 시작",
+    "home.magicCodeLabel": "Magic Link 번호",
+    "home.magicCodeHelp": "이 코드를 이메일, 복사/붙여넣기, QR로 공유하세요. QR에는 Filenymous 사이트와 이 코드가 함께 들어 있습니다.",
+    "home.emailCode": "이메일",
+    "home.copyCode": "코드 복사",
+    "home.showQr": "QR 표시",
+    "home.qrContainsCode": "QR에 Filenymous 사이트와 이 일회용 코드가 들어 있습니다.",
+    "home.codeCopied": "코드가 복사되었습니다.",
     "home.chooseFiles": "파일 선택",
     "home.chooseFolder": "폴더 선택",
     "home.folderNote": "폴더 지원은 브라우저에 따라 다릅니다. 사용할 수 없으면 파일을 선택하세요.",
@@ -4152,6 +4217,30 @@ function normalizeOneTimeCode(value) {
   return `${match[1]}-${match[2]}-${match[3]}`;
 }
 
+function tryExtractP2PCode(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const hash = raw.includes('#') ? raw.split('#').pop() : raw;
+  const decoded = decodeURIComponent(hash || '').trim();
+  const codePart = decoded.startsWith('p2p:') ? decoded.slice(4) : decoded;
+  try {
+    return normalizeOneTimeCode(codePart);
+  } catch (_) {
+    return '';
+  }
+}
+
+function filenymousPublicBaseUrl() {
+  if (location.protocol === 'file:' || location.origin === 'null') {
+    return 'https://geoking2104.github.io/Filenymous/';
+  }
+  return `${location.origin}${location.pathname}`;
+}
+
+function p2pCodeShareUrl(code) {
+  return `${filenymousPublicBaseUrl()}#p2p:${encodeURIComponent(normalizeOneTimeCode(code))}`;
+}
+
 function verifyHumanGesture(event, statusId, checkboxIds) {
   const trusted = event?.isTrusted === true;
   const activationOk = !navigator.userActivation || navigator.userActivation.isActive || navigator.userActivation.hasBeenActive;
@@ -4340,7 +4429,9 @@ window.startP2PSend = async function () {
   if (!p2pSupported()) throw new Error('This browser does not support WebRTC DataChannel.');
 
   markTransferActive('P2P session waiting');
-  const code = createOneTimeCode();
+  const code = S.preparedMagicCode || createOneTimeCode();
+  S.preparedMagicCode = code;
+  renderHomeMagicCode();
   const message = $('send-message').value.trim();
   renderShareArtifact(createShareArtifact({
     kind: 'p2p-code',
@@ -4495,6 +4586,12 @@ window.receiveFromSingleInput = function (event) {
     return;
   }
   if (!verifyHumanGesture(event, 'p2p-recv-status', ['recv-human-proof'])) return;
+  const linkedCode = tryExtractP2PCode(raw);
+  if (linkedCode) {
+    $('p2p-code-input').value = linkedCode;
+    joinP2PReceive();
+    return;
+  }
   if (raw.includes('#') || raw.startsWith('http') || raw.startsWith('w1:') || raw.includes(':')) {
     $('manual-link').value = raw;
     setStatus('p2p-recv-status', 'loading', tr('receive.linkDetected', 'Link detected. Checking the encrypted file...'));
@@ -4506,6 +4603,66 @@ window.receiveFromSingleInput = function (event) {
 
 window.copyP2PCode = function () {
   navigator.clipboard.writeText($('p2p-code-out').textContent).then(() => toast('Code P2P copie !'));
+};
+
+function renderHomeMagicCode() {
+  const card = $('home-magic-code-card');
+  const out = $('home-magic-code-out');
+  if (!card || !out) return;
+  if (!S.file || !S.preparedMagicCode) {
+    card.classList.add('hidden');
+    out.textContent = '';
+    $('home-qr-panel')?.classList.add('hidden');
+    return;
+  }
+  out.textContent = S.preparedMagicCode;
+  card.classList.remove('hidden');
+}
+
+function prepareHomeMagicCode() {
+  if (!S.file) return '';
+  S.preparedMagicCode = createOneTimeCode();
+  renderHomeMagicCode();
+  return S.preparedMagicCode;
+}
+
+function currentHomeMagicCode() {
+  if (!S.preparedMagicCode && S.file) prepareHomeMagicCode();
+  return S.preparedMagicCode || '';
+}
+
+window.copyHomeMagicCode = function () {
+  const code = currentHomeMagicCode();
+  if (!code) return;
+  navigator.clipboard.writeText(code).then(() => toast(tr('home.codeCopied', 'Code copied.')));
+};
+
+window.emailHomeMagicCode = function (event) {
+  if (event) event.preventDefault();
+  const code = currentHomeMagicCode();
+  if (!code) return;
+  const url = p2pCodeShareUrl(code);
+  const subject = encodeURIComponent('Filenymous Magic Link');
+  const body = encodeURIComponent(`Open this Filenymous link or enter the code below.\n\nLink: ${url}\nCode: ${code}`);
+  location.href = `mailto:?subject=${subject}&body=${body}`;
+};
+
+window.renderHomeMagicQr = function () {
+  const code = currentHomeMagicCode();
+  const panel = $('home-qr-panel');
+  const status = $('home-qr-status');
+  if (!panel || !status || !code) return;
+  panel.classList.remove('hidden');
+  if (!window.FilenymousQRCode?.renderCanvas) {
+    status.textContent = tr('qr.unavailable', 'Local QR generator unavailable. Copy or share the link.');
+    return;
+  }
+  try {
+    window.FilenymousQRCode.renderCanvas($('home-qr-canvas'), p2pCodeShareUrl(code));
+    status.textContent = tr('home.qrContainsCode', 'QR contains the Filenymous site and this one-time code.');
+  } catch (e) {
+    status.textContent = tr('qr.tooLong', 'Link too long for one QR. Use Copy or Share to preserve the key.');
+  }
 };
 
 window.copyRoomCode = function () {
@@ -4526,6 +4683,7 @@ function clearSelectedFileForNow(inputToClear) {
   S.file = null;
   S.selectedFiles = [];
   S.preparedPayload = null;
+  S.preparedMagicCode = '';
   const badge = $('file-badge');
   if (badge) {
     badge.textContent = '';
@@ -4537,6 +4695,7 @@ function clearSelectedFileForNow(inputToClear) {
     homePreview.classList.remove('has-file');
   }
   if (homeDrop) homeDrop.classList.remove('has-file');
+  renderHomeMagicCode();
   if (dz) dz.classList.remove('has-file');
   const btnSend = $('btn-send');
   if (btnSend) btnSend.disabled = true;
@@ -4623,6 +4782,7 @@ function pickFile(f) {
   }
   if (homeDrop) homeDrop.classList.add('has-file');
   if (homeBtn) homeBtn.disabled = false;
+  prepareHomeMagicCode();
   // Afficher notice mode web si applicable
   updateSendNotice();
 }
@@ -4901,6 +5061,13 @@ window.renderQrForCurrentLink = function () {
 
 function acceptQrValue(value) {
   if (!value) return;
+  const linkedCode = tryExtractP2PCode(value);
+  if (linkedCode) {
+    $('p2p-code-input').value = linkedCode;
+    if ($('recv-human-proof')) $('recv-human-proof').checked = true;
+    setStatus('p2p-recv-status', 'success', tr('qr.join', 'QR read. Click Continue to join the session.'));
+    return;
+  }
   $('p2p-code-input').value = value;
   if ($('recv-human-proof')) $('recv-human-proof').checked = true;
   if (value.includes('#') || value.startsWith('http') || value.startsWith('w1:') || value.includes(':')) {
@@ -4998,6 +5165,14 @@ async function checkReceiveHash() {
   if (!hash || !hash.includes(':')) {
     $('recv-empty').classList.add('hidden');
     $('recv-auto').classList.add('hidden');
+    return;
+  }
+  const linkedCode = tryExtractP2PCode(`#${hash}`);
+  if (linkedCode) {
+    $('p2p-code-input').value = linkedCode;
+    $('recv-empty').classList.add('hidden');
+    $('recv-auto').classList.add('hidden');
+    setStatus('p2p-recv-status', 'success', tr('qr.join', 'QR read. Click Continue to join the session.'));
     return;
   }
   if (hash === _loadedHash) return;

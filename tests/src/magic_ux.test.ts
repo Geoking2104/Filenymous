@@ -124,4 +124,30 @@ describe("Magic UX public transfer workspace", () => {
     expect(visibleHtml).not.toContain("Direct P2P - One-time code");
     expect(visiblePackagedHtml).not.toContain("Direct P2P - One-time code");
   });
+
+  it("shows a shareable Magic Link number on the home page after file selection", () => {
+    for (const token of [
+      'id="home-magic-code-card" class="home-magic-code-card hidden"',
+      'id="home-magic-code-out"',
+      'data-i18n="home.magicCodeLabel"',
+      'data-i18n="home.emailCode"',
+      'data-i18n="home.copyCode"',
+      'data-i18n="home.showQr"',
+      'id="home-qr-panel" class="qr-panel hidden"',
+      'id="home-qr-canvas"',
+      "prepareHomeMagicCode",
+      "copyHomeMagicCode",
+      "emailHomeMagicCode",
+      "renderHomeMagicQr",
+      "p2pCodeShareUrl",
+      "S.preparedMagicCode || createOneTimeCode()",
+    ]) {
+      expect(html).toContain(token);
+      expect(packagedHtml).toContain(token);
+    }
+    expect(visibleHtml).toContain("Your Magic Link number");
+    expect(visibleHtml).toContain("Email");
+    expect(visibleHtml).toContain("Copy code");
+    expect(visibleHtml).toContain("Show QR");
+  });
 });
