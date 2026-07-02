@@ -32,7 +32,8 @@ describe("P2P direct web mode", () => {
   });
 
   it("uses the OpenDPE VPS WebSocket relay in public web mode", () => {
-    expect(html).toContain("wss://opendpe.net/filenymous-signal/");
+    expect(html).toContain("wss://www.opendpe.net/filenymous-signal/");
+    expect(html).not.toContain("wss://opendpe.net/filenymous-signal/");
     expect(html).not.toContain("wss://signal.filenymous.eu");
   });
 
