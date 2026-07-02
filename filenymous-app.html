@@ -4259,14 +4259,46 @@ function normalizeOneTimeCode(value) {
 function tryExtractP2PCode(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
-  const hash = raw.includes('#') ? raw.split('#').pop() : raw;
-  const decoded = decodeURIComponent(hash || '').trim();
-  const codePart = decoded.startsWith('p2p:') ? decoded.slice(4) : decoded;
+
+  const candidates = [];
+  const addCandidate = candidate => {
+    const text = String(candidate || '').trim();
+    if (text && !candidates.includes(text)) candidates.push(text);
+  };
+  const addParams = text => {
+    if (!String(text || '').includes('=')) return;
+    try {
+      const params = new URLSearchParams(String(text).replace(/^\?/, ''));
+      addCandidate(params.get('code'));
+      addCandidate(params.get('p2p'));
+      addCandidate(params.get('p2pCode'));
+    } catch (_) {}
+  };
+  const addHash = hash => {
+    const decoded = decodeURIComponent(String(hash || '').replace(/^#/, '')).trim();
+    if (!decoded) return;
+    addCandidate(decoded);
+    if (decoded.startsWith('p2p:')) addCandidate(decoded.slice(4));
+    addParams(decoded);
+  };
+
+  addCandidate(raw);
+  addParams(raw);
+  if (raw.includes('#')) addHash(raw.slice(raw.indexOf('#') + 1));
+
   try {
-    return normalizeOneTimeCode(codePart);
-  } catch (_) {
-    return '';
+    const parsed = new URL(raw, location.href);
+    addParams(parsed.search);
+    addHash(parsed.hash);
+  } catch (_) {}
+
+  for (const candidate of candidates) {
+    const codePart = candidate.startsWith('p2p:') ? candidate.slice(4) : candidate;
+    try {
+      return normalizeOneTimeCode(codePart);
+    } catch (_) {}
   }
+  return '';
 }
 
 function filenymousPublicBaseUrl() {

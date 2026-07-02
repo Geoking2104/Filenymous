@@ -122,6 +122,9 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain("loadQrDecoder");
     expect(html).toContain("detectQrFromSource");
     expect(html).toContain("window.jsQR");
+    expect(html).toContain("new URLSearchParams");
+    expect(html).toContain("params.get('code')");
+    expect(html).toContain("params.get('p2p')");
     expect(html).toContain('capture="environment"');
     expect(html).toContain("navigator.share");
     expect(packagedHtml).toContain('id="qr-panel"');
