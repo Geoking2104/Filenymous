@@ -53,4 +53,12 @@ describe("P2P direct web mode", () => {
     expect(html).toContain("legacySignalRoomCode");
     expect(html).toContain("openSignalSocketWithFallback");
   });
+
+  it("prevents stale sender sessions from causing signaling role-taken errors", () => {
+    expect(html).toContain("S.activeP2PSession");
+    expect(html).toContain("closeActiveP2PSession");
+    expect(html).toContain("closeActiveP2PSession('complete', session)");
+    expect(html).toContain("role-taken");
+    expect(html).toContain("Previous code was still active. A fresh code was created automatically.");
+  });
 });

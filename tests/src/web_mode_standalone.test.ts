@@ -26,6 +26,14 @@ describe("standalone web transfer mode", () => {
     }
   });
 
+  it("uses the current Holo Web Conductor client package without the obsolete web-client import", () => {
+    expect(html).toContain("@holo-host/web-conductor-client@0.1.0");
+    expect(html).toContain("WebConductorAppClient");
+    expect(html).not.toContain("@holo-host/web-client");
+    expect(packagedHtml).toContain("@holo-host/web-conductor-client@0.1.0");
+    expect(packagedHtml).not.toContain("@holo-host/web-client");
+  });
+
   it("does not block sends when no Holochain conductor is available", () => {
     expect(html).not.toContain("Mode lecture seule");
     expect(html).not.toContain("envoi non disponible sans conducteur Holochain");
@@ -110,8 +118,15 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain("renderQrForCurrentLink");
     expect(html).toContain("scanQrCode");
     expect(html).toContain("BarcodeDetector");
+    expect(html).toContain("QR_DECODER_URL");
+    expect(html).toContain("loadQrDecoder");
+    expect(html).toContain("detectQrFromSource");
+    expect(html).toContain("window.jsQR");
+    expect(html).toContain('capture="environment"');
     expect(html).toContain("navigator.share");
     expect(packagedHtml).toContain('id="qr-panel"');
+    expect(packagedHtml).toContain("detectQrFromSource");
+    expect(packagedHtml).toContain('capture="environment"');
   });
 
   it("uses the simplified public home message", () => {
