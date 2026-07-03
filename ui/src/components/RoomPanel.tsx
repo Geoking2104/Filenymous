@@ -5,7 +5,7 @@ import { useStore } from "../store/useStore";
 
 const localPeer: RoomPeer = {
   peerId: "local",
-  displayName: "Vous",
+  displayName: "You",
   avatarSeed: "local",
   status: "online",
   lastSeenMs: Date.now(),
@@ -13,19 +13,26 @@ const localPeer: RoomPeer = {
 };
 
 function createRoomId(): string {
-  return `room-${crypto.randomUUID?.() ?? createInviteCode().replace(/-/g, "").toLowerCase()}`;
+  const fallback = createInviteCode().replace(/-/g, "").toLowerCase();
+  return `room-${crypto.randomUUID?.().slice(0, 8) ?? fallback}`;
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+function roomInviteLink(roomId: string, inviteCode: string): string {
+  const origin = window.location.origin || "https://geoking2104.github.io";
+  return `${origin}/Filenymous/#/room/${encodeURIComponent(roomId)}?key=${encodeURIComponent(inviteCode)}`;
 }
 
 function requestFromFile(file: File, roomId: string, peer: RoomPeer): RoomTransferRequest {
   const now = Date.now();
   return {
-    transferId: `transfer-${now}`,
+    transferId: `transfer-${now}-${file.name}`,
     roomId,
     senderId: localPeer.peerId,
     receiverId: peer.peerId,
@@ -50,29 +57,45 @@ export default function RoomPanel() {
     setPeers,
     setRoomTransfers,
   } = useStore();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedPeerId, setSelectedPeerId] = useState("");
   const [draft, setDraft] = useState("");
   const [dragging, setDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [messages, setMessages] = useState<Array<{ id: string; author: string; text: string }>>([]);
+  const [copied, setCopied] = useState(false);
+  const [messages, setMessages] = useState<Array<{ id: string; author: string; text: string }>>([
+    {
+      id: "welcome",
+      author: "Filenymous",
+      text: "Create a room, share the invite link, then keep this tab open while people exchange files.",
+    },
+  ]);
 
   const visiblePeers = useMemo(() => (peers.length ? peers : [localPeer]), [peers]);
   const remotePeers = visiblePeers.filter((peer) => peer.peerId !== localPeer.peerId);
   const selectedPeer = visiblePeers.find((peer) => peer.peerId === selectedPeerId);
-  const canSend = Boolean(selectedPeer && selectedPeer.peerId !== localPeer.peerId);
+  const canSend = Boolean(roomId && selectedPeer && selectedPeer.peerId !== localPeer.peerId);
+  const inviteUrl = roomId && inviteCode ? roomInviteLink(roomId, inviteCode) : "";
 
   const ensureRoom = () => {
     const nextRoomId = roomId || createRoomId();
-    setRoom({ roomId: nextRoomId, inviteCode: inviteCode || createInviteCode() });
+    const nextInviteCode = inviteCode || createInviteCode();
+    setRoom({ roomId: nextRoomId, inviteCode: nextInviteCode });
     if (!peers.length) setPeers([localPeer]);
-    return nextRoomId;
+    return { roomId: nextRoomId, inviteCode: nextInviteCode };
+  };
+
+  const copyInvite = async () => {
+    const room = roomId && inviteCode ? { roomId, inviteCode } : ensureRoom();
+    await navigator.clipboard?.writeText(roomInviteLink(room.roomId, room.inviteCode));
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
   };
 
   const addDemoPeer = () => {
     ensureRoom();
     const demoPeer: RoomPeer = {
       peerId: "peer-demo",
-      displayName: "Pair invite",
+      displayName: "Guest",
       avatarSeed: "demo",
       status: "online",
       lastSeenMs: Date.now(),
@@ -82,17 +105,19 @@ export default function RoomPanel() {
     setSelectedPeerId(demoPeer.peerId);
   };
 
-  const queueFile = (file: File | null) => {
-    if (!file || !selectedPeer) return;
-    const nextRoomId = ensureRoom();
-    setRoomTransfers([requestFromFile(file, nextRoomId, selectedPeer), ...roomTransfers]);
+  const queueFiles = (files: FileList | File[]) => {
+    const selected = selectedPeer ?? remotePeers[0];
+    if (!selected) return;
+    const room = ensureRoom();
+    const requests = Array.from(files).map((file) => requestFromFile(file, room.roomId, selected));
+    setRoomTransfers([...requests, ...roomTransfers]);
   };
 
   const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
     setDragging(false);
     if (!canSend) return;
-    queueFile(event.dataTransfer.files?.[0] ?? null);
+    queueFiles(event.dataTransfer.files);
   };
 
   const handleDropKeyDown = (event: KeyboardEvent<HTMLLabelElement>) => {
@@ -104,64 +129,75 @@ export default function RoomPanel() {
   const sendMessage = () => {
     const text = sanitizeRoomText(draft.trim(), 500);
     if (!text) return;
-    setMessages([{ id: crypto.randomUUID?.() ?? `${Date.now()}`, author: "Vous", text }, ...messages]);
+    setMessages([{ id: crypto.randomUUID?.() ?? `${Date.now()}`, author: "You", text }, ...messages]);
     setDraft("");
   };
 
   return (
-    <section style={{ display: "grid", gap: "1rem" }}>
-      <div className="card" style={{ borderRadius: 8, marginBottom: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center" }}>
-          <div>
-            <div className="card-label">Room Filenymous</div>
-            <h1 style={{ fontSize: "1.35rem", lineHeight: 1.2, marginBottom: ".35rem" }}>Transfert direct anonyme</h1>
-            <p style={{ color: "var(--muted)", fontSize: ".9rem" }}>
-              {net.connected ? "Holochain actif" : "Mode web local"}
-            </p>
-          </div>
-          <button className="btn-primary" onClick={ensureRoom}>Créer</button>
+    <section className="room-shell">
+      <div className="card room-hero">
+        <div>
+          <div className="card-label">Rooms</div>
+          <h1>Create a private room for a group</h1>
+          <p>
+            One temporary room, one invite link, many files. The browser keeps the room key local and the advanced
+            network modules stay behind the scenes.
+          </p>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: ".75rem", marginTop: "1rem" }}>
-          <input readOnly value={inviteCode || "Aucun code"} aria-label="Code invitation room" />
-          <button className="btn-ghost" onClick={addDemoPeer}>Pair test</button>
+        <div className="room-actions">
+          <button className="btn-primary" type="button" onClick={ensureRoom}>
+            Create room
+          </button>
+          <button className="btn-ghost" type="button" onClick={copyInvite}>
+            {copied ? "Copied" : "Copy invite"}
+          </button>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,280px),1fr))", gap: "1rem" }}>
-        <div className="card" style={{ borderRadius: 8, marginBottom: 0 }}>
-          <div className="card-label">Pairs</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(128px,1fr))", gap: ".75rem" }}>
+      <div className="card room-invite-card">
+        <div>
+          <div className="card-label">Invite</div>
+          <p className="room-summary">
+            {roomId ? "Room ready. Share this link and keep this page open." : "Create a room to generate an invite link."}
+          </p>
+        </div>
+        <input
+          readOnly
+          value={inviteUrl || "No room created yet"}
+          aria-label="Room invite link"
+          onFocus={(event) => event.currentTarget.select()}
+        />
+      </div>
+
+      <div className="room-grid">
+        <div className="card room-panel">
+          <div className="card-label">Participants</div>
+          <div className="peer-grid" aria-label="Room participants">
             {visiblePeers.map((peer) => {
               const selected = selectedPeerId === peer.peerId;
               return (
                 <button
                   key={peer.peerId}
+                  type="button"
                   onClick={() => setSelectedPeerId(peer.peerId)}
-                  className={selected ? "btn-primary" : "btn-ghost"}
-                  style={{ minHeight: 112, borderRadius: 8, display: "grid", placeItems: "center", gap: ".35rem" }}
+                  className={selected ? "btn-primary peer-card" : "btn-ghost peer-card"}
                 >
-                  <span
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: "50%",
-                      display: "grid",
-                      placeItems: "center",
-                      background: selected ? "rgba(255,255,255,.24)" : "#e0f2fe",
-                      color: selected ? "#fff" : "#075985",
-                      fontWeight: 800,
-                    }}
-                  >
-                    {roomAvatarInitials(peer.displayName, peer.peerId)}
-                  </span>
-                  <span>{peer.displayName}</span>
-                  <span style={{ fontSize: ".72rem", opacity: .75 }}>{peer.status}</span>
+                  <span className="peer-avatar">{roomAvatarInitials(peer.displayName, peer.peerId)}</span>
+                  <strong>{peer.displayName}</strong>
+                  <small>{peer.status}</small>
                 </button>
               );
             })}
           </div>
+          <button className="btn-ghost btn-full" type="button" onClick={addDemoPeer}>
+            Add test guest
+          </button>
+        </div>
 
+        <div className="card room-panel">
+          <div className="card-label">Files</div>
           <label
+            className={`room-drop ${dragging ? "is-dragging" : ""} ${canSend ? "" : "is-disabled"}`}
             role="button"
             tabIndex={canSend ? 0 : -1}
             onDragOver={(event) => {
@@ -171,76 +207,62 @@ export default function RoomPanel() {
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
             onKeyDown={handleDropKeyDown}
-            style={{
-              marginTop: "1rem",
-              minHeight: 136,
-              border: "1.5px dashed var(--border)",
-              borderRadius: 8,
-              display: "grid",
-              placeItems: "center",
-              textAlign: "center",
-              color: canSend ? "var(--text)" : "var(--muted)",
-              background: dragging ? "#dcfce7" : canSend ? "#f0fdf4" : "#f8fafc",
-              cursor: canSend ? "pointer" : "not-allowed",
-            }}
           >
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               disabled={!canSend}
-              onChange={(event) => queueFile(event.currentTarget.files?.[0] ?? null)}
-              style={{
-                position: "absolute",
-                width: 1,
-                height: 1,
-                opacity: 0,
-                pointerEvents: "none",
+              onChange={(event) => {
+                if (event.currentTarget.files) queueFiles(event.currentTarget.files);
+                event.currentTarget.value = "";
               }}
             />
-            <span style={{ fontWeight: 700 }}>
-              {canSend ? `Envoyer vers ${selectedPeer?.displayName}` : "Sélectionnez un pair distant"}
-            </span>
+            <strong>{canSend ? `Drop files for ${selectedPeer?.displayName}` : "Invite or add a guest first"}</strong>
+            <span>Large files stay in direct-transfer mode when the network path is available.</span>
           </label>
-        </div>
-
-        <div style={{ display: "grid", gap: "1rem" }}>
-          <div className="card" style={{ borderRadius: 8, marginBottom: 0 }}>
-            <div className="card-label">Mini-chat</div>
-            <textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={500} />
-            <button className="btn-primary btn-full" style={{ marginTop: ".65rem" }} onClick={sendMessage}>
-              Envoyer
-            </button>
-            <div style={{ display: "grid", gap: ".45rem", marginTop: ".85rem" }}>
-              {messages.slice(0, 4).map((message) => (
-                <div key={message.id} style={{ borderTop: "1px solid var(--border)", paddingTop: ".45rem" }}>
-                  <strong>{message.author}</strong> <span dangerouslySetInnerHTML={{ __html: message.text }} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card" style={{ borderRadius: 8, marginBottom: 0 }}>
-            <div className="card-label">Demandes</div>
+          <div className="room-transfer-list">
             {roomTransfers.length === 0 ? (
-              <div className="empty" style={{ padding: "1rem" }}>Aucune demande</div>
+              <p className="empty">No room file yet.</p>
             ) : (
-              roomTransfers.slice(0, 4).map((transfer) => (
-                <div key={transfer.transferId} style={{ display: "flex", justifyContent: "space-between", gap: ".75rem", padding: ".45rem 0", borderTop: "1px solid var(--border)" }}>
+              roomTransfers.slice(0, 5).map((transfer) => (
+                <div key={transfer.transferId} className="room-transfer-row">
                   <span>{transfer.fileNameCiphertext}</span>
-                  <span className="badge badge-pending">{formatBytes(transfer.fileSize)}</span>
+                  <strong>{formatBytes(transfer.fileSize)}</strong>
                 </div>
               ))
             )}
           </div>
         </div>
+
+        <div className="card room-panel room-chat">
+          <div className="card-label">Room chat</div>
+          <textarea
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            maxLength={500}
+            placeholder="Write a short note for people in this room..."
+          />
+          <button className="btn-primary btn-full" type="button" onClick={sendMessage}>
+            Send message
+          </button>
+          <div className="room-messages">
+            {messages.slice(0, 5).map((message) => (
+              <p key={message.id}>
+                <strong>{message.author}</strong>
+                <span>{message.text}</span>
+              </p>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {remotePeers.length === 0 && (
-        <div className="warn-box" style={{ marginBottom: 0 }}>
-          <span>!</span>
-          <span>En ligne, les pairs réels apparaîtront via Holochain/HWC ou signal direct. Le pair test simule le flux local.</span>
-        </div>
-      )}
+      <div className="info-box room-footnote">
+        <span>
+          Room transport status: {net.connected ? "advanced network available" : "browser-first mode"}. Network
+          details and relay settings are managed in Advanced.
+        </span>
+      </div>
     </section>
   );
 }

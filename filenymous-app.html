@@ -231,6 +231,116 @@
     #panel-room > .split-grid {
       display: none;
     }
+    .rooms-workspace {
+      display: grid;
+      gap: 18px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    .rooms-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      padding: 26px;
+    }
+    .rooms-hero h1 {
+      font-size: clamp(32px, 5vw, 56px);
+      line-height: .98;
+      letter-spacing: 0;
+      margin-bottom: 12px;
+    }
+    .rooms-hero p {
+      color: var(--muted);
+      max-width: 640px;
+      font-size: 16px;
+    }
+    .rooms-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .rooms-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .room-invite-display {
+      display: grid;
+      gap: 10px;
+    }
+    .room-invite-display input {
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    .room-peer-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+      gap: 10px;
+    }
+    .room-peer-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      background: var(--surface);
+      display: grid;
+      gap: 6px;
+    }
+    .room-peer-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(22, 93, 255, .1);
+      color: var(--accent);
+      font-weight: 800;
+    }
+    .room-drop-static {
+      min-height: 154px;
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      gap: 8px;
+      padding: 18px;
+      background: #f8fafc;
+      cursor: pointer;
+    }
+    .room-file-list, .room-chat-log {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .room-file-row, .room-message-row {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: var(--surface);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .room-message-row {
+      display: grid;
+      justify-content: stretch;
+    }
+    .room-message-row strong { color: var(--text); }
+    @media (max-width: 760px) {
+      .rooms-hero,
+      .rooms-grid {
+        grid-template-columns: 1fr;
+      }
+      .rooms-actions {
+        justify-content: stretch;
+      }
+      .rooms-actions .btn {
+        flex: 1;
+      }
+    }
     .home-shell {
       min-height: calc(100svh - 168px);
       display: grid;
@@ -786,9 +896,23 @@
     }
 
     @media (max-width: 540px) {
-      header { padding: 8px 12px; gap: 10px; }
+      header { padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
       .logo span { display: none; }
-      nav button { padding: 6px 10px; font-size: 12px; }
+      nav {
+        order: 3;
+        flex: 0 0 100%;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+        overflow: visible;
+      }
+      nav button {
+        min-width: 0;
+        padding: 6px 2px;
+        font-size: 11px;
+        justify-content: center;
+      }
+      .language-picker { margin-left: auto; }
       main { padding: 20px 12px; }
       .home-transfer-card { padding: 14px; border-radius: 12px; }
       .home-drop { min-height: 224px; padding: 22px 14px; }
@@ -830,12 +954,11 @@
     <span>Filenymous</span>
   </a>
   <nav>
-    <button id="tab-room"     class="active" onclick="showTab('room')" data-i18n="nav.home">Home</button>
-    <button id="tab-send"     onclick="showTab('send')" data-i18n="nav.send">Send</button>
+    <button id="tab-room"     class="active" onclick="showTab('room')" data-i18n="nav.send">Send</button>
     <button id="tab-receive"  onclick="showTab('receive')" data-i18n="nav.receive">Receive</button>
-    <button id="tab-history"  onclick="showTab('history')"><span data-i18n="nav.files">Files</span><span id="hist-count"></span></button>
-    <button id="tab-privacy"  class="secondary-nav" onclick="showTab('privacy')" data-i18n="nav.security">Security</button>
-    <button id="tab-identity" class="secondary-nav" onclick="showTab('identity')" data-i18n="nav.advanced">Advanced</button>
+    <button id="tab-rooms"    onclick="showTab('rooms')" data-i18n="nav.rooms">Rooms</button>
+    <button id="tab-history"  onclick="showTab('history')"><span data-i18n="nav.history">History</span><span id="hist-count"></span></button>
+    <button id="tab-identity" onclick="showTab('identity')" data-i18n="nav.advanced">Advanced</button>
   </nav>
   <label class="language-picker" for="language-select">
     <span data-i18n="nav.language">Language</span>
@@ -929,6 +1052,70 @@
     <button class="btn btn-secondary" onclick="showTab('history')">
       <span><strong data-i18n="nav.files">Files</strong><span data-i18n="home.filesHint">View files you shared or received.</span></span>
     </button>
+  </div>
+</section>
+
+<section id="panel-rooms" class="panel">
+  <div class="rooms-workspace">
+    <div class="card rooms-hero">
+      <div>
+        <p class="card-title" data-i18n="rooms.mode">Mode ROOM</p>
+        <h1 data-i18n="rooms.title">Create a private room for a group</h1>
+        <p data-i18n="rooms.subtitle">One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.</p>
+      </div>
+      <div class="rooms-actions">
+        <button type="button" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
+        <button type="button" class="btn btn-secondary" onclick="copyPublicRoomLink()" data-i18n="rooms.copyInvite">Copy invite</button>
+      </div>
+    </div>
+
+    <div class="card room-invite-display">
+      <p class="card-title" data-i18n="rooms.inviteTitle">Invite link</p>
+      <p class="muted" data-i18n="rooms.inviteHelp">The room key stays in the link fragment. Share it only with people you trust.</p>
+      <input id="public-room-link" type="text" readonly value="Create a room to generate an invite link." aria-label="Room invite link" />
+      <div id="public-room-status" class="status info">
+        <span data-i18n="rooms.statusIdle">No room created yet.</span>
+      </div>
+    </div>
+
+    <div class="rooms-grid">
+      <div class="card">
+        <p class="card-title" data-i18n="rooms.peopleTitle">People in the room</p>
+        <div id="public-room-peers" class="room-peer-list">
+          <div class="room-peer-card">
+            <span class="room-peer-avatar">YO</span>
+            <strong data-i18n="rooms.you">You</strong>
+            <span class="muted" data-i18n="rooms.online">Online in this browser</span>
+          </div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-full mt-3" onclick="addPublicRoomDemoPeer()" data-i18n="rooms.addGuest">Add test guest</button>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="rooms.filesTitle">Room files</p>
+        <label class="room-drop-static" for="public-room-file-input">
+          <input id="public-room-file-input" type="file" hidden multiple onchange="addPublicRoomFiles(this.files)" />
+          <strong data-i18n="rooms.dropTitle">Add files to this room</strong>
+          <span class="muted" data-i18n="rooms.dropHelp">Files are queued locally here; direct encrypted transfer starts when peers are connected.</span>
+        </label>
+        <div id="public-room-files" class="room-file-list">
+          <p class="empty" data-i18n="rooms.noFiles">No room file yet.</p>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column:1/-1">
+        <p class="card-title" data-i18n="rooms.chatTitle">Room chat</p>
+        <p class="muted" data-i18n="rooms.chatHelp">Short messages help recipients understand what the files are. Full encrypted group chat is part of the advanced network roadmap.</p>
+        <textarea id="public-room-chat-input" maxlength="500" placeholder="Write a short message..." data-i18n-placeholder="rooms.chatPlaceholder"></textarea>
+        <button type="button" class="btn btn-primary btn-full mt-3" onclick="sendPublicRoomMessage()" data-i18n="rooms.sendMessage">Send message</button>
+        <div id="public-room-chat-log" class="room-chat-log">
+          <div class="room-message-row">
+            <strong>Filenymous</strong>
+            <span data-i18n="rooms.welcome">Create a room, share the invite link, then keep this browser open.</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -2836,6 +3023,13 @@ Object.assign(S, {
   lastShareArtifact: null,
   activeP2PSession: null,
   fileSelectionToken: 0,
+  publicRoom: {
+    roomId: '',
+    key: '',
+    files: [],
+    peers: ['You'],
+    messages: [],
+  },
 });
 
 function markTransferActive(label) {
@@ -3316,7 +3510,9 @@ window.FILENYMOUS_I18N = {
     "nav.home": "Home",
     "nav.send": "Send",
     "nav.receive": "Receive",
+    "nav.rooms": "Rooms",
     "nav.files": "Files",
+    "nav.history": "History",
     "nav.security": "Security",
     "nav.advanced": "Advanced",
     "nav.language": "Language",
@@ -3376,6 +3572,32 @@ window.FILENYMOUS_I18N = {
     "home.largeFileHint": "Use direct P2P.",
     "home.publicDirectory": "Public directory",
     "home.publicDirectoryHint": "See voluntarily published links.",
+    "rooms.mode": "Mode ROOM",
+    "rooms.title": "Create a private room for a group",
+    "rooms.subtitle": "One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.",
+    "rooms.create": "Create room",
+    "rooms.copyInvite": "Copy invite",
+    "rooms.inviteTitle": "Invite link",
+    "rooms.inviteHelp": "The room key stays in the link fragment. Share it only with people you trust.",
+    "rooms.statusIdle": "No room created yet.",
+    "rooms.statusReady": "Room ready. Share the invite link and keep this page open.",
+    "rooms.linkCopied": "Room invite link copied.",
+    "rooms.linkEmpty": "Create a room to generate an invite link.",
+    "rooms.peopleTitle": "People in the room",
+    "rooms.you": "You",
+    "rooms.online": "Online in this browser",
+    "rooms.addGuest": "Add test guest",
+    "rooms.guestAdded": "Test guest added. Real peers appear here when connected.",
+    "rooms.filesTitle": "Room files",
+    "rooms.dropTitle": "Add files to this room",
+    "rooms.dropHelp": "Files are queued locally here; direct encrypted transfer starts when peers are connected.",
+    "rooms.noFiles": "No room file yet.",
+    "rooms.filesQueued": "Files queued locally for this room.",
+    "rooms.chatTitle": "Room chat",
+    "rooms.chatHelp": "Short messages help recipients understand what the files are. Full encrypted group chat is part of the advanced network roadmap.",
+    "rooms.chatPlaceholder": "Write a short message...",
+    "rooms.sendMessage": "Send message",
+    "rooms.welcome": "Create a room, share the invite link, then keep this browser open.",
     "human.send": "I am human and I am starting this share myself.",
     "human.receive": "I am human and I am entering this code myself.",
     "common.optional": "(optional)",
@@ -3485,7 +3707,9 @@ window.FILENYMOUS_I18N = {
     "nav.home": "Accueil",
     "nav.send": "Envoyer",
     "nav.receive": "Recevoir",
+    "nav.rooms": "Rooms",
     "nav.files": "Fichiers",
+    "nav.history": "Historique",
     "nav.security": "Sécurité",
     "nav.advanced": "Avancé",
     "nav.language": "Langue",
@@ -3545,6 +3769,32 @@ window.FILENYMOUS_I18N = {
     "home.largeFileHint": "Passer par le P2P direct.",
     "home.publicDirectory": "Répertoire public",
     "home.publicDirectoryHint": "Voir les liens publiés volontairement.",
+    "rooms.mode": "Mode ROOM",
+    "rooms.title": "Créer une room privée pour un groupe",
+    "rooms.subtitle": "Une room temporaire, un lien d'invitation, plusieurs fichiers. Invitez les participants, échangez les fichiers et gardez la page ouverte pendant les transferts directs.",
+    "rooms.create": "Créer la room",
+    "rooms.copyInvite": "Copier l'invitation",
+    "rooms.inviteTitle": "Lien d'invitation",
+    "rooms.inviteHelp": "La clé de room reste dans le fragment du lien. Partagez-le uniquement avec des personnes de confiance.",
+    "rooms.statusIdle": "Aucune room créée.",
+    "rooms.statusReady": "Room prête. Partagez le lien d'invitation et gardez cette page ouverte.",
+    "rooms.linkCopied": "Lien d'invitation copié.",
+    "rooms.linkEmpty": "Créez une room pour générer un lien d'invitation.",
+    "rooms.peopleTitle": "Personnes dans la room",
+    "rooms.you": "Vous",
+    "rooms.online": "En ligne dans ce navigateur",
+    "rooms.addGuest": "Ajouter un invité test",
+    "rooms.guestAdded": "Invité test ajouté. Les vrais pairs apparaîtront ici une fois connectés.",
+    "rooms.filesTitle": "Fichiers de la room",
+    "rooms.dropTitle": "Ajouter des fichiers à cette room",
+    "rooms.dropHelp": "Les fichiers sont mis en file localement; le transfert chiffré direct démarre quand les pairs sont connectés.",
+    "rooms.noFiles": "Aucun fichier dans la room.",
+    "rooms.filesQueued": "Fichiers mis en file localement pour cette room.",
+    "rooms.chatTitle": "Chat de room",
+    "rooms.chatHelp": "Les messages courts aident les destinataires à comprendre les fichiers. Le chat de groupe chiffré complet fait partie de la feuille de route avancée.",
+    "rooms.chatPlaceholder": "Écrire un court message...",
+    "rooms.sendMessage": "Envoyer le message",
+    "rooms.welcome": "Créez une room, partagez le lien d'invitation, puis gardez ce navigateur ouvert.",
     "human.send": "Je suis humain et je lance ce partage moi-même.",
     "human.receive": "Je suis humain et je saisis ce code moi-même.",
     "common.optional": "(facultatif)",
@@ -3654,7 +3904,9 @@ window.FILENYMOUS_I18N = {
     "nav.home": "홈",
     "nav.send": "보내기",
     "nav.receive": "받기",
+    "nav.rooms": "Rooms",
     "nav.files": "파일",
+    "nav.history": "기록",
     "nav.security": "보안",
     "nav.advanced": "고급",
     "nav.language": "언어",
@@ -3714,6 +3966,32 @@ window.FILENYMOUS_I18N = {
     "home.largeFileHint": "직접 P2P를 사용합니다.",
     "home.publicDirectory": "공개 디렉터리",
     "home.publicDirectoryHint": "직접 공개한 링크만 표시합니다.",
+    "rooms.mode": "ROOM 모드",
+    "rooms.title": "그룹용 비공개 룸 만들기",
+    "rooms.subtitle": "임시 룸 하나, 초대 링크 하나, 여러 파일. 사람을 초대하고 파일을 교환하며 직접 전송 중에는 페이지를 열어 두세요.",
+    "rooms.create": "룸 만들기",
+    "rooms.copyInvite": "초대 링크 복사",
+    "rooms.inviteTitle": "초대 링크",
+    "rooms.inviteHelp": "룸 키는 링크 fragment에 남습니다. 신뢰하는 사람에게만 공유하세요.",
+    "rooms.statusIdle": "아직 만든 룸이 없습니다.",
+    "rooms.statusReady": "룸이 준비되었습니다. 초대 링크를 공유하고 이 페이지를 열어 두세요.",
+    "rooms.linkCopied": "룸 초대 링크가 복사되었습니다.",
+    "rooms.linkEmpty": "룸을 만들면 초대 링크가 생성됩니다.",
+    "rooms.peopleTitle": "룸 참가자",
+    "rooms.you": "나",
+    "rooms.online": "이 브라우저에서 온라인",
+    "rooms.addGuest": "테스트 참가자 추가",
+    "rooms.guestAdded": "테스트 참가자가 추가되었습니다. 실제 피어는 연결되면 여기에 표시됩니다.",
+    "rooms.filesTitle": "룸 파일",
+    "rooms.dropTitle": "이 룸에 파일 추가",
+    "rooms.dropHelp": "파일은 이 브라우저에 대기열로 저장됩니다. 피어가 연결되면 직접 암호화 전송이 시작됩니다.",
+    "rooms.noFiles": "아직 룸 파일이 없습니다.",
+    "rooms.filesQueued": "파일이 이 룸의 로컬 대기열에 추가되었습니다.",
+    "rooms.chatTitle": "룸 채팅",
+    "rooms.chatHelp": "짧은 메시지는 받는 사람이 파일 내용을 이해하는 데 도움이 됩니다. 전체 암호화 채팅은 Holochain/Iroh 로드맵에 포함됩니다.",
+    "rooms.chatPlaceholder": "짧은 메시지 작성...",
+    "rooms.sendMessage": "메시지 보내기",
+    "rooms.welcome": "룸을 만들고 초대 링크를 공유한 뒤 이 브라우저를 열어 두세요.",
     "human.send": "나는 사람이며 이 공유를 직접 시작합니다.",
     "human.receive": "나는 사람이며 이 코드를 직접 입력합니다.",
     "common.optional": "(선택 사항)",
@@ -3877,7 +4155,7 @@ function fileIcon(name) {
 function showTab(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   $(`panel-${name}`).classList.add('active');
-  ['room', 'send', 'receive', 'history', 'identity', 'privacy'].forEach(t => {
+  ['room', 'send', 'receive', 'rooms', 'history', 'identity', 'privacy'].forEach(t => {
     const tab = $(`tab-${t}`);
     if (tab) tab.classList.toggle('active', t === name);
   });
@@ -4864,6 +5142,87 @@ window.renderHomeMagicQr = function () {
   } catch (e) {
     status.textContent = tr('qr.tooLong', 'Link too long for one QR. Use Copy or Share to preserve the key.');
   }
+};
+
+function publicRoomInviteUrl() {
+  if (!S.publicRoom.roomId || !S.publicRoom.key) return '';
+  return `${filenymousPublicBaseUrl()}#/room/${encodeURIComponent(S.publicRoom.roomId)}?key=${encodeURIComponent(S.publicRoom.key)}`;
+}
+
+function renderPublicRoom() {
+  const link = $('public-room-link');
+  const peers = $('public-room-peers');
+  const files = $('public-room-files');
+  const chat = $('public-room-chat-log');
+  if (link) link.value = publicRoomInviteUrl() || tr('rooms.linkEmpty', 'Create a room to generate an invite link.');
+  if (peers) {
+    peers.innerHTML = S.publicRoom.peers.map((name) => `
+      <div class="room-peer-card">
+        <span class="room-peer-avatar">${esc(String(name).slice(0, 2).toUpperCase())}</span>
+        <strong>${esc(name)}</strong>
+        <span class="muted">${esc(tr('rooms.online', 'Online in this browser'))}</span>
+      </div>
+    `).join('');
+  }
+  if (files) {
+    files.innerHTML = S.publicRoom.files.length
+      ? S.publicRoom.files.map((file) => `
+        <div class="room-file-row">
+          <span>${esc(file.name)}</span>
+          <strong>${esc(fmtBytes(file.size))}</strong>
+        </div>
+      `).join('')
+      : `<p class="empty">${esc(tr('rooms.noFiles', 'No room file yet.'))}</p>`;
+  }
+  if (chat) {
+    const rows = S.publicRoom.messages.length ? S.publicRoom.messages : [
+      { author: 'Filenymous', text: tr('rooms.welcome', 'Create a room, share the invite link, then keep this browser open.') },
+    ];
+    chat.innerHTML = rows.map((message) => `
+      <div class="room-message-row">
+        <strong>${esc(message.author)}</strong>
+        <span>${esc(message.text)}</span>
+      </div>
+    `).join('');
+  }
+}
+
+window.createPublicRoom = function () {
+  S.publicRoom.roomId = S.publicRoom.roomId || `room-${createOneTimeCode().replace(/-/g, '').toLowerCase()}`;
+  S.publicRoom.key = S.publicRoom.key || createOneTimeCode();
+  renderPublicRoom();
+  setStatus('public-room-status', 'success', tr('rooms.statusReady', 'Room ready. Share the invite link and keep this page open.'));
+};
+
+window.copyPublicRoomLink = async function () {
+  if (!S.publicRoom.roomId || !S.publicRoom.key) createPublicRoom();
+  const url = publicRoomInviteUrl();
+  if (!url) return;
+  await navigator.clipboard.writeText(url);
+  setStatus('public-room-status', 'success', tr('rooms.linkCopied', 'Room invite link copied.'));
+};
+
+window.addPublicRoomDemoPeer = function () {
+  if (!S.publicRoom.peers.includes('Guest')) S.publicRoom.peers.push('Guest');
+  if (!S.publicRoom.roomId) createPublicRoom();
+  renderPublicRoom();
+  setStatus('public-room-status', 'info', tr('rooms.guestAdded', 'Test guest added. Real peers appear here when connected.'));
+};
+
+window.addPublicRoomFiles = function (fileList) {
+  if (!S.publicRoom.roomId) createPublicRoom();
+  S.publicRoom.files = [...S.publicRoom.files, ...Array.from(fileList || [])];
+  renderPublicRoom();
+  setStatus('public-room-status', 'info', tr('rooms.filesQueued', 'Files queued locally for this room.'));
+};
+
+window.sendPublicRoomMessage = function () {
+  const input = $('public-room-chat-input');
+  const text = String(input?.value || '').trim().slice(0, 500);
+  if (!text) return;
+  S.publicRoom.messages.unshift({ author: 'You', text });
+  if (input) input.value = '';
+  renderPublicRoom();
 };
 
 window.copyRoomCode = function () {

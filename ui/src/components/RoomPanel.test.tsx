@@ -15,7 +15,7 @@ afterEach(() => {
   root = null;
   document.body.innerHTML = "";
   useStore.setState({
-    tab: "room",
+    tab: "rooms",
     roomId: "",
     inviteCode: "",
     peers: [],
@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 describe("RoomPanel", () => {
-  it("renders the room as the first transfer surface", async () => {
+  it("renders a public room workflow with invite link and participants", async () => {
     useStore.setState({
       roomId: "room-alpha",
       inviteCode: "ABCD-EFGH-JKLM",
@@ -49,10 +49,13 @@ describe("RoomPanel", () => {
       mountedRoot.render(<RoomPanel />);
     });
 
-    expect(document.body.textContent).toContain("Transfert direct anonyme");
-    expect((document.querySelector("[aria-label='Code invitation room']") as HTMLInputElement).value).toBe(
-      "ABCD-EFGH-JKLM",
+    expect(document.body.textContent).toContain("Create a private room for a group");
+    expect(document.body.textContent).toContain("One temporary room, one invite link, many files");
+    expect(document.body.textContent).toContain("Create room");
+    expect((document.querySelector("[aria-label='Room invite link']") as HTMLInputElement).value).toContain(
+      "/#/room/room-alpha?key=ABCD-EFGH-JKLM",
     );
     expect(document.body.textContent).toContain("Bob");
+    expect(document.body.textContent).toContain("Room chat");
   });
 });

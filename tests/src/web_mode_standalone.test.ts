@@ -75,6 +75,18 @@ describe("standalone web transfer mode", () => {
     expect(packagedHtml).toContain('id="home-file-input"');
   });
 
+  it("exposes Mode ROOM as a clear public tab and panel", () => {
+    expect(html).toContain('id="tab-rooms"');
+    expect(html).toContain('id="panel-rooms"');
+    expect(visibleHtml).toContain("Create a private room for a group");
+    expect(visibleHtml).toContain("One temporary room, one invite link, many files");
+    expect(html).toContain("publicRoomInviteUrl");
+    expect(html).toContain("renderPublicRoom");
+    expect(html).toContain("createPublicRoom");
+    expect(html).toContain('"rooms.title"');
+    expect(packagedHtml).toContain('id="panel-rooms"');
+  });
+
   it("warns before closing the browser during an active transfer", () => {
     expect(html).toContain("beforeunload");
     expect(html).toContain("transferActive");
@@ -140,9 +152,11 @@ describe("standalone web transfer mode", () => {
 
   it("serves English public fallback copy before JavaScript translations run", () => {
     for (const phrase of [
-      "Home",
       "Send",
       "Receive",
+      "Rooms",
+      "History",
+      "Advanced",
       "Language",
       "Create Magic Link",
       "Download and decrypt",
@@ -244,10 +258,11 @@ describe("standalone web transfer mode", () => {
   });
 
   it("keeps advanced panels out of the primary navigation", () => {
-    expect(html).toContain('id="tab-privacy"  class="secondary-nav"');
-    expect(html).toContain('id="tab-identity" class="secondary-nav"');
+    expect(html).not.toContain('id="tab-privacy"');
+    expect(html).toContain('id="tab-identity" onclick="showTab(\'identity\')" data-i18n="nav.advanced"');
+    expect(visibleHtml).toContain("Advanced");
     expect(html).not.toContain("Coffre local");
     expect(html).not.toContain("showTab('wallet')");
-    expect(packagedHtml).toContain('class="secondary-nav"');
+    expect(packagedHtml).not.toContain('id="tab-privacy"');
   });
 });

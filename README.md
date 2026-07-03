@@ -16,17 +16,26 @@ The project no longer publishes `.exe`, `.dmg`, or `.AppImage` files while the n
 
 1. The sender selects a file in the browser.
 2. The file is encrypted locally with WebCrypto.
-3. Filenymous creates a one-time code, a self-contained encrypted link, or a WebRTC P2P session.
+3. Filenymous creates a one-time code, a self-contained encrypted link, a WebRTC P2P session, or a temporary Room invite.
 4. The recipient opens the link or enters the code.
 5. Decryption stays local in the recipient's browser.
 
 For small files, the self-contained link remains the simplest path. For larger files, the direct P2P flow keeps both browsers open during the transfer.
+
+## Public Product Modes
+
+- **Send**: the simplest path. Pick files, create the Magic Link number, then share by email, copy-paste, or QR code.
+- **Receive**: paste a Filenymous link or enter the one-time code. The browser explains where the downloaded file is saved.
+- **Rooms**: create a temporary private room for group sharing. The current web UI generates an invite link, lists participants, queues room files locally, and provides a lightweight room chat surface.
+- **History**: local browser history for transfers the user explicitly created or received.
+- **Advanced**: network, identity, privacy, wallet, Holochain, and Iroh details. The public path does not require users to understand this section.
 
 ## Target Architecture
 
 - **WebCrypto**: local AES-256-GCM encryption.
 - **WebRTC DataChannel**: browser-to-browser transfer when peers can reach each other.
 - **Web signaling**: minimal rendezvous exchange, without storing the plaintext file.
+- **Mode ROOM**: E2E-room-ready model for multiple participants, file queues, room messages, expiration, and future revocation.
 - **Iroh / iroh-blobs**: path for verifiable large files and encrypted relays.
 - **Holochain / Holo Web Conductor**: advanced option for identity, contacts, DHT, and coordination without forcing the general public to run a local conductor.
 

@@ -3,7 +3,7 @@ import type { ClientMode } from "../holochain/client";
 import type { LocalParcel } from "../holochain/types";
 import type { RoomHistorySnapshot, RoomPeer, RoomTransferRequest } from "../rooms/types";
 
-export type Tab = "room" | "send" | "inbox" | "history" | "identity" | "privacy" | "wallet";
+export type Tab = "send" | "receive" | "rooms" | "history" | "advanced";
 export type NetInfo = { connected: boolean; mode: ClientMode; peers: number };
 
 interface State {
@@ -32,7 +32,7 @@ interface State {
 }
 
 export const useStore = create<State>((set) => ({
-  tab: "room",
+  tab: "send",
   net: { connected: false, mode: "detecting", peers: 0 },
   parcels: [],
   contacts: [],
