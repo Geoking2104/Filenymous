@@ -1066,6 +1066,7 @@
       <div class="rooms-actions">
         <button type="button" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
         <button type="button" class="btn btn-secondary" onclick="copyPublicRoomLink()" data-i18n="rooms.copyInvite">Copy invite</button>
+        <button type="button" class="btn btn-danger" onclick="closePublicRoom()" data-i18n="rooms.close">Close room</button>
       </div>
     </div>
 
@@ -3026,8 +3027,15 @@ Object.assign(S, {
   publicRoom: {
     roomId: '',
     key: '',
+    peerId: '',
+    displayName: 'You',
+    socket: null,
+    connected: false,
+    closed: false,
+    expiresAt: 0,
     files: [],
-    peers: ['You'],
+    roomFileTransfers: {},
+    peers: [{ peerId: 'local', displayName: 'You' }],
     messages: [],
   },
 });
@@ -3577,6 +3585,7 @@ window.FILENYMOUS_I18N = {
     "rooms.subtitle": "One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.",
     "rooms.create": "Create room",
     "rooms.copyInvite": "Copy invite",
+    "rooms.close": "Close room",
     "rooms.inviteTitle": "Invite link",
     "rooms.inviteHelp": "The room key stays in the link fragment. Share it only with people you trust.",
     "rooms.statusIdle": "No room created yet.",
@@ -3774,6 +3783,7 @@ window.FILENYMOUS_I18N = {
     "rooms.subtitle": "Une room temporaire, un lien d'invitation, plusieurs fichiers. Invitez les participants, échangez les fichiers et gardez la page ouverte pendant les transferts directs.",
     "rooms.create": "Créer la room",
     "rooms.copyInvite": "Copier l'invitation",
+    "rooms.close": "Fermer la room",
     "rooms.inviteTitle": "Lien d'invitation",
     "rooms.inviteHelp": "La clé de room reste dans le fragment du lien. Partagez-le uniquement avec des personnes de confiance.",
     "rooms.statusIdle": "Aucune room créée.",
@@ -3971,6 +3981,7 @@ window.FILENYMOUS_I18N = {
     "rooms.subtitle": "임시 룸 하나, 초대 링크 하나, 여러 파일. 사람을 초대하고 파일을 교환하며 직접 전송 중에는 페이지를 열어 두세요.",
     "rooms.create": "룸 만들기",
     "rooms.copyInvite": "초대 링크 복사",
+    "rooms.close": "룸 닫기",
     "rooms.inviteTitle": "초대 링크",
     "rooms.inviteHelp": "룸 키는 링크 fragment에 남습니다. 신뢰하는 사람에게만 공유하세요.",
     "rooms.statusIdle": "아직 만든 룸이 없습니다.",
@@ -5149,6 +5160,178 @@ function publicRoomInviteUrl() {
   return `${filenymousPublicBaseUrl()}#/room/${encodeURIComponent(S.publicRoom.roomId)}?key=${encodeURIComponent(S.publicRoom.key)}`;
 }
 
+const PUBLIC_ROOM_FILE_CHUNK_SIZE = 192 * 1024;
+
+function makePublicRoomPeerId() {
+  return `peer-${b64e(crypto.getRandomValues(new Uint8Array(9))).toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 12)}`;
+}
+
+function publicRoomPeerName(peer) {
+  if (typeof peer === 'string') return peer;
+  return peer?.displayName || peer?.peerId || 'Guest';
+}
+
+function setPublicRoomPeers(peers) {
+  const next = Array.isArray(peers) && peers.length ? peers : [
+    { peerId: S.publicRoom.peerId || 'local', displayName: S.publicRoom.displayName || 'You' },
+  ];
+  S.publicRoom.peers = next.map(peer => typeof peer === 'string'
+    ? { peerId: peer.toLowerCase().replace(/[^a-z0-9_-]/g, '') || makePublicRoomPeerId(), displayName: peer }
+    : { peerId: peer.peerId || makePublicRoomPeerId(), displayName: peer.displayName || peer.peerId || 'Guest' });
+  renderPublicRoom();
+}
+
+function ensurePublicRoomState() {
+  if (S.publicRoom.closed) {
+    S.publicRoom.roomId = '';
+    S.publicRoom.key = '';
+    S.publicRoom.peerId = '';
+    S.publicRoom.socket = null;
+    S.publicRoom.connected = false;
+    S.publicRoom.closed = false;
+    S.publicRoom.expiresAt = 0;
+    S.publicRoom.files = [];
+    S.publicRoom.roomFileTransfers = {};
+    S.publicRoom.messages = [];
+  }
+  S.publicRoom.roomId = S.publicRoom.roomId || `room-${createOneTimeCode().replace(/-/g, '').toLowerCase()}`;
+  S.publicRoom.key = S.publicRoom.key || createOneTimeCode();
+  S.publicRoom.peerId = S.publicRoom.peerId || makePublicRoomPeerId();
+  S.publicRoom.displayName = S.publicRoom.displayName || 'You';
+  setPublicRoomPeers([{ peerId: S.publicRoom.peerId, displayName: S.publicRoom.displayName }]);
+}
+
+async function derivePublicRoomKey() {
+  if (!S.publicRoom.key) throw new Error('Missing room key.');
+  const material = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(`Filenymous-room-v1:${S.publicRoom.key}`)
+  );
+  return crypto.subtle.importKey('raw', material, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+async function encryptPublicRoomPayload(payload) {
+  const key = await derivePublicRoomKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plain = new TextEncoder().encode(JSON.stringify(payload));
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain);
+  return { iv: b64e(iv), ciphertext: b64e(new Uint8Array(cipher)) };
+}
+
+async function decryptPublicRoomPayload(event) {
+  const key = await derivePublicRoomKey();
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(event.iv) }, key, b64d(event.ciphertext));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+async function sendPublicRoomEvent(kind, payload) {
+  if (!S.publicRoom.socket || S.publicRoom.socket.readyState !== WebSocket.OPEN || !S.publicRoom.connected) {
+    throw new Error('Room is not connected yet.');
+  }
+  const sealed = await encryptPublicRoomPayload(payload);
+  S.publicRoom.socket.send(JSON.stringify({
+    type: 'room-event',
+    roomId: S.publicRoom.roomId,
+    event: { kind, ...sealed },
+  }));
+  return sealed;
+}
+
+function roomFileTransferList() {
+  const roomFileTransfers = S.publicRoom.roomFileTransfers || {};
+  return Object.values(roomFileTransfers);
+}
+
+function updateRoomFileTransfer(transferId, patch) {
+  const roomFileTransfers = S.publicRoom.roomFileTransfers;
+  roomFileTransfers[transferId] = { ...(roomFileTransfers[transferId] || { transferId }), ...patch };
+  S.publicRoom.files = roomFileTransferList();
+  renderPublicRoom();
+  return roomFileTransfers[transferId];
+}
+
+function publicRoomTransferLabel(file) {
+  if (file.status === 'ready') return 'Ready to download';
+  if (file.status === 'sent') return 'Sent';
+  if (file.status === 'failed') return 'Failed';
+  if (file.direction === 'in') return `Receiving ${file.percent || 0}%`;
+  return `Sending ${file.percent || 0}%`;
+}
+
+async function sharePublicRoomFile(file) {
+  if (!file) return;
+  ensurePublicRoomState();
+  if (!S.publicRoom.connected) await connectPublicRoom();
+
+  const transferId = `file-${b64e(crypto.getRandomValues(new Uint8Array(9))).toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 12)}`;
+  const chunkCount = Math.max(1, Math.ceil(file.size / PUBLIC_ROOM_FILE_CHUNK_SIZE));
+  const base = {
+    transferId,
+    name: file.name || 'room-file',
+    size: file.size || 0,
+    mime: file.type || 'application/octet-stream',
+    direction: 'out',
+    status: 'sending',
+    percent: 0,
+    chunkCount,
+  };
+  updateRoomFileTransfer(transferId, base);
+  markTransferActive('Room file transfer');
+
+  try {
+    await sendPublicRoomEvent('file-offer', {
+      kind: 'file-offer',
+      transferId,
+      name: base.name,
+      size: base.size,
+      mime: base.mime,
+      chunkCount,
+      chunkSize: PUBLIC_ROOM_FILE_CHUNK_SIZE,
+      sender: S.publicRoom.peerId,
+      at: Date.now(),
+    });
+
+    for (let index = 0, offset = 0; index < chunkCount; index++, offset += PUBLIC_ROOM_FILE_CHUNK_SIZE) {
+      const bytes = new Uint8Array(await file.slice(offset, Math.min(offset + PUBLIC_ROOM_FILE_CHUNK_SIZE, file.size)).arrayBuffer());
+      await sendPublicRoomEvent('file-chunk', {
+        kind: 'file-chunk',
+        transferId,
+        index,
+        bytes: b64e(bytes),
+      });
+      const percent = Math.min(99, Math.round(((index + 1) / chunkCount) * 100));
+      updateRoomFileTransfer(transferId, { status: 'sending', percent });
+      await new Promise(resolve => setTimeout(resolve, 180));
+    }
+
+    await sendPublicRoomEvent('file-complete', {
+      kind: 'file-complete',
+      transferId,
+      name: base.name,
+      size: base.size,
+      mime: base.mime,
+      chunkCount,
+    });
+    updateRoomFileTransfer(transferId, { status: 'sent', percent: 100 });
+    setStatus('public-room-status', 'success', `Encrypted room transfer ready: ${esc(base.name)}.`);
+  } catch (e) {
+    updateRoomFileTransfer(transferId, { status: 'failed', error: e.message });
+    setStatus('public-room-status', 'error', e.message);
+  } finally {
+    markTransferDone();
+  }
+}
+
+function downloadPublicRoomFile(transferId) {
+  const file = S.publicRoom.roomFileTransfers[transferId];
+  if (!file?.downloadUrl) return;
+  const a = Object.assign(document.createElement('a'), { href: file.downloadUrl, download: file.name || 'filenymous-room-file' });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setStatus('public-room-status', 'success', `${esc(file.name || 'Room file')} downloaded. Check your browser Downloads folder.`);
+}
+
 function renderPublicRoom() {
   const link = $('public-room-link');
   const peers = $('public-room-peers');
@@ -5156,20 +5339,33 @@ function renderPublicRoom() {
   const chat = $('public-room-chat-log');
   if (link) link.value = publicRoomInviteUrl() || tr('rooms.linkEmpty', 'Create a room to generate an invite link.');
   if (peers) {
-    peers.innerHTML = S.publicRoom.peers.map((name) => `
+    peers.innerHTML = S.publicRoom.peers.map((peer) => {
+      const name = publicRoomPeerName(peer);
+      const isYou = peer?.peerId && peer.peerId === S.publicRoom.peerId;
+      return `
       <div class="room-peer-card">
         <span class="room-peer-avatar">${esc(String(name).slice(0, 2).toUpperCase())}</span>
-        <strong>${esc(name)}</strong>
-        <span class="muted">${esc(tr('rooms.online', 'Online in this browser'))}</span>
+        <strong>${esc(name)}${isYou ? ' (you)' : ''}</strong>
+        <span class="muted">${esc(S.publicRoom.connected ? tr('rooms.online', 'Online in this browser') : 'Waiting for signaling')}</span>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
   if (files) {
-    files.innerHTML = S.publicRoom.files.length
-      ? S.publicRoom.files.map((file) => `
+    const roomFiles = roomFileTransferList();
+    files.innerHTML = roomFiles.length
+      ? roomFiles.map((file) => `
         <div class="room-file-row">
-          <span>${esc(file.name)}</span>
-          <strong>${esc(fmtBytes(file.size))}</strong>
+          <span>
+            <strong>${esc(file.name || 'Room file')}</strong><br>
+            <small class="muted">${esc(publicRoomTransferLabel(file))}</small>
+          </span>
+          <span style="text-align:right">
+            <strong>${esc(fmtBytes(file.size || 0))}</strong><br>
+            ${file.downloadUrl
+              ? `<button class="btn btn-secondary btn-sm" onclick="downloadPublicRoomFile('${esc(file.transferId)}')">Download</button>`
+              : `<small class="muted">${esc(file.percent || 0)}%</small>`}
+          </span>
         </div>
       `).join('')
       : `<p class="empty">${esc(tr('rooms.noFiles', 'No room file yet.'))}</p>`;
@@ -5187,11 +5383,228 @@ function renderPublicRoom() {
   }
 }
 
-window.createPublicRoom = function () {
-  S.publicRoom.roomId = S.publicRoom.roomId || `room-${createOneTimeCode().replace(/-/g, '').toLowerCase()}`;
-  S.publicRoom.key = S.publicRoom.key || createOneTimeCode();
+async function handlePublicRoomEvent(msg) {
+  const payload = await decryptPublicRoomPayload(msg.event);
+  if (payload.kind === 'chat') {
+    S.publicRoom.messages.unshift({
+      author: payload.author || msg.from || 'Peer',
+      text: String(payload.text || '').slice(0, 500),
+    });
+    renderPublicRoom();
+    return;
+  }
+
+  if (payload.kind === 'file-offer') {
+    updateRoomFileTransfer(payload.transferId, {
+      transferId: payload.transferId,
+      name: payload.name || 'Room file',
+      size: payload.size || 0,
+      mime: payload.mime || 'application/octet-stream',
+      direction: 'in',
+      status: 'receiving',
+      percent: 0,
+      chunkCount: payload.chunkCount || 1,
+      chunks: [],
+      receivedBytes: 0,
+      from: msg.from || 'Peer',
+    });
+    setStatus('public-room-status', 'info', `Receiving encrypted room file: ${esc(payload.name || 'file')}.`);
+    return;
+  }
+
+  if (payload.kind === 'file-chunk') {
+    const transfer = S.publicRoom.roomFileTransfers[payload.transferId] || updateRoomFileTransfer(payload.transferId, {
+      transferId: payload.transferId,
+      name: 'Room file',
+      size: 0,
+      direction: 'in',
+      status: 'receiving',
+      chunks: [],
+      receivedBytes: 0,
+    });
+    const chunk = b64d(payload.bytes || '');
+    transfer.chunks = transfer.chunks || [];
+    transfer.chunks[payload.index || 0] = chunk;
+    transfer.receivedBytes = (transfer.chunks || []).reduce((sum, item) => sum + (item?.byteLength || 0), 0);
+    transfer.percent = transfer.size ? Math.min(99, Math.round((transfer.receivedBytes / transfer.size) * 100)) : 99;
+    transfer.status = 'receiving';
+    updateRoomFileTransfer(payload.transferId, transfer);
+    return;
+  }
+
+  if (payload.kind === 'file-complete') {
+    const transfer = S.publicRoom.roomFileTransfers[payload.transferId];
+    if (!transfer) return;
+    const chunks = (transfer.chunks || []).filter(Boolean);
+    transfer.downloadUrl = URL.createObjectURL(new Blob(chunks, { type: transfer.mime || payload.mime || 'application/octet-stream' }));
+    transfer.status = 'ready';
+    transfer.percent = 100;
+    transfer.name = transfer.name || payload.name || 'Room file';
+    transfer.size = transfer.size || payload.size || 0;
+    updateRoomFileTransfer(payload.transferId, transfer);
+    setStatus('public-room-status', 'success', `${esc(transfer.name)} is ready. Use Download to save it.`);
+  }
+}
+
+function handlePublicRoomMessage(msg) {
+  if (!msg || typeof msg !== 'object') return;
+
+  if (msg.type === 'room-joined') {
+    S.publicRoom.connected = true;
+    S.publicRoom.closed = false;
+    S.publicRoom.expiresAt = msg.expiresAt || 0;
+    setPublicRoomPeers(msg.peers || []);
+    setStatus('public-room-status', 'success', tr('rooms.statusReady', 'Room ready. Share the invite link and keep this page open.'));
+    return;
+  }
+
+  if (msg.type === 'room-peer-joined') {
+    const peer = msg.peer;
+    if (peer?.peerId && !S.publicRoom.peers.some(item => item.peerId === peer.peerId)) {
+      S.publicRoom.peers.push({ peerId: peer.peerId, displayName: peer.displayName || peer.peerId });
+      renderPublicRoom();
+    }
+    setStatus('public-room-status', 'success', `${esc(publicRoomPeerName(peer))} joined the room.`);
+    return;
+  }
+
+  if (msg.type === 'room-peer-left') {
+    S.publicRoom.peers = S.publicRoom.peers.filter(peer => peer.peerId !== msg.peerId);
+    renderPublicRoom();
+    setStatus('public-room-status', 'warning', 'A peer left the room.');
+    return;
+  }
+
+  if (msg.type === 'room-waiting') {
+    setStatus('public-room-status', 'info', 'Room is open. Waiting for another device...');
+    return;
+  }
+
+  if (msg.type === 'room-event') {
+    handlePublicRoomEvent(msg).catch(() => {
+      setStatus('public-room-status', 'warning', 'Encrypted room event could not be read with this invite key.');
+    });
+    return;
+  }
+
+  if (msg.type === 'room-closed') {
+    S.publicRoom.closed = true;
+    S.publicRoom.connected = false;
+    try { S.publicRoom.socket?.close(); } catch (_) {}
+    S.publicRoom.socket = null;
+    setStatus('public-room-status', 'warning', 'Room closed.');
+    renderPublicRoom();
+  }
+}
+
+function connectPublicRoom() {
+  return new Promise((resolve, reject) => {
+    if (!S.publicRoom.roomId || !S.publicRoom.key) return reject(new Error('Create a room first.'));
+    if (!CFG.p2pSignalUrl) return reject(new Error('Signaling server is not configured.'));
+    if (S.publicRoom.socket?.readyState === WebSocket.OPEN && S.publicRoom.connected) return resolve(S.publicRoom.socket);
+
+    S.publicRoom.peerId = S.publicRoom.peerId || makePublicRoomPeerId();
+    S.publicRoom.displayName = S.publicRoom.displayName || 'You';
+    setPublicRoomPeers(S.publicRoom.peers);
+    setStatus('public-room-status', 'loading', 'Connecting to the room signaling server...');
+
+    const ws = new WebSocket(CFG.p2pSignalUrl);
+    S.publicRoom.socket = ws;
+    let joined = false;
+    const failTimer = setTimeout(() => {
+      try { ws.close(); } catch (_) {}
+      reject(new Error('Unable to reach room signaling.'));
+    }, 10000);
+
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({
+        type: 'room-join',
+        roomId: S.publicRoom.roomId,
+        peerId: S.publicRoom.peerId,
+        displayName: S.publicRoom.displayName,
+      }));
+    });
+
+    ws.addEventListener('message', ev => {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'room-joined') {
+        joined = true;
+        clearTimeout(failTimer);
+        handlePublicRoomMessage(msg);
+        resolve(ws);
+        return;
+      }
+      if (msg.type === 'error') {
+        if (!joined) {
+          clearTimeout(failTimer);
+          reject(new Error(msg.error || 'room-error'));
+          return;
+        }
+        setStatus('public-room-status', 'error', msg.error || 'Room signaling error.');
+        return;
+      }
+      handlePublicRoomMessage(msg);
+    });
+
+    ws.addEventListener('close', () => {
+      clearTimeout(failTimer);
+      S.publicRoom.connected = false;
+      if (!S.publicRoom.closed) setStatus('public-room-status', 'warning', 'Room signaling disconnected.');
+      renderPublicRoom();
+    });
+
+    ws.addEventListener('error', () => {
+      clearTimeout(failTimer);
+      if (!joined) reject(new Error('Unable to reach room signaling.'));
+    });
+  });
+}
+
+function joinPublicRoomFromHash() {
+  const hash = String(location.hash || '');
+  if (!hash.startsWith('#/room/')) return false;
+  const raw = hash.slice('#/room/'.length);
+  const [roomPart, queryPart = ''] = raw.split('?');
+  const roomId = decodeURIComponent(roomPart || '');
+  const params = new URLSearchParams(queryPart);
+  const key = params.get('key') || '';
+  if (!roomId || !key) return false;
+
+  S.publicRoom.roomId = roomId;
+  S.publicRoom.key = key;
+  S.publicRoom.peerId = S.publicRoom.peerId || makePublicRoomPeerId();
+  S.publicRoom.displayName = 'You';
+  setPublicRoomPeers([{ peerId: S.publicRoom.peerId, displayName: S.publicRoom.displayName }]);
   renderPublicRoom();
-  setStatus('public-room-status', 'success', tr('rooms.statusReady', 'Room ready. Share the invite link and keep this page open.'));
+  showTab('rooms');
+  connectPublicRoom().catch(e => setStatus('public-room-status', 'error', e.message));
+  return true;
+}
+
+function closePublicRoom() {
+  if (!S.publicRoom.roomId) {
+    setStatus('public-room-status', 'warning', 'No room to close.');
+    return;
+  }
+  const ws = S.publicRoom.socket;
+  if (ws?.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'room-close', roomId: S.publicRoom.roomId, reason: 'closed' }));
+    setTimeout(() => {
+      try { ws.close(); } catch (_) {}
+    }, 100);
+  }
+  S.publicRoom.closed = true;
+  S.publicRoom.connected = false;
+  S.publicRoom.socket = null;
+  markTransferDone();
+  setStatus('public-room-status', 'warning', 'Room closed. Create a new room to share again.');
+  renderPublicRoom();
+}
+
+window.createPublicRoom = function () {
+  ensurePublicRoomState();
+  renderPublicRoom();
+  connectPublicRoom().catch(e => setStatus('public-room-status', 'error', e.message));
 };
 
 window.copyPublicRoomLink = async function () {
@@ -5203,17 +5616,22 @@ window.copyPublicRoomLink = async function () {
 };
 
 window.addPublicRoomDemoPeer = function () {
-  if (!S.publicRoom.peers.includes('Guest')) S.publicRoom.peers.push('Guest');
+  if (!S.publicRoom.peers.some(peer => publicRoomPeerName(peer) === 'Guest')) {
+    S.publicRoom.peers.push({ peerId: 'guest-demo', displayName: 'Guest' });
+  }
   if (!S.publicRoom.roomId) createPublicRoom();
   renderPublicRoom();
   setStatus('public-room-status', 'info', tr('rooms.guestAdded', 'Test guest added. Real peers appear here when connected.'));
 };
 
-window.addPublicRoomFiles = function (fileList) {
-  if (!S.publicRoom.roomId) createPublicRoom();
-  S.publicRoom.files = [...S.publicRoom.files, ...Array.from(fileList || [])];
-  renderPublicRoom();
-  setStatus('public-room-status', 'info', tr('rooms.filesQueued', 'Files queued locally for this room.'));
+window.addPublicRoomFiles = async function (fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  ensurePublicRoomState();
+  setStatus('public-room-status', 'loading', 'Encrypting and sending room file(s)...');
+  for (const file of files) {
+    await sharePublicRoomFile(file);
+  }
 };
 
 window.sendPublicRoomMessage = function () {
@@ -5223,7 +5641,25 @@ window.sendPublicRoomMessage = function () {
   S.publicRoom.messages.unshift({ author: 'You', text });
   if (input) input.value = '';
   renderPublicRoom();
+  sendPublicRoomEvent('chat', { kind: 'chat', author: 'You', text, at: Date.now() })
+    .catch(e => setStatus('public-room-status', 'warning', e.message));
 };
+
+window.connectPublicRoom = connectPublicRoom;
+window.closePublicRoom = closePublicRoom;
+window.decryptPublicRoomPayload = decryptPublicRoomPayload;
+window.derivePublicRoomKey = derivePublicRoomKey;
+window.downloadPublicRoomFile = downloadPublicRoomFile;
+window.encryptPublicRoomPayload = encryptPublicRoomPayload;
+window.handlePublicRoomMessage = handlePublicRoomMessage;
+window.joinPublicRoomFromHash = joinPublicRoomFromHash;
+window.sendPublicRoomEvent = sendPublicRoomEvent;
+window.sharePublicRoomFile = sharePublicRoomFile;
+window.setPublicRoomPeers = setPublicRoomPeers;
+
+window.addEventListener('hashchange', () => {
+  if (location.hash.startsWith('#/room/')) joinPublicRoomFromHash();
+});
 
 window.copyRoomCode = function () {
   navigator.clipboard.writeText(document.getElementById('room-code').textContent).then(() => toast('Code copie !'));
@@ -6218,6 +6654,9 @@ async function init() {
 
   // Afficher la notice de mode dans le panel Send
   updateSendNotice();
+
+  // Auto-join a public room invite before the generic receive-link router.
+  if (joinPublicRoomFromHash()) return;
 
   // Auto-redirection vers receive si lien présent dans le fragment URL
   if (location.hash.includes(':')) {
