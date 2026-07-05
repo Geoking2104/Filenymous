@@ -37,4 +37,20 @@ describe("P2P signaling server", () => {
     expect(server).toContain(".split(\",\")");
     expect(server).toContain("allowedOrigins.includes(info.origin)");
   });
+
+  it("supports public group rooms without reusing one-to-one roles", () => {
+    expect(existsSync(serverPath)).toBe(true);
+    const server = readFileSync(serverPath, "utf8");
+
+    expect(server).toContain("roomSessions = new Map()");
+    expect(server).toContain("validateRoomId");
+    expect(server).toContain("validateRoomEvent");
+    expect(server).toContain("room-join");
+    expect(server).toContain("room-joined");
+    expect(server).toContain("room-peer-joined");
+    expect(server).toContain("room-peer-left");
+    expect(server).toContain("room-event");
+    expect(server).toContain("room-close");
+    expect(server).toContain("room-closed");
+  });
 });

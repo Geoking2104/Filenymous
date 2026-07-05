@@ -32,6 +32,9 @@ describe("static room demo", () => {
     expect(html).toContain("copyPublicRoomLink");
     expect(html).toContain("addPublicRoomFiles");
     expect(html).toContain("sendPublicRoomMessage");
+    expect(html).toContain("connectPublicRoom");
+    expect(html).toContain("joinPublicRoomFromHash");
+    expect(html).toContain("room-peer-joined");
     expect(html).toContain('id="public-room-file-input"');
     expect(html).toContain('aria-label="Room invite link"');
   });

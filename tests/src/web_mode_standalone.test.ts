@@ -87,6 +87,76 @@ describe("standalone web transfer mode", () => {
     expect(packagedHtml).toContain('id="panel-rooms"');
   });
 
+  it("connects public rooms to live signaling presence", () => {
+    for (const token of [
+      "connectPublicRoom",
+      "joinPublicRoomFromHash",
+      "handlePublicRoomMessage",
+      "setPublicRoomPeers",
+      "room-join",
+      "room-joined",
+      "room-peer-joined",
+      "room-peer-left",
+      "room-waiting",
+    ]) {
+      expect(html).toContain(token);
+      expect(packagedHtml).toContain(token);
+    }
+  });
+
+  it("joins public room invite links on initial page load", () => {
+    expect(html).toContain("if (joinPublicRoomFromHash()) return;");
+    expect(packagedHtml).toContain("if (joinPublicRoomFromHash()) return;");
+  });
+
+  it("encrypts public room chat events before signaling", () => {
+    for (const token of [
+      "derivePublicRoomKey",
+      "encryptPublicRoomPayload",
+      "decryptPublicRoomPayload",
+      "sendPublicRoomEvent",
+      "sendPublicRoomEvent('chat'",
+      "kind: 'chat'",
+      "crypto.subtle.encrypt({ name: 'AES-GCM'",
+      "crypto.subtle.decrypt({ name: 'AES-GCM'",
+    ]) {
+      expect(html).toContain(token);
+      expect(packagedHtml).toContain(token);
+    }
+  });
+
+  it("supports encrypted public room file transfer events", () => {
+    for (const token of [
+      "roomFileTransfers",
+      "sharePublicRoomFile",
+      "downloadPublicRoomFile",
+      "PUBLIC_ROOM_FILE_CHUNK_SIZE",
+      "sendPublicRoomEvent('file-offer'",
+      "sendPublicRoomEvent('file-chunk'",
+      "sendPublicRoomEvent('file-complete'",
+      "kind: 'file-offer'",
+      "kind: 'file-chunk'",
+      "kind: 'file-complete'",
+      "URL.createObjectURL(new Blob",
+    ]) {
+      expect(html).toContain(token);
+      expect(packagedHtml).toContain(token);
+    }
+  });
+
+  it("lets users close and revoke public rooms", () => {
+    for (const token of [
+      "closePublicRoom",
+      "room-close",
+      "Room closed",
+      "data-i18n=\"rooms.close\"",
+      "Close room",
+    ]) {
+      expect(html).toContain(token);
+      expect(packagedHtml).toContain(token);
+    }
+  });
+
   it("warns before closing the browser during an active transfer", () => {
     expect(html).toContain("beforeunload");
     expect(html).toContain("transferActive");
