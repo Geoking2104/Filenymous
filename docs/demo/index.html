@@ -4591,6 +4591,7 @@ function showTab(name) {
   if (name === 'identity') initIdentity();
   if (name === 'receive')  checkReceiveHash();
   if (name === 'history')  renderHistory();
+  if (name === 'rooms')    renderPublicRoom();
   // Rappel visuel du mode dans le panel send
   if (name === 'send') updateSendNotice();
 }
