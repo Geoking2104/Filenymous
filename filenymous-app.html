@@ -824,9 +824,9 @@
       font-size: 14px; font-weight: 600; cursor: pointer;
       transition: var(--t); text-decoration: none;
     }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
     .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
-    .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
     .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
     .btn-secondary:hover:not(:disabled) { border-color: var(--muted); }
     .btn-danger { background: var(--error); color: #fff; border: none; }
@@ -1215,31 +1215,31 @@
           <button type="button" class="btn btn-secondary btn-sm" onclick="createPublicRoom()" data-i18n="rooms.createShort">New</button>
         </div>
         <div id="public-room-list" class="room-list-items"></div>
-        <p class="muted" data-i18n="rooms.listHint">The room list appears only when several rooms are active.</p>
+        <p class="muted" data-i18n="rooms.listHint">Your active rooms. Use "New" to open another one.</p>
       </aside>
 
       <section class="room-main-panel" aria-label="Room activity" data-i18n-aria-label="rooms.activityLabel">
         <header class="room-topbar">
           <div>
             <p class="card-title" data-i18n="rooms.mode">Mode ROOM</p>
-            <h1 data-i18n="rooms.title">Create a private room for a group</h1>
-            <p class="room-kicker" data-i18n="rooms.subtitle">One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.</p>
+            <h1 id="public-room-title" data-i18n="rooms.title">Create a private room for a group</h1>
+            <p id="public-room-subtitle" class="room-kicker" data-i18n="rooms.subtitle">One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.</p>
           </div>
           <div class="rooms-actions">
-            <button type="button" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
-            <button type="button" class="btn btn-secondary" onclick="copyPublicRoomLink()" data-i18n="rooms.copyInvite">Copy invite</button>
-            <button type="button" class="btn btn-danger" onclick="closePublicRoom()" data-i18n="rooms.close">Close room</button>
+            <button type="button" id="public-room-create-btn" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
+            <button type="button" id="public-room-copy-btn" class="btn btn-secondary" onclick="copyPublicRoomLink()" data-i18n="rooms.copyInvite">Copy invite</button>
+            <button type="button" id="public-room-close-btn" class="btn btn-danger" onclick="closePublicRoom()" data-i18n="rooms.close">Close room</button>
           </div>
         </header>
 
         <div class="room-activity">
           <div id="room-empty-state" class="room-empty-state">
             <p class="card-title" data-i18n="rooms.noRoomTitle">Start a temporary room</p>
-            <p class="muted" data-i18n="rooms.noRoomCopy">Create a room, choose your avatar, then share the invite. The room list stays hidden until you have several active rooms.</p>
+            <p class="muted" data-i18n="rooms.noRoomCopy">Create a room, choose your avatar, then share the invite. Files and chat unlock once the room exists.</p>
             <button type="button" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
           </div>
 
-          <div class="room-side-section">
+          <div id="public-room-files-section" class="room-side-section hidden">
             <p class="card-title" data-i18n="rooms.filesTitle">Room files</p>
         <label class="room-drop-static" for="public-room-file-input">
           <input id="public-room-file-input" type="file" hidden multiple onchange="addPublicRoomFiles(this.files)" />
@@ -1251,7 +1251,7 @@
         </div>
           </div>
 
-          <div class="room-side-section">
+          <div id="public-room-chat-section" class="room-side-section hidden">
             <p class="card-title" data-i18n="rooms.chatTitle">Room chat</p>
             <p class="muted" data-i18n="rooms.chatHelp">Short messages help recipients understand what the files are.</p>
             <div id="public-room-chat-log" class="room-chat-log">
@@ -1263,7 +1263,7 @@
           </div>
         </div>
 
-        <div class="room-composer">
+        <div id="public-room-composer" class="room-composer hidden">
           <div class="room-composer-row">
             <textarea id="public-room-chat-input" maxlength="500" placeholder="Write a short message..." data-i18n-placeholder="rooms.chatPlaceholder"></textarea>
             <button type="button" class="btn btn-primary" onclick="sendPublicRoomMessage()" data-i18n="rooms.sendMessage">Send message</button>
@@ -1272,7 +1272,7 @@
       </section>
 
       <aside class="room-side-panel" aria-label="Room details" data-i18n-aria-label="rooms.detailsLabel">
-        <div class="status warning">
+        <div class="status info">
           <strong data-i18n="rooms.maxUsersTitle">12 users maximum</strong><br>
           <span data-i18n="rooms.maxUsersCopy">Rooms are optimized for small private groups. Create a new room when the group gets bigger.</span>
         </div>
@@ -3792,11 +3792,13 @@ window.FILENYMOUS_I18N = {
     "rooms.copyInvite": "Copy invite",
     "rooms.close": "Close room",
     "rooms.listTitle": "Rooms",
-    "rooms.listHint": "The room list appears only when several rooms are active.",
+    "rooms.listHint": "Your active rooms. Use \"New\" to open another one.",
+    "rooms.activeTitle": "Room is active",
+    "rooms.activeSubtitle": "Share the invite link on the right, then keep this page open while people join.",
     "rooms.activityLabel": "Room activity",
     "rooms.detailsLabel": "Room details",
     "rooms.noRoomTitle": "Start a temporary room",
-    "rooms.noRoomCopy": "Create a room, choose your avatar, then share the invite. The room list stays hidden until you have several active rooms.",
+    "rooms.noRoomCopy": "Create a room, choose your avatar, then share the invite. Files and chat unlock once the room exists.",
     "rooms.maxUsersTitle": "12 users maximum",
     "rooms.maxUsersCopy": "Rooms are optimized for small private groups. Create a new room when the group gets bigger.",
     "rooms.avatarTitle": "Your room avatar",
@@ -3824,6 +3826,17 @@ window.FILENYMOUS_I18N = {
     "rooms.chatPlaceholder": "Write a short message...",
     "rooms.sendMessage": "Send message",
     "rooms.welcome": "Create a room, share the invite link, then keep this browser open.",
+    "rooms.waitingSignal": "Waiting for signaling",
+    "rooms.errCreateFirst": "Create a room first.",
+    "rooms.errSignalingNotConfigured": "Signaling server is not configured.",
+    "rooms.connecting": "Connecting to the room signaling server...",
+    "rooms.errUnreachable": "Unable to reach room signaling.",
+    "rooms.errSignaling": "Room signaling error.",
+    "rooms.disconnected": "Room signaling disconnected.",
+    "rooms.noRoomToClose": "No room to close.",
+    "rooms.closed": "Room closed. Create a new room to share again.",
+    "rooms.receivingFilePrefix": "Receiving encrypted room file:",
+    "rooms.fileReady": "is ready. Use Download to save it.",
     "human.send": "I am human and I am starting this share myself.",
     "human.receive": "I am human and I am entering this code myself.",
     "common.optional": "(optional)",
@@ -4049,11 +4062,13 @@ window.FILENYMOUS_I18N = {
     "rooms.copyInvite": "Copier l'invitation",
     "rooms.close": "Fermer la room",
     "rooms.listTitle": "Rooms",
-    "rooms.listHint": "La liste des rooms n'apparaît que lorsque plusieurs rooms sont actives.",
+    "rooms.listHint": "Vos rooms actives. Utilisez « Nouvelle » pour en créer une autre.",
+    "rooms.activeTitle": "Room active",
+    "rooms.activeSubtitle": "Partagez le lien d'invitation à droite, puis gardez cette page ouverte pendant que les participants rejoignent.",
     "rooms.activityLabel": "Activité de la room",
     "rooms.detailsLabel": "Détails de la room",
     "rooms.noRoomTitle": "Démarrer une room temporaire",
-    "rooms.noRoomCopy": "Créez une room, choisissez votre avatar, puis partagez l'invitation. La liste des rooms reste masquée tant que vous n'avez pas plusieurs rooms actives.",
+    "rooms.noRoomCopy": "Créez une room, choisissez votre avatar, puis partagez l'invitation. Les fichiers et le chat se débloquent une fois la room créée.",
     "rooms.maxUsersTitle": "12 utilisateurs maximum",
     "rooms.maxUsersCopy": "Les rooms sont optimisées pour les petits groupes privés. Créez une nouvelle room quand le groupe grossit.",
     "rooms.avatarTitle": "Votre avatar de room",
@@ -4081,6 +4096,17 @@ window.FILENYMOUS_I18N = {
     "rooms.chatPlaceholder": "Écrire un court message...",
     "rooms.sendMessage": "Envoyer le message",
     "rooms.welcome": "Créez une room, partagez le lien d'invitation, puis gardez ce navigateur ouvert.",
+    "rooms.waitingSignal": "En attente de connexion",
+    "rooms.errCreateFirst": "Créez d'abord une room.",
+    "rooms.errSignalingNotConfigured": "Le serveur de signalisation n'est pas configuré.",
+    "rooms.connecting": "Connexion au serveur de signalisation...",
+    "rooms.errUnreachable": "Impossible de joindre le serveur de signalisation.",
+    "rooms.errSignaling": "Erreur de signalisation de la room.",
+    "rooms.disconnected": "Connexion au serveur de signalisation perdue.",
+    "rooms.noRoomToClose": "Aucune room à fermer.",
+    "rooms.closed": "Room fermée. Créez une nouvelle room pour repartager.",
+    "rooms.receivingFilePrefix": "Réception d'un fichier chiffré de la room :",
+    "rooms.fileReady": "est prêt. Utilisez Télécharger pour l'enregistrer.",
     "human.send": "Je suis humain et je lance ce partage moi-même.",
     "human.receive": "Je suis humain et je saisis ce code moi-même.",
     "common.optional": "(facultatif)",
@@ -4306,11 +4332,13 @@ window.FILENYMOUS_I18N = {
     "rooms.copyInvite": "초대 링크 복사",
     "rooms.close": "룸 닫기",
     "rooms.listTitle": "룸",
-    "rooms.listHint": "활성 룸이 여러 개일 때만 룸 목록이 표시됩니다.",
+    "rooms.listHint": "활성 룸 목록입니다. \"새 룸\"으로 다른 룸을 여세요.",
+    "rooms.activeTitle": "룸이 활성화됨",
+    "rooms.activeSubtitle": "오른쪽의 초대 링크를 공유한 뒤, 참가자들이 들어오는 동안 이 페이지를 열어 두세요.",
     "rooms.activityLabel": "룸 활동",
     "rooms.detailsLabel": "룸 세부 정보",
     "rooms.noRoomTitle": "임시 룸 시작",
-    "rooms.noRoomCopy": "룸을 만들고 아바타를 고른 뒤 초대를 공유하세요. 활성 룸이 여러 개가 될 때까지 룸 목록은 숨겨집니다.",
+    "rooms.noRoomCopy": "룸을 만들고 아바타를 고른 뒤 초대를 공유하세요. 룸이 생성되면 파일과 채팅이 활성화됩니다.",
     "rooms.maxUsersTitle": "최대 12명",
     "rooms.maxUsersCopy": "룸은 소규모 비공개 그룹에 최적화되어 있습니다. 그룹이 커지면 새 룸을 만드세요.",
     "rooms.avatarTitle": "내 룸 아바타",
@@ -4338,6 +4366,17 @@ window.FILENYMOUS_I18N = {
     "rooms.chatPlaceholder": "짧은 메시지 작성...",
     "rooms.sendMessage": "메시지 보내기",
     "rooms.welcome": "룸을 만들고 초대 링크를 공유한 뒤 이 브라우저를 열어 두세요.",
+    "rooms.waitingSignal": "연결 대기 중",
+    "rooms.errCreateFirst": "먼저 룸을 만드세요.",
+    "rooms.errSignalingNotConfigured": "시그널링 서버가 설정되지 않았습니다.",
+    "rooms.connecting": "룸 시그널링 서버에 연결 중...",
+    "rooms.errUnreachable": "룸 시그널링 서버에 연결할 수 없습니다.",
+    "rooms.errSignaling": "룸 시그널링 오류.",
+    "rooms.disconnected": "룸 시그널링 연결이 끊어졌습니다.",
+    "rooms.noRoomToClose": "닫을 룸이 없습니다.",
+    "rooms.closed": "룸이 닫혔습니다. 다시 공유하려면 새 룸을 만드세요.",
+    "rooms.receivingFilePrefix": "룸의 암호화된 파일 수신 중:",
+    "rooms.fileReady": "다운로드할 준비가 되었습니다. 다운로드를 눌러 저장하세요.",
     "human.send": "나는 사람이며 이 공유를 직접 시작합니다.",
     "human.receive": "나는 사람이며 이 코드를 직접 입력합니다.",
     "common.optional": "(선택 사항)",
@@ -4558,6 +4597,7 @@ function showTab(name) {
   if (name === 'identity') initIdentity();
   if (name === 'receive')  checkReceiveHash();
   if (name === 'history')  renderHistory();
+  if (name === 'rooms')    renderPublicRoom();
   // Rappel visuel du mode dans le panel send
   if (name === 'send') updateSendNotice();
 }
@@ -5777,7 +5817,36 @@ function renderPublicRoom() {
   const files = $('public-room-files');
   const chat = $('public-room-chat-log');
   const roomEntries = Array.isArray(S.publicRoomDirectory) ? S.publicRoomDirectory : [];
-  const showRoomList = roomEntries.length > 1;
+  const showRoomList = roomEntries.length >= 1;
+  const hasRoom = Boolean(S.publicRoom.roomId);
+
+  const createBtn = $('public-room-create-btn');
+  const copyBtn = $('public-room-copy-btn');
+  const closeBtn = $('public-room-close-btn');
+  if (createBtn) createBtn.classList.toggle('hidden', hasRoom);
+  if (copyBtn) copyBtn.disabled = !hasRoom;
+  if (closeBtn) closeBtn.disabled = !hasRoom;
+
+  const filesSection = $('public-room-files-section');
+  const chatSection = $('public-room-chat-section');
+  const composer = $('public-room-composer');
+  if (filesSection) filesSection.classList.toggle('hidden', !hasRoom);
+  if (chatSection) chatSection.classList.toggle('hidden', !hasRoom);
+  if (composer) composer.classList.toggle('hidden', !hasRoom);
+
+  const titleEl = $('public-room-title');
+  const subtitleEl = $('public-room-subtitle');
+  if (titleEl) {
+    const shortId = hasRoom ? S.publicRoom.roomId.replace(/^room-/i, '') : '';
+    titleEl.textContent = hasRoom
+      ? `${tr('rooms.activeTitle', 'Room is active')} — #${shortId}`
+      : tr('rooms.title', 'Create a private room for a group');
+  }
+  if (subtitleEl) {
+    subtitleEl.textContent = hasRoom
+      ? tr('rooms.activeSubtitle', 'Share the invite link on the right, then keep this page open while people join.')
+      : tr('rooms.subtitle', 'One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.');
+  }
 
   if (shell) shell.classList.toggle('has-room-list', showRoomList);
   if (listPanel) {
@@ -5803,12 +5872,11 @@ function renderPublicRoom() {
     peers.innerHTML = S.publicRoom.peers.map((peer) => {
       const name = publicRoomDisplayLabel(peer);
       const avatar = publicRoomPeerAvatar(peer);
-      const isYou = peer?.peerId && peer.peerId === S.publicRoom.peerId;
       return `
       <div class="room-peer-card">
         <span class="room-peer-avatar">${esc(avatar)}</span>
-        <strong>${esc(name)}${isYou ? ' (you)' : ''}</strong>
-        <span class="muted">${esc(S.publicRoom.connected ? tr('rooms.online', 'Online in this browser') : 'Waiting for signaling')}</span>
+        <strong>${esc(name)}</strong>
+        <span class="muted">${esc(S.publicRoom.connected ? tr('rooms.online', 'Online in this browser') : tr('rooms.waitingSignal', 'Waiting for signaling'))}</span>
       </div>
     `;
     }).join('');
@@ -5870,7 +5938,7 @@ async function handlePublicRoomEvent(msg) {
       receivedBytes: 0,
       from: msg.from || 'Peer',
     });
-    setStatus('public-room-status', 'info', `Receiving encrypted room file: ${esc(payload.name || 'file')}.`);
+    setStatus('public-room-status', 'info', `${esc(tr('rooms.receivingFilePrefix', 'Receiving encrypted room file:'))} ${esc(payload.name || 'file')}.`);
     return;
   }
 
@@ -5904,7 +5972,7 @@ async function handlePublicRoomEvent(msg) {
     transfer.name = transfer.name || payload.name || 'Room file';
     transfer.size = transfer.size || payload.size || 0;
     updateRoomFileTransfer(payload.transferId, transfer);
-    setStatus('public-room-status', 'success', `${esc(transfer.name)} is ready. Use Download to save it.`);
+    setStatus('public-room-status', 'success', `${esc(transfer.name)} ${esc(tr('rooms.fileReady', 'is ready. Use Download to save it.'))}`);
   }
 }
 
@@ -5964,21 +6032,21 @@ function handlePublicRoomMessage(msg) {
 
 function connectPublicRoom() {
   return new Promise((resolve, reject) => {
-    if (!S.publicRoom.roomId || !S.publicRoom.key) return reject(new Error('Create a room first.'));
-    if (!CFG.p2pSignalUrl) return reject(new Error('Signaling server is not configured.'));
+    if (!S.publicRoom.roomId || !S.publicRoom.key) return reject(new Error(tr('rooms.errCreateFirst', 'Create a room first.')));
+    if (!CFG.p2pSignalUrl) return reject(new Error(tr('rooms.errSignalingNotConfigured', 'Signaling server is not configured.')));
     if (S.publicRoom.socket?.readyState === WebSocket.OPEN && S.publicRoom.connected) return resolve(S.publicRoom.socket);
 
     S.publicRoom.peerId = S.publicRoom.peerId || makePublicRoomPeerId();
     S.publicRoom.displayName = S.publicRoom.displayName || publicRoomDisplayName();
     setPublicRoomPeers(S.publicRoom.peers);
-    setStatus('public-room-status', 'loading', 'Connecting to the room signaling server...');
+    setStatus('public-room-status', 'loading', tr('rooms.connecting', 'Connecting to the room signaling server...'));
 
     const ws = new WebSocket(CFG.p2pSignalUrl);
     S.publicRoom.socket = ws;
     let joined = false;
     const failTimer = setTimeout(() => {
       try { ws.close(); } catch (_) {}
-      reject(new Error('Unable to reach room signaling.'));
+      reject(new Error(tr('rooms.errUnreachable', 'Unable to reach room signaling.')));
     }, 10000);
 
     ws.addEventListener('open', () => {
@@ -6005,7 +6073,7 @@ function connectPublicRoom() {
           reject(new Error(msg.error || 'room-error'));
           return;
         }
-        setStatus('public-room-status', 'error', msg.error || 'Room signaling error.');
+        setStatus('public-room-status', 'error', msg.error || tr('rooms.errSignaling', 'Room signaling error.'));
         return;
       }
       handlePublicRoomMessage(msg);
@@ -6014,13 +6082,13 @@ function connectPublicRoom() {
     ws.addEventListener('close', () => {
       clearTimeout(failTimer);
       S.publicRoom.connected = false;
-      if (!S.publicRoom.closed) setStatus('public-room-status', 'warning', 'Room signaling disconnected.');
+      if (!S.publicRoom.closed) setStatus('public-room-status', 'warning', tr('rooms.disconnected', 'Room signaling disconnected.'));
       renderPublicRoom();
     });
 
     ws.addEventListener('error', () => {
       clearTimeout(failTimer);
-      if (!joined) reject(new Error('Unable to reach room signaling.'));
+      if (!joined) reject(new Error(tr('rooms.errUnreachable', 'Unable to reach room signaling.')));
     });
   });
 }
@@ -6049,7 +6117,7 @@ function joinPublicRoomFromHash() {
 
 function closePublicRoom() {
   if (!S.publicRoom.roomId) {
-    setStatus('public-room-status', 'warning', 'No room to close.');
+    setStatus('public-room-status', 'warning', tr('rooms.noRoomToClose', 'No room to close.'));
     return;
   }
   const ws = S.publicRoom.socket;
@@ -6064,7 +6132,7 @@ function closePublicRoom() {
   S.publicRoom.socket = null;
   removePublicRoomFromDirectory(S.publicRoom.roomId);
   markTransferDone();
-  setStatus('public-room-status', 'warning', 'Room closed. Create a new room to share again.');
+  setStatus('public-room-status', 'warning', tr('rooms.closed', 'Room closed. Create a new room to share again.'));
   renderPublicRoom();
 }
 
@@ -6116,10 +6184,11 @@ window.sendPublicRoomMessage = function () {
   const input = $('public-room-chat-input');
   const text = String(input?.value || '').trim().slice(0, 500);
   if (!text) return;
-  S.publicRoom.messages.unshift({ author: 'You', text });
+  const authorName = S.publicRoom.displayName || publicRoomDisplayName();
+  S.publicRoom.messages.unshift({ author: authorName, text });
   if (input) input.value = '';
   renderPublicRoom();
-  sendPublicRoomEvent('chat', { kind: 'chat', author: 'You', text, at: Date.now() })
+  sendPublicRoomEvent('chat', { kind: 'chat', author: authorName, text, at: Date.now() })
     .catch(e => setStatus('public-room-status', 'warning', e.message));
 };
 
@@ -7008,146 +7077,4 @@ window.revokeHistItem = async function (id) {
 
 // ═══════════════════════════════════════════════════════════
 // IDENTITY PANEL
-// ═══════════════════════════════════════════════════════════
-async function initIdentity() {
-  // Mettre à jour l'ID expéditeur affiché
-  const el = $('sender-id-display');
-  if (el && S.senderId) el.textContent = S.senderId;
-
-  const noConductor = $('id-no-conductor');
-  const ui          = $('id-ui');
-  const ncTitle     = $('id-nc-title');
-  const ncDesc      = $('id-nc-desc');
-  const ncFeatures  = $('id-nc-features');
-  const feature = (key, color, fallback) => `<li style="color:var(--${color})">${esc(tr(key, fallback))}</li>`;
-
-  if (S.mode === 'bridge') {
-    if (ncTitle) { ncTitle.textContent = tr('advanced.publicModeTitle', 'Public web mode'); ncTitle.style.color = 'var(--accent)'; }
-    if (ncDesc)  ncDesc.textContent = tr('advanced.publicModeDesc', "No Holochain conductor is required to send or receive. DHT contacts stay reserved for Holo Web Conductor; Iroh is prepared for large web transfers and encrypted relays.");
-    if (ncFeatures) ncFeatures.innerHTML = [
-      feature('advanced.publicModeSend', 'success', 'File sending: encrypted link or direct P2P'),
-      feature('advanced.publicModeReceive', 'success', 'File receiving: one-time code'),
-      feature('advanced.publicModeIroh', 'warning', 'Browser Iroh: encrypted relay, no direct UDP'),
-      feature('advanced.publicModeDht', 'warning', 'DHT contacts: require Holo Web Conductor'),
-    ].join('');
-    noConductor.classList.remove('hidden');
-    ui.classList.add('hidden');
-    return;
-  }
-
-  if (S.mode === 'holo') {
-    // Mode Holo Web Conductor — fonctionnalités complètes en navigateur
-    if (ncTitle) { ncTitle.textContent = tr('advanced.holoModeTitle', 'Holo Web Conductor active'); ncTitle.style.color = 'var(--success)'; }
-    if (ncDesc)  ncDesc.textContent = tr('advanced.holoModeDesc', 'You are operating through the hosted Holo network. All features are available directly in your browser.');
-    if (ncFeatures) ncFeatures.innerHTML = [
-      feature('advanced.holoModeSend', 'success', 'File sending (local encryption + Holo DHT)'),
-      feature('advanced.holoModeReceive', 'success', 'File receiving'),
-      feature('advanced.holoModeContacts', 'success', 'Contact registration'),
-      feature('advanced.holoModeEcies', 'success', 'ECIES encryption (after X25519 key generation)'),
-    ].join('');
-    noConductor.classList.remove('hidden');
-  } else {
-    // Mode local — pas besoin du bandeau
-    noConductor.classList.add('hidden');
-  }
-
-  // Afficher l'UI identité (local + holo)
-  ui.classList.remove('hidden');
-
-  // Titre du card Agent selon le mode
-  const agentCardTitle = document.querySelector('#id-ui > .card > .card-title');
-  if (agentCardTitle) agentCardTitle.textContent =
-    S.mode === 'holo'
-      ? tr('advanced.holoAgentTitle', 'Holo agent (hosted conductor)')
-      : tr('advanced.agentTitle', 'Holochain agent');
-
-  if (S.agentKey) $('agent-key').textContent = b64e(new Uint8Array(S.agentKey));
-
-  const sk = await idb.get('x25519-sk').catch(() => null);
-  const x25519El = $('x25519-status');
-  if (sk) {
-    x25519El.className = 'status success';
-    x25519El.textContent = tr('advanced.x25519Present', 'X25519 key is present in this browser');
-  } else {
-    x25519El.className = 'status warning';
-    x25519El.textContent = tr('advanced.x25519Missing', 'No X25519 key yet - generate one to receive in agent mode');
-  }
-}
-
-window.claimContact = async function () {
-  const raw = $('contact-input').value.trim();
-  if (!raw) return;
-  try {
-    const norm = raw.includes('@') ? raw.toLowerCase() : raw;
-    const hash = await sha256hex(norm);
-    await zomeCall('identity', 'claim_contact', { contact_hash: hash });
-    setStatus('claim-status', 'success', `Published: ${norm} -> ${hash.slice(0, 16)}...`);
-    toast('Contact saved on the DHT.');
-  } catch (e) { setStatus('claim-status', 'error', e.message); }
-};
-
-window.genX25519 = async function () {
-  try {
-    const kp  = nacl().box.keyPair();
-    await idb.set('x25519-sk', kp.secretKey);
-    const b64 = b64e(kp.publicKey);
-    await zomeCall('identity', 'publish_x25519_key', { x25519_pubkey_b64: b64 });
-    $('x25519-status').className = 'status success';
-    $('x25519-status').innerHTML = 'X25519 key generated and published on the DHT';
-    toast('X25519 key published.');
-  } catch (e) {
-    $('x25519-status').className = 'status error';
-    $('x25519-status').innerHTML = `❌ ${esc(e.message)}`;
-  }
-};
-
-window.copyAgent = () => {
-  navigator.clipboard.writeText($('agent-key').textContent).then(() => toast('Agent key copied.'));
-};
-
-// ═══════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════
-window.showTab = showTab;
-
-async function init() {
-  applyI18n(localStorage.getItem('filenymous.lang') || 'en');
-  updateBadge();
-
-  // Détection du mode : local → holo → bridge
-  const localOk = await initHolochain();
-  if (localOk) {
-    S.mode = 'local';
-  } else {
-    // Tenter Holo Web Conductor si hApp déployé sur Holo Host
-    const holoOk = await initHoloWebConductor();
-    S.mode = holoOk ? 'holo' : 'bridge';
-  }
-  updateBadge();
-
-  // Brancher le lien de téléchargement web portable
-  const dlBtn = $('desktop-dl-btn');
-  if (dlBtn) dlBtn.href = CFG.dlUrl;
-
-  // Initialiser l'identifiant expéditeur (agent key ou pseudonyme Ed25519)
-  await initSenderId();
-
-  // Activer le bouton d'envoi si un fichier a déjà été sélectionné
-  if (S.file) $('btn-send').disabled = false;
-
-  // Afficher la notice de mode dans le panel Send
-  updateSendNotice();
-
-  // Auto-join a public room invite before the generic receive-link router.
-  if (joinPublicRoomFromHash()) return;
-
-  // Auto-redirection vers receive si lien présent dans le fragment URL
-  if (location.hash.includes(':')) {
-    showTab('receive');
-  }
-}
-
-init().catch(console.error);
-</script>
-</body>
-</html>
+// ═════
