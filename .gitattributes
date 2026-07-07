@@ -1,0 +1,3 @@
+# Lock the demo bundle to CRLF to avoid noisy whole-file diffs when
+# edited from tools with different default line-ending conventions.
+docs/demo/index.html text eol=crlf
