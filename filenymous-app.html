@@ -1610,63 +1610,63 @@
 <section id="panel-identity" class="panel">
 
   <div class="card">
-    <h2 class="section-title">Advanced networks</h2>
-    <p class="muted">The public can use Filenymous without a conductor. This area explains and activates stronger engines: Iroh for verifiable large files, Holochain for identity and coordination.</p>
+    <h2 class="section-title" data-i18n="advanced.title">Advanced networks</h2>
+    <p class="muted" data-i18n="advanced.intro">The public can use Filenymous without a conductor. This area explains and activates stronger engines: Iroh for verifiable large files, Holochain for identity and coordination.</p>
   </div>
 
   <div class="transport-grid">
     <div class="transport-card">
       <span class="transport-tag">Iroh v1</span>
-      <strong>Modern QUIC transport</strong>
-      <p>Priority for the web roadmap: dial-by-key, encrypted relays, NAT traversal, and more robust transfer without a native installer.</p>
+      <strong data-i18n="advanced.irohTitle">Modern QUIC transport</strong>
+      <p data-i18n="advanced.irohCopy">Priority for the web roadmap: dial-by-key, encrypted relays, NAT traversal, and more robust transfer without a native installer.</p>
     </div>
     <div class="transport-card">
       <span class="transport-tag">iroh-blobs</span>
-      <strong>BLAKE3-addressed files</strong>
-      <p>Enables verified streaming, partial resumes, and a better experience for large files.</p>
+      <strong data-i18n="advanced.blobsTitle">BLAKE3-addressed files</strong>
+      <p data-i18n="advanced.blobsCopy">Enables verified streaming, partial resumes, and a better experience for large files.</p>
     </div>
     <div class="transport-card">
-      <span class="transport-tag">Browser</span>
-      <strong>WebRTC remains direct</strong>
-      <p>Iroh in browser WASM currently goes through relays; WebRTC DataChannel remains the direct no-download path.</p>
+      <span class="transport-tag" data-i18n="advanced.browserTag">Browser</span>
+      <strong data-i18n="advanced.browserTitle">WebRTC remains direct</strong>
+      <p data-i18n="advanced.browserCopy">Iroh in browser WASM currently goes through relays; WebRTC DataChannel remains the direct no-download path.</p>
     </div>
   </div>
 
   <div class="card">
-    <p class="card-title">Sender identifier</p>
+    <p class="card-title" data-i18n="advanced.senderTitle">Sender identifier</p>
     <div id="sender-mode-badge" class="status info" style="margin-bottom:12px; font-size:12px;">
-      <span id="sender-mode-label">Loading...</span>
+      <span id="sender-mode-label" data-i18n="common.loading">Loading...</span>
     </div>
     <div class="link-box">
       <code id="sender-id-display" class="sender-id-mono">Loading...</code>
-      <button class="btn btn-secondary btn-sm" onclick="copySenderId()">Copy</button>
+      <button class="btn btn-secondary btn-sm" onclick="copySenderId()" data-i18n="common.copy">Copy</button>
     </div>
-    <p class="muted mt-2">Recipients will see the first 16 characters of this identifier with your transfer.</p>
+    <p class="muted mt-2" data-i18n="advanced.senderHelp">Recipients will see the first 16 characters of this identifier with your transfer.</p>
   </div>
 
   <div class="card" style="border-color:var(--success);">
-    <p class="card-title" style="color:var(--success)">Portable web version</p>
-    <p style="font-size:13px; color:var(--muted); margin-bottom:14px; line-height:1.6;">
+    <p class="card-title" style="color:var(--success)" data-i18n="advanced.portableTitle">Portable web version</p>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:14px; line-height:1.6;" data-i18n="advanced.portableCopy">
       Filenymous remains a P2P web app: no native installer, no mandatory local Holochain conductor.
       These archives open the same app in a modern browser.
     </p>
     <a id="desktop-dl-btn" href="#" target="_blank" rel="noopener"
-       class="btn btn-primary btn-full">
+       class="btn btn-primary btn-full" data-i18n="advanced.downloadWeb">
       Download the web version
     </a>
     <div class="os-row">
       <span>Windows</span><span>macOS</span><span>Linux</span>
     </div>
     <div class="desktop-cta-row">
-      <div class="compare-row"><span class="cck">?</span><span>Web: local AES-256-GCM encryption</span></div>
-      <div class="compare-row"><span class="cck">?</span><span>Web: one-time code and direct WebRTC P2P</span></div>
-      <div class="compare-row"><span class="cck">?</span><span>Web: keys and history stored locally</span></div>
-      <div class="compare-row"><span class="ccn">~</span><span>Advanced: Holochain/HWC and Iroh remain optional network modules</span></div>
+      <div class="compare-row"><span class="cck">?</span><span data-i18n="advanced.webEncryption">Web: local AES-256-GCM encryption</span></div>
+      <div class="compare-row"><span class="cck">?</span><span data-i18n="advanced.webP2P">Web: one-time code and direct WebRTC P2P</span></div>
+      <div class="compare-row"><span class="cck">?</span><span data-i18n="advanced.webLocalKeys">Web: keys and history stored locally</span></div>
+      <div class="compare-row"><span class="ccn">~</span><span data-i18n="advanced.optionalModules">Advanced: Holochain/HWC and Iroh remain optional network modules</span></div>
     </div>
   </div>
 
   <div id="id-no-conductor" class="card hidden">
-    <p id="id-nc-title" class="card-title">Web mode active</p>
+    <p id="id-nc-title" class="card-title" data-i18n="advanced.publicModeTitle">Public web mode</p>
     <p id="id-nc-desc" style="font-size:13px; color:var(--muted); line-height:1.6;"></p>
     <ul id="id-nc-features" class="feature-list mt-3"></ul>
   </div>
@@ -1674,35 +1674,35 @@
   <div id="id-ui" class="hidden">
 
     <div class="card">
-      <p class="card-title">Holochain agent</p>
+      <p class="card-title" data-i18n="advanced.agentTitle">Holochain agent</p>
       <div class="link-box">
         <code id="agent-key" style="font-size:11px">Loading...</code>
-        <button class="btn btn-secondary btn-sm" onclick="copyAgent()">Copy</button>
+        <button class="btn btn-secondary btn-sm" onclick="copyAgent()" data-i18n="common.copy">Copy</button>
       </div>
     </div>
 
     <div class="card">
-      <p class="card-title">Register your contact</p>
+      <p class="card-title" data-i18n="advanced.registerTitle">Register your contact</p>
       <div class="field">
-        <label for="contact-input">Email or phone number</label>
+        <label for="contact-input" data-i18n="advanced.contactLabel">Email or phone number</label>
         <input type="text" id="contact-input" placeholder="you@example.com" />
       </div>
-      <p class="muted mt-2">A SHA-256 hash of your normalized contact is published on the DHT so senders can find you.</p>
-      <button class="btn btn-primary btn-full mt-3" onclick="claimContact()">Publish on the DHT</button>
+      <p class="muted mt-2" data-i18n="advanced.registerHelp">A SHA-256 hash of your normalized contact is published on the DHT so senders can find you.</p>
+      <button class="btn btn-primary btn-full mt-3" onclick="claimContact()" data-i18n="advanced.publishDht">Publish on the DHT</button>
       <div id="claim-status" class="hidden mt-3"></div>
     </div>
 
     <div class="card">
-      <p class="card-title">X25519 key (agent-to-agent encryption)</p>
-      <p class="muted" style="font-size:13px; margin-bottom:12px;">
+      <p class="card-title" data-i18n="advanced.x25519Title">X25519 key (agent-to-agent encryption)</p>
+      <p class="muted" style="font-size:13px; margin-bottom:12px;" data-i18n="advanced.x25519Copy">
         Your X25519 public key lets senders encrypt the AES key directly for you through ECIES, without using the URL fragment.
       </p>
       <div id="x25519-status" class="status loading">
         <div class="spinner"></div>
-        <span>Checking...</span>
+        <span data-i18n="advanced.checking">Checking...</span>
       </div>
       <div class="row mt-3">
-        <button class="btn btn-secondary flex-1" onclick="genX25519()">Generate and publish</button>
+        <button class="btn btn-secondary flex-1" onclick="genX25519()" data-i18n="advanced.generatePublish">Generate and publish</button>
       </div>
     </div>
 
@@ -3369,14 +3369,23 @@ const idb = (() => {
 // ═══════════════════════════════════════════════════════════
 // SENDER ID — agent key (local) ou pseudonyme Ed25519 (web)
 // ═══════════════════════════════════════════════════════════
+function renderSenderModeLabel() {
+  const lbl = $('sender-mode-label');
+  if (!lbl) return;
+  if ((S.mode === 'local' || S.mode === 'holo') && S.agentKey) {
+    lbl.textContent = S.mode === 'local'
+      ? tr('advanced.senderModeLocal', 'Holochain agent - key certified by your local conductor')
+      : tr('advanced.senderModeHolo', 'Holo agent - key certified by the hosted Holo conductor');
+  } else {
+    lbl.textContent = tr('advanced.senderModeWeb', 'Web pseudonym - Ed25519 key generated and stored in this browser');
+  }
+}
+
 async function initSenderId() {
   if ((S.mode === 'local' || S.mode === 'holo') && S.agentKey) {
     // Mode local/holo : l'ID expéditeur = clé agent Holochain (certifiée par conducteur)
     S.senderId = b64e(new Uint8Array(S.agentKey));
-    const lbl = $('sender-mode-label');
-    if (lbl) lbl.textContent = S.mode === 'local'
-      ? '⬡ Holochain agent - key certified by your local conductor'
-      : '⬡ Holo agent - key certified by the hosted Holo conductor';
+    renderSenderModeLabel();
     const badge = $('sender-mode-badge');
     if (badge) { badge.className = 'status success'; badge.style.marginBottom = '12px'; }
   } else {
@@ -3394,8 +3403,7 @@ async function initSenderId() {
       // Fallback : ID aléatoire non persistant
       S.senderId = b64e(crypto.getRandomValues(new Uint8Array(32)));
     }
-    const lbl = $('sender-mode-label');
-    if (lbl) lbl.textContent = '☁ Web pseudonym - Ed25519 key generated and stored in this browser';
+    renderSenderModeLabel();
   }
   // Mettre à jour l'affichage
   const el = $('sender-id-display');
@@ -3403,7 +3411,7 @@ async function initSenderId() {
 }
 
 window.copySenderId = () => {
-  if (S.senderId) navigator.clipboard.writeText(S.senderId).then(() => toast('Sender ID copied.'));
+  if (S.senderId) navigator.clipboard.writeText(S.senderId).then(() => toast(tr('advanced.senderCopied', 'Sender ID copied.')));
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -3916,6 +3924,52 @@ window.FILENYMOUS_I18N = {
     "receive.manualTitle": "Enter a link manually",
     "receive.manualLabel": "Filenymous link",
     "receive.empty": "Enter a one-time code or paste a Filenymous link to receive a file.",
+    "advanced.title": "Advanced networks",
+    "advanced.intro": "The public can use Filenymous without a conductor. This area explains and activates stronger engines: Iroh for verifiable large files, Holochain for identity and coordination.",
+    "advanced.irohTitle": "Modern QUIC transport",
+    "advanced.irohCopy": "Priority for the web roadmap: dial-by-key, encrypted relays, NAT traversal, and more robust transfer without a native installer.",
+    "advanced.blobsTitle": "BLAKE3-addressed files",
+    "advanced.blobsCopy": "Enables verified streaming, partial resumes, and a better experience for large files.",
+    "advanced.browserTag": "Browser",
+    "advanced.browserTitle": "WebRTC remains direct",
+    "advanced.browserCopy": "Iroh in browser WASM currently goes through relays; WebRTC DataChannel remains the direct no-download path.",
+    "advanced.senderTitle": "Sender identifier",
+    "advanced.senderModeLocal": "Holochain agent - key certified by your local conductor",
+    "advanced.senderModeHolo": "Holo agent - key certified by the hosted Holo conductor",
+    "advanced.senderModeWeb": "Web pseudonym - Ed25519 key generated and stored in this browser",
+    "advanced.senderHelp": "Recipients will see the first 16 characters of this identifier with your transfer.",
+    "advanced.senderCopied": "Sender ID copied.",
+    "advanced.portableTitle": "Portable web version",
+    "advanced.portableCopy": "Filenymous remains a P2P web app: no native installer, no mandatory local Holochain conductor. These archives open the same app in a modern browser.",
+    "advanced.downloadWeb": "Download the web version",
+    "advanced.webEncryption": "Web: local AES-256-GCM encryption",
+    "advanced.webP2P": "Web: one-time code and direct WebRTC P2P",
+    "advanced.webLocalKeys": "Web: keys and history stored locally",
+    "advanced.optionalModules": "Advanced: Holochain/HWC and Iroh remain optional network modules",
+    "advanced.publicModeTitle": "Public web mode",
+    "advanced.publicModeDesc": "No Holochain conductor is required to send or receive. DHT contacts stay reserved for Holo Web Conductor; Iroh is prepared for large web transfers and encrypted relays.",
+    "advanced.publicModeSend": "File sending: encrypted link or direct P2P",
+    "advanced.publicModeReceive": "File receiving: one-time code",
+    "advanced.publicModeIroh": "Browser Iroh: encrypted relay, no direct UDP",
+    "advanced.publicModeDht": "DHT contacts: require Holo Web Conductor",
+    "advanced.holoModeTitle": "Holo Web Conductor active",
+    "advanced.holoModeDesc": "You are operating through the hosted Holo network. All features are available directly in your browser.",
+    "advanced.holoModeSend": "File sending (local encryption + Holo DHT)",
+    "advanced.holoModeReceive": "File receiving",
+    "advanced.holoModeContacts": "Contact registration",
+    "advanced.holoModeEcies": "ECIES encryption (after X25519 key generation)",
+    "advanced.agentTitle": "Holochain agent",
+    "advanced.holoAgentTitle": "Holo agent (hosted conductor)",
+    "advanced.registerTitle": "Register your contact",
+    "advanced.contactLabel": "Email or phone number",
+    "advanced.registerHelp": "A SHA-256 hash of your normalized contact is published on the DHT so senders can find you.",
+    "advanced.publishDht": "Publish on the DHT",
+    "advanced.x25519Title": "X25519 key (agent-to-agent encryption)",
+    "advanced.x25519Copy": "Your X25519 public key lets senders encrypt the AES key directly for you through ECIES, without using the URL fragment.",
+    "advanced.checking": "Checking...",
+    "advanced.generatePublish": "Generate and publish",
+    "advanced.x25519Present": "X25519 key is present in this browser",
+    "advanced.x25519Missing": "No X25519 key yet - generate one to receive in agent mode",
     "status.humanRequired": "Human verification required: check \"I am human\", then start again from this button.",
     "status.humanToast": "Human verification required."
   },
@@ -4127,6 +4181,52 @@ window.FILENYMOUS_I18N = {
     "receive.manualTitle": "Entrer un lien manuellement",
     "receive.manualLabel": "Lien Filenymous",
     "receive.empty": "Entre un code à usage unique ou colle un lien Filenymous pour recevoir un fichier.",
+    "advanced.title": "Réseaux avancés",
+    "advanced.intro": "Le public peut utiliser Filenymous sans conducteur. Cette zone explique et active des moteurs plus puissants : Iroh pour les gros fichiers vérifiables, Holochain pour l'identité et la coordination.",
+    "advanced.irohTitle": "Transport QUIC moderne",
+    "advanced.irohCopy": "Priorité de la feuille de route web : connexion par clé, relais chiffrés, traversée NAT et transfert plus robuste sans installateur natif.",
+    "advanced.blobsTitle": "Fichiers adressés en BLAKE3",
+    "advanced.blobsCopy": "Permet le streaming vérifié, les reprises partielles et une meilleure expérience pour les gros fichiers.",
+    "advanced.browserTag": "Navigateur",
+    "advanced.browserTitle": "WebRTC reste direct",
+    "advanced.browserCopy": "Iroh en WASM navigateur passe actuellement par des relais ; WebRTC DataChannel reste le chemin direct sans téléchargement.",
+    "advanced.senderTitle": "Identifiant d'expéditeur",
+    "advanced.senderModeLocal": "Agent Holochain - clé certifiée par votre conducteur local",
+    "advanced.senderModeHolo": "Agent Holo - clé certifiée par le conducteur Holo hébergé",
+    "advanced.senderModeWeb": "Pseudonyme web - clé Ed25519 générée et stockée dans ce navigateur",
+    "advanced.senderHelp": "Les destinataires voient les 16 premiers caractères de cet identifiant avec votre transfert.",
+    "advanced.senderCopied": "Identifiant expéditeur copié.",
+    "advanced.portableTitle": "Version web portable",
+    "advanced.portableCopy": "Filenymous reste une app web P2P : aucun installateur natif, aucun conducteur Holochain local obligatoire. Ces archives ouvrent la même app dans un navigateur moderne.",
+    "advanced.downloadWeb": "Télécharger la version web",
+    "advanced.webEncryption": "Web : chiffrement local AES-256-GCM",
+    "advanced.webP2P": "Web : code à usage unique et P2P WebRTC direct",
+    "advanced.webLocalKeys": "Web : clés et historique stockés localement",
+    "advanced.optionalModules": "Avancé : Holochain/HWC et Iroh restent des modules réseau optionnels",
+    "advanced.publicModeTitle": "Mode web public",
+    "advanced.publicModeDesc": "Aucun conducteur Holochain n'est requis pour envoyer ou recevoir. Les contacts DHT restent réservés à Holo Web Conductor ; Iroh est préparé pour les gros transferts web et les relais chiffrés.",
+    "advanced.publicModeSend": "Envoi de fichiers : lien chiffré ou P2P direct",
+    "advanced.publicModeReceive": "Réception de fichiers : code à usage unique",
+    "advanced.publicModeIroh": "Iroh navigateur : relais chiffré, pas d'UDP direct",
+    "advanced.publicModeDht": "Contacts DHT : nécessitent Holo Web Conductor",
+    "advanced.holoModeTitle": "Holo Web Conductor actif",
+    "advanced.holoModeDesc": "Vous utilisez le réseau Holo hébergé. Toutes les fonctions sont disponibles directement dans votre navigateur.",
+    "advanced.holoModeSend": "Envoi de fichiers (chiffrement local + DHT Holo)",
+    "advanced.holoModeReceive": "Réception de fichiers",
+    "advanced.holoModeContacts": "Enregistrement des contacts",
+    "advanced.holoModeEcies": "Chiffrement ECIES (après génération de clé X25519)",
+    "advanced.agentTitle": "Agent Holochain",
+    "advanced.holoAgentTitle": "Agent Holo (conducteur hébergé)",
+    "advanced.registerTitle": "Enregistrer votre contact",
+    "advanced.contactLabel": "Email ou numéro de téléphone",
+    "advanced.registerHelp": "Un hash SHA-256 de votre contact normalisé est publié sur la DHT afin que les expéditeurs puissent vous trouver.",
+    "advanced.publishDht": "Publier sur la DHT",
+    "advanced.x25519Title": "Clé X25519 (chiffrement agent à agent)",
+    "advanced.x25519Copy": "Votre clé publique X25519 permet aux expéditeurs de chiffrer la clé AES directement pour vous via ECIES, sans fragment d'URL.",
+    "advanced.checking": "Vérification...",
+    "advanced.generatePublish": "Générer et publier",
+    "advanced.x25519Present": "La clé X25519 est présente dans ce navigateur",
+    "advanced.x25519Missing": "Aucune clé X25519 pour l'instant - générez-en une pour recevoir en mode agent",
     "status.humanRequired": "Vérification humaine requise : cochez \"Je suis humain\", puis relancez depuis ce bouton.",
     "status.humanToast": "Vérification humaine requise."
   },
@@ -4338,6 +4438,52 @@ window.FILENYMOUS_I18N = {
     "receive.manualTitle": "링크 직접 입력",
     "receive.manualLabel": "Filenymous 링크",
     "receive.empty": "파일을 받으려면 일회용 코드를 입력하거나 Filenymous 링크를 붙여넣으세요.",
+    "advanced.title": "고급 네트워크",
+    "advanced.intro": "일반 사용자는 컨덕터 없이 Filenymous를 사용할 수 있습니다. 이 영역은 검증 가능한 대용량 파일을 위한 Iroh, 신원과 조정을 위한 Holochain 같은 더 강력한 엔진을 설명하고 활성화합니다.",
+    "advanced.irohTitle": "현대적인 QUIC 전송",
+    "advanced.irohCopy": "웹 로드맵의 우선순위입니다. 키 기반 연결, 암호화 릴레이, NAT 통과, 네이티브 설치 없는 더 안정적인 전송을 목표로 합니다.",
+    "advanced.blobsTitle": "BLAKE3 주소 기반 파일",
+    "advanced.blobsCopy": "검증된 스트리밍, 부분 재개, 대용량 파일에 더 나은 경험을 제공합니다.",
+    "advanced.browserTag": "브라우저",
+    "advanced.browserTitle": "WebRTC는 직접 연결 유지",
+    "advanced.browserCopy": "브라우저 WASM의 Iroh는 현재 릴레이를 거칩니다. WebRTC DataChannel은 다운로드 없는 직접 경로로 남습니다.",
+    "advanced.senderTitle": "보낸 사람 식별자",
+    "advanced.senderModeLocal": "Holochain 에이전트 - 로컬 컨덕터가 인증한 키",
+    "advanced.senderModeHolo": "Holo 에이전트 - 호스팅 Holo 컨덕터가 인증한 키",
+    "advanced.senderModeWeb": "웹 가명 - 이 브라우저에서 생성되고 저장된 Ed25519 키",
+    "advanced.senderHelp": "수신자는 전송과 함께 이 식별자의 처음 16자를 보게 됩니다.",
+    "advanced.senderCopied": "보낸 사람 식별자가 복사되었습니다.",
+    "advanced.portableTitle": "휴대용 웹 버전",
+    "advanced.portableCopy": "Filenymous는 P2P 웹 앱으로 유지됩니다. 네이티브 설치 프로그램도, 필수 로컬 Holochain 컨덕터도 없습니다. 이 아카이브는 최신 브라우저에서 같은 앱을 엽니다.",
+    "advanced.downloadWeb": "웹 버전 다운로드",
+    "advanced.webEncryption": "웹: 로컬 AES-256-GCM 암호화",
+    "advanced.webP2P": "웹: 일회용 코드와 직접 WebRTC P2P",
+    "advanced.webLocalKeys": "웹: 키와 기록을 로컬에 저장",
+    "advanced.optionalModules": "고급: Holochain/HWC와 Iroh는 선택형 네트워크 모듈입니다",
+    "advanced.publicModeTitle": "공개 웹 모드",
+    "advanced.publicModeDesc": "파일을 보내거나 받는 데 Holochain 컨덕터가 필요하지 않습니다. DHT 연락처는 Holo Web Conductor용으로 남겨두며, Iroh는 대용량 웹 전송과 암호화 릴레이를 위해 준비되어 있습니다.",
+    "advanced.publicModeSend": "파일 보내기: 암호화 링크 또는 직접 P2P",
+    "advanced.publicModeReceive": "파일 받기: 일회용 코드",
+    "advanced.publicModeIroh": "브라우저 Iroh: 암호화 릴레이, 직접 UDP 없음",
+    "advanced.publicModeDht": "DHT 연락처: Holo Web Conductor 필요",
+    "advanced.holoModeTitle": "Holo Web Conductor 활성화됨",
+    "advanced.holoModeDesc": "호스팅 Holo 네트워크를 통해 작동 중입니다. 모든 기능을 브라우저에서 바로 사용할 수 있습니다.",
+    "advanced.holoModeSend": "파일 보내기(로컬 암호화 + Holo DHT)",
+    "advanced.holoModeReceive": "파일 받기",
+    "advanced.holoModeContacts": "연락처 등록",
+    "advanced.holoModeEcies": "ECIES 암호화(X25519 키 생성 후)",
+    "advanced.agentTitle": "Holochain 에이전트",
+    "advanced.holoAgentTitle": "Holo 에이전트(호스팅 컨덕터)",
+    "advanced.registerTitle": "연락처 등록",
+    "advanced.contactLabel": "이메일 또는 전화번호",
+    "advanced.registerHelp": "정규화된 연락처의 SHA-256 해시가 DHT에 게시되어 보낸 사람이 사용자를 찾을 수 있습니다.",
+    "advanced.publishDht": "DHT에 게시",
+    "advanced.x25519Title": "X25519 키(에이전트 간 암호화)",
+    "advanced.x25519Copy": "X25519 공개 키를 사용하면 보낸 사람이 URL 조각 없이 ECIES로 AES 키를 직접 암호화할 수 있습니다.",
+    "advanced.checking": "확인 중...",
+    "advanced.generatePublish": "생성 및 게시",
+    "advanced.x25519Present": "이 브라우저에 X25519 키가 있습니다",
+    "advanced.x25519Missing": "아직 X25519 키가 없습니다. 에이전트 모드로 받으려면 키를 생성하세요",
     "status.humanRequired": "사람 확인이 필요합니다. \"사람입니다\"를 체크한 뒤 이 버튼에서 다시 시작하세요.",
     "status.humanToast": "사람 확인이 필요합니다."
   }
@@ -4374,6 +4520,10 @@ function applyI18n(lang) {
     el.setAttribute('aria-label', tr(el.dataset.i18nAriaLabel, el.getAttribute('aria-label') || ''));
   });
   if (typeof updateBadge === 'function') updateBadge();
+  if (typeof renderSenderModeLabel === 'function') renderSenderModeLabel();
+  if ($('panel-identity')?.classList.contains('active') && typeof initIdentity === 'function') {
+    initIdentity().catch(() => {});
+  }
 }
 
 window.setLanguage = function (lang) {
@@ -6869,15 +7019,17 @@ async function initIdentity() {
   const ncTitle     = $('id-nc-title');
   const ncDesc      = $('id-nc-desc');
   const ncFeatures  = $('id-nc-features');
+  const feature = (key, color, fallback) => `<li style="color:var(--${color})">${esc(tr(key, fallback))}</li>`;
 
   if (S.mode === 'bridge') {
-    if (ncTitle) { ncTitle.textContent = 'Public web mode'; ncTitle.style.color = 'var(--accent)'; }
-    if (ncDesc)  ncDesc.textContent = "No Holochain conductor is required to send or receive. DHT contacts stay reserved for Holo Web Conductor; Iroh is prepared for large web transfers and encrypted relays.";
-    if (ncFeatures) ncFeatures.innerHTML = `
-      <li style="color:var(--success)">File sending: encrypted link or direct P2P</li>
-      <li style="color:var(--success)">File receiving: one-time code</li>
-      <li style="color:var(--warning)">Browser Iroh: encrypted relay, no direct UDP</li>
-      <li style="color:var(--warning)">DHT contacts: require Holo Web Conductor</li>`;
+    if (ncTitle) { ncTitle.textContent = tr('advanced.publicModeTitle', 'Public web mode'); ncTitle.style.color = 'var(--accent)'; }
+    if (ncDesc)  ncDesc.textContent = tr('advanced.publicModeDesc', "No Holochain conductor is required to send or receive. DHT contacts stay reserved for Holo Web Conductor; Iroh is prepared for large web transfers and encrypted relays.");
+    if (ncFeatures) ncFeatures.innerHTML = [
+      feature('advanced.publicModeSend', 'success', 'File sending: encrypted link or direct P2P'),
+      feature('advanced.publicModeReceive', 'success', 'File receiving: one-time code'),
+      feature('advanced.publicModeIroh', 'warning', 'Browser Iroh: encrypted relay, no direct UDP'),
+      feature('advanced.publicModeDht', 'warning', 'DHT contacts: require Holo Web Conductor'),
+    ].join('');
     noConductor.classList.remove('hidden');
     ui.classList.add('hidden');
     return;
@@ -6885,13 +7037,14 @@ async function initIdentity() {
 
   if (S.mode === 'holo') {
     // Mode Holo Web Conductor — fonctionnalités complètes en navigateur
-    if (ncTitle) { ncTitle.textContent = '⬡ Holo Web Conductor active'; ncTitle.style.color = 'var(--success)'; }
-    if (ncDesc)  ncDesc.textContent = 'You are operating through the hosted Holo network. All features are available directly in your browser.';
-    if (ncFeatures) ncFeatures.innerHTML = `
-      <li style="color:var(--success)">File sending (local encryption + Holo DHT)</li>
-      <li style="color:var(--success)">File receiving</li>
-      <li style="color:var(--success)">Contact registration</li>
-      <li style="color:var(--success)">ECIES encryption (after X25519 key generation)</li>`;
+    if (ncTitle) { ncTitle.textContent = tr('advanced.holoModeTitle', 'Holo Web Conductor active'); ncTitle.style.color = 'var(--success)'; }
+    if (ncDesc)  ncDesc.textContent = tr('advanced.holoModeDesc', 'You are operating through the hosted Holo network. All features are available directly in your browser.');
+    if (ncFeatures) ncFeatures.innerHTML = [
+      feature('advanced.holoModeSend', 'success', 'File sending (local encryption + Holo DHT)'),
+      feature('advanced.holoModeReceive', 'success', 'File receiving'),
+      feature('advanced.holoModeContacts', 'success', 'Contact registration'),
+      feature('advanced.holoModeEcies', 'success', 'ECIES encryption (after X25519 key generation)'),
+    ].join('');
     noConductor.classList.remove('hidden');
   } else {
     // Mode local — pas besoin du bandeau
@@ -6904,7 +7057,9 @@ async function initIdentity() {
   // Titre du card Agent selon le mode
   const agentCardTitle = document.querySelector('#id-ui > .card > .card-title');
   if (agentCardTitle) agentCardTitle.textContent =
-    S.mode === 'holo' ? 'Holo agent (hosted conductor)' : 'Holochain agent';
+    S.mode === 'holo'
+      ? tr('advanced.holoAgentTitle', 'Holo agent (hosted conductor)')
+      : tr('advanced.agentTitle', 'Holochain agent');
 
   if (S.agentKey) $('agent-key').textContent = b64e(new Uint8Array(S.agentKey));
 
@@ -6912,10 +7067,10 @@ async function initIdentity() {
   const x25519El = $('x25519-status');
   if (sk) {
     x25519El.className = 'status success';
-    x25519El.innerHTML = 'X25519 key is present in this browser';
+    x25519El.textContent = tr('advanced.x25519Present', 'X25519 key is present in this browser');
   } else {
     x25519El.className = 'status warning';
-    x25519El.innerHTML = 'No X25519 key yet - generate one to receive in agent mode';
+    x25519El.textContent = tr('advanced.x25519Missing', 'No X25519 key yet - generate one to receive in agent mode');
   }
 }
 

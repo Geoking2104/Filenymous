@@ -26,6 +26,16 @@ describe("standalone web transfer mode", () => {
     }
   });
 
+  it("defines every translation key referenced by the HTML", () => {
+    const referencedKeys = Array.from(html.matchAll(/data-i18n(?:-[a-z-]+)?="([^"]+)"/g), match => match[1]).sort();
+    expect(referencedKeys.length).toBeGreaterThan(0);
+    for (const key of referencedKeys) {
+      expect(i18n.en[key], key).toBeTruthy();
+      expect(i18n.fr[key], key).toBeTruthy();
+      expect(i18n.ko[key], key).toBeTruthy();
+    }
+  });
+
   it("uses the current Holo Web Conductor client package without the obsolete web-client import", () => {
     expect(html).toContain("@holo-host/web-conductor-client@0.1.0");
     expect(html).toContain("WebConductorAppClient");
@@ -310,6 +320,82 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain("고유 코드 하나로 파일을 보내세요");
     expect(packagedHtml).toContain('id="language-select"');
     expect(packagedHtml).toContain("FILENYMOUS_I18N");
+  });
+
+  it("localizes the advanced identity panel and runtime status copy", () => {
+    const advancedKeys = [
+      "advanced.title",
+      "advanced.intro",
+      "advanced.irohTitle",
+      "advanced.irohCopy",
+      "advanced.blobsTitle",
+      "advanced.blobsCopy",
+      "advanced.browserTag",
+      "advanced.browserTitle",
+      "advanced.browserCopy",
+      "advanced.senderTitle",
+      "advanced.senderModeLocal",
+      "advanced.senderModeHolo",
+      "advanced.senderModeWeb",
+      "advanced.senderHelp",
+      "advanced.senderCopied",
+      "advanced.portableTitle",
+      "advanced.portableCopy",
+      "advanced.downloadWeb",
+      "advanced.webEncryption",
+      "advanced.webP2P",
+      "advanced.webLocalKeys",
+      "advanced.optionalModules",
+      "advanced.publicModeTitle",
+      "advanced.publicModeDesc",
+      "advanced.publicModeSend",
+      "advanced.publicModeReceive",
+      "advanced.publicModeIroh",
+      "advanced.publicModeDht",
+      "advanced.holoModeTitle",
+      "advanced.holoModeDesc",
+      "advanced.holoModeSend",
+      "advanced.holoModeReceive",
+      "advanced.holoModeContacts",
+      "advanced.holoModeEcies",
+      "advanced.agentTitle",
+      "advanced.holoAgentTitle",
+      "advanced.registerTitle",
+      "advanced.contactLabel",
+      "advanced.registerHelp",
+      "advanced.publishDht",
+      "advanced.x25519Title",
+      "advanced.x25519Copy",
+      "advanced.checking",
+      "advanced.generatePublish",
+      "advanced.x25519Present",
+      "advanced.x25519Missing",
+    ];
+
+    for (const key of advancedKeys) {
+      expect(i18n.en[key], key).toBeTruthy();
+      expect(i18n.fr[key], key).toBeTruthy();
+      expect(i18n.ko[key], key).toBeTruthy();
+      expect(i18n.fr[key], key).not.toBe(i18n.en[key]);
+      expect(i18n.ko[key], key).not.toBe(i18n.en[key]);
+      expect(html).toContain(`"${key}"`);
+      expect(packagedHtml).toContain(`"${key}"`);
+    }
+
+    for (const marker of [
+      'data-i18n="advanced.title"',
+      'data-i18n="advanced.intro"',
+      'data-i18n="advanced.senderTitle"',
+      'data-i18n="advanced.portableTitle"',
+      'data-i18n="advanced.registerTitle"',
+      'data-i18n="advanced.x25519Title"',
+      "tr('advanced.publicModeTitle'",
+      "tr('advanced.senderModeWeb'",
+      "tr('advanced.x25519Missing'",
+    ]) {
+      expect(html).toContain(marker);
+      expect(packagedHtml).toContain(marker);
+    }
   });
 
   it("localizes received download confirmations and progress messages", () => {
