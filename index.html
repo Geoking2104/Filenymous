@@ -232,65 +232,197 @@
       display: none;
     }
     .rooms-workspace {
-      display: grid;
-      gap: 18px;
-      max-width: 1120px;
+      max-width: 1240px;
       margin: 0 auto;
     }
-    .rooms-hero {
+    .rooms-shell {
+      min-height: calc(100svh - 168px);
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 18px;
+      grid-template-columns: minmax(0, 1fr) 292px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .rooms-shell.has-room-list {
+      grid-template-columns: 236px minmax(0, 1fr) 292px;
+    }
+    .room-list-panel {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      background: #1f2937;
+      color: #f8fafc;
+      padding: 14px;
+      border-right: 1px solid rgba(255,255,255,.08);
+    }
+    .room-list-panel.hidden {
+      display: none;
+    }
+    .room-list-title {
+      display: flex;
       align-items: center;
-      padding: 26px;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #cbd5e1;
     }
-    .rooms-hero h1 {
-      font-size: clamp(32px, 5vw, 56px);
-      line-height: .98;
+    .room-list-items {
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      min-height: 0;
+      overflow: auto;
+    }
+    .room-list-item {
+      display: grid;
+      gap: 2px;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.06);
+      color: #e2e8f0;
+      border: 1px solid transparent;
+      text-align: left;
+    }
+    .room-list-item.active {
+      background: rgba(47, 125, 246, .22);
+      border-color: rgba(96, 165, 250, .45);
+      color: #fff;
+    }
+    .room-list-item span {
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .room-main-panel {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      background: #fff;
+    }
+    .room-topbar {
+      min-height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .room-topbar h1 {
+      font-size: clamp(22px, 3vw, 32px);
+      line-height: 1.05;
       letter-spacing: 0;
-      margin-bottom: 12px;
+      margin: 0;
     }
-    .rooms-hero p {
+    .room-kicker {
       color: var(--muted);
-      max-width: 640px;
-      font-size: 16px;
+      font-size: 13px;
+      margin-top: 4px;
     }
     .rooms-actions {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
       justify-content: flex-end;
     }
-    .rooms-grid {
+    .room-activity {
+      min-height: 0;
+      overflow: auto;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-      gap: 18px;
-      align-items: start;
+      align-content: start;
+      gap: 14px;
+      padding: 18px 20px;
+      background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+    }
+    .room-empty-state {
+      display: grid;
+      gap: 10px;
+      max-width: 560px;
+      padding: 22px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .room-empty-state.hidden {
+      display: none;
+    }
+    .room-composer {
+      display: grid;
+      gap: 10px;
+      padding: 14px 20px 18px;
+      border-top: 1px solid var(--border);
+      background: #fff;
+    }
+    .room-composer-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+    .room-side-panel {
+      min-width: 0;
+      display: grid;
+      align-content: start;
+      gap: 16px;
+      padding: 16px;
+      background: #f8fafc;
+      border-left: 1px solid var(--border);
+      overflow: auto;
+    }
+    .room-side-section {
+      display: grid;
+      gap: 10px;
+    }
+    .room-avatar-picker {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+    .room-avatar-picker button {
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .room-avatar-picker button.active {
+      border-color: var(--accent);
+      background: rgba(22, 93, 255, .1);
+      color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(22, 93, 255, .08);
     }
     .room-invite-display {
       display: grid;
-      gap: 10px;
+      gap: 8px;
     }
     .room-invite-display input {
       font-family: var(--mono);
-      font-size: 13px;
+      font-size: 12px;
+      min-width: 0;
     }
     .room-peer-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-      gap: 10px;
+      gap: 8px;
     }
     .room-peer-card {
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 14px;
+      padding: 10px;
       background: var(--surface);
       display: grid;
-      gap: 6px;
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: 8px 10px;
+      align-items: center;
     }
     .room-peer-avatar {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       display: grid;
       place-items: center;
@@ -298,8 +430,12 @@
       color: var(--accent);
       font-weight: 800;
     }
+    .room-peer-card .muted {
+      grid-column: 2;
+      font-size: 12px;
+    }
     .room-drop-static {
-      min-height: 154px;
+      min-height: 128px;
       border: 1.5px dashed var(--border);
       border-radius: 8px;
       display: grid;
@@ -329,16 +465,31 @@
       justify-content: stretch;
     }
     .room-message-row strong { color: var(--text); }
+    .room-message-row span {
+      color: var(--muted);
+      line-height: 1.45;
+    }
     @media (max-width: 760px) {
-      .rooms-hero,
-      .rooms-grid {
+      .rooms-shell,
+      .rooms-shell.has-room-list {
         grid-template-columns: 1fr;
+        min-height: auto;
       }
+      .room-list-panel,
+      .room-side-panel {
+        border: 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .room-topbar,
       .rooms-actions {
-        justify-content: stretch;
+        align-items: stretch;
+        flex-direction: column;
       }
       .rooms-actions .btn {
-        flex: 1;
+        width: 100%;
+      }
+      .room-composer-row {
+        grid-template-columns: 1fr;
       }
     }
     .home-shell {
@@ -1057,43 +1208,39 @@
 
 <section id="panel-rooms" class="panel">
   <div class="rooms-workspace">
-    <div class="card rooms-hero">
-      <div>
-        <p class="card-title" data-i18n="rooms.mode">Mode ROOM</p>
-        <h1 data-i18n="rooms.title">Create a private room for a group</h1>
-        <p data-i18n="rooms.subtitle">One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.</p>
-      </div>
-      <div class="rooms-actions">
-        <button type="button" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
-        <button type="button" class="btn btn-secondary" onclick="copyPublicRoomLink()" data-i18n="rooms.copyInvite">Copy invite</button>
-        <button type="button" class="btn btn-danger" onclick="closePublicRoom()" data-i18n="rooms.close">Close room</button>
-      </div>
-    </div>
-
-    <div class="card room-invite-display">
-      <p class="card-title" data-i18n="rooms.inviteTitle">Invite link</p>
-      <p class="muted" data-i18n="rooms.inviteHelp">The room key stays in the link fragment. Share it only with people you trust.</p>
-      <input id="public-room-link" type="text" readonly value="Create a room to generate an invite link." aria-label="Room invite link" />
-      <div id="public-room-status" class="status info">
-        <span data-i18n="rooms.statusIdle">No room created yet.</span>
-      </div>
-    </div>
-
-    <div class="rooms-grid">
-      <div class="card">
-        <p class="card-title" data-i18n="rooms.peopleTitle">People in the room</p>
-        <div id="public-room-peers" class="room-peer-list">
-          <div class="room-peer-card">
-            <span class="room-peer-avatar">YO</span>
-            <strong data-i18n="rooms.you">You</strong>
-            <span class="muted" data-i18n="rooms.online">Online in this browser</span>
-          </div>
+    <div id="rooms-shell" class="rooms-shell">
+      <aside id="public-room-list-panel" class="room-list-panel hidden" aria-hidden="true">
+        <div class="room-list-title">
+          <span data-i18n="rooms.listTitle">Rooms</span>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="createPublicRoom()" data-i18n="rooms.createShort">New</button>
         </div>
-        <button type="button" class="btn btn-secondary btn-full mt-3" onclick="addPublicRoomDemoPeer()" data-i18n="rooms.addGuest">Add test guest</button>
-      </div>
+        <div id="public-room-list" class="room-list-items"></div>
+        <p class="muted" data-i18n="rooms.listHint">The room list appears only when several rooms are active.</p>
+      </aside>
 
-      <div class="card">
-        <p class="card-title" data-i18n="rooms.filesTitle">Room files</p>
+      <section class="room-main-panel" aria-label="Room activity" data-i18n-aria-label="rooms.activityLabel">
+        <header class="room-topbar">
+          <div>
+            <p class="card-title" data-i18n="rooms.mode">Mode ROOM</p>
+            <h1 data-i18n="rooms.title">Create a private room for a group</h1>
+            <p class="room-kicker" data-i18n="rooms.subtitle">One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.</p>
+          </div>
+          <div class="rooms-actions">
+            <button type="button" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
+            <button type="button" class="btn btn-secondary" onclick="copyPublicRoomLink()" data-i18n="rooms.copyInvite">Copy invite</button>
+            <button type="button" class="btn btn-danger" onclick="closePublicRoom()" data-i18n="rooms.close">Close room</button>
+          </div>
+        </header>
+
+        <div class="room-activity">
+          <div id="room-empty-state" class="room-empty-state">
+            <p class="card-title" data-i18n="rooms.noRoomTitle">Start a temporary room</p>
+            <p class="muted" data-i18n="rooms.noRoomCopy">Create a room, choose your avatar, then share the invite. The room list stays hidden until you have several active rooms.</p>
+            <button type="button" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
+          </div>
+
+          <div class="room-side-section">
+            <p class="card-title" data-i18n="rooms.filesTitle">Room files</p>
         <label class="room-drop-static" for="public-room-file-input">
           <input id="public-room-file-input" type="file" hidden multiple onchange="addPublicRoomFiles(this.files)" />
           <strong data-i18n="rooms.dropTitle">Add files to this room</strong>
@@ -1102,20 +1249,67 @@
         <div id="public-room-files" class="room-file-list">
           <p class="empty" data-i18n="rooms.noFiles">No room file yet.</p>
         </div>
-      </div>
+          </div>
 
-      <div class="card" style="grid-column:1/-1">
-        <p class="card-title" data-i18n="rooms.chatTitle">Room chat</p>
-        <p class="muted" data-i18n="rooms.chatHelp">Short messages help recipients understand what the files are. Full encrypted group chat is part of the advanced network roadmap.</p>
-        <textarea id="public-room-chat-input" maxlength="500" placeholder="Write a short message..." data-i18n-placeholder="rooms.chatPlaceholder"></textarea>
-        <button type="button" class="btn btn-primary btn-full mt-3" onclick="sendPublicRoomMessage()" data-i18n="rooms.sendMessage">Send message</button>
-        <div id="public-room-chat-log" class="room-chat-log">
-          <div class="room-message-row">
-            <strong>Filenymous</strong>
-            <span data-i18n="rooms.welcome">Create a room, share the invite link, then keep this browser open.</span>
+          <div class="room-side-section">
+            <p class="card-title" data-i18n="rooms.chatTitle">Room chat</p>
+            <p class="muted" data-i18n="rooms.chatHelp">Short messages help recipients understand what the files are.</p>
+            <div id="public-room-chat-log" class="room-chat-log">
+              <div class="room-message-row">
+                <strong>Filenymous</strong>
+                <span data-i18n="rooms.welcome">Create a room, share the invite link, then keep this browser open.</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+
+        <div class="room-composer">
+          <div class="room-composer-row">
+            <textarea id="public-room-chat-input" maxlength="500" placeholder="Write a short message..." data-i18n-placeholder="rooms.chatPlaceholder"></textarea>
+            <button type="button" class="btn btn-primary" onclick="sendPublicRoomMessage()" data-i18n="rooms.sendMessage">Send message</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="room-side-panel" aria-label="Room details" data-i18n-aria-label="rooms.detailsLabel">
+        <div class="status warning">
+          <strong data-i18n="rooms.maxUsersTitle">12 users maximum</strong><br>
+          <span data-i18n="rooms.maxUsersCopy">Rooms are optimized for small private groups. Create a new room when the group gets bigger.</span>
+        </div>
+
+        <div class="room-side-section">
+          <p class="card-title" data-i18n="rooms.avatarTitle">Your room avatar</p>
+          <div id="public-room-avatar-picker" class="room-avatar-picker" aria-label="Choose room avatar" data-i18n-aria-label="rooms.avatarLabel">
+            <button type="button" class="active" data-room-avatar="⬢" onclick="setPublicRoomAvatar('⬢')">⬢</button>
+            <button type="button" data-room-avatar="◆" onclick="setPublicRoomAvatar('◆')">◆</button>
+            <button type="button" data-room-avatar="●" onclick="setPublicRoomAvatar('●')">●</button>
+            <button type="button" data-room-avatar="▲" onclick="setPublicRoomAvatar('▲')">▲</button>
+            <button type="button" data-room-avatar="■" onclick="setPublicRoomAvatar('■')">■</button>
+            <button type="button" data-room-avatar="✦" onclick="setPublicRoomAvatar('✦')">✦</button>
+          </div>
+        </div>
+
+        <div class="room-side-section room-invite-display">
+          <p class="card-title" data-i18n="rooms.inviteTitle">Invite link</p>
+          <p class="muted" data-i18n="rooms.inviteHelp">The room key stays in the link fragment. Share it only with people you trust.</p>
+          <input id="public-room-link" type="text" readonly value="Create a room to generate an invite link." aria-label="Room invite link" />
+          <div id="public-room-status" class="status info">
+            <span data-i18n="rooms.statusIdle">No room created yet.</span>
+          </div>
+        </div>
+
+        <div class="room-side-section">
+          <p class="card-title" data-i18n="rooms.peopleTitle">People in the room</p>
+          <div id="public-room-peers" class="room-peer-list">
+            <div class="room-peer-card">
+              <span class="room-peer-avatar">⬢</span>
+              <strong data-i18n="rooms.you">You</strong>
+              <span class="muted" data-i18n="rooms.online">Online in this browser</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-full mt-3" onclick="addPublicRoomDemoPeer()" data-i18n="rooms.addGuest">Add test guest</button>
+        </div>
+      </aside>
     </div>
   </div>
 </section>
@@ -3029,6 +3223,7 @@ Object.assign(S, {
     key: '',
     peerId: '',
     displayName: 'You',
+    avatar: '⬢',
     socket: null,
     connected: false,
     closed: false,
@@ -3038,6 +3233,7 @@ Object.assign(S, {
     peers: [{ peerId: 'local', displayName: 'You' }],
     messages: [],
   },
+  publicRoomDirectory: [],
 });
 
 function markTransferActive(label) {
@@ -3584,8 +3780,21 @@ window.FILENYMOUS_I18N = {
     "rooms.title": "Create a private room for a group",
     "rooms.subtitle": "One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.",
     "rooms.create": "Create room",
+    "rooms.createShort": "New",
     "rooms.copyInvite": "Copy invite",
     "rooms.close": "Close room",
+    "rooms.listTitle": "Rooms",
+    "rooms.listHint": "The room list appears only when several rooms are active.",
+    "rooms.activityLabel": "Room activity",
+    "rooms.detailsLabel": "Room details",
+    "rooms.noRoomTitle": "Start a temporary room",
+    "rooms.noRoomCopy": "Create a room, choose your avatar, then share the invite. The room list stays hidden until you have several active rooms.",
+    "rooms.maxUsersTitle": "12 users maximum",
+    "rooms.maxUsersCopy": "Rooms are optimized for small private groups. Create a new room when the group gets bigger.",
+    "rooms.avatarTitle": "Your room avatar",
+    "rooms.avatarLabel": "Choose room avatar",
+    "rooms.roomLive": "Live",
+    "rooms.roomWaiting": "Waiting",
     "rooms.inviteTitle": "Invite link",
     "rooms.inviteHelp": "The room key stays in the link fragment. Share it only with people you trust.",
     "rooms.statusIdle": "No room created yet.",
@@ -3603,7 +3812,7 @@ window.FILENYMOUS_I18N = {
     "rooms.noFiles": "No room file yet.",
     "rooms.filesQueued": "Files queued locally for this room.",
     "rooms.chatTitle": "Room chat",
-    "rooms.chatHelp": "Short messages help recipients understand what the files are. Full encrypted group chat is part of the advanced network roadmap.",
+    "rooms.chatHelp": "Use short messages to clarify what the shared files are.",
     "rooms.chatPlaceholder": "Write a short message...",
     "rooms.sendMessage": "Send message",
     "rooms.welcome": "Create a room, share the invite link, then keep this browser open.",
@@ -3782,8 +3991,21 @@ window.FILENYMOUS_I18N = {
     "rooms.title": "Créer une room privée pour un groupe",
     "rooms.subtitle": "Une room temporaire, un lien d'invitation, plusieurs fichiers. Invitez les participants, échangez les fichiers et gardez la page ouverte pendant les transferts directs.",
     "rooms.create": "Créer la room",
+    "rooms.createShort": "Nouvelle",
     "rooms.copyInvite": "Copier l'invitation",
     "rooms.close": "Fermer la room",
+    "rooms.listTitle": "Rooms",
+    "rooms.listHint": "La liste des rooms n'apparaît que lorsque plusieurs rooms sont actives.",
+    "rooms.activityLabel": "Activité de la room",
+    "rooms.detailsLabel": "Détails de la room",
+    "rooms.noRoomTitle": "Démarrer une room temporaire",
+    "rooms.noRoomCopy": "Créez une room, choisissez votre avatar, puis partagez l'invitation. La liste des rooms reste masquée tant que vous n'avez pas plusieurs rooms actives.",
+    "rooms.maxUsersTitle": "12 utilisateurs maximum",
+    "rooms.maxUsersCopy": "Les rooms sont optimisées pour les petits groupes privés. Créez une nouvelle room quand le groupe grossit.",
+    "rooms.avatarTitle": "Votre avatar de room",
+    "rooms.avatarLabel": "Choisir l'avatar de room",
+    "rooms.roomLive": "Active",
+    "rooms.roomWaiting": "En attente",
     "rooms.inviteTitle": "Lien d'invitation",
     "rooms.inviteHelp": "La clé de room reste dans le fragment du lien. Partagez-le uniquement avec des personnes de confiance.",
     "rooms.statusIdle": "Aucune room créée.",
@@ -3801,7 +4023,7 @@ window.FILENYMOUS_I18N = {
     "rooms.noFiles": "Aucun fichier dans la room.",
     "rooms.filesQueued": "Fichiers mis en file localement pour cette room.",
     "rooms.chatTitle": "Chat de room",
-    "rooms.chatHelp": "Les messages courts aident les destinataires à comprendre les fichiers. Le chat de groupe chiffré complet fait partie de la feuille de route avancée.",
+    "rooms.chatHelp": "Utilisez les messages courts pour préciser le contenu des fichiers partagés.",
     "rooms.chatPlaceholder": "Écrire un court message...",
     "rooms.sendMessage": "Envoyer le message",
     "rooms.welcome": "Créez une room, partagez le lien d'invitation, puis gardez ce navigateur ouvert.",
@@ -3980,8 +4202,21 @@ window.FILENYMOUS_I18N = {
     "rooms.title": "그룹용 비공개 룸 만들기",
     "rooms.subtitle": "임시 룸 하나, 초대 링크 하나, 여러 파일. 사람을 초대하고 파일을 교환하며 직접 전송 중에는 페이지를 열어 두세요.",
     "rooms.create": "룸 만들기",
+    "rooms.createShort": "새 룸",
     "rooms.copyInvite": "초대 링크 복사",
     "rooms.close": "룸 닫기",
+    "rooms.listTitle": "룸",
+    "rooms.listHint": "활성 룸이 여러 개일 때만 룸 목록이 표시됩니다.",
+    "rooms.activityLabel": "룸 활동",
+    "rooms.detailsLabel": "룸 세부 정보",
+    "rooms.noRoomTitle": "임시 룸 시작",
+    "rooms.noRoomCopy": "룸을 만들고 아바타를 고른 뒤 초대를 공유하세요. 활성 룸이 여러 개가 될 때까지 룸 목록은 숨겨집니다.",
+    "rooms.maxUsersTitle": "최대 12명",
+    "rooms.maxUsersCopy": "룸은 소규모 비공개 그룹에 최적화되어 있습니다. 그룹이 커지면 새 룸을 만드세요.",
+    "rooms.avatarTitle": "내 룸 아바타",
+    "rooms.avatarLabel": "룸 아바타 선택",
+    "rooms.roomLive": "활성",
+    "rooms.roomWaiting": "대기 중",
     "rooms.inviteTitle": "초대 링크",
     "rooms.inviteHelp": "룸 키는 링크 fragment에 남습니다. 신뢰하는 사람에게만 공유하세요.",
     "rooms.statusIdle": "아직 만든 룸이 없습니다.",
@@ -3999,7 +4234,7 @@ window.FILENYMOUS_I18N = {
     "rooms.noFiles": "아직 룸 파일이 없습니다.",
     "rooms.filesQueued": "파일이 이 룸의 로컬 대기열에 추가되었습니다.",
     "rooms.chatTitle": "룸 채팅",
-    "rooms.chatHelp": "짧은 메시지는 받는 사람이 파일 내용을 이해하는 데 도움이 됩니다. 전체 암호화 채팅은 Holochain/Iroh 로드맵에 포함됩니다.",
+    "rooms.chatHelp": "짧은 메시지로 공유 파일의 내용을 설명하세요.",
     "rooms.chatPlaceholder": "짧은 메시지 작성...",
     "rooms.sendMessage": "메시지 보내기",
     "rooms.welcome": "룸을 만들고 초대 링크를 공유한 뒤 이 브라우저를 열어 두세요.",
@@ -5161,9 +5396,22 @@ function publicRoomInviteUrl() {
 }
 
 const PUBLIC_ROOM_FILE_CHUNK_SIZE = 192 * 1024;
+const PUBLIC_ROOM_AVATARS = ['⬢', '◆', '●', '▲', '■', '✦'];
 
 function makePublicRoomPeerId() {
   return `peer-${b64e(crypto.getRandomValues(new Uint8Array(9))).toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 12)}`;
+}
+
+function publicRoomDisplayName() {
+  const avatar = PUBLIC_ROOM_AVATARS.includes(S.publicRoom.avatar) ? S.publicRoom.avatar : PUBLIC_ROOM_AVATARS[0];
+  return `${avatar} ${tr('rooms.you', 'You')}`;
+}
+
+function publicRoomLocalPeer() {
+  return {
+    peerId: S.publicRoom.peerId || 'local',
+    displayName: S.publicRoom.displayName || publicRoomDisplayName(),
+  };
 }
 
 function publicRoomPeerName(peer) {
@@ -5171,9 +5419,42 @@ function publicRoomPeerName(peer) {
   return peer?.displayName || peer?.peerId || 'Guest';
 }
 
+function publicRoomPeerAvatar(peer) {
+  const name = String(publicRoomPeerName(peer)).trim();
+  const first = Array.from(name)[0] || '';
+  if (PUBLIC_ROOM_AVATARS.includes(first)) return first;
+  if (peer?.peerId && (peer.peerId === S.publicRoom.peerId || peer.peerId === 'local')) return S.publicRoom.avatar || PUBLIC_ROOM_AVATARS[0];
+  return String(name.slice(0, 2) || 'GU').toUpperCase();
+}
+
+function publicRoomDisplayLabel(peer) {
+  const name = String(publicRoomPeerName(peer)).trim();
+  const first = Array.from(name)[0] || '';
+  return PUBLIC_ROOM_AVATARS.includes(first) ? name.slice(first.length).trim() || name : name;
+}
+
+function upsertPublicRoomDirectory(status = '') {
+  if (!S.publicRoom.roomId) return;
+  const entry = {
+    roomId: S.publicRoom.roomId,
+    label: `# ${S.publicRoom.roomId.replace(/^room-/i, '')}`,
+    status: status || (S.publicRoom.connected ? tr('rooms.roomLive', 'Live') : tr('rooms.roomWaiting', 'Waiting')),
+    updatedAt: Date.now(),
+  };
+  const list = Array.isArray(S.publicRoomDirectory) ? S.publicRoomDirectory : [];
+  const index = list.findIndex(item => item.roomId === entry.roomId);
+  if (index >= 0) list[index] = { ...list[index], ...entry };
+  else list.unshift(entry);
+  S.publicRoomDirectory = list.slice(0, 12);
+}
+
+function removePublicRoomFromDirectory(roomId) {
+  S.publicRoomDirectory = (S.publicRoomDirectory || []).filter(item => item.roomId !== roomId);
+}
+
 function setPublicRoomPeers(peers) {
   const next = Array.isArray(peers) && peers.length ? peers : [
-    { peerId: S.publicRoom.peerId || 'local', displayName: S.publicRoom.displayName || 'You' },
+    publicRoomLocalPeer(),
   ];
   S.publicRoom.peers = next.map(peer => typeof peer === 'string'
     ? { peerId: peer.toLowerCase().replace(/[^a-z0-9_-]/g, '') || makePublicRoomPeerId(), displayName: peer }
@@ -5182,6 +5463,7 @@ function setPublicRoomPeers(peers) {
 }
 
 function ensurePublicRoomState() {
+  const previousRoomId = S.publicRoom.roomId;
   if (S.publicRoom.closed) {
     S.publicRoom.roomId = '';
     S.publicRoom.key = '';
@@ -5193,12 +5475,14 @@ function ensurePublicRoomState() {
     S.publicRoom.files = [];
     S.publicRoom.roomFileTransfers = {};
     S.publicRoom.messages = [];
+    removePublicRoomFromDirectory(previousRoomId);
   }
   S.publicRoom.roomId = S.publicRoom.roomId || `room-${createOneTimeCode().replace(/-/g, '').toLowerCase()}`;
   S.publicRoom.key = S.publicRoom.key || createOneTimeCode();
   S.publicRoom.peerId = S.publicRoom.peerId || makePublicRoomPeerId();
-  S.publicRoom.displayName = S.publicRoom.displayName || 'You';
-  setPublicRoomPeers([{ peerId: S.publicRoom.peerId, displayName: S.publicRoom.displayName }]);
+  S.publicRoom.displayName = publicRoomDisplayName();
+  upsertPublicRoomDirectory();
+  setPublicRoomPeers([publicRoomLocalPeer()]);
 }
 
 async function derivePublicRoomKey() {
@@ -5333,18 +5617,46 @@ function downloadPublicRoomFile(transferId) {
 }
 
 function renderPublicRoom() {
+  const shell = $('rooms-shell');
+  const listPanel = $('public-room-list-panel');
+  const roomList = $('public-room-list');
+  const emptyState = $('room-empty-state');
+  const avatarPicker = $('public-room-avatar-picker');
   const link = $('public-room-link');
   const peers = $('public-room-peers');
   const files = $('public-room-files');
   const chat = $('public-room-chat-log');
+  const roomEntries = Array.isArray(S.publicRoomDirectory) ? S.publicRoomDirectory : [];
+  const showRoomList = roomEntries.length > 1;
+
+  if (shell) shell.classList.toggle('has-room-list', showRoomList);
+  if (listPanel) {
+    listPanel.classList.toggle('hidden', !showRoomList);
+    listPanel.setAttribute('aria-hidden', String(!showRoomList));
+  }
+  if (roomList) {
+    roomList.innerHTML = roomEntries.map(entry => `
+      <button type="button" class="room-list-item ${entry.roomId === S.publicRoom.roomId ? 'active' : ''}" data-room-id="${esc(entry.roomId)}">
+        <strong>${esc(entry.label || entry.roomId)}</strong>
+        <span>${esc(entry.status || '')}</span>
+      </button>
+    `).join('');
+  }
+  if (emptyState) emptyState.classList.toggle('hidden', Boolean(S.publicRoom.roomId));
+  if (avatarPicker) {
+    avatarPicker.querySelectorAll('[data-room-avatar]').forEach(button => {
+      button.classList.toggle('active', button.getAttribute('data-room-avatar') === S.publicRoom.avatar);
+    });
+  }
   if (link) link.value = publicRoomInviteUrl() || tr('rooms.linkEmpty', 'Create a room to generate an invite link.');
   if (peers) {
     peers.innerHTML = S.publicRoom.peers.map((peer) => {
-      const name = publicRoomPeerName(peer);
+      const name = publicRoomDisplayLabel(peer);
+      const avatar = publicRoomPeerAvatar(peer);
       const isYou = peer?.peerId && peer.peerId === S.publicRoom.peerId;
       return `
       <div class="room-peer-card">
-        <span class="room-peer-avatar">${esc(String(name).slice(0, 2).toUpperCase())}</span>
+        <span class="room-peer-avatar">${esc(avatar)}</span>
         <strong>${esc(name)}${isYou ? ' (you)' : ''}</strong>
         <span class="muted">${esc(S.publicRoom.connected ? tr('rooms.online', 'Online in this browser') : 'Waiting for signaling')}</span>
       </div>
@@ -5453,6 +5765,7 @@ function handlePublicRoomMessage(msg) {
     S.publicRoom.connected = true;
     S.publicRoom.closed = false;
     S.publicRoom.expiresAt = msg.expiresAt || 0;
+    upsertPublicRoomDirectory(tr('rooms.roomLive', 'Live'));
     setPublicRoomPeers(msg.peers || []);
     setStatus('public-room-status', 'success', tr('rooms.statusReady', 'Room ready. Share the invite link and keep this page open.'));
     return;
@@ -5464,6 +5777,7 @@ function handlePublicRoomMessage(msg) {
       S.publicRoom.peers.push({ peerId: peer.peerId, displayName: peer.displayName || peer.peerId });
       renderPublicRoom();
     }
+    upsertPublicRoomDirectory(tr('rooms.roomLive', 'Live'));
     setStatus('public-room-status', 'success', `${esc(publicRoomPeerName(peer))} joined the room.`);
     return;
   }
@@ -5492,6 +5806,7 @@ function handlePublicRoomMessage(msg) {
     S.publicRoom.connected = false;
     try { S.publicRoom.socket?.close(); } catch (_) {}
     S.publicRoom.socket = null;
+    removePublicRoomFromDirectory(S.publicRoom.roomId);
     setStatus('public-room-status', 'warning', 'Room closed.');
     renderPublicRoom();
   }
@@ -5504,7 +5819,7 @@ function connectPublicRoom() {
     if (S.publicRoom.socket?.readyState === WebSocket.OPEN && S.publicRoom.connected) return resolve(S.publicRoom.socket);
 
     S.publicRoom.peerId = S.publicRoom.peerId || makePublicRoomPeerId();
-    S.publicRoom.displayName = S.publicRoom.displayName || 'You';
+    S.publicRoom.displayName = S.publicRoom.displayName || publicRoomDisplayName();
     setPublicRoomPeers(S.publicRoom.peers);
     setStatus('public-room-status', 'loading', 'Connecting to the room signaling server...');
 
@@ -5573,8 +5888,9 @@ function joinPublicRoomFromHash() {
   S.publicRoom.roomId = roomId;
   S.publicRoom.key = key;
   S.publicRoom.peerId = S.publicRoom.peerId || makePublicRoomPeerId();
-  S.publicRoom.displayName = 'You';
-  setPublicRoomPeers([{ peerId: S.publicRoom.peerId, displayName: S.publicRoom.displayName }]);
+  S.publicRoom.displayName = publicRoomDisplayName();
+  upsertPublicRoomDirectory(tr('rooms.roomWaiting', 'Waiting'));
+  setPublicRoomPeers([publicRoomLocalPeer()]);
   renderPublicRoom();
   showTab('rooms');
   connectPublicRoom().catch(e => setStatus('public-room-status', 'error', e.message));
@@ -5596,10 +5912,22 @@ function closePublicRoom() {
   S.publicRoom.closed = true;
   S.publicRoom.connected = false;
   S.publicRoom.socket = null;
+  removePublicRoomFromDirectory(S.publicRoom.roomId);
   markTransferDone();
   setStatus('public-room-status', 'warning', 'Room closed. Create a new room to share again.');
   renderPublicRoom();
 }
+
+window.setPublicRoomAvatar = function (avatar) {
+  if (!PUBLIC_ROOM_AVATARS.includes(avatar)) return;
+  S.publicRoom.avatar = avatar;
+  S.publicRoom.displayName = publicRoomDisplayName();
+  const localId = S.publicRoom.peerId || 'local';
+  const localPeer = S.publicRoom.peers.find(peer => peer.peerId === localId || peer.peerId === 'local');
+  if (localPeer) localPeer.displayName = S.publicRoom.displayName;
+  else S.publicRoom.peers.unshift(publicRoomLocalPeer());
+  renderPublicRoom();
+};
 
 window.createPublicRoom = function () {
   ensurePublicRoomState();
