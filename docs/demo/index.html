@@ -1215,15 +1215,15 @@
           <button type="button" class="btn btn-secondary btn-sm" onclick="createPublicRoom()" data-i18n="rooms.createShort">New</button>
         </div>
         <div id="public-room-list" class="room-list-items"></div>
-        <p class="muted" data-i18n="rooms.listHint">The room list appears only when several rooms are active.</p>
+        <p class="muted" data-i18n="rooms.listHint">Your active rooms. Use "New" to open another one.</p>
       </aside>
 
       <section class="room-main-panel" aria-label="Room activity" data-i18n-aria-label="rooms.activityLabel">
         <header class="room-topbar">
           <div>
             <p class="card-title" data-i18n="rooms.mode">Mode ROOM</p>
-            <h1 data-i18n="rooms.title">Create a private room for a group</h1>
-            <p class="room-kicker" data-i18n="rooms.subtitle">One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.</p>
+            <h1 id="public-room-title" data-i18n="rooms.title">Create a private room for a group</h1>
+            <p id="public-room-subtitle" class="room-kicker" data-i18n="rooms.subtitle">One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.</p>
           </div>
           <div class="rooms-actions">
             <button type="button" id="public-room-create-btn" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
@@ -1235,11 +1235,11 @@
         <div class="room-activity">
           <div id="room-empty-state" class="room-empty-state">
             <p class="card-title" data-i18n="rooms.noRoomTitle">Start a temporary room</p>
-            <p class="muted" data-i18n="rooms.noRoomCopy">Create a room, choose your avatar, then share the invite. The room list stays hidden until you have several active rooms.</p>
+            <p class="muted" data-i18n="rooms.noRoomCopy">Create a room, choose your avatar, then share the invite. Files and chat unlock once the room exists.</p>
             <button type="button" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
           </div>
 
-          <div class="room-side-section">
+          <div id="public-room-files-section" class="room-side-section hidden">
             <p class="card-title" data-i18n="rooms.filesTitle">Room files</p>
         <label class="room-drop-static" for="public-room-file-input">
           <input id="public-room-file-input" type="file" hidden multiple onchange="addPublicRoomFiles(this.files)" />
@@ -1251,7 +1251,7 @@
         </div>
           </div>
 
-          <div class="room-side-section">
+          <div id="public-room-chat-section" class="room-side-section hidden">
             <p class="card-title" data-i18n="rooms.chatTitle">Room chat</p>
             <p class="muted" data-i18n="rooms.chatHelp">Short messages help recipients understand what the files are.</p>
             <div id="public-room-chat-log" class="room-chat-log">
@@ -1263,7 +1263,7 @@
           </div>
         </div>
 
-        <div class="room-composer">
+        <div id="public-room-composer" class="room-composer hidden">
           <div class="room-composer-row">
             <textarea id="public-room-chat-input" maxlength="500" placeholder="Write a short message..." data-i18n-placeholder="rooms.chatPlaceholder"></textarea>
             <button type="button" class="btn btn-primary" onclick="sendPublicRoomMessage()" data-i18n="rooms.sendMessage">Send message</button>
@@ -3792,11 +3792,13 @@ window.FILENYMOUS_I18N = {
     "rooms.copyInvite": "Copy invite",
     "rooms.close": "Close room",
     "rooms.listTitle": "Rooms",
-    "rooms.listHint": "The room list appears only when several rooms are active.",
+    "rooms.listHint": "Your active rooms. Use \"New\" to open another one.",
+    "rooms.activeTitle": "Room is active",
+    "rooms.activeSubtitle": "Share the invite link on the right, then keep this page open while people join.",
     "rooms.activityLabel": "Room activity",
     "rooms.detailsLabel": "Room details",
     "rooms.noRoomTitle": "Start a temporary room",
-    "rooms.noRoomCopy": "Create a room, choose your avatar, then share the invite. The room list stays hidden until you have several active rooms.",
+    "rooms.noRoomCopy": "Create a room, choose your avatar, then share the invite. Files and chat unlock once the room exists.",
     "rooms.maxUsersTitle": "12 users maximum",
     "rooms.maxUsersCopy": "Rooms are optimized for small private groups. Create a new room when the group gets bigger.",
     "rooms.avatarTitle": "Your room avatar",
@@ -4060,11 +4062,13 @@ window.FILENYMOUS_I18N = {
     "rooms.copyInvite": "Copier l'invitation",
     "rooms.close": "Fermer la room",
     "rooms.listTitle": "Rooms",
-    "rooms.listHint": "La liste des rooms n'apparaît que lorsque plusieurs rooms sont actives.",
+    "rooms.listHint": "Vos rooms actives. Utilisez « Nouvelle » pour en créer une autre.",
+    "rooms.activeTitle": "Room active",
+    "rooms.activeSubtitle": "Partagez le lien d'invitation à droite, puis gardez cette page ouverte pendant que les participants rejoignent.",
     "rooms.activityLabel": "Activité de la room",
     "rooms.detailsLabel": "Détails de la room",
     "rooms.noRoomTitle": "Démarrer une room temporaire",
-    "rooms.noRoomCopy": "Créez une room, choisissez votre avatar, puis partagez l'invitation. La liste des rooms reste masquée tant que vous n'avez pas plusieurs rooms actives.",
+    "rooms.noRoomCopy": "Créez une room, choisissez votre avatar, puis partagez l'invitation. Les fichiers et le chat se débloquent une fois la room créée.",
     "rooms.maxUsersTitle": "12 utilisateurs maximum",
     "rooms.maxUsersCopy": "Les rooms sont optimisées pour les petits groupes privés. Créez une nouvelle room quand le groupe grossit.",
     "rooms.avatarTitle": "Votre avatar de room",
@@ -4328,11 +4332,13 @@ window.FILENYMOUS_I18N = {
     "rooms.copyInvite": "초대 링크 복사",
     "rooms.close": "룸 닫기",
     "rooms.listTitle": "룸",
-    "rooms.listHint": "활성 룸이 여러 개일 때만 룸 목록이 표시됩니다.",
+    "rooms.listHint": "활성 룸 목록입니다. \"새 룸\"으로 다른 룸을 여세요.",
+    "rooms.activeTitle": "룸이 활성화됨",
+    "rooms.activeSubtitle": "오른쪽의 초대 링크를 공유한 뒤, 참가자들이 들어오는 동안 이 페이지를 열어 두세요.",
     "rooms.activityLabel": "룸 활동",
     "rooms.detailsLabel": "룸 세부 정보",
     "rooms.noRoomTitle": "임시 룸 시작",
-    "rooms.noRoomCopy": "룸을 만들고 아바타를 고른 뒤 초대를 공유하세요. 활성 룸이 여러 개가 될 때까지 룸 목록은 숨겨집니다.",
+    "rooms.noRoomCopy": "룸을 만들고 아바타를 고른 뒤 초대를 공유하세요. 룸이 생성되면 파일과 채팅이 활성화됩니다.",
     "rooms.maxUsersTitle": "최대 12명",
     "rooms.maxUsersCopy": "룸은 소규모 비공개 그룹에 최적화되어 있습니다. 그룹이 커지면 새 룸을 만드세요.",
     "rooms.avatarTitle": "내 룸 아바타",
@@ -5811,7 +5817,7 @@ function renderPublicRoom() {
   const files = $('public-room-files');
   const chat = $('public-room-chat-log');
   const roomEntries = Array.isArray(S.publicRoomDirectory) ? S.publicRoomDirectory : [];
-  const showRoomList = roomEntries.length > 1;
+  const showRoomList = roomEntries.length >= 1;
   const hasRoom = Boolean(S.publicRoom.roomId);
 
   const createBtn = $('public-room-create-btn');
@@ -5820,6 +5826,27 @@ function renderPublicRoom() {
   if (createBtn) createBtn.classList.toggle('hidden', hasRoom);
   if (copyBtn) copyBtn.disabled = !hasRoom;
   if (closeBtn) closeBtn.disabled = !hasRoom;
+
+  const filesSection = $('public-room-files-section');
+  const chatSection = $('public-room-chat-section');
+  const composer = $('public-room-composer');
+  if (filesSection) filesSection.classList.toggle('hidden', !hasRoom);
+  if (chatSection) chatSection.classList.toggle('hidden', !hasRoom);
+  if (composer) composer.classList.toggle('hidden', !hasRoom);
+
+  const titleEl = $('public-room-title');
+  const subtitleEl = $('public-room-subtitle');
+  if (titleEl) {
+    const shortId = hasRoom ? S.publicRoom.roomId.replace(/^room-/i, '') : '';
+    titleEl.textContent = hasRoom
+      ? `${tr('rooms.activeTitle', 'Room is active')} — #${shortId}`
+      : tr('rooms.title', 'Create a private room for a group');
+  }
+  if (subtitleEl) {
+    subtitleEl.textContent = hasRoom
+      ? tr('rooms.activeSubtitle', 'Share the invite link on the right, then keep this page open while people join.')
+      : tr('rooms.subtitle', 'One temporary room, one invite link, many files. Invite people, exchange files, and keep the page open during direct transfers.');
+  }
 
   if (shell) shell.classList.toggle('has-room-list', showRoomList);
   if (listPanel) {
