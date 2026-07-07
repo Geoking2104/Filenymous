@@ -37,5 +37,10 @@ describe("static room demo", () => {
     expect(html).toContain("room-peer-joined");
     expect(html).toContain('id="public-room-file-input"');
     expect(html).toContain('aria-label="Room invite link"');
+    expect(html).toContain('id="rooms-shell"');
+    expect(html).toContain('id="public-room-list-panel"');
+    expect(html).toContain('id="public-room-avatar-picker"');
+    expect(html).toContain("12 users maximum");
+    expect(html).toContain("showRoomList = roomEntries.length > 1");
   });
 });

@@ -78,6 +78,7 @@ describe("standalone web transfer mode", () => {
   it("exposes Mode ROOM as a clear public tab and panel", () => {
     expect(html).toContain('id="tab-rooms"');
     expect(html).toContain('id="panel-rooms"');
+    expect(html).toContain('id="rooms-shell"');
     expect(visibleHtml).toContain("Create a private room for a group");
     expect(visibleHtml).toContain("One temporary room, one invite link, many files");
     expect(html).toContain("publicRoomInviteUrl");
@@ -85,6 +86,25 @@ describe("standalone web transfer mode", () => {
     expect(html).toContain("createPublicRoom");
     expect(html).toContain('"rooms.title"');
     expect(packagedHtml).toContain('id="panel-rooms"');
+  });
+
+  it("uses a Discord-style room shell with conditional room list and avatars", () => {
+    for (const token of [
+      "rooms-shell",
+      "public-room-list-panel",
+      "public-room-list",
+      "has-room-list",
+      "showRoomList = roomEntries.length > 1",
+      "publicRoomDirectory",
+      "setPublicRoomAvatar",
+      "public-room-avatar-picker",
+      "PUBLIC_ROOM_AVATARS",
+      "12 users maximum",
+      "rooms.maxUsersTitle",
+    ]) {
+      expect(html).toContain(token);
+      expect(packagedHtml).toContain(token);
+    }
   });
 
   it("connects public rooms to live signaling presence", () => {
