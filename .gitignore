@@ -41,3 +41,6 @@ Capture*.gif
 # Shuttle secrets — never commit
 mailer/Secrets.toml
 Secrets.toml
+
+# Stray nested clone on some machines (old pre-cleanup checkout)
+/filenymous/
