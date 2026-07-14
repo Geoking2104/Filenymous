@@ -3663,9 +3663,12 @@ async function transformWebInlineBytes(bytes, mode) {
     ? new CompressionStream('gzip')
     : new DecompressionStream('gzip');
   const writer = stream.writable.getWriter();
+  // Start consuming the readable side BEFORE awaiting write(): Chrome only
+  // resolves write() once the chunk is pulled, so awaiting it first deadlocks.
+  const result = new Response(stream.readable).arrayBuffer();
   await writer.write(bytes);
   await writer.close();
-  return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+  return new Uint8Array(await result);
 }
 
 async function compressWebInlineBytes(bytes) {
