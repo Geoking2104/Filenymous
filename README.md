@@ -2,8 +2,8 @@
 
 P2P web app for sending and receiving encrypted files without an account, without a native installer, and without requiring a local Holochain conductor.
 
-- OVH site: https://filenymous.eu/
-- GitHub Pages: https://geoking2104.github.io/Filenymous/
+- OVH site: https://filenymous.eu/ (landing) - app at https://filenymous.eu/app/
+- GitHub Pages mirror: https://geoking2104.github.io/Filenymous/ (landing) - app at https://geoking2104.github.io/Filenymous/app/
 - Releases: https://github.com/Geoking2104/Filenymous/releases/latest
 
 ## Positioning

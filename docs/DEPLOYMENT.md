@@ -15,8 +15,9 @@ Verified facts (2026-07-14) — how the public site is actually hosted and updat
 
 ## What gets deployed
 
-- The site is the **standalone single-file app**: `docs/demo/index.html` from the repo,
-  uploaded as `www/index.html`. Nothing else is required.
+- The site has two files since the 2026-07 redesign:
+  - `docs/demo/index.html` (dark landing page) -> upload as `www/index.html`
+  - `docs/demo/app/index.html` (the standalone app) -> upload as `www/app/index.html`
 - The React app (`ui/`) is NOT what filenymous.eu serves.
 - Mirror: GitHub Pages auto-publishes `docs/demo/` via `.github/workflows/pages.yml`
   on every push to `main` → https://geoking2104.github.io/Filenymous/

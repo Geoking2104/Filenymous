@@ -24,7 +24,7 @@ jobs:
           root = Path.cwd()
           workdir = root / "workdir"
           workdir.mkdir(exist_ok=True)
-          app_html = (root / "docs" / "demo" / "index.html").read_text(encoding="utf-8")
+          app_html = (root / "docs" / "demo" / "app" / "index.html").read_text(encoding="utf-8")
 
           def write_zip(zip_name, files):
               with ZipFile(workdir / zip_name, "w", ZIP_DEFLATED) as archive:
