@@ -16,6 +16,7 @@ import SendPanel          from "./components/SendPanel";
 import ReceivePanel       from "./components/ReceivePanel";
 import HistoryPanel       from "./components/HistoryPanel";
 import IdentityPanel      from "./components/IdentityPanel";
+import ContactsPanel       from "./components/ContactsPanel";
 import PrivacyPanel       from "./components/PrivacyPanel";
 import WalletPanel        from "./components/WalletPanel";
 
@@ -93,6 +94,10 @@ const CSS = `
   .tab-icon[data-icon="room"]::after { inset:6px 1px 1px 6px; border-radius:50%; background:currentColor; }
   .tab-icon[data-icon="list"]::before { inset:3px; }
   .tab-icon[data-icon="list"]::after { inset:5px 4px auto 4px; height:1.8px; background:currentColor; box-shadow:0 4px 0 currentColor,0 8px 0 currentColor; border:0; }
+  .tab-icon[data-icon="contacts"]::before { border-radius:50%; inset:2px 5px 6px 5px; }
+  .tab-icon[data-icon="contacts"]::after { inset:auto 2px 1px 2px; height:5px; border-width:1.8px 1.8px 0 1.8px; border-radius:6px 6px 0 0; }
+  .tab-icon[data-icon="id"]::before { inset:2px; border-radius:4px; }
+  .tab-icon[data-icon="id"]::after { inset:5px auto auto 5px; width:4px; height:4px; border-radius:50%; background:currentColor; border:0; box-shadow:6px 1px 0 -1px currentColor, 6px 4px 0 -1px currentColor; }
   .tab-icon[data-icon="gear"]::before { border-radius:50%; }
   .tab-icon[data-icon="gear"]::after { inset:6px; border-radius:50%; background:currentColor; border:0; }
   .advanced-grid { display:grid; gap:1rem; }
@@ -204,6 +209,8 @@ export default function App() {
           {tab === "send"     && <SendPanel />}
           {tab === "receive"  && <ReceivePanel />}
           {tab === "rooms"    && <RoomPanel />}
+          {tab === "contacts" && <ContactsPanel />}
+          {tab === "identity" && <IdentityPanel />}
           {tab === "history"  && <HistoryPanel />}
           {tab === "advanced" && <AdvancedPanel />}
         </main>

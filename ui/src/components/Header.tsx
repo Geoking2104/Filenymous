@@ -9,6 +9,8 @@ const tabs: Array<{ id: Tab; label: string; icon: string }> = [
   { id: "send", label: "Send", icon: "up" },
   { id: "receive", label: "Receive", icon: "down" },
   { id: "rooms", label: "Rooms", icon: "room" },
+  { id: "contacts", label: "Contacts", icon: "contacts" },
+  { id: "identity", label: "Identity", icon: "id" },
   { id: "history", label: "History", icon: "list" },
   { id: "advanced", label: "Advanced", icon: "gear" },
 ];

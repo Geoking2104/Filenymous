@@ -2,7 +2,12 @@ import { useState, useEffect } from "react";
 import { hashContact }          from "../crypto/contact";
 import { identityZome }         from "../holochain/identity";
 import { useStore }             from "../store/useStore";
-import { loadOrCreateKeyPair, loadPublicKeyBytes } from "../crypto/keystore";
+import {
+  loadOrCreateKeyPair,
+  loadPublicKeyBytes,
+  exportKeyPairBackup,
+  importKeyPairBackup,
+} from "../crypto/keystore";
 
 declare const __BRIDGE_URL__: string;
 
@@ -19,6 +24,8 @@ export default function IdentityPanel() {
   const [pkCopied,   setPkCopied]   = useState(false);
   const [loading,    setLoading]    = useState(false);
   const [x25519Pub,  setX25519Pub]  = useState<string | null>(null);
+  const [keyBusy,    setKeyBusy]    = useState(false);
+  const [published,  setPublished]  = useState(false);
 
   // M3: Load or display existing X25519 public key on mount
   useEffect(() => {
@@ -26,6 +33,53 @@ export default function IdentityPanel() {
       if (bytes) setX25519Pub(toBase64(bytes));
     }).catch(() => {/* no key yet */});
   }, []);
+
+  /** M3 — generate (or load) the local X25519 keypair without requiring an OTP flow. */
+  const generateKey = async () => {
+    setKeyBusy(true);
+    try {
+      const { publicKeyBytes } = await loadOrCreateKeyPair();
+      setX25519Pub(toBase64(publicKeyBytes));
+      setPublished(false);
+    } catch (e) { alert("Erreur generation de cle : " + String(e)); }
+    finally { setKeyBusy(false); }
+  };
+
+  /** M3 — publish the local X25519 public key on the DHT (requires conductor). */
+  const publishKey = async () => {
+    if (!x25519Pub) return;
+    setKeyBusy(true);
+    try {
+      await identityZome.publishX25519Key(x25519Pub);
+      setPublished(true);
+    } catch (e) { alert("Publication impossible — verifiez la connexion au conducteur Holochain : " + String(e)); }
+    finally { setKeyBusy(false); }
+  };
+
+  /** Backup — download the keypair as filenymous-keys.json (private key included). */
+  const exportKeys = async () => {
+    const backup = await exportKeyPairBackup();
+    if (!backup) { alert("Aucune cle a exporter — generez d'abord votre cle X25519."); return; }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = "filenymous-keys.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /** Backup — restore a keypair from a filenymous-keys.json file. */
+  const importKeys = async (file: File) => {
+    try {
+      const data = JSON.parse(await file.text());
+      if (!data.publicKey || !data.privateKey) throw new Error("Fichier de sauvegarde invalide");
+      await importKeyPairBackup(data.publicKey, data.privateKey);
+      setX25519Pub(data.publicKey);
+      setPublished(false);
+      alert("Cles importees. Pensez a republier votre cle publique sur le DHT si necessaire.");
+    } catch (e) { alert("Import impossible : " + String(e)); }
+  };
 
   const validContact = (v: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+[1-9]\d{7,14}$/.test(v);
@@ -111,9 +165,41 @@ export default function IdentityPanel() {
           </div>
         ) : (
           <div className="info-box">
-            ⚠️ Aucune clé X25519 — liez d'abord un contact pour générer votre clé de chiffrement.
+            ⚠️ Aucune clé X25519 — générez votre clé ci-dessous, ou liez un contact (la clé sera créée automatiquement).
           </div>
         )}
+
+        <div style={{ display:"flex", gap:".6rem", marginTop:".8rem", flexWrap:"wrap" }}>
+          <button className="btn-ghost" disabled={keyBusy || !!x25519Pub} onClick={generateKey}>
+            {keyBusy && !x25519Pub ? <span className="spin" /> : "Générer ma clé X25519"}
+          </button>
+          <button className="btn-primary" disabled={keyBusy || !x25519Pub || published} onClick={publishKey}>
+            {published ? "✓ Publiée sur le DHT" : keyBusy && x25519Pub ? <span className="spin" /> : "Publier sur le DHT"}
+          </button>
+        </div>
+        <p style={{ fontSize:".74rem", color:"var(--muted)", marginTop:".5rem" }}>
+          Votre clé privée ne quitte jamais ce navigateur (IndexedDB). Seule la clé publique est publiée sur Holochain.
+        </p>
+      </div>
+
+      {/* Mes clés — sauvegarde / restauration */}
+      <div className="card">
+        <div className="card-label">Mes clés (sauvegarde)</div>
+        <div style={{ display:"flex", gap:".6rem", flexWrap:"wrap" }}>
+          <button className="btn-ghost" onClick={exportKeys}>Exporter mes clés</button>
+          <label className="btn-ghost" style={{ display:"inline-flex", alignItems:"center", cursor:"pointer", margin:0 }}>
+            Importer mes clés
+            <input
+              type="file"
+              accept=".json"
+              style={{ display:"none" }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) importKeys(f); e.target.value = ""; }}
+            />
+          </label>
+        </div>
+        <p style={{ fontSize:".74rem", color:"var(--muted)", marginTop:".5rem" }}>
+          Le fichier exporté contient votre <strong>clé privée</strong>. Conservez-le en lieu sûr et ne le partagez jamais.
+        </p>
       </div>
 
       {/* Contacts liés */}

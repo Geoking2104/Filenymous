@@ -19,7 +19,7 @@
  *   5. L'utilisateur partage ce lien par son propre canal (email, SMS…)
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { hashContact }                          from "../crypto/contact";
 import { generateAesKey, exportAesKey }         from "../crypto/aes";
 import { encryptFile }                          from "../crypto/chunker";
@@ -53,7 +53,9 @@ function encodeB64Url(bytes: Uint8Array): string {
 }
 
 export default function SendPanel() {
-  const addParcel = useStore((s) => s.addParcel);
+  const addParcel           = useStore((s) => s.addParcel);
+  const selectedRecipient   = useStore((s) => s.selectedRecipient);
+  const setSelectedRecipient = useStore((s) => s.setSelectedRecipient);
 
   const [files,       setFiles]       = useState<File[]>([]);
   const [recipient,   setRecipient]   = useState("");
@@ -84,6 +86,15 @@ export default function SendPanel() {
       } catch { setResolvedKey(false); }
     }, 800);
   };
+
+  // Pre-remplit le destinataire quand on arrive depuis l'onglet Contacts
+  useEffect(() => {
+    if (selectedRecipient) {
+      handleRecipientChange(selectedRecipient);
+      setSelectedRecipient("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRecipient]);
 
   const addFiles = (fs: File[]) => {
     const total = [...files, ...fs].reduce((s, f) => s + f.size, 0);

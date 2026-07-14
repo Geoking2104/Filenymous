@@ -138,6 +138,42 @@ export async function loadPublicKeyBytes(): Promise<Uint8Array | null> {
 /**
  * Wipe the keypair from IndexedDB (RGPD erasure or key rotation).
  */
+/**
+ * Export the stored keypair as base64 strings for user-controlled backup
+ * (downloaded as filenymous-keys.json). Returns null if no keypair exists.
+ *
+ * Security note: the backup file contains the PRIVATE key. It must stay
+ * under the user's exclusive control.
+ */
+export async function exportKeyPairBackup(): Promise<{ publicKey: string; privateKey: string } | null> {
+  const db = await openDb();
+  const priv = await idbGet(db, KEY_ID + "_priv");
+  const pub  = await idbGet(db, KEY_ID + "_pub");
+  if (!priv || !pub) return null;
+  const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u));
+  return { publicKey: b64(pub), privateKey: b64(priv) };
+}
+
+/**
+ * Import a keypair backup (as produced by exportKeyPairBackup) and persist
+ * it in IndexedDB, replacing any existing keypair. Both keys are validated
+ * by importing them through WebCrypto before anything is written.
+ */
+export async function importKeyPairBackup(publicKeyB64: string, privateKeyB64: string): Promise<void> {
+  const fromB64 = (v: string) => Uint8Array.from(atob(v), (c) => c.charCodeAt(0));
+  const pubRaw    = fromB64(publicKeyB64);
+  const privPkcs8 = fromB64(privateKeyB64);
+
+  if (pubRaw.length !== 32) throw new Error("Invalid X25519 public key (expected 32 raw bytes)");
+  // Validate both keys — throws if malformed
+  await importX25519PrivateKey(privPkcs8);
+  await crypto.subtle.importKey("raw", toArrayBuffer(pubRaw), { name: "X25519" }, true, []);
+
+  const db = await openDb();
+  await idbPut(db, KEY_ID + "_pub",  pubRaw);
+  await idbPut(db, KEY_ID + "_priv", privPkcs8);
+}
+
 export async function deleteKeyPair(): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
