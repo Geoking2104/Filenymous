@@ -1,3 +1,7 @@
-# Lock the demo bundle to CRLF to avoid noisy whole-file diffs when
-# edited from tools with different default line-ending conventions.
-docs/demo/app/index.html text eol=crlf
+# Byte-locked bundles (-text): git must NEVER convert their line endings.
+# Their blobs are committed with CRLF on purpose (portable web bundles).
+# The previous attribute (text eol=crlf) contradicted the CRLF blobs and
+# caused a permanent phantom "modified" state that silently broke pulls
+# on every clone.
+docs/demo/app/index.html -text
+filenymous-app.html -text
