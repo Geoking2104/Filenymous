@@ -98,6 +98,14 @@
       .side { display: none; }
     }
   </style>
+  <script>
+    // Legacy magic links pointed at the site root (filenymous.eu/#w2:... or #eh:key).
+    // The root is now the landing page: forward any transfer fragment to the app,
+    // preserving the hash (it never reaches the server).
+    if (location.hash && location.hash.includes(':')) {
+      location.replace('./app/' + location.hash);
+    }
+  </script>
 </head>
 <body>
 
