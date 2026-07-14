@@ -1108,8 +1108,10 @@
     <button id="tab-room"     class="active" onclick="showTab('room')" data-i18n="nav.send">Send</button>
     <button id="tab-receive"  onclick="showTab('receive')" data-i18n="nav.receive">Receive</button>
     <button id="tab-rooms"    onclick="showTab('rooms')" data-i18n="nav.rooms">Rooms</button>
+    <button id="tab-contacts" onclick="showTab('contacts')" data-i18n="nav.contacts">Contacts</button>
+    <button id="tab-identity" onclick="showTab('identity')" data-i18n="nav.identity">Identity</button>
     <button id="tab-history"  onclick="showTab('history')"><span data-i18n="nav.history">History</span><span id="hist-count"></span></button>
-    <button id="tab-identity" onclick="showTab('identity')" data-i18n="nav.advanced">Advanced</button>
+    <button id="tab-advanced" onclick="showTab('advanced')" data-i18n="nav.advanced">Advanced</button>
   </nav>
   <label class="language-picker" for="language-select">
     <span data-i18n="nav.language">Language</span>
@@ -1423,6 +1425,10 @@
       <input type="text" id="recipient" placeholder="alice@example.com or +33612345678" />
     </div>
     <p class="muted mt-2" data-i18n="send.recipientHelp">You can leave this empty: Filenymous creates a code or link you share yourself.</p>
+    <div id="send-contact-notice" class="status success hidden" style="margin-top:10px; font-size:12px; display:flex; align-items:center; gap:8px;">
+      <span id="send-contact-notice-text" style="flex:1;"></span>
+      <button class="btn btn-secondary btn-sm" onclick="clearSendContact()" data-i18n="contacts.clear">Clear</button>
+    </div>
   </div>
 
   <div class="card">
@@ -1607,7 +1613,7 @@
   </div>
 </section>
 
-<section id="panel-identity" class="panel">
+<section id="panel-advanced" class="panel">
 
   <div class="card">
     <h2 class="section-title" data-i18n="advanced.title">Advanced networks</h2>
@@ -1706,6 +1712,72 @@
       </div>
     </div>
 
+  </div>
+</section>
+
+<section id="panel-identity" class="panel">
+
+  <div class="card">
+    <h2 class="section-title" data-i18n="identity.title">Your sovereign identity</h2>
+    <p class="muted" data-i18n="identity.intro">Generate a local X25519 keypair to receive end-to-end encrypted transfers. Your private key never leaves this browser. Share your identity code so contacts can encrypt files directly for you.</p>
+  </div>
+
+  <div class="card">
+    <p class="card-title" data-i18n="identity.codeTitle">My identity code (X25519 public key)</p>
+    <div id="identity-status" class="status info" style="margin-bottom:12px; font-size:12px;">
+      <span data-i18n="common.loading">Loading...</span>
+    </div>
+    <div class="link-box">
+      <code id="identity-code" class="sender-id-mono" data-i18n="identity.noKey">No key yet</code>
+      <button class="btn btn-secondary btn-sm" onclick="idCopyCode()" data-i18n="common.copy">Copy</button>
+    </div>
+    <div class="row mt-3">
+      <button id="identity-gen-btn" class="btn btn-primary flex-1" onclick="idGenerateKey()" data-i18n="identity.generate">Generate my key</button>
+    </div>
+    <p class="muted mt-2" data-i18n="identity.codeHelp">Send this code to your contacts (email, chat...). They add it in their Contacts tab to send you end-to-end encrypted files.</p>
+  </div>
+
+  <div class="card">
+    <p class="card-title" data-i18n="identity.backupTitle">My keys (backup)</p>
+    <div class="row">
+      <button class="btn btn-secondary flex-1" onclick="idExportKeys()" data-i18n="identity.export">Export my keys</button>
+      <button class="btn btn-secondary flex-1" onclick="document.getElementById('identity-import-file').click()" data-i18n="identity.import">Import my keys</button>
+      <input type="file" id="identity-import-file" accept=".json,application/json" hidden onchange="idImportKeys(event)" />
+    </div>
+    <p class="muted mt-2" data-i18n="identity.backupHelp">The exported file contains your private key. Keep it safe and never share it.</p>
+  </div>
+
+  <div class="card">
+    <p class="card-title" data-i18n="identity.dhtTitle">Holochain DHT publication</p>
+    <p class="muted" data-i18n="identity.dhtHelp">With a Holochain conductor or Holo Web Conductor, you can also publish your key on the DHT so senders find you by email or phone hash. See the Advanced tab.</p>
+    <button class="btn btn-secondary mt-2" onclick="showTab('advanced')" data-i18n="nav.advanced">Advanced</button>
+  </div>
+</section>
+
+<section id="panel-contacts" class="panel">
+
+  <div class="card">
+    <h2 class="section-title" data-i18n="contacts.title">My contacts</h2>
+    <p class="muted" data-i18n="contacts.intro">Add the people you send files to. With their identity code, the file key is encrypted end-to-end for them (ECIES) - the link alone is no longer enough to decrypt.</p>
+  </div>
+
+  <div class="card">
+    <p class="card-title" data-i18n="contacts.addTitle">Add a contact</p>
+    <div class="field">
+      <label for="contact-label-input" data-i18n="contacts.labelField">Name or email</label>
+      <input type="text" id="contact-label-input" placeholder="Alice - alice@example.com" />
+    </div>
+    <div class="field">
+      <label for="contact-code-input" data-i18n="contacts.codeField">Identity code (your contact finds it in their Identity tab)</label>
+      <input type="text" id="contact-code-input" placeholder="X25519 public key (base64)" />
+    </div>
+    <button class="btn btn-primary btn-full mt-2" onclick="contactAdd()" data-i18n="contacts.add">Add contact</button>
+    <div id="contact-add-status" class="hidden mt-3"></div>
+  </div>
+
+  <div class="card">
+    <p class="card-title" data-i18n="contacts.listTitle">Contacts</p>
+    <div id="contacts-list"></div>
   </div>
 </section>
 
@@ -1837,7 +1909,7 @@
      <a href="https://github.com/Geoking2104/Filenymous" target="_blank" rel="noopener">Source code</a> ?
      <a href="https://www.iroh.computer/" target="_blank" rel="noopener">Iroh</a> -
      <button type="button" class="footer-link" onclick="showTab('privacy')">Security</button> -
-     <button type="button" class="footer-link" onclick="showTab('identity')">Advanced</button></p>
+     <button type="button" class="footer-link" onclick="showTab('advanced')">Advanced</button></p>
 </footer>
 
 <!-- TweetNaCl (X25519 / ECIES + Ed25519 sender ID) — chargé avant le module -->
@@ -3617,7 +3689,7 @@ async function decompressWebInlineBytes(bytes, compression) {
   return transformWebInlineBytes(bytes, 'decompress');
 }
 
-async function createWebParcelLink(file, message) {
+async function createWebParcelLink(file, message, recipContact = null) {
   if (file.size > CFG.webInlineMaxBytes) {
     throw new Error(`File too large for a self-contained link (${fmtBytes(CFG.webInlineMaxBytes)} max).`);
   }
@@ -3638,12 +3710,20 @@ async function createWebParcelLink(file, message) {
     r: S.senderId || '',
     m: message || '',
   };
+  let keyPart = b64e(keyBytes);
+  if (recipContact?.code) {
+    // Sovereign contact mode: the AES key travels ECIES-encrypted for the
+    // recipient's X25519 identity - the link alone can no longer decrypt.
+    keyPart = 'e1!' + await eciesWrap(keyBytes, b64d(recipContact.code));
+    meta.c  = String(recipContact.label || '').slice(0, 60);
+  }
   const metaB64 = b64e(new TextEncoder().encode(JSON.stringify(meta)));
   const dataB64 = b64e(enc);
   return {
     id: `w2:${metaB64}:${dataB64}`,
     keyBytes,
-    url: `${location.origin}${location.pathname}#w2:${metaB64}:${dataB64}:${b64e(keyBytes)}`,
+    e2eContact: recipContact?.label || '',
+    url: `${location.origin}${location.pathname}#w2:${metaB64}:${dataB64}:${keyPart}`,
   };
 }
 
@@ -3667,7 +3747,9 @@ function parseWebParcelLink(hash) {
         compression: meta.z || 'none',
         compressedSize: meta.cs || 0,
       },
-      keyBytes: b64d(keyB64),
+      keyBytes: keyB64.startsWith('e1!') ? null : b64d(keyB64),
+      eciesBlob: keyB64.startsWith('e1!') ? keyB64.slice(3) : '',
+      eciesTo: meta.c || '',
     };
   }
   if (!hash.startsWith('w1:')) return null;
@@ -3983,6 +4065,53 @@ window.FILENYMOUS_I18N = {
     "advanced.generatePublish": "Generate and publish",
     "advanced.x25519Present": "X25519 key is present in this browser",
     "advanced.x25519Missing": "No X25519 key yet - generate one to receive in agent mode",
+    "nav.contacts": "Contacts",
+    "nav.identity": "Identity",
+    "identity.title": "Your sovereign identity",
+    "identity.intro": "Generate a local X25519 keypair to receive end-to-end encrypted transfers. Your private key never leaves this browser. Share your identity code so contacts can encrypt files directly for you.",
+    "identity.codeTitle": "My identity code (X25519 public key)",
+    "identity.noKey": "No key yet",
+    "identity.keyPresent": "Key present in this browser - you can receive end-to-end encrypted transfers.",
+    "identity.keyMissing": "No key yet - generate one to get your identity code.",
+    "identity.generate": "Generate my key",
+    "identity.regenerate": "Regenerate (replaces the current key)",
+    "identity.regenConfirm": "Replace your current key? Contacts using your old identity code will no longer be able to encrypt for you, and links encrypted for the old key become unreadable.",
+    "identity.generated": "X25519 key generated and stored locally.",
+    "identity.copied": "Identity code copied.",
+    "identity.codeHelp": "Send this code to your contacts (email, chat...). They add it in their Contacts tab to send you end-to-end encrypted files.",
+    "identity.backupTitle": "My keys (backup)",
+    "identity.export": "Export my keys",
+    "identity.import": "Import my keys",
+    "identity.exported": "Keys exported. Keep this file safe: it contains your private key.",
+    "identity.imported": "Keys imported.",
+    "identity.importInvalid": "Invalid backup file.",
+    "identity.importMismatch": "The public and private keys in this file do not match.",
+    "identity.backupHelp": "The exported file contains your private key. Keep it safe and never share it.",
+    "identity.dhtTitle": "Holochain DHT publication",
+    "identity.dhtHelp": "With a Holochain conductor or Holo Web Conductor, you can also publish your key on the DHT so senders find you by email or phone hash. See the Advanced tab.",
+    "contacts.title": "My contacts",
+    "contacts.intro": "Add the people you send files to. With their identity code, the file key is encrypted end-to-end for them (ECIES) - the link alone is no longer enough to decrypt.",
+    "contacts.addTitle": "Add a contact",
+    "contacts.labelField": "Name or email",
+    "contacts.codeField": "Identity code (your contact finds it in their Identity tab)",
+    "contacts.add": "Add contact",
+    "contacts.added": "Contact added. You can now send end-to-end encrypted files to this person.",
+    "contacts.invalidCode": "Invalid identity code: expected a 32-byte X25519 public key in base64.",
+    "contacts.duplicate": "This identity code is already in your contacts.",
+    "contacts.defaultLabel": "Contact",
+    "contacts.listTitle": "Contacts",
+    "contacts.empty": "No contacts yet. Ask them for their identity code (Identity tab) and add it here.",
+    "contacts.e2eReady": "End-to-end encryption ready",
+    "contacts.send": "Send",
+    "contacts.remove": "Remove",
+    "contacts.removeConfirm": "Remove {name} from your contacts? (local only)",
+    "contacts.clear": "Clear",
+    "contacts.selected": "Files will be encrypted end-to-end for this contact.",
+    "contacts.sendingTo": "End-to-end encrypted for:",
+    "contacts.linkEncrypted": "Link encrypted end-to-end for {name}.",
+    "receive.modeContact": "Encrypted for contact",
+    "receive.eciesNoKey": "This link is end-to-end encrypted for a specific recipient. Open it in the browser holding your identity key, or import your keys in the Identity tab.",
+    "receive.eciesWrongKey": "Your identity key cannot open this link: it was encrypted for a different identity code.",
     "status.humanRequired": "Human verification required: check \"I am human\", then start again from this button.",
     "status.humanToast": "Human verification required."
   },
@@ -4253,6 +4382,53 @@ window.FILENYMOUS_I18N = {
     "advanced.generatePublish": "Générer et publier",
     "advanced.x25519Present": "La clé X25519 est présente dans ce navigateur",
     "advanced.x25519Missing": "Aucune clé X25519 pour l'instant - générez-en une pour recevoir en mode agent",
+    "nav.contacts": "Contacts",
+    "nav.identity": "Identité",
+    "identity.title": "Votre identité souveraine",
+    "identity.intro": "Générez une paire de clés X25519 locale pour recevoir des transferts chiffrés de bout en bout. Votre clé privée ne quitte jamais ce navigateur. Partagez votre code d'identité pour que vos contacts chiffrent directement pour vous.",
+    "identity.codeTitle": "Mon code d'identité (clé publique X25519)",
+    "identity.noKey": "Aucune clé pour l'instant",
+    "identity.keyPresent": "Clé présente dans ce navigateur - vous pouvez recevoir des transferts chiffrés de bout en bout.",
+    "identity.keyMissing": "Aucune clé - générez-en une pour obtenir votre code d'identité.",
+    "identity.generate": "Générer ma clé",
+    "identity.regenerate": "Régénérer (remplace la clé actuelle)",
+    "identity.regenConfirm": "Remplacer votre clé actuelle ? Les contacts qui utilisent votre ancien code ne pourront plus chiffrer pour vous, et les liens chiffrés pour l'ancienne clé deviendront illisibles.",
+    "identity.generated": "Clé X25519 générée et stockée localement.",
+    "identity.copied": "Code d'identité copié.",
+    "identity.codeHelp": "Envoyez ce code à vos contacts (email, messagerie...). Ils l'ajoutent dans leur onglet Contacts pour vous envoyer des fichiers chiffrés de bout en bout.",
+    "identity.backupTitle": "Mes clés (sauvegarde)",
+    "identity.export": "Exporter mes clés",
+    "identity.import": "Importer mes clés",
+    "identity.exported": "Clés exportées. Conservez ce fichier en lieu sûr : il contient votre clé privée.",
+    "identity.imported": "Clés importées.",
+    "identity.importInvalid": "Fichier de sauvegarde invalide.",
+    "identity.importMismatch": "Les clés publique et privée de ce fichier ne correspondent pas.",
+    "identity.backupHelp": "Le fichier exporté contient votre clé privée. Conservez-le en lieu sûr et ne le partagez jamais.",
+    "identity.dhtTitle": "Publication sur la DHT Holochain",
+    "identity.dhtHelp": "Avec un conducteur Holochain ou le Holo Web Conductor, vous pouvez aussi publier votre clé sur la DHT pour être trouvé via le hash de votre email ou téléphone. Voir l'onglet Avancé.",
+    "contacts.title": "Mes contacts",
+    "contacts.intro": "Ajoutez les personnes à qui vous envoyez des fichiers. Avec leur code d'identité, la clé du fichier est chiffrée de bout en bout pour elles (ECIES) - le lien seul ne suffit plus à déchiffrer.",
+    "contacts.addTitle": "Ajouter un contact",
+    "contacts.labelField": "Nom ou email",
+    "contacts.codeField": "Code d'identité (votre contact le trouve dans son onglet Identité)",
+    "contacts.add": "Ajouter le contact",
+    "contacts.added": "Contact ajouté. Vous pouvez maintenant lui envoyer des fichiers chiffrés de bout en bout.",
+    "contacts.invalidCode": "Code d'identité invalide : clé publique X25519 de 32 octets en base64 attendue.",
+    "contacts.duplicate": "Ce code d'identité est déjà dans vos contacts.",
+    "contacts.defaultLabel": "Contact",
+    "contacts.listTitle": "Contacts",
+    "contacts.empty": "Aucun contact. Demandez-leur leur code d'identité (onglet Identité) et ajoutez-le ici.",
+    "contacts.e2eReady": "Chiffrement de bout en bout prêt",
+    "contacts.send": "Envoyer",
+    "contacts.remove": "Retirer",
+    "contacts.removeConfirm": "Retirer {name} de vos contacts ? (local uniquement)",
+    "contacts.clear": "Retirer",
+    "contacts.selected": "Les fichiers seront chiffrés de bout en bout pour ce contact.",
+    "contacts.sendingTo": "Chiffré de bout en bout pour :",
+    "contacts.linkEncrypted": "Lien chiffré de bout en bout pour {name}.",
+    "receive.modeContact": "Chiffré pour un contact",
+    "receive.eciesNoKey": "Ce lien est chiffré de bout en bout pour un destinataire précis. Ouvrez-le dans le navigateur qui détient votre clé d'identité, ou importez vos clés dans l'onglet Identité.",
+    "receive.eciesWrongKey": "Votre clé d'identité ne peut pas ouvrir ce lien : il a été chiffré pour un autre code d'identité.",
     "status.humanRequired": "Vérification humaine requise : cochez \"Je suis humain\", puis relancez depuis ce bouton.",
     "status.humanToast": "Vérification humaine requise."
   },
@@ -4523,6 +4699,53 @@ window.FILENYMOUS_I18N = {
     "advanced.generatePublish": "생성 및 게시",
     "advanced.x25519Present": "이 브라우저에 X25519 키가 있습니다",
     "advanced.x25519Missing": "아직 X25519 키가 없습니다. 에이전트 모드로 받으려면 키를 생성하세요",
+    "nav.contacts": "연락처",
+    "nav.identity": "신원",
+    "identity.title": "나의 주권 신원",
+    "identity.intro": "로컬 X25519 키 쌍을 생성하여 종단 간 암호화된 전송을 받으세요. 개인 키는 이 브라우저를 떠나지 않습니다. 신원 코드를 공유하면 연락처가 나를 위해 직접 암호화할 수 있습니다.",
+    "identity.codeTitle": "내 신원 코드 (X25519 공개 키)",
+    "identity.noKey": "아직 키가 없습니다",
+    "identity.keyPresent": "이 브라우저에 키가 있습니다 - 종단 간 암호화 전송을 받을 수 있습니다.",
+    "identity.keyMissing": "키가 없습니다 - 생성하여 신원 코드를 받으세요.",
+    "identity.generate": "내 키 생성",
+    "identity.regenerate": "재생성 (현재 키 교체)",
+    "identity.regenConfirm": "현재 키를 교체할까요? 이전 코드를 쓰는 연락처는 더 이상 암호화할 수 없고, 이전 키로 암호화된 링크는 읽을 수 없게 됩니다.",
+    "identity.generated": "X25519 키가 생성되어 로컬에 저장되었습니다.",
+    "identity.copied": "신원 코드가 복사되었습니다.",
+    "identity.codeHelp": "이 코드를 연락처에게 보내세요. 상대가 연락처 탭에 추가하면 종단 간 암호화 파일을 보낼 수 있습니다.",
+    "identity.backupTitle": "내 키 (백업)",
+    "identity.export": "내 키 내보내기",
+    "identity.import": "내 키 가져오기",
+    "identity.exported": "키를 내보냈습니다. 개인 키가 포함되어 있으니 안전하게 보관하세요.",
+    "identity.imported": "키를 가져왔습니다.",
+    "identity.importInvalid": "잘못된 백업 파일입니다.",
+    "identity.importMismatch": "이 파일의 공개 키와 개인 키가 일치하지 않습니다.",
+    "identity.backupHelp": "내보낸 파일에는 개인 키가 포함됩니다. 안전하게 보관하고 절대 공유하지 마세요.",
+    "identity.dhtTitle": "Holochain DHT 게시",
+    "identity.dhtHelp": "Holochain 컨덕터 또는 Holo Web Conductor가 있으면 DHT에 키를 게시하여 이메일/전화 해시로 찾을 수 있습니다. 고급 탭을 참조하세요.",
+    "contacts.title": "내 연락처",
+    "contacts.intro": "파일을 보낼 사람을 추가하세요. 신원 코드가 있으면 파일 키가 상대를 위해 종단 간 암호화(ECIES)되어 링크만으로는 복호화할 수 없습니다.",
+    "contacts.addTitle": "연락처 추가",
+    "contacts.labelField": "이름 또는 이메일",
+    "contacts.codeField": "신원 코드 (상대의 신원 탭에서 확인)",
+    "contacts.add": "연락처 추가",
+    "contacts.added": "연락처가 추가되었습니다. 이제 종단 간 암호화 파일을 보낼 수 있습니다.",
+    "contacts.invalidCode": "잘못된 신원 코드: base64 형식의 32바이트 X25519 공개 키가 필요합니다.",
+    "contacts.duplicate": "이 신원 코드는 이미 연락처에 있습니다.",
+    "contacts.defaultLabel": "연락처",
+    "contacts.listTitle": "연락처",
+    "contacts.empty": "연락처가 없습니다. 상대에게 신원 코드(신원 탭)를 요청해 여기에 추가하세요.",
+    "contacts.e2eReady": "종단 간 암호화 준비 완료",
+    "contacts.send": "보내기",
+    "contacts.remove": "삭제",
+    "contacts.removeConfirm": "{name}을(를) 연락처에서 삭제할까요? (로컬만)",
+    "contacts.clear": "해제",
+    "contacts.selected": "파일이 이 연락처를 위해 종단 간 암호화됩니다.",
+    "contacts.sendingTo": "종단 간 암호화 대상:",
+    "contacts.linkEncrypted": "{name}을(를) 위해 링크가 종단 간 암호화되었습니다.",
+    "receive.modeContact": "연락처용 암호화",
+    "receive.eciesNoKey": "이 링크는 특정 수신자를 위해 종단 간 암호화되었습니다. 신원 키가 있는 브라우저에서 열거나 신원 탭에서 키를 가져오세요.",
+    "receive.eciesWrongKey": "내 신원 키로 이 링크를 열 수 없습니다: 다른 신원 코드로 암호화되었습니다.",
     "status.humanRequired": "사람 확인이 필요합니다. \"사람입니다\"를 체크한 뒤 이 버튼에서 다시 시작하세요.",
     "status.humanToast": "사람 확인이 필요합니다."
   }
@@ -4560,7 +4783,7 @@ function applyI18n(lang) {
   });
   if (typeof updateBadge === 'function') updateBadge();
   if (typeof renderSenderModeLabel === 'function') renderSenderModeLabel();
-  if ($('panel-identity')?.classList.contains('active') && typeof initIdentity === 'function') {
+  if ($('panel-advanced')?.classList.contains('active') && typeof initIdentity === 'function') {
     initIdentity().catch(() => {});
   }
 }
@@ -4590,16 +4813,18 @@ function fileIcon(name) {
 function showTab(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   $(`panel-${name}`).classList.add('active');
-  ['room', 'send', 'receive', 'rooms', 'history', 'identity', 'privacy'].forEach(t => {
+  ['room', 'send', 'receive', 'rooms', 'contacts', 'identity', 'advanced', 'history', 'privacy'].forEach(t => {
     const tab = $(`tab-${t}`);
     if (tab) tab.classList.toggle('active', t === name);
   });
-  if (name === 'identity') initIdentity();
+  if (name === 'advanced') initIdentity();
+  if (name === 'identity') renderIdentityPanel();
+  if (name === 'contacts') renderContactsPanel();
   if (name === 'receive')  checkReceiveHash();
   if (name === 'history')  renderHistory();
   if (name === 'rooms')    renderPublicRoom();
   // Rappel visuel du mode dans le panel send
-  if (name === 'send') updateSendNotice();
+  if (name === 'send') { updateSendNotice(); updateSendContactNotice(); }
 }
 
 function setStatus(id, type, msg) {
@@ -6385,7 +6610,7 @@ window.handleSend = async function (event, options = {}) {
   }
 
   if (S.mode === 'bridge') {
-    if (!options.preferWebLink && p2pSupported()) {
+    if (!options.preferWebLink && p2pSupported() && !S.sendContact) {
       btn.disabled = false;
       try {
         return await startP2PSend();
@@ -6425,7 +6650,8 @@ window.handleSend = async function (event, options = {}) {
       });
       setStatus('send-status', 'loading', 'Local AES-256 encryption - creating the anonymous web link...');
       const message = $('send-message').value.trim();
-      const out = await createWebParcelLink(S.file, message);
+      const out = await createWebParcelLink(S.file, message, S.sendContact?.code ? S.sendContact : null);
+      if (out.e2eContact) toast(trFormat('contacts.linkEncrypted', { name: out.e2eContact }, 'Link encrypted end-to-end for {name}.'));
       const recipRaw = $('recipient').value.trim();
 
       S.history.unshift({
@@ -6490,6 +6716,11 @@ window.handleSend = async function (event, options = {}) {
       // Mode bridge : stocker le hash du contact sans lookup DHT
       const norm  = recipRaw.includes('@') ? recipRaw.toLowerCase() : recipRaw;
       contactHash = await sha256hex(norm);
+    }
+
+    // Local address book: ECIES-wrap with the selected contact's identity key
+    if (!encKeyBlob && S.sendContact?.code) {
+      try { encKeyBlob = await eciesWrap(keyBytes, b64d(S.sendContact.code)); } catch (_) { /* ignore */ }
     }
 
     // Injection de l'ID expéditeur en préfixe structuré dans le message
@@ -6805,6 +7036,32 @@ async function checkReceiveHash() {
     const webParcel = parseWebParcelLink(hash);
     if (webParcel) {
       const { payload, keyBytes } = webParcel;
+      let useKey = keyBytes;
+      if (!useKey && webParcel.eciesBlob) {
+        const sk = await idb.get('x25519-sk').catch(() => null);
+        if (!sk) {
+          $('recv-empty').classList.add('hidden');
+          $('recv-auto').classList.remove('hidden');
+          $('recv-meta').innerHTML = '';
+          $('recv-msg-wrap').classList.add('hidden');
+          $('btn-download').disabled = true;
+          setStatus('recv-status', 'error', tr('receive.eciesNoKey',
+            'This link is end-to-end encrypted for a specific recipient. Open it in the browser holding your identity key, or import your keys in the Identity tab.'));
+          return;
+        }
+        try {
+          useKey = await eciesUnwrap(webParcel.eciesBlob, new Uint8Array(sk));
+        } catch (_) {
+          $('recv-empty').classList.add('hidden');
+          $('recv-auto').classList.remove('hidden');
+          $('recv-meta').innerHTML = '';
+          $('recv-msg-wrap').classList.add('hidden');
+          $('btn-download').disabled = true;
+          setStatus('recv-status', 'error', tr('receive.eciesWrongKey',
+            'Your identity key cannot open this link: it was encrypted for a different identity code.'));
+          return;
+        }
+      }
       $('recv-empty').classList.add('hidden');
       $('recv-auto').classList.remove('hidden');
       $('recv-msg-wrap').classList.add('hidden');
@@ -6814,7 +7071,7 @@ async function checkReceiveHash() {
       $('btn-download').disabled = false;
       S.parcel = {
         web: true,
-        keyBytes,
+        keyBytes: useKey,
         p: {
           download_count: 0,
           is_revoked: false,
@@ -6836,7 +7093,7 @@ async function checkReceiveHash() {
       $('recv-meta').innerHTML =
         `<div class="meta-item"><label>${esc(tr('receive.metaFile', 'File'))}</label><span>${esc(payload.name)}</span></div>` +
         `<div class="meta-item"><label>${esc(tr('receive.metaSize', 'Size'))}</label><span>${fmtBytes(payload.size)}</span></div>` +
-        `<div class="meta-item"><label>${esc(tr('receive.metaMode', 'Mode'))}</label><span>${esc(tr('receive.modeWeb', 'Anonymous web'))}</span></div>` +
+        `<div class="meta-item"><label>${esc(tr('receive.metaMode', 'Mode'))}</label><span>${esc(webParcel.eciesBlob ? tr('receive.modeContact', 'Encrypted for contact') : tr('receive.modeWeb', 'Anonymous web'))}</span></div>` +
         `<div class="meta-item"><label>${esc(tr('receive.metaStatus', 'Status'))}</label><span style="color:var(--success)">${esc(tr('receive.statusAvailable', 'Available'))}</span></div>` +
         (payload.sender
           ? `<div class="meta-item" style="grid-column:1/-1"><label>${esc(tr('receive.metaSender', 'Sender'))}</label>` +
@@ -7173,6 +7430,179 @@ window.genX25519 = async function () {
 window.copyAgent = () => {
   navigator.clipboard.writeText($('agent-key').textContent).then(() => toast('Agent key copied.'));
 };
+
+// ═══════════════════════════════════════════════════════════
+// IDENTITY & CONTACTS — sovereign mode, no conductor required
+// Reuses the same X25519 keystore slot ('x25519-sk') as agent mode.
+// ═══════════════════════════════════════════════════════════
+const CONTACTS_LS_KEY = 'filenymous.contacts.v1';
+
+function loadContacts() {
+  try {
+    const list = JSON.parse(localStorage.getItem(CONTACTS_LS_KEY) || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch (_) { return []; }
+}
+function saveContacts(list) { localStorage.setItem(CONTACTS_LS_KEY, JSON.stringify(list)); }
+
+async function idGetKeyPair() {
+  const sk = await idb.get('x25519-sk').catch(() => null);
+  if (!sk) return null;
+  try { return nacl().box.keyPair.fromSecretKey(new Uint8Array(sk)); }
+  catch (_) { return null; }
+}
+
+window.renderIdentityPanel = async function () {
+  const codeEl = $('identity-code');
+  const st     = $('identity-status');
+  const genBtn = $('identity-gen-btn');
+  if (!codeEl || !st) return;
+  const kp = await idGetKeyPair();
+  if (kp) {
+    codeEl.textContent = b64e(kp.publicKey);
+    st.className = 'status success';
+    st.innerHTML = `<span>${esc(tr('identity.keyPresent', 'Key present in this browser - you can receive end-to-end encrypted transfers.'))}</span>`;
+    if (genBtn) genBtn.textContent = tr('identity.regenerate', 'Regenerate (replaces the current key)');
+  } else {
+    codeEl.textContent = tr('identity.noKey', 'No key yet');
+    st.className = 'status warning';
+    st.innerHTML = `<span>${esc(tr('identity.keyMissing', 'No key yet - generate one to get your identity code.'))}</span>`;
+    if (genBtn) genBtn.textContent = tr('identity.generate', 'Generate my key');
+  }
+};
+
+window.idGenerateKey = async function () {
+  const existing = await idGetKeyPair();
+  if (existing && !confirm(tr('identity.regenConfirm',
+    'Replace your current key? Contacts using your old identity code will no longer be able to encrypt for you, and links encrypted for the old key become unreadable.'))) return;
+  const kp = nacl().box.keyPair();
+  await idb.set('x25519-sk', kp.secretKey);
+  toast(tr('identity.generated', 'X25519 key generated and stored locally.'));
+  renderIdentityPanel();
+};
+
+window.idCopyCode = async function () {
+  const kp = await idGetKeyPair();
+  if (!kp) { toast(tr('identity.keyMissing', 'No key yet - generate one to get your identity code.')); return; }
+  navigator.clipboard.writeText(b64e(kp.publicKey)).then(() =>
+    toast(tr('identity.copied', 'Identity code copied.')));
+};
+
+window.idExportKeys = async function () {
+  const sk = await idb.get('x25519-sk').catch(() => null);
+  if (!sk) { toast(tr('identity.keyMissing', 'No key yet - generate one to get your identity code.')); return; }
+  const kp   = nacl().box.keyPair.fromSecretKey(new Uint8Array(sk));
+  const data = { v: 1, app: 'filenymous', publicKey: b64e(kp.publicKey), privateKey: b64e(new Uint8Array(sk)) };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'filenymous-keys.json'; a.click();
+  URL.revokeObjectURL(url);
+  toast(tr('identity.exported', 'Keys exported. Keep this file safe: it contains your private key.'));
+};
+
+window.idImportKeys = async function (ev) {
+  const file = ev.target.files?.[0];
+  ev.target.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const sk   = b64d(String(data.privateKey || ''));
+    if (sk.length !== 32) throw new Error(tr('identity.importInvalid', 'Invalid backup file.'));
+    const kp = nacl().box.keyPair.fromSecretKey(sk);
+    if (data.publicKey && b64e(kp.publicKey) !== data.publicKey) {
+      throw new Error(tr('identity.importMismatch', 'The public and private keys in this file do not match.'));
+    }
+    await idb.set('x25519-sk', sk);
+    toast(tr('identity.imported', 'Keys imported.'));
+    renderIdentityPanel();
+  } catch (e) { toast(`\u274c ${e.message}`); }
+};
+
+window.renderContactsPanel = function () {
+  const el = $('contacts-list');
+  if (!el) return;
+  const list = loadContacts();
+  if (!list.length) {
+    el.innerHTML = `<div class="muted" style="padding:10px 0; font-size:13px;">${esc(tr('contacts.empty', 'No contacts yet. Ask them for their identity code (Identity tab) and add it here.'))}</div>`;
+    return;
+  }
+  el.innerHTML = list.map((c, i) => `
+    <div class="link-box" style="margin-bottom:8px; align-items:center; gap:8px;">
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis;">${esc(c.label)}</div>
+        <code class="sender-id-mono" style="font-size:11px;">${esc(String(c.code).slice(0, 22))}\u2026</code>
+        <div style="font-size:12px; color:var(--success);">${esc(tr('contacts.e2eReady', 'End-to-end encryption ready'))}</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="contactSendTo(${i})">${esc(tr('contacts.send', 'Send'))}</button>
+      <button class="btn btn-secondary btn-sm" onclick="contactCopy(${i})">${esc(tr('common.copy', 'Copy'))}</button>
+      <button class="btn btn-secondary btn-sm" style="color:var(--error);" onclick="contactRemove(${i})">${esc(tr('contacts.remove', 'Remove'))}</button>
+    </div>`).join('');
+};
+
+window.contactAdd = function () {
+  const labelEl = $('contact-label-input');
+  const codeEl  = $('contact-code-input');
+  const label   = labelEl.value.trim();
+  const code    = codeEl.value.trim();
+  let pub;
+  try { pub = b64d(code); } catch (_) { pub = new Uint8Array(0); }
+  if (pub.length !== 32) {
+    setStatus('contact-add-status', 'error', tr('contacts.invalidCode', 'Invalid identity code: expected a 32-byte X25519 public key in base64.'));
+    return;
+  }
+  const list = loadContacts();
+  if (list.some(c => c.code === code)) {
+    setStatus('contact-add-status', 'warning', tr('contacts.duplicate', 'This identity code is already in your contacts.'));
+    return;
+  }
+  list.push({ label: label || tr('contacts.defaultLabel', 'Contact'), code, added: Date.now() });
+  saveContacts(list);
+  labelEl.value = ''; codeEl.value = '';
+  setStatus('contact-add-status', 'success', tr('contacts.added', 'Contact added. You can now send end-to-end encrypted files to this person.'));
+  renderContactsPanel();
+};
+
+window.contactRemove = function (i) {
+  const list = loadContacts();
+  const c = list[i];
+  if (!c) return;
+  if (!confirm(trFormat('contacts.removeConfirm', { name: c.label }, 'Remove {name} from your contacts? (local only)'))) return;
+  list.splice(i, 1);
+  saveContacts(list);
+  renderContactsPanel();
+};
+
+window.contactCopy = function (i) {
+  const c = loadContacts()[i];
+  if (!c) return;
+  navigator.clipboard.writeText(c.code).then(() => toast(tr('identity.copied', 'Identity code copied.')));
+};
+
+window.contactSendTo = function (i) {
+  const c = loadContacts()[i];
+  if (!c) return;
+  S.sendContact = c;
+  showTab('send');
+  toast(tr('contacts.selected', 'Files will be encrypted end-to-end for this contact.'));
+};
+
+window.clearSendContact = function () {
+  S.sendContact = null;
+  updateSendContactNotice();
+};
+
+function updateSendContactNotice() {
+  const box = $('send-contact-notice');
+  if (!box) return;
+  if (S.sendContact) {
+    $('send-contact-notice-text').textContent =
+      tr('contacts.sendingTo', 'End-to-end encrypted for:') + ' ' + S.sendContact.label;
+    box.classList.remove('hidden');
+  } else {
+    box.classList.add('hidden');
+  }
+}
 
 // ═══════════════════════════════════════════════════════════
 // INIT
