@@ -139,7 +139,7 @@ export default function PendingNotices() {
           : null;
 
         return (
-          <div key={ehStr} style={{ display:"flex",alignItems:"flex-start",gap:".9rem",padding:"1rem 1.1rem",background:"#fff",border:"1px solid var(--border)",borderRadius:"12px",marginBottom:".6rem",boxShadow:"var(--shadow)" }}>
+          <div key={ehStr} style={{ display:"flex",alignItems:"flex-start",gap:".9rem",padding:"1rem 1.1rem",background:"rgba(255,255,255,.05)",border:"1px solid var(--border)",borderRadius:"14px",marginBottom:".6rem",boxShadow:"var(--shadow)" }}>
             <div style={{ width:"42px",height:"42px",borderRadius:"9px",background:"var(--grad-soft)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.3rem",flexShrink:0 }}>📄</div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:".9rem",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>

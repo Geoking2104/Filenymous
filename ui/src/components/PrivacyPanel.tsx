@@ -2,7 +2,7 @@ export default function PrivacyPanel() {
   return (
     <div>
       {/* Hero */}
-      <div style={{ background:"linear-gradient(135deg,#6366f1,#8b5cf6)",borderRadius:"16px",padding:"2.5rem 2rem",color:"#fff",marginBottom:"1.5rem",textAlign:"center" }}>
+      <div style={{ background:"linear-gradient(135deg,#0e7490,#0f766e)",borderRadius:"16px",padding:"2.5rem 2rem",color:"#fff",marginBottom:"1.5rem",textAlign:"center" }}>
         <h2 style={{ fontSize:"1.5rem",marginBottom:".5rem" }}>Confidentialité par conception</h2>
         <p style={{ fontSize:".9rem",opacity:.88,maxWidth:"480px",margin:"0 auto" }}>
           Filenymous n'est pas juste conforme au RGPD. Il est construit de façon à ce qu'il soit <em>structurellement impossible</em> pour un opérateur de lire vos fichiers.
@@ -37,7 +37,7 @@ export default function PrivacyPanel() {
             ["✓","Expiration & révocation cryptographiques"],
           ], highlight:true },
         ].map(({ title, items, highlight }) => (
-          <div key={title} style={{ background:"#fff",border:`${highlight?"2px solid #6366f1":"1px solid var(--border)"}`,borderRadius:"14px",padding:"1.2rem",boxShadow:"var(--shadow)" }}>
+          <div key={title} style={{ background:"rgba(255,255,255,.05)",border:`${highlight?"2px solid var(--g1)":"1px solid var(--border)"}`,borderRadius:"14px",padding:"1.2rem",boxShadow:"var(--shadow)" }}>
             <div style={{ fontSize:".82rem",fontWeight:700,marginBottom:".8rem",color:highlight?"#6366f1":"var(--text)" }}>{title}</div>
             {items.map(([mark, text]) => (
               <div key={text} style={{ display:"flex",gap:".5rem",fontSize:".78rem",marginBottom:".45rem",alignItems:"flex-start" }}>
@@ -62,7 +62,7 @@ export default function PrivacyPanel() {
           ["⏱","Expiration garantie","L'expiration publie une DeleteAction sur le DHT. Les nœuds sont obligés par la DNA (contrat applicatif) de supprimer les chunks. Ce n'est pas une promesse — c'est une règle cryptographiquement validée."],
           ["🕵️","Contacts pseudonymisés","Votre email ou téléphone n'est jamais publié sur le réseau. Seul son hash SHA-256 est stocké, associé à votre clé publique. Un observateur ne peut pas reconstituer votre adresse depuis ce hash."],
         ].map(([ico, title, text]) => (
-          <div key={title as string} style={{ background:"#fff",border:"1px solid var(--border)",borderRadius:"12px",padding:"1.1rem 1.2rem",boxShadow:"var(--shadow)" }}>
+          <div key={title as string} style={{ background:"rgba(255,255,255,.05)",border:"1px solid var(--border)",borderRadius:"14px",padding:"1.1rem 1.2rem",boxShadow:"var(--shadow)" }}>
             <div style={{ fontSize:"1.4rem",marginBottom:".45rem" }}>{ico}</div>
             <div style={{ fontSize:".85rem",fontWeight:700,marginBottom:".3rem" }}>{title as string}</div>
             <div style={{ fontSize:".78rem",color:"var(--muted)",lineHeight:1.55 }}>{text as string}</div>

@@ -69,6 +69,8 @@ export default function SendPanel() {
   const [copied,      setCopied]      = useState(false);
   const [dragging,    setDragging]    = useState(false);
   const [resolvedKey, setResolvedKey] = useState<boolean | null>(null);
+  const [uiMode,      setUiMode]      = useState<"magic" | "contact">("magic");
+  const addressBook = useStore((st) => st.addressBook);
   const resolveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const progress = (p: number, s: string) => { setPct(p); setStep(s); };
@@ -90,6 +92,7 @@ export default function SendPanel() {
   // Pre-remplit le destinataire quand on arrive depuis l'onglet Contacts
   useEffect(() => {
     if (selectedRecipient) {
+      setUiMode("contact");
       handleRecipientChange(selectedRecipient);
       setSelectedRecipient("");
     }
@@ -267,9 +270,31 @@ export default function SendPanel() {
 
   return (
     <div>
+      {/* En-tête (concept redesign) */}
+      <div style={{ marginBottom:"1.4rem" }}>
+        <h1 style={{ fontSize:"2rem", fontWeight:600, letterSpacing:"-.03em", lineHeight:1.1 }}>Send files privately</h1>
+        <p style={{ color:"var(--muted)", marginTop:".35rem" }}>End-to-end encrypted • Sovereign options available</p>
+      </div>
+
+      {/* Sélecteur de mode : Magic Link / Send to Contact */}
+      <div style={{ display:"flex", background:"rgba(255,255,255,.05)", borderRadius:"16px", padding:"4px", marginBottom:"1rem", width:"fit-content" }}>
+        <button type="button" onClick={() => setUiMode("magic")}
+          style={{ padding:".5rem 1.4rem", borderRadius:"12px", fontSize:".86rem", fontWeight:600, transition:"all .2s",
+                   background: uiMode==="magic" ? "#fff" : "transparent",
+                   color: uiMode==="magic" ? "#09090b" : "var(--muted)" }}>
+          Magic Link
+        </button>
+        <button type="button" onClick={() => setUiMode("contact")}
+          style={{ padding:".5rem 1.4rem", borderRadius:"12px", fontSize:".86rem", fontWeight:600, transition:"all .2s",
+                   background: uiMode==="contact" ? "#fff" : "transparent",
+                   color: uiMode==="contact" ? "#09090b" : "var(--muted)" }}>
+          Send to Contact
+        </button>
+      </div>
+
       {/* Zone de dépôt */}
       <div className="card" style={{ padding:"1rem" }}>
-        <div style={{ border:`2px dashed ${dragging?"#6366f1":"#d1d5db"}`,borderRadius:"12px",padding:"2.8rem 1.5rem",textAlign:"center",cursor:"pointer",position:"relative",background:dragging?"#ede9fe22":"var(--bg)",transition:"all .2s" }}
+        <div style={{ border:`2px dashed ${dragging?"var(--g1)":"rgba(255,255,255,.2)"}`,borderRadius:"18px",padding:"2.8rem 1.5rem",textAlign:"center",cursor:"pointer",position:"relative",background:dragging?"rgba(34,211,238,.07)":"rgba(255,255,255,.02)",transition:"all .2s" }}
           onDragOver={(e)=>{e.preventDefault();setDragging(true);}}
           onDragLeave={()=>setDragging(false)}
           onDrop={(e)=>{e.preventDefault();setDragging(false);addFiles(Array.from(e.dataTransfer.files));}}>
@@ -277,7 +302,7 @@ export default function SendPanel() {
             onChange={(e)=>{addFiles(Array.from(e.target.files??[]));e.target.value="";}} />
           <div style={{ fontSize:"2.4rem", marginBottom:".6rem" }}>📂</div>
           <div style={{ fontSize:".9rem", color:"var(--muted)" }}><strong style={{ color:"var(--g1)" }}>Cliquez</strong> ou déposez vos fichiers ici</div>
-          <div style={{ fontSize:".76rem", color:"#9ca3af", marginTop:".3rem" }}>Tous formats · jusqu'à 5 Go</div>
+          <div style={{ fontSize:".76rem", color:"var(--muted)", marginTop:".3rem" }}>Tous formats · jusqu'à 5 Go</div>
         </div>
         {files.map((f,i) => (
           <div key={i} style={{ display:"flex",alignItems:"center",gap:".7rem",padding:".6rem .8rem",background:"var(--bg)",border:"1px solid var(--border)",borderRadius:"10px",marginTop:".5rem" }}>
@@ -286,7 +311,7 @@ export default function SendPanel() {
               <div style={{ fontSize:".88rem",fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{f.name}</div>
               <div style={{ fontSize:".75rem",color:"var(--muted)" }}>{fmtSize(f.size)}</div>
             </div>
-            <button style={{ background:"transparent",color:"#9ca3af",fontSize:".9rem",padding:".2rem .5rem",borderRadius:"6px" }}
+            <button style={{ background:"transparent",color:"var(--err)",fontSize:".9rem",padding:".2rem .5rem",borderRadius:"6px" }}
               onClick={()=>setFiles((p)=>p.filter((_,j)=>j!==i))}>✕</button>
           </div>
         ))}
@@ -295,19 +320,49 @@ export default function SendPanel() {
       {/* Destinataire + options */}
       <div className="card">
         <div className="card-label">Destinataire & options</div>
-        <div className="form-row">
-          <label className="form-label">Email ou téléphone *</label>
-          <input type="text" value={recipient} onChange={(e)=>handleRecipientChange(e.target.value)}
-            placeholder="alice@example.com ou +33612345678"
-            style={recipient&&!isValidContact(recipient)?{borderColor:"var(--err)"}:{}} />
-          {recipient && isValidContact(recipient) && resolvedKey !== null && (
-            <div style={{ fontSize:".74rem",marginTop:".25rem",color:resolvedKey?"var(--ok)":"var(--warn)" }}>
-              {resolvedKey
-                ? "✓ Agent enregistré sur le DHT — livraison directe + lien de secours"
-                : "⚠ Contact non enregistré — un lien one-time sera généré (partagez-le vous-même)"}
-            </div>
-          )}
-        </div>
+        {uiMode === "magic" ? (
+          <div className="form-row">
+            <label className="form-label">Email ou téléphone *</label>
+            <input type="text" value={recipient} onChange={(e)=>handleRecipientChange(e.target.value)}
+              placeholder="alice@example.com ou +33612345678"
+              style={recipient&&!isValidContact(recipient)?{borderColor:"var(--err)"}:{}} />
+          </div>
+        ) : (
+          <div className="form-row">
+            <label className="form-label">Choisir un contact</label>
+            {addressBook.length === 0 ? (
+              <div className="warn-box" style={{ marginBottom:0 }}>
+                Aucun contact — ajoutez-en un dans l'onglet Contacts.
+              </div>
+            ) : (
+              <div style={{ display:"grid", gap:".5rem", maxHeight:"15rem", overflow:"auto" }}>
+                {addressBook.map((c) => (
+                  <button key={c.hash} type="button" onClick={() => handleRecipientChange(c.contact)}
+                    style={{ textAlign:"left", padding:".7rem .9rem", borderRadius:"14px", transition:"all .15s",
+                             border: recipient === c.contact ? "1px solid var(--g1)" : "1px solid var(--border)",
+                             background: recipient === c.contact ? "rgba(34,211,238,.1)" : "rgba(255,255,255,.04)",
+                             color:"var(--text)" }}>
+                    <div style={{ fontWeight:600, fontSize:".9rem" }}>{c.contact}</div>
+                    {c.x25519Key ? (
+                      <div style={{ fontSize:".72rem", color:"var(--ok)" }}>Encryption key ready</div>
+                    ) : c.resolvedAgent ? (
+                      <div style={{ fontSize:".72rem", color:"var(--warn)" }}>No X25519 key published yet</div>
+                    ) : (
+                      <div style={{ fontSize:".72rem", color:"var(--muted)" }}>Not resolved on the DHT yet</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {recipient && isValidContact(recipient) && resolvedKey !== null && (
+          <div style={{ fontSize:".74rem",margin:"-.4rem 0 .9rem",color:resolvedKey?"var(--ok)":"var(--warn)" }}>
+            {resolvedKey
+              ? "✓ Agent enregistré sur le DHT — livraison directe chiffrée + lien de secours"
+              : "⚠ Contact non enregistré — un lien one-time sera généré (partagez-le vous-même)"}
+          </div>
+        )}
 
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:".75rem",marginBottom:".9rem" }}>
           <div>
@@ -337,8 +392,11 @@ export default function SendPanel() {
 
         <button className="btn-primary btn-full" style={{ padding:".75rem" }}
           disabled={!files.length || !isValidContact(recipient)} onClick={send}>
-          Chiffrer &amp; Envoyer
+          {uiMode === "magic" ? "Create Magic Link & Encrypt" : "Send Securely to Contact"}
         </button>
+        <p style={{ textAlign:"center", fontSize:".72rem", color:"var(--muted)", marginTop:".7rem" }}>
+          All files are encrypted locally in your browser.
+        </p>
       </div>
     </div>
   );

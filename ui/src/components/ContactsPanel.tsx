@@ -119,7 +119,7 @@ export default function ContactsPanel() {
         {addressBook.map((c) => (
           <div
             key={c.hash}
-            style={{ display: "flex", alignItems: "center", gap: ".85rem", padding: ".85rem 1rem", background: "#fff", border: "1px solid var(--border)", borderRadius: "12px", marginBottom: ".55rem", boxShadow: "var(--shadow)" }}
+            style={{ display: "flex", alignItems: "center", gap: ".85rem", padding: ".85rem 1rem", background: "rgba(255,255,255,.05)", border: "1px solid var(--border)", borderRadius: "14px", marginBottom: ".55rem", boxShadow: "var(--shadow)" }}
           >
             <div style={{ width: "38px", height: "38px", borderRadius: "50%", background: "var(--grad)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, flexShrink: 0 }}>
               {c.contact[0].toUpperCase()}

@@ -1,7 +1,7 @@
 import { useStore } from "../store/useStore";
 
 const S = `
-  footer { background:#fff; border-top:1px solid #e5e7eb; padding:1.2rem 2rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.8rem; }
+  footer { background:rgba(9,9,11,.92); border-top:1px solid var(--border); padding:1.2rem 2rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.8rem; }
   .footer-logo { font-size:.85rem; font-weight:800; color:#111827; }
   .footer-copy { font-size:.77rem; color:#9ca3af; }
   .footer-links { display:flex; gap:1.2rem; align-items:center; flex-wrap:wrap; }

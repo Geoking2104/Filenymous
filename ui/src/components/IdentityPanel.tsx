@@ -156,7 +156,7 @@ export default function IdentityPanel() {
         <div className="card-label">Clé de chiffrement (X25519 — M3)</div>
         {x25519Pub ? (
           <div>
-            <div className="info-box" style={{ background:"#f0fdf4",border:"1px solid #86efac" }}>
+            <div className="info-box" style={{ background:"rgba(52,211,153,.1)",border:"1px solid rgba(52,211,153,.35)" }}>
               🔒 Clé X25519 active — les expéditeurs peuvent vous envoyer des fichiers sans exposer la clé AES dans l'URL.
             </div>
             <div style={{ fontSize:".72rem",fontFamily:"monospace",wordBreak:"break-all",color:"var(--muted)",marginTop:".5rem" }}>
@@ -208,7 +208,7 @@ export default function IdentityPanel() {
         <div className="info-box">📡 Votre email ou téléphone n'est <strong>jamais publié en clair</strong> — seul son hash SHA-256 est sur le DHT.</div>
 
         {contacts.map((c) => (
-          <div key={c.hash} style={{ display:"flex",alignItems:"center",gap:".85rem",padding:".85rem 1rem",background:"#fff",border:"1px solid var(--border)",borderRadius:"12px",marginBottom:".55rem",boxShadow:"var(--shadow)" }}>
+          <div key={c.hash} style={{ display:"flex",alignItems:"center",gap:".85rem",padding:".85rem 1rem",background:"rgba(255,255,255,.05)",border:"1px solid var(--border)",borderRadius:"14px",marginBottom:".55rem",boxShadow:"var(--shadow)" }}>
             <div style={{ width:"38px",height:"38px",borderRadius:"50%",background:"var(--grad)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:700,flexShrink:0 }}>
               {c.contact[0].toUpperCase()}
             </div>
