@@ -756,6 +756,14 @@
     .btn-tg:hover:not(:disabled) { background:#1d8bc0; }
     .contact-chip { border:1px solid var(--border); background:rgba(255,255,255,.05); color:var(--text); border-radius:999px; padding:.35rem .8rem; font-size:.8rem; }
     .contact-chip.on { border-color:var(--accent); background:rgba(34,211,238,.12); }
+    .preview-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,.7); backdrop-filter:blur(6px); display:grid; place-items:center; padding:20px; }
+    .preview-box { width:min(920px, 96vw); max-height:92vh; display:grid; grid-template-rows:auto 1fr auto; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:16px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+    .preview-head { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
+    .preview-head strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .preview-body { overflow:auto; min-height:200px; display:grid; place-items:center; background:rgba(0,0,0,.25); border-radius:12px; }
+    .preview-body img { max-width:100%; max-height:74vh; border-radius:8px; }
+    .preview-body iframe { width:100%; height:74vh; border:0; border-radius:8px; background:#fff; }
+    .preview-body pre { width:100%; max-height:74vh; overflow:auto; padding:14px; font-size:12px; white-space:pre-wrap; word-break:break-word; text-align:left; }
     .share-actions {
       display: flex;
       flex-wrap: wrap;
@@ -1277,10 +1285,24 @@
         </div>
 
         <div id="public-room-composer" class="room-composer hidden">
+          <div id="public-room-typing" class="muted" style="font-size:.74rem; min-height:1.1em; margin-bottom:4px;"></div>
           <div class="room-composer-row">
-            <textarea id="public-room-chat-input" maxlength="500" placeholder="Write a short message..." data-i18n-placeholder="rooms.chatPlaceholder"></textarea>
+            <textarea id="public-room-chat-input" maxlength="500" placeholder="Write a short message..." data-i18n-placeholder="rooms.chatPlaceholder" oninput="notifyRoomTyping()"></textarea>
             <button type="button" class="btn btn-primary" onclick="sendPublicRoomMessage()" data-i18n="rooms.sendMessage">Send message</button>
           </div>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+            <label for="public-room-sd" class="muted" style="font-size:.78rem;" data-i18n="rooms.selfDestruct">Self-destruct room</label>
+            <select id="public-room-sd" style="width:auto; padding:.3rem .6rem; font-size:.8rem;" onchange="armRoomSelfDestruct(this.value)">
+              <option value="0" data-i18n="rooms.sdOff">Off</option>
+              <option value="60">1 h</option>
+              <option value="1440">24 h</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="room-side-section" style="margin-top:12px;">
+          <p class="card-title" data-i18n="rooms.activityTitle">Activity</p>
+          <div id="public-room-activity-log" class="muted" style="font-size:.76rem; display:grid; gap:4px; max-height:9rem; overflow:auto;"></div>
         </div>
       </section>
 
@@ -1569,6 +1591,9 @@
     <button id="btn-download" class="btn btn-primary btn-full mt-3" onclick="handleDownload()">
       <span data-i18n="receive.download">Download and decrypt</span>
     </button>
+    <button id="btn-preview" class="btn btn-secondary btn-full mt-2" onclick="handlePreviewBeforeSave()">
+      <span data-i18n="receive.previewFirst">Preview before saving (secure viewer)</span>
+    </button>
   </div>
 
   <div id="recv-p2p" class="card">
@@ -1639,6 +1664,16 @@
         <button class="filter-btn active" id="filt-all"     onclick="setFilter('all')">All</button>
         <button class="filter-btn"        id="filt-pending" onclick="setFilter('pending')">Pending</button>
         <button class="filter-btn"        id="filt-done"    onclick="setFilter('done')">Downloaded</button>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 4px;">
+        <input type="search" id="hist-search" placeholder="Search name, recipient, tag..." data-i18n-placeholder="history.searchPlaceholder" style="flex:1; min-width:180px;" oninput="S.histSearch=this.value; renderHistory();" />
+        <select id="hist-type" style="width:auto;" onchange="S.histType=this.value; renderHistory();">
+          <option value="all" data-i18n="history.typeAll">All types</option>
+          <option value="link" data-i18n="history.typeLink">Self-contained links</option>
+          <option value="e2e" data-i18n="history.typeE2e">E2E for contact</option>
+          <option value="parcel" data-i18n="history.typeParcel">DHT parcels</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="exportHistory()" data-i18n="history.export">Export</button>
       </div>
     </div>
     <div id="history-list">
@@ -3248,6 +3283,20 @@ module.exports = QRCode;
 })();
 </script>
 <!-- /Filenymous local QR generator -->
+<div id="preview-overlay" class="preview-overlay hidden" onclick="if (event.target === this) closePreview()">
+  <div class="preview-box">
+    <div class="preview-head">
+      <strong id="preview-title"></strong>
+      <span style="display:flex; gap:8px; flex-shrink:0;">
+        <button class="btn btn-primary btn-sm" onclick="savePreviewFile()" data-i18n="preview.save">Save to disk</button>
+        <button class="btn btn-secondary btn-sm" onclick="closePreview()" data-i18n="common.close">Close</button>
+      </span>
+    </div>
+    <div id="preview-body" class="preview-body"></div>
+    <p class="muted" style="font-size:.72rem; margin:0;" data-i18n="preview.note">Secure viewer: the decrypted file stays in memory - nothing touches the disk until you save.</p>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
 
 <script type="module">
@@ -3338,6 +3387,9 @@ Object.assign(S, {
     roomFileTransfers: {},
     peers: [{ peerId: 'local', displayName: 'You' }],
     messages: [],
+    activity: [],
+    typingPeers: {},
+    sdDeadline: 0,
   },
   publicRoomDirectory: [],
 });
@@ -4104,6 +4156,36 @@ window.FILENYMOUS_I18N = {
     "advanced.x25519Missing": "No X25519 key yet - generate one to receive in agent mode",
     "nav.contacts": "Contacts",
     "nav.identity": "Identity",
+    "preview.button": "Preview",
+    "preview.save": "Save to disk",
+    "preview.note": "Secure viewer: the decrypted file stays in memory - nothing touches the disk until you save.",
+    "preview.unsupported": "No inline preview for this file type - use Save to disk.",
+    "common.close": "Close",
+    "receive.previewFirst": "Preview before saving (secure viewer)",
+    "rooms.selfDestruct": "Self-destruct room",
+    "rooms.sdOff": "Off",
+    "rooms.activityTitle": "Activity",
+    "rooms.activityEmpty": "Nothing yet - invite someone and share a file.",
+    "rooms.isTyping": "is typing...",
+    "rooms.actJoined": "joined the room",
+    "rooms.actLeft": "A peer left the room",
+    "rooms.actDownloaded": "downloaded",
+    "rooms.sdArmed": "Self-destruct armed: room wipes in {mins} min.",
+    "rooms.sdArmedBy": "{name} armed self-destruct ({mins} min).",
+    "rooms.sdDisarmed": "Self-destruct disarmed.",
+    "rooms.sdDone": "Room self-destructed: files, chat, and activity wiped locally.",
+    "history.searchPlaceholder": "Search name, recipient, tag...",
+    "history.typeAll": "All types",
+    "history.typeLink": "Self-contained links",
+    "history.typeE2e": "E2E for contact",
+    "history.typeParcel": "DHT parcels",
+    "history.export": "Export",
+    "history.exported": "History exported (metadata only, no keys, no links).",
+    "history.badgeLink": "Self-contained link",
+    "history.badgeE2e": "E2E for contact",
+    "history.badgeParcel": "DHT parcel",
+    "history.linkNotStored": "link not stored",
+    "history.tagPrompt": "Tags for this transfer (comma separated):",
     "share.nothingYet": "Create a transfer first.",
     "share.codeText": "Encrypted file via Filenymous - one-time code:",
     "share.linkText": "Encrypted file via Filenymous - open this link:",
@@ -4432,6 +4514,36 @@ window.FILENYMOUS_I18N = {
     "advanced.x25519Missing": "Aucune clé X25519 pour l'instant - générez-en une pour recevoir en mode agent",
     "nav.contacts": "Contacts",
     "nav.identity": "Identité",
+    "preview.button": "Aperçu",
+    "preview.save": "Enregistrer sur le disque",
+    "preview.note": "Visionneuse sécurisée : le fichier déchiffré reste en mémoire - rien n'est écrit sur le disque avant l'enregistrement.",
+    "preview.unsupported": "Pas d'aperçu pour ce type de fichier - utilisez Enregistrer sur le disque.",
+    "common.close": "Fermer",
+    "receive.previewFirst": "Aperçu avant enregistrement (visionneuse sécurisée)",
+    "rooms.selfDestruct": "Autodestruction de la room",
+    "rooms.sdOff": "Désactivée",
+    "rooms.activityTitle": "Activité",
+    "rooms.activityEmpty": "Rien pour l'instant - invitez quelqu'un et partagez un fichier.",
+    "rooms.isTyping": "écrit...",
+    "rooms.actJoined": "a rejoint la room",
+    "rooms.actLeft": "Un participant a quitté la room",
+    "rooms.actDownloaded": "a téléchargé",
+    "rooms.sdArmed": "Autodestruction armée : la room s'efface dans {mins} min.",
+    "rooms.sdArmedBy": "{name} a armé l'autodestruction ({mins} min).",
+    "rooms.sdDisarmed": "Autodestruction désarmée.",
+    "rooms.sdDone": "Room autodétruite : fichiers, chat et activité effacés localement.",
+    "history.searchPlaceholder": "Rechercher nom, destinataire, tag...",
+    "history.typeAll": "Tous les types",
+    "history.typeLink": "Liens autonomes",
+    "history.typeE2e": "E2E pour contact",
+    "history.typeParcel": "Parcels DHT",
+    "history.export": "Exporter",
+    "history.exported": "Historique exporté (métadonnées uniquement, sans clés ni liens).",
+    "history.badgeLink": "Lien autonome",
+    "history.badgeE2e": "E2E pour contact",
+    "history.badgeParcel": "Parcel DHT",
+    "history.linkNotStored": "lien non conservé",
+    "history.tagPrompt": "Tags pour ce transfert (séparés par des virgules) :",
     "share.nothingYet": "Créez d'abord un transfert.",
     "share.codeText": "Fichier chiffré via Filenymous - code à usage unique :",
     "share.linkText": "Fichier chiffré via Filenymous - ouvre ce lien :",
@@ -5234,9 +5346,53 @@ function updateSendNotice() {
   el.classList.remove('hidden');
 }
 
+const HISTORY_LS_KEY = 'filenymous.history.v1';
+
+function saveHistory() {
+  try {
+    const slim = S.history.slice(0, 200).map(h => {
+      if (h.link && h.link.length > 60000) return { ...h, link: '', ehBytes: [], linkLost: true };
+      return { ...h, ehBytes: [] };
+    });
+    localStorage.setItem(HISTORY_LS_KEY, JSON.stringify(slim));
+  } catch (_) { /* quota - keep in-memory only */ }
+}
+
+function loadHistorySaved() {
+  try {
+    const list = JSON.parse(localStorage.getItem(HISTORY_LS_KEY) || '[]');
+    if (Array.isArray(list) && list.length && !S.history.length) S.history = list;
+  } catch (_) { /* ignore */ }
+}
+loadHistorySaved();
+
+window.tagHistItem = function (id) {
+  const h = S.history.find(x => x.id === id);
+  if (!h) return;
+  const next = prompt(tr('history.tagPrompt', 'Tags for this transfer (comma separated):'), h.tags || '');
+  if (next === null) return;
+  h.tags = String(next).slice(0, 80);
+  saveHistory();
+  renderHistory();
+};
+
+window.exportHistory = function () {
+  const data = S.history.map(h => ({
+    name: h.name, size: h.size, to: h.to, date: h.date, status: h.status,
+    type: histEntryType(h), tags: h.tags || '', downloads: h.dlCount || 0, maxDownloads: h.maxDl || 0,
+  }));
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: 'filenymous-history.json' });
+  document.body.append(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast(tr('history.exported', 'History exported (metadata only, no keys, no links).'));
+};
+
 function updateHistBadge() {
   const n = S.history.filter(h => h.status === 'pending').length;
   $('hist-count').textContent = n ? ` (${n})` : '';
+  saveHistory();
 }
 
 // Direct WebRTC P2P transfer for oversized anonymous web files.
@@ -5959,6 +6115,9 @@ function ensurePublicRoomState() {
     S.publicRoom.expiresAt = 0;
     S.publicRoom.files = [];
     S.publicRoom.roomFileTransfers = {};
+  S.publicRoom.activity = [];
+  S.publicRoom.typingPeers = {};
+  S.publicRoom.sdDeadline = 0;
     S.publicRoom.messages = [];
     removePublicRoomFromDirectory(previousRoomId);
   }
@@ -6099,6 +6258,9 @@ function downloadPublicRoomFile(transferId) {
   a.click();
   a.remove();
   setStatus('public-room-status', 'success', `${esc(file.name || 'Room file')} downloaded. Check your browser Downloads folder.`);
+  const who = S.publicRoom.displayName || publicRoomDisplayName();
+  pushRoomActivity(`${who} ${tr('rooms.actDownloaded', 'downloaded')} ${file.name || 'file'}`);
+  sendPublicRoomEvent('activity', { kind: 'activity', text: `${who} ${tr('rooms.actDownloaded', 'downloaded')} ${file.name || 'file'}` }).catch(() => {});
 }
 
 function renderPublicRoom() {
@@ -6188,7 +6350,7 @@ function renderPublicRoom() {
           <span style="text-align:right">
             <strong>${esc(fmtBytes(file.size || 0))}</strong><br>
             ${file.downloadUrl
-              ? `<button class="btn btn-secondary btn-sm" onclick="downloadPublicRoomFile('${esc(file.transferId)}')">Download</button>`
+              ? `${file.blob && previewableMime(file.mime, file.name) ? `<button class="btn btn-secondary btn-sm" onclick="previewPublicRoomFile('${esc(file.transferId)}')">${esc(tr('preview.button', 'Preview'))}</button> ` : ''}<button class="btn btn-secondary btn-sm" onclick="downloadPublicRoomFile('${esc(file.transferId)}')">Download</button>`
               : `<small class="muted">${esc(file.percent || 0)}%</small>`}
           </span>
         </div>
@@ -6206,10 +6368,96 @@ function renderPublicRoom() {
       </div>
     `).join('');
   }
+  const act = $('public-room-activity-log');
+  if (act) {
+    const items = S.publicRoom.activity || [];
+    act.innerHTML = items.length
+      ? items.map(a => `<div>· ${esc(a.text)} <span style="opacity:.55">${new Date(a.at).toLocaleTimeString().slice(0, 5)}</span></div>`).join('')
+      : `<div>${esc(tr('rooms.activityEmpty', 'Nothing yet - invite someone and share a file.'))}</div>`;
+  }
+  renderRoomTyping();
+}
+
+function pushRoomActivity(text) {
+  ensurePublicRoomState();
+  S.publicRoom.activity.unshift({ text: String(text).slice(0, 160), at: Date.now() });
+  S.publicRoom.activity = S.publicRoom.activity.slice(0, 40);
+  const act = $('public-room-activity-log');
+  if (act) renderPublicRoom();
+}
+
+function renderRoomTyping() {
+  const el = $('public-room-typing');
+  if (!el) return;
+  const now = Date.now();
+  const names = Object.entries(S.publicRoom.typingPeers || {})
+    .filter(([, at]) => now - at < 3500).map(([name]) => name);
+  el.textContent = names.length
+    ? names.join(', ') + ' ' + tr('rooms.isTyping', 'is typing...')
+    : '';
+}
+setInterval(renderRoomTyping, 1200);
+
+let _lastTypingSent = 0;
+window.notifyRoomTyping = function () {
+  if (!S.publicRoom?.connected) return;
+  const now = Date.now();
+  if (now - _lastTypingSent < 2000) return;
+  _lastTypingSent = now;
+  const author = S.publicRoom.displayName || publicRoomDisplayName();
+  sendPublicRoomEvent('typing', { kind: 'typing', author }).catch(() => {});
+};
+
+window.previewPublicRoomFile = function (transferId) {
+  const file = S.publicRoom.roomFileTransfers[transferId];
+  if (!file?.blob) return;
+  openPreview(file.blob, file.name || 'Room file', file.mime || '');
+};
+
+let _sdTimer = null;
+window.armRoomSelfDestruct = function (minutes) {
+  const mins = parseInt(minutes, 10) || 0;
+  clearTimeout(_sdTimer);
+  if (!mins) { S.publicRoom.sdDeadline = 0; pushRoomActivity(tr('rooms.sdDisarmed', 'Self-destruct disarmed.')); return; }
+  if (!S.publicRoom?.connected) { toast(tr('rooms.noRoomYet', 'Create a room first to get an invite link.')); return; }
+  S.publicRoom.sdDeadline = Date.now() + mins * 60000;
+  pushRoomActivity(trFormat('rooms.sdArmed', { mins }, 'Self-destruct armed: room wipes in {mins} min.'));
+  sendPublicRoomEvent('activity', { kind: 'activity', text: trFormat('rooms.sdArmedBy', { name: S.publicRoom.displayName || publicRoomDisplayName(), mins }, '{name} armed self-destruct ({mins} min).') }).catch(() => {});
+  _sdTimer = setTimeout(() => {
+    sendPublicRoomEvent('self-destruct', { kind: 'self-destruct' }).catch(() => {});
+    wipePublicRoom(tr('rooms.sdDone', 'Room self-destructed: files, chat, and activity wiped locally.'));
+  }, mins * 60000);
+};
+
+function wipePublicRoom(message) {
+  clearTimeout(_sdTimer);
+  Object.values(S.publicRoom.roomFileTransfers || {}).forEach(t => { try { if (t.downloadUrl) URL.revokeObjectURL(t.downloadUrl); } catch (_) {} });
+  S.publicRoom.roomFileTransfers = {};
+  S.publicRoom.messages = [];
+  S.publicRoom.activity = [];
+  S.publicRoom.typingPeers = {};
+  S.publicRoom.closed = true;
+  S.publicRoom.connected = false;
+  try { S.publicRoom.socket?.close(); } catch (_) {}
+  renderPublicRoom();
+  setStatus('public-room-status', 'warning', message);
 }
 
 async function handlePublicRoomEvent(msg) {
   const payload = await decryptPublicRoomPayload(msg.event);
+  if (payload.kind === 'typing') {
+    S.publicRoom.typingPeers[String(payload.author || 'Peer').slice(0, 40)] = Date.now();
+    renderRoomTyping();
+    return;
+  }
+  if (payload.kind === 'activity') {
+    pushRoomActivity(String(payload.text || '').slice(0, 160));
+    return;
+  }
+  if (payload.kind === 'self-destruct') {
+    wipePublicRoom(tr('rooms.sdDone', 'Room self-destructed: files, chat, and activity wiped locally.'));
+    return;
+  }
   if (payload.kind === 'chat') {
     S.publicRoom.messages.unshift({
       author: payload.author || msg.from || 'Peer',
@@ -6234,6 +6482,7 @@ async function handlePublicRoomEvent(msg) {
       from: msg.from || 'Peer',
     });
     setStatus('public-room-status', 'info', `${esc(tr('rooms.receivingFilePrefix', 'Receiving encrypted room file:'))} ${esc(payload.name || 'file')}.`);
+    pushRoomActivity(`${msg.from || 'Peer'} → ${payload.name || 'file'}`);
     return;
   }
 
@@ -6261,7 +6510,8 @@ async function handlePublicRoomEvent(msg) {
     const transfer = S.publicRoom.roomFileTransfers[payload.transferId];
     if (!transfer) return;
     const chunks = (transfer.chunks || []).filter(Boolean);
-    transfer.downloadUrl = URL.createObjectURL(new Blob(chunks, { type: transfer.mime || payload.mime || 'application/octet-stream' }));
+    transfer.blob = new Blob(chunks, { type: transfer.mime || payload.mime || 'application/octet-stream' });
+    transfer.downloadUrl = URL.createObjectURL(transfer.blob);
     transfer.status = 'ready';
     transfer.percent = 100;
     transfer.name = transfer.name || payload.name || 'Room file';
@@ -6292,6 +6542,7 @@ function handlePublicRoomMessage(msg) {
     }
     upsertPublicRoomDirectory(tr('rooms.roomLive', 'Live'));
     setStatus('public-room-status', 'success', `${esc(publicRoomPeerName(peer))} joined the room.`);
+    pushRoomActivity(`${publicRoomPeerName(peer)} ${tr('rooms.actJoined', 'joined the room')}`);
     return;
   }
 
@@ -6299,6 +6550,7 @@ function handlePublicRoomMessage(msg) {
     S.publicRoom.peers = S.publicRoom.peers.filter(peer => peer.peerId !== msg.peerId);
     renderPublicRoom();
     setStatus('public-room-status', 'warning', 'A peer left the room.');
+    pushRoomActivity(tr('rooms.actLeft', 'A peer left the room'));
     return;
   }
 
@@ -7337,18 +7589,33 @@ window.loadManual = function () {
 // ═══════════════════════════════════════════════════════════
 // HISTORY PANEL
 // ═══════════════════════════════════════════════════════════
+function histEntryType(h) {
+  if ((h.link || '').includes(':e1!')) return 'e2e';
+  if (String(h.id || '').startsWith('w2:') || String(h.id || '').startsWith('w1:')) return 'link';
+  return 'parcel';
+}
+
 function renderHistory() {
-  const list     = $('history-list');
-  const filtered = S.histFilt === 'all'
-    ? S.history
-    : S.history.filter(h => h.status === S.histFilt);
+  const list = $('history-list');
+  const q = String(S.histSearch || '').toLowerCase();
+  const filtered = S.history.filter(h => {
+    if (S.histFilt !== 'all' && h.status !== S.histFilt) return false;
+    if ((S.histType || 'all') !== 'all' && histEntryType(h) !== S.histType) return false;
+    if (q && !(`${h.name} ${h.to} ${h.tags || ''}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
 
   if (!filtered.length) {
     list.innerHTML = `<p style="text-align:center;color:var(--muted);font-size:13px;padding:24px 0;">
-      ${S.histFilt === 'all' ? 'No transfer yet.' : 'No transfer in this category.'}
+      ${(S.histFilt === 'all' && !q && (S.histType || 'all') === 'all') ? 'No transfer yet.' : 'No transfer matches these filters.'}
     </p>`;
     return;
   }
+  const typeBadge = {
+    link:   `<span class="badge" style="background:rgba(34,211,238,.14);color:var(--g1)">${esc(tr('history.badgeLink', 'Self-contained link'))}</span>`,
+    e2e:    `<span class="badge" style="background:rgba(52,211,153,.14);color:var(--ok)">${esc(tr('history.badgeE2e', 'E2E for contact'))}</span>`,
+    parcel: `<span class="badge" style="background:rgba(255,255,255,.1);color:var(--muted)">${esc(tr('history.badgeParcel', 'DHT parcel'))}</span>`,
+  };
 
   const lbl = { pending: 'Waiting', done: 'Downloaded', revoked: 'Revoked' };
 
@@ -7358,12 +7625,16 @@ function renderHistory() {
       <div class="hist-info">
         <div class="hist-name">${esc(h.name)}</div>
         <div class="hist-meta">${esc(h.to)} · ${fmtBytes(h.size)} · ${h.date}</div>
-        <div style="margin-top:4px;display:flex;align-items:center;gap:8px;">
+        <div style="margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="badge badge-${h.status}">${lbl[h.status] ?? h.status}</span>
+          ${typeBadge[histEntryType(h)] || ''}
+          ${h.linkLost ? `<span class="badge badge-expired">${esc(tr('history.linkNotStored', 'link not stored'))}</span>` : ''}
+          ${h.tags ? `<span style="font-size:11px;color:var(--g1)">#${esc(h.tags)}</span>` : ''}
           ${h.status === 'done' ? `<span style="font-size:11px;color:var(--muted)">${h.dlCount}/${h.maxDl || '∞'} dl</span>` : ''}
         </div>
       </div>
       <div class="hist-actions">
+        <button class="btn btn-secondary btn-sm" onclick="tagHistItem('${esc(h.id)}')" title="Tags">🏷</button>
         <button class="btn btn-secondary btn-sm" onclick="copyHistLink('${esc(h.id)}')" title="Copy link">🔗</button>
         ${h.status === 'pending' && S.mode !== 'bridge'
           ? `<button class="btn btn-danger btn-sm" onclick="revokeHistItem('${esc(h.id)}')">Revoke</button>`
@@ -7673,6 +7944,80 @@ function updateSendContactNotice() {
     box.classList.add('hidden');
   }
 }
+
+// ═══════════════════════════════════════════════════════════
+// SECURE PREVIEW OVERLAY — shared by Rooms and Receive
+// ═══════════════════════════════════════════════════════════
+let _previewState = null;
+
+function previewableMime(mime, name) {
+  const m = String(mime || '');
+  return m.startsWith('image/') || m === 'application/pdf' || m.startsWith('text/')
+    || /\.(png|jpe?g|gif|webp|svg|pdf|txt|md|json|csv|log)$/i.test(String(name || ''));
+}
+
+function openPreview(blob, name, mime) {
+  closePreview();
+  _previewState = { blob, name };
+  const body = $('preview-body');
+  $('preview-title').textContent = name;
+  const m = String(mime || '');
+  const url = URL.createObjectURL(blob);
+  _previewState.url = url;
+  if (m.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(name)) {
+    body.innerHTML = `<img src="${url}" alt="">`;
+  } else if (m === 'application/pdf' || /\.pdf$/i.test(name)) {
+    body.innerHTML = `<iframe src="${url}" title="PDF preview"></iframe>`;
+  } else if (m.startsWith('text/') || /\.(txt|md|json|csv|log)$/i.test(name)) {
+    body.innerHTML = '<pre></pre>';
+    blob.text().then(t => { const pre = body.querySelector('pre'); if (pre) pre.textContent = t.slice(0, 300000); });
+  } else {
+    body.innerHTML = `<p class="muted" style="padding:24px;">${esc(tr('preview.unsupported', 'No inline preview for this file type - use Save to disk.'))}</p>`;
+  }
+  $('preview-overlay').classList.remove('hidden');
+}
+
+window.closePreview = function () {
+  $('preview-overlay')?.classList.add('hidden');
+  const body = $('preview-body');
+  if (body) body.innerHTML = '';
+  if (_previewState?.url) { try { URL.revokeObjectURL(_previewState.url); } catch (_) {} }
+  _previewState = null;
+};
+
+window.savePreviewFile = function () {
+  if (!_previewState) return;
+  const url = URL.createObjectURL(_previewState.blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: _previewState.name });
+  document.body.append(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast(tr('receive.downloadToast', 'File decrypted and sent to Downloads.'));
+};
+
+/** Receive: decrypt in memory and open the secure viewer instead of saving. */
+window.handlePreviewBeforeSave = async function () {
+  if (!S.parcel) return;
+  const { p, keyBytes } = S.parcel;
+  let useKey = keyBytes;
+  try {
+    if (p.manifest.encrypted_key_blob) {
+      const sk = await idb.get('x25519-sk');
+      if (sk) useKey = await eciesUnwrap(p.manifest.encrypted_key_blob, sk);
+    }
+    if (!useKey) throw new Error(tr('receive.eciesNoKey', 'This link is end-to-end encrypted for a specific recipient. Open it in the browser holding your identity key, or import your keys in the Identity tab.'));
+    setStatus('recv-status', 'loading', tr('receive.progressDecrypt', 'Decrypting...'));
+    const plain = S.parcel.web
+      ? await (async () => {
+          const decrypted = await aesDecrypt(useKey, b64d(p.manifest.web_inline_data));
+          return decompressWebInlineBytes(decrypted, p.manifest.web_inline_compression);
+        })()
+      : await downloadFile(p.manifest.file_hash, useKey, () => {});
+    $('recv-status').classList.add('hidden');
+    openPreview(new Blob([plain], { type: p.manifest.file_type || 'application/octet-stream' }), p.manifest.file_name, p.manifest.file_type || '');
+  } catch (e) {
+    setStatus('recv-status', 'error', esc(e.message));
+  }
+};
 
 // ═══════════════════════════════════════════════════════════
 // SOCIAL SHARE — WhatsApp / Telegram (simple, shareable scenarios)
