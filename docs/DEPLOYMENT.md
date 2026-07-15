@@ -48,3 +48,22 @@ Verified facts (2026-07-14) — how the public site is actually hosted and updat
 | autonyz | autonymous.me | cluster029 (FTP via cluster129 history) |
 | opendpn | opendpe.net | cluster121 |
 | VPS vps-088d27a3 | opendpe VPS (51.210.9.71) | — |
+
+## P2P signaling relay (QR / one-time codes)
+
+- Endpoint: `wss://www.opendpe.net/filenymous-signal/` — served by the **opendpe VPS**
+  (`vps-088d27a3.vps.ovh.net`, 51.210.9.71), NOT the shared hosting.
+- Components on the VPS: systemd service `filenymous-signal` (node, port 8789,
+  `/opt/filenymous-signal/app`) + nginx snippet
+  `/etc/nginx/snippets/filenymous-signal-location.conf` included in the 443 blocks of
+  `/etc/nginx/sites-enabled/opendpe.net`.
+- `ALLOWED_ORIGIN=https://filenymous.eu,https://geoking2104.github.io` (exact origins).
+- **Known failure mode (happened 2026-07-07):** replacing/regenerating the opendpe.net
+  vhost drops the `include snippets/filenymous-signal-location.conf;` lines → the relay
+  returns 404 and every cross-device QR/code fails with "Unable to reach the P2P
+  signaling server". After ANY change to the opendpe.net vhost, re-check:
+  `curl -si https://www.opendpe.net/filenymous-signal/ | head -2` → expected **426**, not 404.
+- Never leave `*.bak` files inside `/etc/nginx/sites-enabled/` (nginx loads them as
+  vhosts); backups live in `/etc/nginx/vhost-backups/`.
+- SSH access: key `opendpe_vps_ed25519` (user `root`) — works from Linux; Windows
+  OpenSSH may fail silently on this key (ACL), use the sandbox/WSL if needed.
