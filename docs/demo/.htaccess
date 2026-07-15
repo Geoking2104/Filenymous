@@ -1,0 +1,9 @@
+# Filenymous - OVH shared hosting
+# HTML must always revalidate: without this, browsers cache the app
+# heuristically and users keep seeing stale versions after deploys.
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+AddDefaultCharset UTF-8
