@@ -750,6 +750,12 @@
       line-height: 1.4;
     }
     .human-proof input { width: 18px; height: 18px; margin-top: 1px; accent-color: var(--accent); }
+    .btn-wa { background:#25D366; color:#04240f; font-weight:700; }
+    .btn-wa:hover:not(:disabled) { background:#1eba58; }
+    .btn-tg { background:#229ED9; color:#032230; font-weight:700; }
+    .btn-tg:hover:not(:disabled) { background:#1d8bc0; }
+    .contact-chip { border:1px solid var(--border); background:rgba(255,255,255,.05); color:var(--text); border-radius:999px; padding:.35rem .8rem; font-size:.8rem; }
+    .contact-chip.on { border-color:var(--accent); background:rgba(34,211,238,.12); }
     .share-actions {
       display: flex;
       flex-wrap: wrap;
@@ -1146,6 +1152,8 @@
         <code id="home-magic-code-out" class="home-magic-code-value"></code>
         <p class="muted" data-i18n="home.magicCodeHelp">Share this code by email, copy-paste, or QR. The QR opens Filenymous with this code already attached.</p>
         <div class="share-actions">
+          <button type="button" class="btn btn-sm btn-wa" onclick="shareHomeMagicTo('wa')">WhatsApp</button>
+          <button type="button" class="btn btn-sm btn-tg" onclick="shareHomeMagicTo('tg')">Telegram</button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="emailHomeMagicCode(event)" data-i18n="home.emailCode">Email</button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="copyHomeMagicCode()" data-i18n="home.copyCode">Copy code</button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="renderHomeMagicQr()" data-i18n="home.showQr">Show QR</button>
@@ -1231,6 +1239,8 @@
           <div class="rooms-actions">
             <button type="button" id="public-room-create-btn" class="btn btn-primary" onclick="createPublicRoom()" data-i18n="rooms.create">Create room</button>
             <button type="button" id="public-room-copy-btn" class="btn btn-secondary" onclick="copyPublicRoomLink()" data-i18n="rooms.copyInvite">Copy invite</button>
+            <button type="button" class="btn btn-wa" onclick="shareRoomTo('wa')">WhatsApp</button>
+            <button type="button" class="btn btn-tg" onclick="shareRoomTo('tg')">Telegram</button>
             <button type="button" id="public-room-close-btn" class="btn btn-danger" onclick="closePublicRoom()" data-i18n="rooms.close">Close room</button>
           </div>
         </header>
@@ -1430,6 +1440,25 @@
       <span id="send-contact-notice-text" style="flex:1;"></span>
       <button class="btn btn-secondary btn-sm" onclick="clearSendContact()" data-i18n="contacts.clear">Clear</button>
     </div>
+    <div class="mt-3">
+      <p class="card-title" style="margin-bottom:.5rem;" data-i18n="send.quickContacts">Send to a contact (end-to-end)</p>
+      <div id="send-contact-chips" class="share-actions"></div>
+      <p class="muted mt-2" style="font-size:.74rem;" data-i18n="send.quickContactsHelp">Pick a contact: the file key is encrypted for them only - the link alone cannot decrypt.</p>
+    </div>
+  </div>
+
+  <div class="card" id="send-identity-mini">
+    <p class="card-title" data-i18n="send.myIdentityTitle">My identity - receive end-to-end</p>
+    <div class="link-box">
+      <code id="send-identity-code" class="sender-id-mono" data-i18n="identity.noKey">No key yet</code>
+      <button class="btn btn-secondary btn-sm" onclick="idCopyCode()" data-i18n="common.copy">Copy</button>
+    </div>
+    <div class="share-actions mt-2">
+      <button type="button" class="btn btn-sm btn-wa" onclick="shareIdentityTo('wa')">WhatsApp</button>
+      <button type="button" class="btn btn-sm btn-tg" onclick="shareIdentityTo('tg')">Telegram</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="showTab('identity')" data-i18n="nav.identity">Identity</button>
+    </div>
+    <p class="muted mt-2" style="font-size:.74rem;" data-i18n="send.myIdentityHelp">Share your identity code: your contacts add it in their Contacts tab and every file they send you is encrypted for you alone.</p>
   </div>
 
   <div class="card">
@@ -1484,6 +1513,8 @@
       <button class="btn btn-secondary btn-sm" onclick="copyLink()" data-i18n="common.copy">Copy</button>
     </div>
     <div class="share-actions">
+<button type="button" class="btn btn-sm btn-wa" onclick="shareArtifactTo('wa')">WhatsApp</button>
+      <button type="button" class="btn btn-sm btn-tg" onclick="shareArtifactTo('tg')">Telegram</button>
       <button class="btn btn-secondary btn-sm" onclick="shareLink()" data-i18n="common.share">Share</button>
       <button class="btn btn-secondary btn-sm" onclick="renderQrForCurrentLink()" data-i18n="common.qrCode">QR code</button>
     </div>
@@ -1503,6 +1534,8 @@
     </div>
     <div class="share-actions">
       <button class="btn btn-secondary btn-sm" onclick="copyP2PCode()" data-i18n="send.copyCode">Copy code</button>
+      <button type="button" class="btn btn-sm btn-wa" onclick="shareArtifactTo('wa')">WhatsApp</button>
+      <button type="button" class="btn btn-sm btn-tg" onclick="shareArtifactTo('tg')">Telegram</button>
     </div>
     <p class="muted mt-2" data-i18n="send.magicKeepOpen">Keep this tab open until the receiver has finished downloading.</p>
     <div id="p2p-send-status" class="status info mt-3 hidden"></div>
@@ -4071,6 +4104,17 @@ window.FILENYMOUS_I18N = {
     "advanced.x25519Missing": "No X25519 key yet - generate one to receive in agent mode",
     "nav.contacts": "Contacts",
     "nav.identity": "Identity",
+    "share.nothingYet": "Create a transfer first.",
+    "share.codeText": "Encrypted file via Filenymous - one-time code:",
+    "share.linkText": "Encrypted file via Filenymous - open this link:",
+    "rooms.shareText": "Join my private Filenymous room (files + chat, encrypted):",
+    "rooms.noRoomYet": "Create a room first to get an invite link.",
+    "identity.shareText": "Add me as a Filenymous contact (Contacts tab) with my identity code:",
+    "send.quickContacts": "Send to a contact (end-to-end)",
+    "send.quickContactsHelp": "Pick a contact: the file key is encrypted for them only - the link alone cannot decrypt.",
+    "send.quickContactsManage": "Manage",
+    "send.myIdentityTitle": "My identity - receive end-to-end",
+    "send.myIdentityHelp": "Share your identity code: your contacts add it in their Contacts tab and every file they send you is encrypted for you alone.",
     "identity.title": "Your sovereign identity",
     "identity.intro": "Generate a local X25519 keypair to receive end-to-end encrypted transfers. Your private key never leaves this browser. Share your identity code so contacts can encrypt files directly for you.",
     "identity.codeTitle": "My identity code (X25519 public key)",
@@ -4388,6 +4432,17 @@ window.FILENYMOUS_I18N = {
     "advanced.x25519Missing": "Aucune clé X25519 pour l'instant - générez-en une pour recevoir en mode agent",
     "nav.contacts": "Contacts",
     "nav.identity": "Identité",
+    "share.nothingYet": "Créez d'abord un transfert.",
+    "share.codeText": "Fichier chiffré via Filenymous - code à usage unique :",
+    "share.linkText": "Fichier chiffré via Filenymous - ouvre ce lien :",
+    "rooms.shareText": "Rejoins ma room privée Filenymous (fichiers + chat, chiffrés) :",
+    "rooms.noRoomYet": "Créez d'abord une room pour obtenir un lien d'invitation.",
+    "identity.shareText": "Ajoute-moi comme contact Filenymous (onglet Contacts) avec mon code d'identité :",
+    "send.quickContacts": "Envoyer à un contact (bout en bout)",
+    "send.quickContactsHelp": "Choisissez un contact : la clé du fichier est chiffrée pour lui seul - le lien seul ne peut pas déchiffrer.",
+    "send.quickContactsManage": "Gérer",
+    "send.myIdentityTitle": "Mon identité - recevoir en bout en bout",
+    "send.myIdentityHelp": "Partagez votre code d'identité : vos contacts l'ajoutent dans leur onglet Contacts et chaque fichier qu'ils vous envoient n'est déchiffrable que par vous.",
     "identity.title": "Votre identité souveraine",
     "identity.intro": "Générez une paire de clés X25519 locale pour recevoir des transferts chiffrés de bout en bout. Votre clé privée ne quitte jamais ce navigateur. Partagez votre code d'identité pour que vos contacts chiffrent directement pour vous.",
     "identity.codeTitle": "Mon code d'identité (clé publique X25519)",
@@ -4705,6 +4760,17 @@ window.FILENYMOUS_I18N = {
     "advanced.x25519Missing": "아직 X25519 키가 없습니다. 에이전트 모드로 받으려면 키를 생성하세요",
     "nav.contacts": "연락처",
     "nav.identity": "신원",
+    "share.nothingYet": "먼저 전송을 만드세요.",
+    "share.codeText": "Filenymous 암호화 파일 - 일회용 코드:",
+    "share.linkText": "Filenymous 암호화 파일 - 이 링크를 여세요:",
+    "rooms.shareText": "내 Filenymous 비공개 룸에 참여하세요 (파일 + 채팅, 암호화):",
+    "rooms.noRoomYet": "먼저 룸을 만들어 초대 링크를 받으세요.",
+    "identity.shareText": "내 신원 코드로 Filenymous 연락처(연락처 탭)에 추가하세요:",
+    "send.quickContacts": "연락처로 보내기 (종단 간)",
+    "send.quickContactsHelp": "연락처를 선택하면 파일 키가 그 사람만을 위해 암호화됩니다 - 링크만으로는 복호화할 수 없습니다.",
+    "send.quickContactsManage": "관리",
+    "send.myIdentityTitle": "내 신원 - 종단 간 수신",
+    "send.myIdentityHelp": "신원 코드를 공유하세요: 연락처가 자신의 연락처 탭에 추가하면 보내는 모든 파일이 나만 복호화할 수 있게 암호화됩니다.",
     "identity.title": "나의 주권 신원",
     "identity.intro": "로컬 X25519 키 쌍을 생성하여 종단 간 암호화된 전송을 받으세요. 개인 키는 이 브라우저를 떠나지 않습니다. 신원 코드를 공유하면 연락처가 나를 위해 직접 암호화할 수 있습니다.",
     "identity.codeTitle": "내 신원 코드 (X25519 공개 키)",
@@ -4828,7 +4894,7 @@ function showTab(name) {
   if (name === 'history')  renderHistory();
   if (name === 'rooms')    renderPublicRoom();
   // Rappel visuel du mode dans le panel send
-  if (name === 'send') { updateSendNotice(); updateSendContactNotice(); }
+  if (name === 'send') { updateSendNotice(); updateSendContactNotice(); renderSendContactChips(); renderSendIdentityMini(); }
 }
 
 function setStatus(id, type, msg) {
@@ -7606,6 +7672,75 @@ function updateSendContactNotice() {
   } else {
     box.classList.add('hidden');
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SOCIAL SHARE — WhatsApp / Telegram (simple, shareable scenarios)
+// ═══════════════════════════════════════════════════════════
+function openShare(net, url, text) {
+  const target = net === 'wa'
+    ? 'https://wa.me/?text=' + encodeURIComponent(text + '\n' + url)
+    : 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text);
+  window.open(target, '_blank', 'noopener');
+}
+
+/** Share the last created artifact (magic link or one-time code). */
+window.shareArtifactTo = function (net) {
+  const a = S.lastShareArtifact;
+  if (!a || (!a.url && !a.code)) { toast(tr('share.nothingYet', 'Create a transfer first.')); return; }
+  const url  = a.url || p2pCodeShareUrl(a.code);
+  const text = a.code
+    ? tr('share.codeText', 'Encrypted file via Filenymous - one-time code:') + ' ' + a.code
+    : tr('share.linkText', 'Encrypted file via Filenymous - open this link:');
+  openShare(net, url, text);
+};
+
+window.shareHomeMagicTo = function (net) {
+  const code = typeof currentHomeMagicCode === 'function' ? currentHomeMagicCode() : '';
+  if (!code) { toast(tr('share.nothingYet', 'Create a transfer first.')); return; }
+  openShare(net, p2pCodeShareUrl(code), tr('share.codeText', 'Encrypted file via Filenymous - one-time code:') + ' ' + code);
+};
+
+window.shareRoomTo = function (net) {
+  const v = $('public-room-link')?.value || '';
+  if (!v.startsWith('http')) { toast(tr('rooms.noRoomYet', 'Create a room first to get an invite link.')); return; }
+  openShare(net, v, tr('rooms.shareText', 'Join my private Filenymous room (files + chat, encrypted):'));
+};
+
+window.shareIdentityTo = async function (net) {
+  const kp = await idGetKeyPair();
+  if (!kp) { toast(tr('identity.keyMissing', 'No key yet - generate one to get your identity code.')); showTab('identity'); return; }
+  const appUrl = location.origin + location.pathname;
+  openShare(net, appUrl, tr('identity.shareText', 'Add me as a Filenymous contact (Contacts tab) with my identity code:') + ' ' + b64e(kp.publicKey));
+};
+
+/** Quick contact chips inside the Send panel. */
+function renderSendContactChips() {
+  const el = $('send-contact-chips');
+  if (!el) return;
+  const list = loadContacts();
+  const chips = list.map((c, i) => {
+    const on = S.sendContact && S.sendContact.code === c.code;
+    return '<button type="button" class="contact-chip' + (on ? ' on' : '') + '" onclick="quickPickContact(' + i + ')">' + esc(c.label) + '</button>';
+  });
+  chips.push('<button type="button" class="contact-chip" onclick="showTab(\'contacts\')">+ ' + esc(tr('send.quickContactsManage', 'Manage')) + '</button>');
+  el.innerHTML = chips.join('');
+}
+
+window.quickPickContact = function (i) {
+  const c = loadContacts()[i];
+  if (!c) return;
+  S.sendContact = (S.sendContact && S.sendContact.code === c.code) ? null : c;
+  updateSendContactNotice();
+  renderSendContactChips();
+  if (S.sendContact) toast(tr('contacts.selected', 'Files will be encrypted end-to-end for this contact.'));
+};
+
+async function renderSendIdentityMini() {
+  const el = $('send-identity-code');
+  if (!el) return;
+  const kp = await idGetKeyPair();
+  el.textContent = kp ? b64e(kp.publicKey) : tr('identity.noKey', 'No key yet');
 }
 
 // ═══════════════════════════════════════════════════════════
