@@ -3919,6 +3919,7 @@ window.FILENYMOUS_I18N = {
     "home.copyCode": "Copy code",
     "home.showQr": "Show QR",
     "home.qrContainsCode": "QR contains the Filenymous site and this one-time code.",
+    "home.qrContainsLink": "QR contains the full encrypted link - scan and the file decrypts instantly, no waiting.",
     "home.codeCopied": "Code copied.",
     "home.chooseFiles": "Choose files",
     "home.chooseFolder": "Choose folder",
@@ -4277,6 +4278,7 @@ window.FILENYMOUS_I18N = {
     "home.copyCode": "Copier le code",
     "home.showQr": "Afficher le QR",
     "home.qrContainsCode": "Le QR contient le site Filenymous et ce code à usage unique.",
+    "home.qrContainsLink": "Le QR contient le lien chiffré complet - scannez et le fichier se déchiffre instantanément, sans attente.",
     "home.codeCopied": "Code copié.",
     "home.chooseFiles": "Choisir des fichiers",
     "home.chooseFolder": "Choisir un dossier",
@@ -4637,6 +4639,7 @@ window.FILENYMOUS_I18N = {
     "home.copyCode": "코드 복사",
     "home.showQr": "QR 표시",
     "home.qrContainsCode": "QR에 Filenymous 사이트와 이 일회용 코드가 들어 있습니다.",
+    "home.qrContainsLink": "QR에 전체 암호화 링크가 들어 있습니다 - 스캔하면 대기 없이 즉시 복호화됩니다.",
     "home.codeCopied": "코드가 복사되었습니다.",
     "home.chooseFiles": "파일 선택",
     "home.chooseFolder": "폴더 선택",
@@ -6024,24 +6027,36 @@ function currentHomeMagicCode() {
   return S.preparedMagicCode || '';
 }
 
-window.copyHomeMagicCode = function () {
+// The best URL to share/QR from the home card: the self-contained magic
+// link if one was just created (instant decrypt, no sender presence),
+// otherwise the P2P-code URL.
+function currentHomeShareUrl() {
+  const a = S.lastShareArtifact;
+  if (a && a.kind === 'magic-link' && a.url) return a.url;
   const code = currentHomeMagicCode();
-  if (!code) return;
-  navigator.clipboard.writeText(code).then(() => toast(tr('home.codeCopied', 'Code copied.')));
+  return code ? p2pCodeShareUrl(code) : '';
+}
+
+window.copyHomeMagicCode = function () {
+  const url = currentHomeShareUrl();
+  const code = currentHomeMagicCode();
+  const text = url || code;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => toast(tr('home.codeCopied', 'Code copied.')));
 };
 
 window.emailHomeMagicCode = function (event) {
   if (event) event.preventDefault();
+  const url = currentHomeShareUrl();
+  if (!url) return;
   const code = currentHomeMagicCode();
-  if (!code) return;
-  const url = p2pCodeShareUrl(code);
-  const subject = encodeURIComponent('Filenymous Magic Link');
-  const body = encodeURIComponent(`Open this Filenymous link or enter the code below.\n\nLink: ${url}\nCode: ${code}`);
+  const subject = encodeURIComponent('Filenymous');
+  const body = encodeURIComponent(`Open this Filenymous link.\n\nLink: ${url}` + (S.lastShareArtifact?.kind === 'magic-link' ? '' : `\nCode: ${code}`));
   location.href = `mailto:?subject=${subject}&body=${body}`;
 };
 
 window.renderHomeMagicQr = function () {
-  const code = currentHomeMagicCode();
+  const code = currentHomeShareUrl();
   const panel = $('home-qr-panel');
   const status = $('home-qr-status');
   if (!panel || !status || !code) return;
@@ -6051,8 +6066,10 @@ window.renderHomeMagicQr = function () {
     return;
   }
   try {
-    window.FilenymousQRCode.renderCanvas($('home-qr-canvas'), p2pCodeShareUrl(code));
-    status.textContent = tr('home.qrContainsCode', 'QR contains the Filenymous site and this one-time code.');
+    window.FilenymousQRCode.renderCanvas($('home-qr-canvas'), currentHomeShareUrl());
+    status.textContent = S.lastShareArtifact?.kind === 'magic-link'
+      ? tr('home.qrContainsLink', 'QR contains the full encrypted link - scan and the file decrypts instantly, no waiting.')
+      : tr('home.qrContainsCode', 'QR contains the Filenymous site and this one-time code.');
   } catch (e) {
     status.textContent = tr('qr.tooLong', 'Link too long for one QR. Use Copy or Share to preserve the key.');
   }
@@ -6937,7 +6954,11 @@ window.createFromHome = async function (event) {
   if (homeBtn) homeBtn.disabled = true;
   try {
     showTab('send');
-    await window.handleSend(event, { preferP2PCode: true });
+    // Files that fit in a self-contained link: use the link (no sender
+    // presence, no WebRTC, decrypts instantly on scan). Only oversized
+    // files fall back to the direct P2P code (both devices stay open).
+    const fitsInline = S.file && S.file.size <= (CFG.webInlineMaxBytes || 0) && !S.sendContact;
+    await window.handleSend(event, fitsInline ? { preferWebLink: true } : { preferP2PCode: true });
   } finally {
     if (homeBtn && S.file) homeBtn.disabled = false;
   }
@@ -8068,9 +8089,13 @@ window.shareArtifactTo = function (net) {
 };
 
 window.shareHomeMagicTo = function (net) {
-  const code = typeof currentHomeMagicCode === 'function' ? currentHomeMagicCode() : '';
-  if (!code) { toast(tr('share.nothingYet', 'Create a transfer first.')); return; }
-  openShare(net, p2pCodeShareUrl(code), tr('share.codeText', 'Encrypted file via Filenymous - one-time code:') + ' ' + code);
+  const url = currentHomeShareUrl();
+  if (!url) { toast(tr('share.nothingYet', 'Create a transfer first.')); return; }
+  const isLink = S.lastShareArtifact?.kind === 'magic-link';
+  const text = isLink
+    ? tr('share.linkText', 'Encrypted file via Filenymous - open this link:')
+    : tr('share.codeText', 'Encrypted file via Filenymous - one-time code:') + ' ' + currentHomeMagicCode();
+  openShare(net, url, text);
 };
 
 window.shareRoomTo = function (net) {
