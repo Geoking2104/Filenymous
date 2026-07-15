@@ -4055,6 +4055,9 @@ window.FILENYMOUS_I18N = {
     "qr.local": "Local QR: the link and key do not leave this browser.",
     "qr.generated": "QR generated locally. The link and key do not leave this browser.",
     "qr.tooLong": "Link too long for one QR. Use Copy or Share to preserve the key.",
+    "qr.needsP2P": "This browser cannot open a direct QR transfer. Share the link via WhatsApp, Telegram, or Copy instead.",
+    "qr.startingSession": "Preparing the direct transfer for the QR...",
+    "home.qrLiveTransfer": "QR ready. Keep this page open: your recipient scans it and the file transfers directly, end-to-end. For remote sharing use WhatsApp / Telegram / Copy.",
     "qr.unavailable": "Local QR generator unavailable. Copy or share the link.",
     "qr.loaded": "QR read. Link detected and loaded.",
     "qr.join": "QR read. Click Continue to join the session.",
@@ -4414,6 +4417,9 @@ window.FILENYMOUS_I18N = {
     "qr.local": "QR local : le lien et sa clé ne quittent pas ce navigateur.",
     "qr.generated": "QR généré localement. Le lien et sa clé ne quittent pas ce navigateur.",
     "qr.tooLong": "Lien trop long pour un QR unique. Utilisez Copier ou Partager pour garder la clé intacte.",
+    "qr.needsP2P": "Ce navigateur ne peut pas ouvrir de transfert QR direct. Partagez le lien via WhatsApp, Telegram ou Copier.",
+    "qr.startingSession": "Préparation du transfert direct pour le QR...",
+    "home.qrLiveTransfer": "QR prêt. Gardez cette page ouverte : le destinataire le scanne et le fichier est transféré directement, de bout en bout. Pour un partage à distance, utilisez WhatsApp / Telegram / Copier.",
     "qr.unavailable": "Générateur QR local indisponible. Copiez ou partagez le lien.",
     "qr.loaded": "QR lu. Lien détecté et chargé.",
     "qr.join": "QR lu. Cliquez sur Continuer pour rejoindre la session.",
@@ -4775,6 +4781,9 @@ window.FILENYMOUS_I18N = {
     "qr.local": "로컬 QR: 링크와 키는 이 브라우저를 떠나지 않습니다.",
     "qr.generated": "QR이 로컬에서 생성되었습니다. 링크와 키는 이 브라우저를 떠나지 않습니다.",
     "qr.tooLong": "링크가 하나의 QR에 담기에는 너무 깁니다. 키를 보존하려면 복사 또는 공유를 사용하세요.",
+    "qr.needsP2P": "이 브라우저는 직접 QR 전송을 열 수 없습니다. WhatsApp, Telegram 또는 복사로 링크를 공유하세요.",
+    "qr.startingSession": "QR용 직접 전송을 준비 중...",
+    "home.qrLiveTransfer": "QR 준비 완료. 이 페이지를 열어 두세요: 수신자가 스캔하면 파일이 종단 간으로 직접 전송됩니다. 원격 공유는 WhatsApp / Telegram / 복사를 사용하세요.",
     "qr.unavailable": "로컬 QR 생성기를 사용할 수 없습니다. 링크를 복사하거나 공유하세요.",
     "qr.loaded": "QR을 읽었습니다. 링크가 감지되어 로드되었습니다.",
     "qr.join": "QR을 읽었습니다. 계속을 눌러 세션에 참여하세요.",
@@ -6037,6 +6046,24 @@ function currentHomeShareUrl() {
   return code ? p2pCodeShareUrl(code) : '';
 }
 
+// A QR code can only reliably carry a SHORT string (dense QRs misread on
+// phone cameras). Self-contained links (the whole encrypted file in the
+// URL) are far too long. So the QR always encodes a short P2P code backed
+// by a LIVE sender session: the recipient scans, the file streams directly
+// (WebRTC + TURN), any size. Text channels (WhatsApp/Telegram/copy) keep
+// the self-contained link instead.
+async function ensureP2PSenderForQr(statusEl) {
+  if (!S.file) throw new Error(tr('share.nothingYet', 'Create a transfer first.'));
+  if (!p2pSupported()) throw new Error(tr('qr.needsP2P', 'This browser cannot open a direct QR transfer. Share the link via WhatsApp, Telegram, or Copy instead.'));
+  const code = currentHomeMagicCode() || createOneTimeCode();
+  S.preparedMagicCode = code;
+  if (!hasActiveP2PSession('sender', normalizeOneTimeCode(code))) {
+    if (statusEl) statusEl.textContent = tr('qr.startingSession', 'Preparing the direct transfer for the QR...');
+    await startP2PSend();
+  }
+  return S.preparedMagicCode;
+}
+
 window.copyHomeMagicCode = function () {
   const url = currentHomeShareUrl();
   const code = currentHomeMagicCode();
@@ -6055,23 +6082,21 @@ window.emailHomeMagicCode = function (event) {
   location.href = `mailto:?subject=${subject}&body=${body}`;
 };
 
-window.renderHomeMagicQr = function () {
-  const code = currentHomeShareUrl();
+window.renderHomeMagicQr = async function () {
   const panel = $('home-qr-panel');
   const status = $('home-qr-status');
-  if (!panel || !status || !code) return;
+  if (!panel || !status) return;
   panel.classList.remove('hidden');
   if (!window.FilenymousQRCode?.renderCanvas) {
     status.textContent = tr('qr.unavailable', 'Local QR generator unavailable. Copy or share the link.');
     return;
   }
   try {
-    window.FilenymousQRCode.renderCanvas($('home-qr-canvas'), currentHomeShareUrl());
-    status.textContent = S.lastShareArtifact?.kind === 'magic-link'
-      ? tr('home.qrContainsLink', 'QR contains the full encrypted link - scan and the file decrypts instantly, no waiting.')
-      : tr('home.qrContainsCode', 'QR contains the Filenymous site and this one-time code.');
+    const code = await ensureP2PSenderForQr(status);
+    window.FilenymousQRCode.renderCanvas($('home-qr-canvas'), p2pCodeShareUrl(code));
+    status.textContent = tr('home.qrLiveTransfer', 'QR ready. Keep this page open: your recipient scans it and the file transfers directly, end-to-end. For remote sharing use WhatsApp / Telegram / Copy.');
   } catch (e) {
-    status.textContent = tr('qr.tooLong', 'Link too long for one QR. Use Copy or Share to preserve the key.');
+    status.textContent = esc(e.message);
   }
 };
 
@@ -7184,24 +7209,32 @@ window.shareLink = async function () {
   toast('Link copied: manual sharing is available.');
 };
 
-window.renderQrForCurrentLink = function () {
-  const url = currentShareLink();
+window.renderQrForCurrentLink = async function () {
   const panel = $('qr-panel');
   const status = $('qr-status');
+  if (!panel || !status) return;
   panel.classList.remove('hidden');
-  if (!url) {
-    status.textContent = 'No link to encode.';
-    return;
-  }
   if (!window.FilenymousQRCode?.renderCanvas) {
     status.textContent = tr('qr.unavailable', 'Local QR generator unavailable. Copy or share the link.');
     return;
   }
+  // If the current link is short enough for a crisp QR (tiny payload), encode
+  // it directly (instant decrypt, no presence). Otherwise use a short live
+  // P2P code so the QR stays reliably scannable and works for any size.
+  const url = currentShareLink();
+  if (url && url.length <= 300) {
+    try {
+      window.FilenymousQRCode.renderCanvas($('qr-canvas'), url);
+      status.textContent = tr('qr.generated', 'QR generated locally. The link and key do not leave this browser.');
+      return;
+    } catch (_) { /* fall through to P2P */ }
+  }
   try {
-    window.FilenymousQRCode.renderCanvas($('qr-canvas'), url);
-    status.textContent = tr('qr.generated', 'QR generated locally. The link and key do not leave this browser.');
+    const code = await ensureP2PSenderForQr(status);
+    window.FilenymousQRCode.renderCanvas($('qr-canvas'), p2pCodeShareUrl(code));
+    status.textContent = tr('home.qrLiveTransfer', 'QR ready. Keep this page open: your recipient scans it and the file transfers directly, end-to-end. For remote sharing use WhatsApp / Telegram / Copy.');
   } catch (e) {
-    status.textContent = tr('qr.tooLong', 'Link too long for a single QR code. Use Copy or Share to keep the key intact.');
+    status.textContent = esc(e.message);
   }
 };
 
