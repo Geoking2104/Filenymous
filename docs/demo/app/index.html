@@ -4544,6 +4544,8 @@ window.FILENYMOUS_I18N = {
     "history.badgeParcel": "Parcel DHT",
     "history.linkNotStored": "lien non conservé",
     "history.tagPrompt": "Tags pour ce transfert (séparés par des virgules) :",
+    "p2p.connecting": "Pair trouvé - établissement du canal direct chiffré (traversée NAT, jusqu'à ~30 s)...",
+    "p2p.connectTimeout": "Connexion directe impossible. Vérifiez que les DEUX appareils restent sur leur page et réessayez avec un code neuf.",
     "share.nothingYet": "Créez d'abord un transfert.",
     "share.codeText": "Fichier chiffré via Filenymous - code à usage unique :",
     "share.linkText": "Fichier chiffré via Filenymous - ouvre ce lien :",
@@ -5632,10 +5634,35 @@ async function openSignalSocketWithFallback(code, role, onSignal, onPeerJoined, 
   }
 }
 
-function createP2PPeer(sendSignal) {
+function createP2PPeer(sendSignal, statusId) {
   const pc = new RTCPeerConnection({
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      // Sovereign TURN relay (Filenymous VPS): only WebRTC negotiation +
+      // encrypted payload relaying when NAT blocks the direct path.
+      {
+        urls: ['turn:51.210.9.71:3478?transport=udp', 'turn:51.210.9.71:3478?transport=tcp'],
+        username: 'filenymous',
+        credential: '63c2ed2abf666f98001a2416b4770a7a',
+      },
+    ],
   });
+  const connectTimer = setTimeout(() => {
+    if (!['connected', 'completed'].includes(pc.iceConnectionState)) {
+      if (statusId) setStatus(statusId, 'error', tr('p2p.connectTimeout', 'Direct connection could not be established. Make sure BOTH devices stay on their page and retry with a fresh code.'));
+      setTransferState(TRANSFER_STATES.FAILED, {
+        percent: Math.min(S.transferProgressPercent || 10, 95),
+        label: tr('home.progressFailed', 'Transfer failed.'),
+      });
+    }
+  }, 45000);
+  pc.oniceconnectionstatechange = () => {
+    const st = pc.iceConnectionState;
+    if (st === 'checking' && statusId) {
+      setStatus(statusId, 'loading', tr('p2p.connecting', 'Peer found - establishing the direct encrypted channel (NAT traversal, up to ~30s)...'));
+    }
+    if (st === 'connected' || st === 'completed') clearTimeout(connectTimer);
+  };
   pc.onicecandidate = ev => {
     if (ev.candidate) sendSignal({ kind: 'ice', candidate: ev.candidate });
   };
@@ -5763,7 +5790,7 @@ window.startP2PSend = async function () {
         ws.send(JSON.stringify({ type: 'signal', code: signalCode, payload }));
       }
     };
-    const pc = createP2PPeer(sendSignal);
+    const pc = createP2PPeer(sendSignal, 'p2p-send-status');
     const channel = pc.createDataChannel('filenymous-file');
     const session = { code, role: 'sender', pc, channel, ws: null, signalCode };
     S.activeP2PSession = session;
@@ -5874,7 +5901,7 @@ window.joinP2PReceive = async function () {
   let signalCode = code;
   markTransferActive(tr('receive.p2pConnecting', 'Connecting to the direct P2P code...'));
   const sendSignal = payload => ws?.send(JSON.stringify({ type: 'signal', code: signalCode, payload }));
-  const pc = createP2PPeer(sendSignal);
+  const pc = createP2PPeer(sendSignal, 'p2p-recv-status');
   closeActiveP2PSession('replace');
   const session = { code, role: 'receiver', pc, channel: null, ws: null, signalCode };
   S.activeP2PSession = session;
