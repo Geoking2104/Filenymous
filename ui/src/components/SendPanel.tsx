@@ -19,7 +19,7 @@ const CHUNK_SIZE = 256 * 1024;
 type SendState = "idle" | "uploading" | "done";
 
 function isValidContact(v: string) {
-  return /[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+[1-9]\d{7,14}$/.test(v);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+[1-9]\d{7,14}$/.test(v);
 }
 
 function fmtSize(b: number, units: string[]) {
