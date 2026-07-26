@@ -25,7 +25,9 @@
     "websocket": "Conducteur local",
     "webBridge": "Pont",
     "localOnly": "Navigateur",
-    "checking": "Vérification…"
+    "checking": "Vérification…",
+    "holochainLocal": "Holochain local",
+    "holoWebBridge": "Holo Web Bridge"
   },
   "lang": {
     "label": "Langue",
@@ -44,7 +46,29 @@
     "search": "Rechercher",
     "loading": "Chargement…",
     "error": "Erreur",
-    "close": "Fermer"
+    "close": "Fermer",
+    "continue": "Continuer",
+    "retry": "Réessayer",
+    "never": "Jamais",
+    "unlimited": "Illimité"
+  },
+  "size": {
+    "b": "o",
+    "kb": "Ko",
+    "mb": "Mo",
+    "gb": "Go",
+    "tb": "To"
+  },
+  "footer": {
+    "copy": "2026 protocole open-source",
+    "github": "GitHub",
+    "security": "Sécurité",
+    "holochain": "Holochain"
+  },
+  "advanced": {
+    "label": "Avancé",
+    "title": "Réseau, identité, sécurité et portefeuille",
+    "subtitle": "Ces réglages s’adressent aux utilisateurs avancés. Les flux Envoyer, Recevoir et Salons fonctionnent sans cette section."
   },
   "rooms": {
     "title": "Salons privés ou publics",
@@ -61,12 +85,102 @@
     "chat": "Chat du salon"
   },
   "send": {
-    "title": "Envoyer un fichier",
-    "drop": "Déposez un fichier ici",
-    "toContact": "Envoyer à un contact"
+    "title": "Envoyer des fichiers en privé",
+    "subtitle": "Chiffrement de bout en bout · options souveraines disponibles",
+    "browserOnly": "Mode navigateur seul — l’envoi nécessite Holo Web Conductor ou un conducteur Holochain local. L’interface reste utilisable ; le chiffrement local fonctionne, mais la publication sur le DHT est indisponible.",
+    "magicLink": "Magic Link",
+    "toContact": "Envoyer à un contact",
+    "dropHint": "Cliquez ou déposez vos fichiers ici",
+    "dropClick": "Cliquez",
+    "dropFormats": "Tous formats · jusqu’à 5 Go",
+    "limitExceeded": "Limite 5 Go dépassée",
+    "recipientOptions": "Destinataire & options",
+    "emailOrPhone": "Email ou téléphone *",
+    "placeholderContact": "alice@example.com ou +33612345678",
+    "chooseContact": "Choisir un contact",
+    "noContacts": "Aucun contact — ajoutez-en un dans l’onglet Contacts.",
+    "keyReady": "Clé de chiffrement prête",
+    "noX25519": "Pas encore de clé X25519 publiée",
+    "notResolved": "Pas encore résolu sur le DHT",
+    "agentRegistered": "✓ Agent enregistré sur le DHT — livraison directe chiffrée + lien de secours",
+    "agentUnknown": "⚠ Contact non enregistré — un lien one-time sera généré (partagez-le vous-même)",
+    "expiry": "Expiration",
+    "expiry24h": "24 heures",
+    "expiry7d": "7 jours",
+    "expiry30d": "30 jours",
+    "maxDownloads": "Téléchargements max",
+    "times1": "1 fois",
+    "times3": "3 fois",
+    "times10": "10 fois",
+    "infoCrypto": "Chiffrement AES-256-GCM + ECIES/X25519 dans le navigateur. Aucun serveur Filenymous ne voit la clé ni les données. Stockage sur Holo DHT.",
+    "btnMagic": "Créer le Magic Link & chiffrer",
+    "btnContact": "Envoyer de façon sécurisée au contact",
+    "localEncryptNote": "Tous les fichiers sont chiffrés localement dans votre navigateur.",
+    "published": "Transfert publié sur le réseau Holo",
+    "notified": "Le destinataire a été notifié en temps réel via le DHT. Voici également le lien de secours.",
+    "notRegistered": "Destinataire non enregistré sur le DHT. Partagez ce lien vous-même (email, SMS, messagerie). La clé de déchiffrement est dans le fragment # — elle ne transite pas sur le réseau.",
+    "scanQr": "Scannez ce QR code pour ouvrir le lien de téléchargement",
+    "downloadLink": "Lien de téléchargement",
+    "newSend": "Nouvel envoi",
+    "localOnlyProgress": "Chiffrement local — vos fichiers ne transitent jamais en clair. Aucun serveur tiers.",
+    "progressResolve": "Résolution du destinataire sur le DHT…",
+    "progressAes": "Génération de la clé AES-256…",
+    "progressEncrypt": "Chiffrement local des chunks…",
+    "progressChunk": "Chunk {{current}}/{{total}} chiffré…",
+    "progressPublish": "Publication des chunks sur le DHT…",
+    "progressWrap": "Wrapping ECIES de la clé AES (X25519)…",
+    "progressManifest": "Création du manifest sur le DHT…",
+    "progressLink": "Génération du lien…",
+    "progressDone": "Transfert publié !",
+    "errorTransfer": "Erreur lors du transfert : {{message}}",
+    "nFiles": "{{count}} fichiers"
   },
   "receive": {
-    "title": "Recevoir",
-    "waiting": "En attente d’un lien ou d’un code…"
+    "title": "Recevoir un fichier",
+    "subtitle": "Collez un Magic Link ou un code Filenymous",
+    "linkOrCode": "Magic Link ou code",
+    "placeholder": "https://filenymous.eu/#parcel:key  ou  parcel:key",
+    "keyNote": "La clé de déchiffrement reste dans le fragment # — elle ne transite jamais sur le réseau.",
+    "invalidLink": "Lien ou code invalide. Format attendu : …/#parcel:key",
+    "notFound": "Transfert introuvable ou expiré.",
+    "revoked": "Ce transfert a été révoqué par l’expéditeur.",
+    "expired": "Ce transfert a expiré.",
+    "errorPrefix": "Erreur : {{message}}",
+    "accessDenied": "Impossible d’accéder au fichier",
+    "downloaded": "Fichier téléchargé !",
+    "savedLocally": "«{{name}}» déchiffré et sauvegardé localement.",
+    "chunksEncrypted": "{{count}} chunks chiffrés",
+    "downloads": "Téléchargements",
+    "network": "Réseau",
+    "aesInHash": "Clé AES dans le fragment # de l’URL — elle n’a jamais transité sur le réseau. Déchiffrement 100 % local.",
+    "downloadDecrypt": "Télécharger & déchiffrer",
+    "progressManifest": "Récupération du manifest DHT…",
+    "progressChunks": "Récupération des chunks DHT…",
+    "progressDecrypt": "Déchiffrement AES-256-GCM…",
+    "progressChunk": "Chunk {{current}}/{{total}} déchiffré…",
+    "progressSave": "Sauvegarde…",
+    "progressDone": "Terminé !",
+    "errorDownload": "Erreur lors du téléchargement : {{message}}",
+    "fileMissingDht": "Fichier introuvable sur le DHT.",
+    "fileMissingBridge": "Fichier introuvable via Web Bridge."
+  },
+  "contacts": {
+    "title": "Contacts",
+    "empty": "Aucun contact pour le moment",
+    "add": "Ajouter un contact"
+  },
+  "identity": {
+    "title": "Identité souveraine",
+    "generate": "Générer une identité",
+    "export": "Exporter",
+    "import": "Importer"
+  },
+  "history": {
+    "title": "Historique",
+    "empty": "Aucun transfert pour le moment",
+    "pending": "En attente",
+    "done": "Terminé",
+    "revoked": "Révoqué",
+    "expired": "Expiré"
   }
 }

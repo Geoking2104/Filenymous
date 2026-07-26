@@ -25,7 +25,9 @@
     "websocket": "Local conductor",
     "webBridge": "Bridge",
     "localOnly": "Browser",
-    "checking": "Checking…"
+    "checking": "Checking…",
+    "holochainLocal": "Local Holochain",
+    "holoWebBridge": "Holo Web Bridge"
   },
   "lang": {
     "label": "Language",
@@ -44,7 +46,29 @@
     "search": "Search",
     "loading": "Loading…",
     "error": "Error",
-    "close": "Close"
+    "close": "Close",
+    "continue": "Continue",
+    "retry": "Retry",
+    "never": "Never",
+    "unlimited": "Unlimited"
+  },
+  "size": {
+    "b": "B",
+    "kb": "KB",
+    "mb": "MB",
+    "gb": "GB",
+    "tb": "TB"
+  },
+  "footer": {
+    "copy": "2026 open-source protocol",
+    "github": "GitHub",
+    "security": "Security",
+    "holochain": "Holochain"
+  },
+  "advanced": {
+    "label": "Advanced",
+    "title": "Network, identity, security, and wallet controls",
+    "subtitle": "These settings are for power users. The normal Send, Receive, and Rooms flows work without reading this section."
   },
   "rooms": {
     "title": "Private or public rooms",
@@ -61,12 +85,102 @@
     "chat": "Room chat"
   },
   "send": {
-    "title": "Send a file",
-    "drop": "Drop a file here",
-    "toContact": "Send to a contact"
+    "title": "Send files privately",
+    "subtitle": "End-to-end encrypted • Sovereign options available",
+    "browserOnly": "Browser-only mode — sending requires Holo Web Conductor or a local Holochain conductor. The UI remains usable; local encryption works, but DHT publication is unavailable.",
+    "magicLink": "Magic Link",
+    "toContact": "Send to Contact",
+    "dropHint": "Click or drop your files here",
+    "dropClick": "Click",
+    "dropFormats": "Any format · up to 5 GB",
+    "limitExceeded": "5 GB limit exceeded",
+    "recipientOptions": "Recipient & options",
+    "emailOrPhone": "Email or phone *",
+    "placeholderContact": "alice@example.com or +33612345678",
+    "chooseContact": "Choose a contact",
+    "noContacts": "No contacts — add one in the Contacts tab.",
+    "keyReady": "Encryption key ready",
+    "noX25519": "No X25519 key published yet",
+    "notResolved": "Not resolved on the DHT yet",
+    "agentRegistered": "✓ Agent registered on the DHT — encrypted direct delivery + backup link",
+    "agentUnknown": "⚠ Contact not registered — a one-time link will be generated (share it yourself)",
+    "expiry": "Expiry",
+    "expiry24h": "24 hours",
+    "expiry7d": "7 days",
+    "expiry30d": "30 days",
+    "maxDownloads": "Max downloads",
+    "times1": "1 time",
+    "times3": "3 times",
+    "times10": "10 times",
+    "infoCrypto": "AES-256-GCM + ECIES/X25519 encryption in the browser. No Filenymous server sees the key or the data. Storage on Holo DHT.",
+    "btnMagic": "Create Magic Link & Encrypt",
+    "btnContact": "Send Securely to Contact",
+    "localEncryptNote": "All files are encrypted locally in your browser.",
+    "published": "Transfer published on the Holo network",
+    "notified": "The recipient was notified in real time via the DHT. Here is the backup link as well.",
+    "notRegistered": "Recipient not registered on the DHT. Share this link yourself (email, SMS, messenger). The decryption key is in the # fragment — it never travels on the network.",
+    "scanQr": "Scan this QR code to open the download link",
+    "downloadLink": "Download link",
+    "newSend": "New send",
+    "localOnlyProgress": "Local encryption — your files never travel in the clear. No third-party server.",
+    "progressResolve": "Resolving recipient on the DHT…",
+    "progressAes": "Generating AES-256 key…",
+    "progressEncrypt": "Encrypting chunks locally…",
+    "progressChunk": "Chunk {{current}}/{{total}} encrypted…",
+    "progressPublish": "Publishing chunks on the DHT…",
+    "progressWrap": "ECIES wrapping of AES key (X25519)…",
+    "progressManifest": "Creating manifest on the DHT…",
+    "progressLink": "Generating link…",
+    "progressDone": "Transfer published!",
+    "errorTransfer": "Transfer error: {{message}}",
+    "nFiles": "{{count}} files"
   },
   "receive": {
-    "title": "Receive",
-    "waiting": "Waiting for a link or code…"
+    "title": "Receive a file",
+    "subtitle": "Paste a Magic Link or Filenymous code",
+    "linkOrCode": "Magic Link or code",
+    "placeholder": "https://filenymous.eu/#parcel:key  or  parcel:key",
+    "keyNote": "The decryption key stays in the # fragment — it never travels on the network.",
+    "invalidLink": "Invalid link or code. Expected format: …/#parcel:key",
+    "notFound": "Transfer not found or expired.",
+    "revoked": "This transfer was revoked by the sender.",
+    "expired": "This transfer has expired.",
+    "errorPrefix": "Error: {{message}}",
+    "accessDenied": "Unable to access the file",
+    "downloaded": "File downloaded!",
+    "savedLocally": "“{{name}}” decrypted and saved locally.",
+    "chunksEncrypted": "{{count}} encrypted chunks",
+    "downloads": "Downloads",
+    "network": "Network",
+    "aesInHash": "AES key in the URL # fragment — it never traveled on the network. 100% local decryption.",
+    "downloadDecrypt": "Download & Decrypt",
+    "progressManifest": "Fetching DHT manifest…",
+    "progressChunks": "Fetching DHT chunks…",
+    "progressDecrypt": "AES-256-GCM decryption…",
+    "progressChunk": "Chunk {{current}}/{{total}} decrypted…",
+    "progressSave": "Saving…",
+    "progressDone": "Done!",
+    "errorDownload": "Download error: {{message}}",
+    "fileMissingDht": "File not found on the DHT.",
+    "fileMissingBridge": "File not found via Web Bridge."
+  },
+  "contacts": {
+    "title": "Contacts",
+    "empty": "No contacts yet",
+    "add": "Add a contact"
+  },
+  "identity": {
+    "title": "Sovereign identity",
+    "generate": "Generate identity",
+    "export": "Export",
+    "import": "Import"
+  },
+  "history": {
+    "title": "History",
+    "empty": "No transfers yet",
+    "pending": "Pending",
+    "done": "Done",
+    "revoked": "Revoked",
+    "expired": "Expired"
   }
 }
