@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useStore } from "../store/useStore";
 
 const S = `
@@ -10,6 +11,7 @@ const S = `
 `;
 
 export default function Footer() {
+  const { t } = useTranslation();
   const { setTab } = useStore();
 
   return (
@@ -19,7 +21,7 @@ export default function Footer() {
         <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
           <span className="footer-logo">Filenymous</span>
           <span style={{ color: "#e5e7eb" }}>/</span>
-          <span className="footer-copy">2026 open-source protocol</span>
+          <span className="footer-copy">{t("footer.copy")}</span>
         </div>
         <div className="footer-links">
           <a
@@ -28,17 +30,17 @@ export default function Footer() {
             rel="noreferrer"
             className="footer-link"
           >
-            GitHub
+            {t("footer.github")}
           </a>
           <button
             className="footer-link"
             style={{ border: "none", background: "transparent", cursor: "pointer" }}
             onClick={() => setTab("advanced")}
           >
-            Security
+            {t("footer.security")}
           </button>
           <a href="https://developer.holochain.org" target="_blank" rel="noreferrer" className="footer-link">
-            Holochain
+            {t("footer.holochain")}
           </a>
         </div>
       </footer>

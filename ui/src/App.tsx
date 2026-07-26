@@ -4,6 +4,7 @@
  */
 
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { initClient, onSignal } from "./holochain/client";
 import { useStore } from "./store/useStore";
 import type { FilenymousSignal } from "./holochain/types";
@@ -20,15 +21,16 @@ import WalletPanel from "./components/WalletPanel";
 import "./styles.css";
 
 function AdvancedPanel() {
+  const { t } = useTranslation();
   return (
     <section className="panel-enter">
       <div className="card advanced-intro">
-        <div className="card-label">Advanced</div>
+        <div className="card-label">{t("advanced.label")}</div>
         <h1 style={{ fontSize: "1.35rem", lineHeight: 1.2, marginBottom: ".45rem" }}>
-          Network, identity, security, and wallet controls
+          {t("advanced.title")}
         </h1>
         <p style={{ color: "var(--muted)", fontSize: ".92rem" }}>
-          These settings are for power users. The normal Send, Receive, and Rooms flows work without reading this section.
+          {t("advanced.subtitle")}
         </p>
       </div>
       <div className="advanced-grid">
@@ -55,7 +57,7 @@ export default function App() {
     onSignal((raw) => {
       const sig = raw as FilenymousSignal;
       if (sig?.type === "IncomingParcel") {
-        console.info("[Filenymous] Nouveau parcel recu :", sig.file_name);
+        console.info("[Filenymous] Incoming parcel:", sig.file_name);
       }
     });
 
