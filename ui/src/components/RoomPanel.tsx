@@ -1,6 +1,12 @@
+/**
+ * RoomPanel — private room + live open shared library
+ * Inspired by eMule shared files: files selected by peers are visible
+ * to everyone in the room session (browser-only, no plugin download).
+ */
+
 import { useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import { createInviteCode, roomAvatarInitials, sanitizeRoomText } from "../rooms/roomModel";
-import type { RoomPeer, RoomTransferRequest } from "../rooms/types";
+import type { RoomPeer, RoomSharedFile, RoomTransferRequest } from "../rooms/types";
 import { useStore } from "../store/useStore";
 
 const localPeer: RoomPeer = {
@@ -11,6 +17,9 @@ const localPeer: RoomPeer = {
   lastSeenMs: Date.now(),
   expiresAtMs: Date.now() + 60_000,
 };
+
+/** Keep File handles only in memory on the owner's tab */
+const localFileHandles = new Map<string, File>();
 
 function createRoomId(): string {
   const fallback = createInviteCode().replace(/-/g, "").toLowerCase();
@@ -46,6 +55,22 @@ function requestFromFile(file: File, roomId: string, peer: RoomPeer): RoomTransf
   };
 }
 
+function shareFromFile(file: File, roomId: string): RoomSharedFile {
+  const shareId = `share-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  localFileHandles.set(shareId, file);
+  return {
+    shareId,
+    roomId,
+    ownerId: localPeer.peerId,
+    ownerName: localPeer.displayName,
+    fileName: sanitizeRoomText(file.name, 180),
+    fileSize: file.size,
+    mimeType: file.type || "application/octet-stream",
+    localOnly: true,
+    addedAtMs: Date.now(),
+  };
+}
+
 export default function RoomPanel() {
   const {
     net,
@@ -53,20 +78,27 @@ export default function RoomPanel() {
     inviteCode,
     peers,
     roomTransfers,
+    roomSharedFiles,
     setRoom,
     setPeers,
     setRoomTransfers,
+    addRoomSharedFile,
+    removeRoomSharedFile,
   } = useStore();
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const libraryInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedPeerId, setSelectedPeerId] = useState("");
   const [draft, setDraft] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [libDragging, setLibDragging] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [filter, setFilter] = useState("");
   const [messages, setMessages] = useState<Array<{ id: string; author: string; text: string }>>([
     {
       id: "welcome",
       author: "Filenymous",
-      text: "Create a room, share the invite link, then keep this tab open while people exchange files.",
+      text: "Create a room, share the invite, open files into the live library. Peers discover them in-session — no plugin.",
     },
   ]);
 
@@ -75,6 +107,17 @@ export default function RoomPanel() {
   const selectedPeer = visiblePeers.find((peer) => peer.peerId === selectedPeerId);
   const canSend = Boolean(roomId && selectedPeer && selectedPeer.peerId !== localPeer.peerId);
   const inviteUrl = roomId && inviteCode ? roomInviteLink(roomId, inviteCode) : "";
+
+  const filteredLibrary = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return roomSharedFiles;
+    return roomSharedFiles.filter(
+      (f) =>
+        f.fileName.toLowerCase().includes(q) ||
+        f.ownerName.toLowerCase().includes(q) ||
+        f.mimeType.toLowerCase().includes(q),
+    );
+  }, [roomSharedFiles, filter]);
 
   const ensureRoom = () => {
     const nextRoomId = roomId || createRoomId();
@@ -113,11 +156,81 @@ export default function RoomPanel() {
     setRoomTransfers([...requests, ...roomTransfers]);
   };
 
+  const openToLibrary = (files: FileList | File[]) => {
+    const room = ensureRoom();
+    Array.from(files).forEach((file) => {
+      addRoomSharedFile(shareFromFile(file, room.roomId));
+    });
+    setMessages((prev) => [
+      {
+        id: crypto.randomUUID?.() ?? `${Date.now()}`,
+        author: "System",
+        text: `${Array.from(files).length} file(s) opened to the live library — visible to room peers while this tab stays open.`,
+      },
+      ...prev,
+    ]);
+  };
+
+  const requestSharedFile = (entry: RoomSharedFile) => {
+    if (entry.ownerId === localPeer.peerId) {
+      const file = localFileHandles.get(entry.shareId);
+      if (file) {
+        const url = URL.createObjectURL(file);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = entry.fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      return;
+    }
+    // Remote peer: queue a transfer request (live session path)
+    const peer = visiblePeers.find((p) => p.peerId === entry.ownerId);
+    if (!peer) return;
+    const room = ensureRoom();
+    const now = Date.now();
+    setRoomTransfers([
+      {
+        transferId: `transfer-${now}-${entry.shareId}`,
+        roomId: room.roomId,
+        senderId: entry.ownerId,
+        receiverId: localPeer.peerId,
+        fileNameCiphertext: entry.fileName,
+        fileSize: entry.fileSize,
+        manifestHash: "",
+        integrityHash: "",
+        status: "pending",
+        createdAtMs: now,
+        expiresAtMs: now + 10 * 60_000,
+      },
+      ...roomTransfers,
+    ]);
+    setMessages((prev) => [
+      {
+        id: crypto.randomUUID?.() ?? `${Date.now()}`,
+        author: "You",
+        text: `Requested «${entry.fileName}» from ${entry.ownerName}`,
+      },
+      ...prev,
+    ]);
+  };
+
+  const unshare = (shareId: string) => {
+    localFileHandles.delete(shareId);
+    removeRoomSharedFile(shareId);
+  };
+
   const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
     setDragging(false);
     if (!canSend) return;
     queueFiles(event.dataTransfer.files);
+  };
+
+  const handleLibDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setLibDragging(false);
+    openToLibrary(event.dataTransfer.files);
   };
 
   const handleDropKeyDown = (event: KeyboardEvent<HTMLLabelElement>) => {
@@ -138,10 +251,10 @@ export default function RoomPanel() {
       <div className="card room-hero">
         <div>
           <div className="card-label">Rooms</div>
-          <h1>Create a private room for a group</h1>
+          <h1>Live room & open library</h1>
           <p>
-            One temporary room, one invite link, many files. The browser keeps the room key local and the advanced
-            network modules stay behind the scenes.
+            Session-only shared files — like a lightweight eMule library in the browser.
+            Select files to open them to the room; peers discover and request them live. No plugin.
           </p>
         </div>
         <div className="room-actions">
@@ -158,7 +271,9 @@ export default function RoomPanel() {
         <div>
           <div className="card-label">Invite</div>
           <p className="room-summary">
-            {roomId ? "Room ready. Share this link and keep this page open." : "Create a room to generate an invite link."}
+            {roomId
+              ? "Room ready. Share this link — library stays live while tabs stay open."
+              : "Create a room to generate an invite link."}
           </p>
         </div>
         <input
@@ -167,6 +282,102 @@ export default function RoomPanel() {
           aria-label="Room invite link"
           onFocus={(event) => event.currentTarget.select()}
         />
+      </div>
+
+      {/* Live open library */}
+      <div className="card">
+        <div className="card-label">Open library · live discovery</div>
+        <p style={{ color: "var(--muted)", fontSize: ".9rem", marginBottom: "1rem" }}>
+          Files you open here are listed for everyone in this room session.
+          Data never leaves the owner's browser until a peer requests a transfer.
+        </p>
+
+        <label
+          className={`room-drop ${libDragging ? "is-dragging" : ""}`}
+          role="button"
+          tabIndex={0}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setLibDragging(true);
+          }}
+          onDragLeave={() => setLibDragging(false)}
+          onDrop={handleLibDrop}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              libraryInputRef.current?.click();
+            }
+          }}
+          style={{ marginBottom: "1rem" }}
+        >
+          <input
+            ref={libraryInputRef}
+            type="file"
+            multiple
+            onChange={(e) => {
+              if (e.currentTarget.files) openToLibrary(e.currentTarget.files);
+              e.currentTarget.value = "";
+            }}
+          />
+          <strong>Open files to the room library</strong>
+          <span>Drop or click — visible to peers in this browser session only</span>
+        </label>
+
+        <div className="form-row">
+          <input
+            type="search"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter by name, owner, type…"
+            aria-label="Filter shared library"
+          />
+        </div>
+
+        {filteredLibrary.length === 0 ? (
+          <p className="empty">No files in the live library yet. Open a few to start discovery.</p>
+        ) : (
+          <div className="room-transfer-list">
+            {filteredLibrary.map((entry) => {
+              const isMine = entry.ownerId === localPeer.peerId;
+              return (
+                <div key={entry.shareId} className="room-transfer-row" style={{ alignItems: "center" }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {entry.fileName}
+                    </div>
+                    <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>
+                      {formatBytes(entry.fileSize)} · {entry.ownerName}
+                      {isMine ? " · you" : " · peer"} · {entry.mimeType.split("/")[0] || "file"}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: ".4rem", flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-sm"
+                      onClick={() => requestSharedFile(entry)}
+                    >
+                      {isMine ? "Save" : "Request"}
+                    </button>
+                    {isMine && (
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm"
+                        onClick={() => unshare(entry.shareId)}
+                        style={{ color: "var(--err)" }}
+                      >
+                        Unshare
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <p style={{ fontSize: ".72rem", color: "var(--muted)", marginTop: ".9rem" }}>
+          {roomSharedFiles.length} file{roomSharedFiles.length === 1 ? "" : "s"} · session-scoped · no central server
+        </p>
       </div>
 
       <div className="room-grid">
@@ -195,7 +406,7 @@ export default function RoomPanel() {
         </div>
 
         <div className="card room-panel">
-          <div className="card-label">Files</div>
+          <div className="card-label">Direct send</div>
           <label
             className={`room-drop ${dragging ? "is-dragging" : ""} ${canSend ? "" : "is-disabled"}`}
             role="button"
@@ -219,11 +430,11 @@ export default function RoomPanel() {
               }}
             />
             <strong>{canSend ? `Drop files for ${selectedPeer?.displayName}` : "Invite or add a guest first"}</strong>
-            <span>Large files stay in direct-transfer mode when the network path is available.</span>
+            <span>Point-to-point transfer to one peer (not listed in the open library).</span>
           </label>
           <div className="room-transfer-list">
             {roomTransfers.length === 0 ? (
-              <p className="empty">No room file yet.</p>
+              <p className="empty">No direct transfer yet.</p>
             ) : (
               roomTransfers.slice(0, 5).map((transfer) => (
                 <div key={transfer.transferId} className="room-transfer-row">
@@ -247,7 +458,7 @@ export default function RoomPanel() {
             Send message
           </button>
           <div className="room-messages">
-            {messages.slice(0, 5).map((message) => (
+            {messages.slice(0, 6).map((message) => (
               <p key={message.id}>
                 <strong>{message.author}</strong>
                 <span>{message.text}</span>
@@ -259,8 +470,8 @@ export default function RoomPanel() {
 
       <div className="info-box room-footnote">
         <span>
-          Room transport status: {net.connected ? "advanced network available" : "browser-first mode"}. Network
-          details and relay settings are managed in Advanced.
+          Transport: {net.connected ? "advanced network available" : "browser-first mode"}.
+          Open library is session-only — close the tab and shares disappear. Wire WebRTC signaling next for multi-tab live sync.
         </span>
       </div>
     </section>
