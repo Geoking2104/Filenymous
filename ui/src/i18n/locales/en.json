@@ -1,0 +1,72 @@
+{
+  "app": {
+    "tagline": "Files that fly private",
+    "navAria": "Main navigation",
+    "navAriaMobile": "Mobile navigation"
+  },
+  "tabs": {
+    "send": "Send",
+    "receive": "Receive",
+    "rooms": "Rooms",
+    "contacts": "Contacts",
+    "identity": "Identity",
+    "history": "History",
+    "advanced": "Advanced",
+    "sendShort": "Send",
+    "receiveShort": "Recv",
+    "roomsShort": "Rooms",
+    "contactsShort": "Book",
+    "identityShort": "ID",
+    "historyShort": "Hist",
+    "advancedShort": "More"
+  },
+  "net": {
+    "holoWeb": "Web conductor",
+    "websocket": "Local conductor",
+    "webBridge": "Bridge",
+    "localOnly": "Browser",
+    "checking": "Checking…"
+  },
+  "lang": {
+    "label": "Language",
+    "fr": "Français",
+    "en": "English"
+  },
+  "common": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyLink": "Copy link",
+    "create": "Create",
+    "cancel": "Cancel",
+    "save": "Save",
+    "remove": "Remove",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading…",
+    "error": "Error",
+    "close": "Close"
+  },
+  "rooms": {
+    "title": "Private or public rooms",
+    "subtitle": "Private (lock): selected contacts + code. Public: open library for a chosen duration.",
+    "create": "Create room",
+    "copyInvite": "Copy invite",
+    "type": "Room type",
+    "private": "Private",
+    "public": "Public",
+    "duration": "Visibility duration",
+    "library": "Shared library",
+    "participants": "Participants",
+    "directSend": "Direct send",
+    "chat": "Room chat"
+  },
+  "send": {
+    "title": "Send a file",
+    "drop": "Drop a file here",
+    "toContact": "Send to a contact"
+  },
+  "receive": {
+    "title": "Receive",
+    "waiting": "Waiting for a link or code…"
+  }
+}

@@ -1,26 +1,28 @@
+import { useTranslation } from "react-i18next";
 import { useStore } from "../store/useStore";
 import type { Tab } from "../store/useStore";
+import type { AppLanguage } from "../i18n";
 
 interface HeaderProps {
   minimal?: boolean;
 }
 
-const tabs: Array<{ id: Tab; label: string; short: string; icon: string }> = [
-  { id: "send", label: "Send", short: "Send", icon: "up" },
-  { id: "receive", label: "Receive", short: "Recv", icon: "down" },
-  { id: "rooms", label: "Rooms", short: "Rooms", icon: "room" },
-  { id: "contacts", label: "Contacts", short: "Book", icon: "contacts" },
-  { id: "identity", label: "Identity", short: "ID", icon: "id" },
-  { id: "history", label: "History", short: "Hist", icon: "list" },
-  { id: "advanced", label: "Advanced", short: "More", icon: "gear" },
+const tabIds: Array<{ id: Tab; icon: string; labelKey: string; shortKey: string }> = [
+  { id: "send", icon: "up", labelKey: "tabs.send", shortKey: "tabs.sendShort" },
+  { id: "receive", icon: "down", labelKey: "tabs.receive", shortKey: "tabs.receiveShort" },
+  { id: "rooms", icon: "room", labelKey: "tabs.rooms", shortKey: "tabs.roomsShort" },
+  { id: "contacts", icon: "contacts", labelKey: "tabs.contacts", shortKey: "tabs.contactsShort" },
+  { id: "identity", icon: "id", labelKey: "tabs.identity", shortKey: "tabs.identityShort" },
+  { id: "history", icon: "list", labelKey: "tabs.history", shortKey: "tabs.historyShort" },
+  { id: "advanced", icon: "gear", labelKey: "tabs.advanced", shortKey: "tabs.advancedShort" },
 ];
 
-function modeLabel(mode: string): string {
-  if (mode === "holo-web") return "Web conductor";
-  if (mode === "websocket") return "Local conductor";
-  if (mode === "web-bridge") return "Bridge";
-  if (mode === "local-only") return "Browser";
-  return "Checking";
+function modeLabel(mode: string, t: (k: string) => string): string {
+  if (mode === "holo-web") return t("net.holoWeb");
+  if (mode === "websocket") return t("net.websocket");
+  if (mode === "web-bridge") return t("net.webBridge");
+  if (mode === "local-only") return t("net.localOnly");
+  return t("net.checking");
 }
 
 function PigeonLogo() {
@@ -41,30 +43,50 @@ function PigeonLogo() {
 }
 
 export default function Header({ minimal = false }: HeaderProps) {
+  const { t, i18n } = useTranslation();
   const { tab, setTab, net } = useStore();
+  const lng = (i18n.resolvedLanguage?.startsWith("en") ? "en" : "fr") as AppLanguage;
+
+  const setLang = (next: AppLanguage) => {
+    void i18n.changeLanguage(next);
+  };
 
   return (
     <>
       <header className="site-header">
         <div className="header-inner">
-          <button className="brand" type="button" onClick={() => setTab("send")} aria-label="Open Send">
+          <button className="brand" type="button" onClick={() => setTab("send")} aria-label={t("tabs.send")}>
             <span className="brand-mark">
               <PigeonLogo />
             </span>
             <span>
               <strong>Filenymous</strong>
-              <small>Files that fly private</small>
+              <small>{t("app.tagline")}</small>
             </span>
           </button>
-          <span className={`net-pill ${net.connected ? "is-online" : ""}`}>
-            <span aria-hidden="true" />
-            {modeLabel(net.mode)}
-          </span>
+
+          <div className="header-right">
+            <label className="lang-switch" title={t("lang.label")}>
+              <span className="sr-only">{t("lang.label")}</span>
+              <select
+                value={lng}
+                onChange={(e) => setLang(e.target.value as AppLanguage)}
+                aria-label={t("lang.label")}
+              >
+                <option value="fr">{t("lang.fr")}</option>
+                <option value="en">{t("lang.en")}</option>
+              </select>
+            </label>
+            <span className={`net-pill ${net.connected ? "is-online" : ""}`}>
+              <span aria-hidden="true" />
+              {modeLabel(net.mode, t)}
+            </span>
+          </div>
         </div>
 
         {!minimal && (
-          <nav className="top-tabs top-tabs-desktop" aria-label="Main navigation">
-            {tabs.map(({ id, label, icon }) => (
+          <nav className="top-tabs top-tabs-desktop" aria-label={t("app.navAria")}>
+            {tabIds.map(({ id, labelKey, icon }) => (
               <button
                 key={id}
                 type="button"
@@ -73,7 +95,7 @@ export default function Header({ minimal = false }: HeaderProps) {
                 aria-current={tab === id ? "page" : undefined}
               >
                 <span className="tab-icon" data-icon={icon} aria-hidden="true" />
-                <span>{label}</span>
+                <span>{t(labelKey)}</span>
               </button>
             ))}
           </nav>
@@ -81,8 +103,8 @@ export default function Header({ minimal = false }: HeaderProps) {
       </header>
 
       {!minimal && (
-        <nav className="bottom-tabs" aria-label="Mobile navigation">
-          {tabs.map(({ id, short, icon }) => (
+        <nav className="bottom-tabs" aria-label={t("app.navAriaMobile")}>
+          {tabIds.map(({ id, shortKey, icon }) => (
             <button
               key={id}
               type="button"
@@ -91,7 +113,7 @@ export default function Header({ minimal = false }: HeaderProps) {
               aria-current={tab === id ? "page" : undefined}
             >
               <span className="tab-icon" data-icon={icon} aria-hidden="true" />
-              <span className="bottom-tab-label">{short}</span>
+              <span className="bottom-tab-label">{t(shortKey)}</span>
             </button>
           ))}
         </nav>

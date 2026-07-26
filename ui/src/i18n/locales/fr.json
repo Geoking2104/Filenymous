@@ -1,0 +1,72 @@
+{
+  "app": {
+    "tagline": "Des fichiers qui voyagent en privé",
+    "navAria": "Navigation principale",
+    "navAriaMobile": "Navigation mobile"
+  },
+  "tabs": {
+    "send": "Envoyer",
+    "receive": "Recevoir",
+    "rooms": "Salons",
+    "contacts": "Contacts",
+    "identity": "Identité",
+    "history": "Historique",
+    "advanced": "Avancé",
+    "sendShort": "Envoi",
+    "receiveShort": "Récep.",
+    "roomsShort": "Salons",
+    "contactsShort": "Carnet",
+    "identityShort": "ID",
+    "historyShort": "Histo.",
+    "advancedShort": "Plus"
+  },
+  "net": {
+    "holoWeb": "Conducteur web",
+    "websocket": "Conducteur local",
+    "webBridge": "Pont",
+    "localOnly": "Navigateur",
+    "checking": "Vérification…"
+  },
+  "lang": {
+    "label": "Langue",
+    "fr": "Français",
+    "en": "English"
+  },
+  "common": {
+    "copy": "Copier",
+    "copied": "Copié",
+    "copyLink": "Copier le lien",
+    "create": "Créer",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "remove": "Retirer",
+    "add": "Ajouter",
+    "search": "Rechercher",
+    "loading": "Chargement…",
+    "error": "Erreur",
+    "close": "Fermer"
+  },
+  "rooms": {
+    "title": "Salons privés ou publics",
+    "subtitle": "Privé (cadenas) : contacts sélectionnés + code. Public : bibliothèque ouverte pour une durée choisie.",
+    "create": "Créer un salon",
+    "copyInvite": "Copier l’invitation",
+    "type": "Type de salon",
+    "private": "Privé",
+    "public": "Public",
+    "duration": "Durée de visibilité",
+    "library": "Bibliothèque partagée",
+    "participants": "Participants",
+    "directSend": "Envoi direct",
+    "chat": "Chat du salon"
+  },
+  "send": {
+    "title": "Envoyer un fichier",
+    "drop": "Déposez un fichier ici",
+    "toContact": "Envoyer à un contact"
+  },
+  "receive": {
+    "title": "Recevoir",
+    "waiting": "En attente d’un lien ou d’un code…"
+  }
+}
