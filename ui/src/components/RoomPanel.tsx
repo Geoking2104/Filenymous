@@ -1,22 +1,15 @@
 /**
- * RoomPanel — private room + live open shared library
- * Inspired by eMule shared files: files selected by peers are visible
- * to everyone in the room session (browser-only, no plugin download).
+ * RoomPanel — private room + live open shared library + P2P discovery
  */
 
-import { useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
+import {
+  createLocalRoomPeer,
+  RoomDiscovery,
+} from "../rooms/discovery";
 import { createInviteCode, roomAvatarInitials, sanitizeRoomText } from "../rooms/roomModel";
 import type { RoomPeer, RoomSharedFile, RoomTransferRequest } from "../rooms/types";
 import { useStore } from "../store/useStore";
-
-const localPeer: RoomPeer = {
-  peerId: "local",
-  displayName: "You",
-  avatarSeed: "local",
-  status: "online",
-  lastSeenMs: Date.now(),
-  expiresAtMs: Date.now() + 60_000,
-};
 
 /** Keep File handles only in memory on the owner's tab */
 const localFileHandles = new Map<string, File>();
@@ -38,12 +31,12 @@ function roomInviteLink(roomId: string, inviteCode: string): string {
   return `${origin}/Filenymous/#/room/${encodeURIComponent(roomId)}?key=${encodeURIComponent(inviteCode)}`;
 }
 
-function requestFromFile(file: File, roomId: string, peer: RoomPeer): RoomTransferRequest {
+function requestFromFile(file: File, roomId: string, localId: string, peer: RoomPeer): RoomTransferRequest {
   const now = Date.now();
   return {
     transferId: `transfer-${now}-${file.name}`,
     roomId,
-    senderId: localPeer.peerId,
+    senderId: localId,
     receiverId: peer.peerId,
     fileNameCiphertext: sanitizeRoomText(file.name, 180),
     fileSize: file.size,
@@ -55,7 +48,7 @@ function requestFromFile(file: File, roomId: string, peer: RoomPeer): RoomTransf
   };
 }
 
-function shareFromFile(file: File, roomId: string): RoomSharedFile {
+function shareFromFile(file: File, roomId: string, localPeer: RoomPeer): RoomSharedFile {
   const shareId = `share-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   localFileHandles.set(shareId, file);
   return {
@@ -82,9 +75,13 @@ export default function RoomPanel() {
     setRoom,
     setPeers,
     setRoomTransfers,
+    setRoomSharedFiles,
     addRoomSharedFile,
     removeRoomSharedFile,
   } = useStore();
+
+  const localPeerRef = useRef(createLocalRoomPeer("You"));
+  const discoveryRef = useRef<RoomDiscovery | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const libraryInputRef = useRef<HTMLInputElement | null>(null);
@@ -94,15 +91,126 @@ export default function RoomPanel() {
   const [libDragging, setLibDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const [filter, setFilter] = useState("");
+  const [discoveryState, setDiscoveryState] = useState<"off" | "live">("off");
   const [messages, setMessages] = useState<Array<{ id: string; author: string; text: string }>>([
     {
       id: "welcome",
       author: "Filenymous",
-      text: "Create a room, share the invite, open files into the live library. Peers discover them in-session — no plugin.",
+      text: "Create a room, share the invite. P2P discovery joins other tabs on this origin automatically — no plugin.",
     },
   ]);
 
-  const visiblePeers = useMemo(() => (peers.length ? peers : [localPeer]), [peers]);
+  const localPeer = localPeerRef.current;
+
+  // Start / stop discovery when room credentials change
+  useEffect(() => {
+    discoveryRef.current?.stop();
+    discoveryRef.current = null;
+    setDiscoveryState("off");
+
+    if (!roomId || !inviteCode) return;
+
+    const discovery = new RoomDiscovery(roomId, inviteCode, localPeer, {
+      onPeerJoin: (peer) => {
+        setPeers((prev) => {
+          // useStore setPeers expects full array — merge carefully via getState pattern
+          const current = useStore.getState().peers;
+          const without = current.filter((p) => p.peerId !== peer.peerId && p.peerId !== localPeer.peerId);
+          return [localPeer, peer, ...without];
+        });
+        setMessages((prev) => [
+          {
+            id: crypto.randomUUID?.() ?? `${Date.now()}`,
+            author: "System",
+            text: `${peer.displayName} joined via P2P discovery`,
+          },
+          ...prev,
+        ]);
+      },
+      onPeerUpdate: (peer) => {
+        const current = useStore.getState().peers;
+        const without = current.filter((p) => p.peerId !== peer.peerId && p.peerId !== localPeer.peerId);
+        setPeers([localPeer, peer, ...without]);
+      },
+      onPeerLeave: (peerId) => {
+        const current = useStore.getState().peers;
+        setPeers(current.filter((p) => p.peerId !== peerId));
+        // Drop library entries owned by that peer
+        const files = useStore.getState().roomSharedFiles.filter((f) => f.ownerId !== peerId);
+        setRoomSharedFiles(files);
+        setMessages((prev) => [
+          {
+            id: crypto.randomUUID?.() ?? `${Date.now()}`,
+            author: "System",
+            text: `Peer ${peerId.slice(0, 12)}… left`,
+          },
+          ...prev,
+        ]);
+      },
+      onLibrarySync: (peerId, files, mode) => {
+        const current = useStore.getState().roomSharedFiles;
+        if (mode === "full") {
+          const others = current.filter((f) => f.ownerId !== peerId);
+          setRoomSharedFiles([...files, ...others]);
+        } else if (mode === "delta-add") {
+          const ids = new Set(files.map((f) => f.shareId));
+          setRoomSharedFiles([...files, ...current.filter((f) => !ids.has(f.shareId))]);
+        } else if (mode === "delta-remove") {
+          const remove = new Set(files.map((f) => f.shareId));
+          setRoomSharedFiles(current.filter((f) => !remove.has(f.shareId)));
+        }
+      },
+      onTransferAsk: (msg) => {
+        setMessages((prev) => [
+          {
+            id: crypto.randomUUID?.() ?? `${Date.now()}`,
+            author: "System",
+            text: `Transfer request for «${msg.fileName}» from ${msg.fromPeerId.slice(0, 10)}…`,
+          },
+          ...prev,
+        ]);
+        const now = Date.now();
+        const transfers = useStore.getState().roomTransfers;
+        setRoomTransfers([
+          {
+            transferId: `transfer-${now}-${msg.shareId}`,
+            roomId: msg.roomId,
+            senderId: localPeer.peerId,
+            receiverId: msg.fromPeerId,
+            fileNameCiphertext: msg.fileName,
+            fileSize: localFileHandles.get(msg.shareId)?.size ?? 0,
+            manifestHash: "",
+            integrityHash: "",
+            status: "pending",
+            createdAtMs: now,
+            expiresAtMs: now + 10 * 60_000,
+          },
+          ...transfers,
+        ]);
+      },
+    });
+
+    discovery.start(useStore.getState().roomSharedFiles.filter((f) => f.ownerId === localPeer.peerId));
+    discoveryRef.current = discovery;
+    setDiscoveryState("live");
+
+    // Ensure local peer is in the list
+    setPeers([localPeer, ...useStore.getState().peers.filter((p) => p.peerId !== localPeer.peerId)]);
+
+    return () => {
+      discovery.stop();
+      discoveryRef.current = null;
+      setDiscoveryState("off");
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, inviteCode]);
+
+  const visiblePeers = useMemo(() => {
+    if (!peers.length) return [localPeer];
+    const hasLocal = peers.some((p) => p.peerId === localPeer.peerId);
+    return hasLocal ? peers : [localPeer, ...peers];
+  }, [peers, localPeer]);
+
   const remotePeers = visiblePeers.filter((peer) => peer.peerId !== localPeer.peerId);
   const selectedPeer = visiblePeers.find((peer) => peer.peerId === selectedPeerId);
   const canSend = Boolean(roomId && selectedPeer && selectedPeer.peerId !== localPeer.peerId);
@@ -134,38 +242,26 @@ export default function RoomPanel() {
     window.setTimeout(() => setCopied(false), 1800);
   };
 
-  const addDemoPeer = () => {
-    ensureRoom();
-    const demoPeer: RoomPeer = {
-      peerId: "peer-demo",
-      displayName: "Guest",
-      avatarSeed: "demo",
-      status: "online",
-      lastSeenMs: Date.now(),
-      expiresAtMs: Date.now() + 60_000,
-    };
-    setPeers([...visiblePeers.filter((peer) => peer.peerId !== demoPeer.peerId), demoPeer]);
-    setSelectedPeerId(demoPeer.peerId);
-  };
-
   const queueFiles = (files: FileList | File[]) => {
     const selected = selectedPeer ?? remotePeers[0];
     if (!selected) return;
     const room = ensureRoom();
-    const requests = Array.from(files).map((file) => requestFromFile(file, room.roomId, selected));
+    const requests = Array.from(files).map((file) =>
+      requestFromFile(file, room.roomId, localPeer.peerId, selected),
+    );
     setRoomTransfers([...requests, ...roomTransfers]);
   };
 
   const openToLibrary = (files: FileList | File[]) => {
     const room = ensureRoom();
-    Array.from(files).forEach((file) => {
-      addRoomSharedFile(shareFromFile(file, room.roomId));
-    });
+    const entries = Array.from(files).map((file) => shareFromFile(file, room.roomId, localPeer));
+    entries.forEach((e) => addRoomSharedFile(e));
+    discoveryRef.current?.announceLibraryAdd(entries);
     setMessages((prev) => [
       {
         id: crypto.randomUUID?.() ?? `${Date.now()}`,
         author: "System",
-        text: `${Array.from(files).length} file(s) opened to the live library — visible to room peers while this tab stays open.`,
+        text: `${entries.length} file(s) announced on P2P discovery`,
       },
       ...prev,
     ]);
@@ -184,9 +280,7 @@ export default function RoomPanel() {
       }
       return;
     }
-    // Remote peer: queue a transfer request (live session path)
-    const peer = visiblePeers.find((p) => p.peerId === entry.ownerId);
-    if (!peer) return;
+    discoveryRef.current?.askTransfer(entry.ownerId, entry.shareId, entry.fileName);
     const room = ensureRoom();
     const now = Date.now();
     setRoomTransfers([
@@ -218,6 +312,7 @@ export default function RoomPanel() {
   const unshare = (shareId: string) => {
     localFileHandles.delete(shareId);
     removeRoomSharedFile(shareId);
+    discoveryRef.current?.announceLibraryRemove([shareId]);
   };
 
   const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
@@ -253,8 +348,8 @@ export default function RoomPanel() {
           <div className="card-label">Rooms</div>
           <h1>Live room & open library</h1>
           <p>
-            Session-only shared files — like a lightweight eMule library in the browser.
-            Select files to open them to the room; peers discover and request them live. No plugin.
+            P2P discovery (BroadcastChannel) finds other tabs on this origin sharing the same invite.
+            Open files to the live library — peers see them without any plugin.
           </p>
         </div>
         <div className="room-actions">
@@ -269,10 +364,12 @@ export default function RoomPanel() {
 
       <div className="card room-invite-card">
         <div>
-          <div className="card-label">Invite</div>
+          <div className="card-label">Invite · discovery</div>
           <p className="room-summary">
             {roomId
-              ? "Room ready. Share this link — library stays live while tabs stay open."
+              ? discoveryState === "live"
+                ? `Discovery live · ${remotePeers.length} remote peer(s)`
+                : "Room ready — starting discovery…"
               : "Create a room to generate an invite link."}
           </p>
         </div>
@@ -284,12 +381,10 @@ export default function RoomPanel() {
         />
       </div>
 
-      {/* Live open library */}
       <div className="card">
         <div className="card-label">Open library · live discovery</div>
         <p style={{ color: "var(--muted)", fontSize: ".9rem", marginBottom: "1rem" }}>
-          Files you open here are listed for everyone in this room session.
-          Data never leaves the owner's browser until a peer requests a transfer.
+          Files you open are announced on the discovery channel. Catalog only — bytes stay local until requested.
         </p>
 
         <label
@@ -320,7 +415,7 @@ export default function RoomPanel() {
             }}
           />
           <strong>Open files to the room library</strong>
-          <span>Drop or click — visible to peers in this browser session only</span>
+          <span>Announced to discovered peers · session-scoped</span>
         </label>
 
         <div className="form-row">
@@ -334,7 +429,7 @@ export default function RoomPanel() {
         </div>
 
         {filteredLibrary.length === 0 ? (
-          <p className="empty">No files in the live library yet. Open a few to start discovery.</p>
+          <p className="empty">No files in the live library yet.</p>
         ) : (
           <div className="room-transfer-list">
             {filteredLibrary.map((entry) => {
@@ -351,11 +446,7 @@ export default function RoomPanel() {
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: ".4rem", flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      className="btn-ghost btn-sm"
-                      onClick={() => requestSharedFile(entry)}
-                    >
+                    <button type="button" className="btn-ghost btn-sm" onClick={() => requestSharedFile(entry)}>
                       {isMine ? "Save" : "Request"}
                     </button>
                     {isMine && (
@@ -376,13 +467,13 @@ export default function RoomPanel() {
         )}
 
         <p style={{ fontSize: ".72rem", color: "var(--muted)", marginTop: ".9rem" }}>
-          {roomSharedFiles.length} file{roomSharedFiles.length === 1 ? "" : "s"} · session-scoped · no central server
+          {roomSharedFiles.length} file{roomSharedFiles.length === 1 ? "" : "s"} · discovery {discoveryState}
         </p>
       </div>
 
       <div className="room-grid">
         <div className="card room-panel">
-          <div className="card-label">Participants</div>
+          <div className="card-label">Participants · P2P</div>
           <div className="peer-grid" aria-label="Room participants">
             {visiblePeers.map((peer) => {
               const selected = selectedPeerId === peer.peerId;
@@ -395,14 +486,14 @@ export default function RoomPanel() {
                 >
                   <span className="peer-avatar">{roomAvatarInitials(peer.displayName, peer.peerId)}</span>
                   <strong>{peer.displayName}</strong>
-                  <small>{peer.status}</small>
+                  <small>{peer.peerId === localPeer.peerId ? "you" : peer.status}</small>
                 </button>
               );
             })}
           </div>
-          <button className="btn-ghost btn-full" type="button" onClick={addDemoPeer}>
-            Add test guest
-          </button>
+          <p style={{ fontSize: ".75rem", color: "var(--muted)", marginTop: ".6rem" }}>
+            Open the same invite in another tab to see live join/leave.
+          </p>
         </div>
 
         <div className="card room-panel">
@@ -429,8 +520,8 @@ export default function RoomPanel() {
                 event.currentTarget.value = "";
               }}
             />
-            <strong>{canSend ? `Drop files for ${selectedPeer?.displayName}` : "Invite or add a guest first"}</strong>
-            <span>Point-to-point transfer to one peer (not listed in the open library).</span>
+            <strong>{canSend ? `Drop files for ${selectedPeer?.displayName}` : "Select a remote peer first"}</strong>
+            <span>Point-to-point (not listed in open library).</span>
           </label>
           <div className="room-transfer-list">
             {roomTransfers.length === 0 ? (
@@ -458,7 +549,7 @@ export default function RoomPanel() {
             Send message
           </button>
           <div className="room-messages">
-            {messages.slice(0, 6).map((message) => (
+            {messages.slice(0, 8).map((message) => (
               <p key={message.id}>
                 <strong>{message.author}</strong>
                 <span>{message.text}</span>
@@ -470,8 +561,9 @@ export default function RoomPanel() {
 
       <div className="info-box room-footnote">
         <span>
-          Transport: {net.connected ? "advanced network available" : "browser-first mode"}.
-          Open library is session-only — close the tab and shares disappear. Wire WebRTC signaling next for multi-tab live sync.
+          Discovery: {discoveryState === "live" ? "BroadcastChannel active" : "idle"} ·
+          Network: {net.connected ? "advanced path available" : "browser-first"}.
+          WebRTC DataChannel can plug into the same protocol via <code>sendExternal</code>.
         </span>
       </div>
     </section>
