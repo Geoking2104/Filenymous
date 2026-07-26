@@ -1,25 +1,12 @@
 /**
- * SendPanel v2 — sans bridge, deux modes de livraison :
+ * SendPanel v2 — with working QR code for Magic Links
  *
- * Mode A — Agent DHT (destinataire enregistré) :
- *   1. Résolution contact_hash → AgentPubKey
- *   2. Récupération clé X25519 du destinataire
- *   3. Chiffrement AES-256-GCM des chunks
- *   4. Upload chunks via file_storage_zome
- *   5. ECIES wrapping de la clé AES
- *   6. create_parcel → remote_signal au destinataire
- *   7. Affichage lien de secours (copier-coller)
- *
- * Mode B — Lien one-time (destinataire non enregistré) :
- *   1. Chiffrement AES-256-GCM des chunks
- *   2. Upload chunks via file_storage_zome → file_hash
- *   3. create_parcel (encrypted_key_blob vide)
- *   4. Génération URL : https://app/#<parcel_eh_b64>:<aes_key_b64>
- *      (le fragment # ne transite pas sur le réseau)
- *   5. L'utilisateur partage ce lien par son propre canal (email, SMS…)
+ * Mode A — Agent DHT (destinataire enregistré)
+ * Mode B — Lien one-time (destinataire non enregistré)
  */
 
 import { useState, useRef, useEffect } from "react";
+import QRCode from "react-qr-code";
 import { hashContact }                          from "../crypto/contact";
 import { generateAesKey, exportAesKey }         from "../crypto/aes";
 import { encryptFile }                          from "../crypto/chunker";
@@ -186,15 +173,12 @@ export default function SendPanel() {
 
       // ── 8. Construction du lien de téléchargement ─────────────────────────
       progress(92, "Génération du lien…");
-      // EntryHash → base64url pour l'URL
       const parcelEhB64 = encodeB64Url(new Uint8Array(parcelOut.parcel_eh as unknown as number[]));
 
       let transferLink: string;
       if (deliveryMode === "agent") {
-        // Lien de secours sans clé (le destinataire agent utilise sa clé X25519)
         transferLink = `${window.location.origin}/#${parcelEhB64}`;
       } else {
-        // Clé AES dans le fragment # (ne transite pas sur le réseau)
         const aesB64 = encodeB64Url(aesRaw);
         transferLink = `${window.location.origin}/#${parcelEhB64}:${aesB64}`;
       }
@@ -240,6 +224,23 @@ export default function SendPanel() {
           La clé de déchiffrement est dans le fragment <code>#</code> — elle ne transite pas sur le réseau.
         </div>
       )}
+
+      {/* QR Code */}
+      <div style={{ display: "flex", justifyContent: "center", margin: "1.5rem 0" }}>
+        <div style={{ background: "white", padding: "16px", borderRadius: "16px" }}>
+          <QRCode
+            value={link}
+            size={180}
+            level="M"
+            bgColor="#ffffff"
+            fgColor="#0a0f1a"
+          />
+        </div>
+      </div>
+      <p style={{ fontSize: ".78rem", color: "var(--muted)", marginBottom: "1.2rem" }}>
+        Scannez ce QR code pour ouvrir le lien de téléchargement
+      </p>
+
       <div className="form-row" style={{ textAlign:"left" }}>
         <div className="form-label">Lien de téléchargement</div>
         <div style={{ display:"flex",gap:".5rem",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:"10px",padding:".45rem .45rem .45rem .85rem",alignItems:"center" }}>
@@ -270,13 +271,13 @@ export default function SendPanel() {
 
   return (
     <div>
-      {/* En-tête (concept redesign) */}
+      {/* En-tête */}
       <div style={{ marginBottom:"1.4rem" }}>
         <h1 style={{ fontSize:"2rem", fontWeight:600, letterSpacing:"-.03em", lineHeight:1.1 }}>Send files privately</h1>
         <p style={{ color:"var(--muted)", marginTop:".35rem" }}>End-to-end encrypted • Sovereign options available</p>
       </div>
 
-      {/* Sélecteur de mode : Magic Link / Send to Contact */}
+      {/* Sélecteur de mode */}
       <div style={{ display:"flex", background:"rgba(255,255,255,.05)", borderRadius:"16px", padding:"4px", marginBottom:"1rem", width:"fit-content" }}>
         <button type="button" onClick={() => setUiMode("magic")}
           style={{ padding:".5rem 1.4rem", borderRadius:"12px", fontSize:".86rem", fontWeight:600, transition:"all .2s",
