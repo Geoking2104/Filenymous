@@ -48,9 +48,28 @@ export interface RoomTransferRequest {
   expiresAtMs: number;
 }
 
+/**
+ * Live open-library entry (eMule-inspired shared files).
+ * Session-scoped: visible to peers in the room while the browser tab stays open.
+ * No plugin — pure browser discovery + on-demand P2P transfer.
+ */
+export interface RoomSharedFile {
+  shareId: string;
+  roomId: string;
+  ownerId: string;
+  ownerName: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  /** Local File handle stays only on the owner's device */
+  localOnly: boolean;
+  addedAtMs: number;
+}
+
 export interface RoomHistorySnapshot {
   rooms: Array<{ roomId: string; inviteCode: string; lastOpenedMs: number }>;
   peers: RoomPeer[];
   messages: RoomMessage[];
   transfers: RoomTransferRequest[];
+  sharedFiles?: RoomSharedFile[];
 }
