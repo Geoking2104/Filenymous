@@ -102,7 +102,6 @@ export default function RoomPanel() {
 
   const localPeer = localPeerRef.current;
 
-  // Start / stop discovery when room credentials change
   useEffect(() => {
     discoveryRef.current?.stop();
     discoveryRef.current = null;
@@ -112,12 +111,9 @@ export default function RoomPanel() {
 
     const discovery = new RoomDiscovery(roomId, inviteCode, localPeer, {
       onPeerJoin: (peer) => {
-        setPeers((prev) => {
-          // useStore setPeers expects full array — merge carefully via getState pattern
-          const current = useStore.getState().peers;
-          const without = current.filter((p) => p.peerId !== peer.peerId && p.peerId !== localPeer.peerId);
-          return [localPeer, peer, ...without];
-        });
+        const current = useStore.getState().peers;
+        const without = current.filter((p) => p.peerId !== peer.peerId && p.peerId !== localPeer.peerId);
+        setPeers([localPeer, peer, ...without]);
         setMessages((prev) => [
           {
             id: crypto.randomUUID?.() ?? `${Date.now()}`,
@@ -135,7 +131,6 @@ export default function RoomPanel() {
       onPeerLeave: (peerId) => {
         const current = useStore.getState().peers;
         setPeers(current.filter((p) => p.peerId !== peerId));
-        // Drop library entries owned by that peer
         const files = useStore.getState().roomSharedFiles.filter((f) => f.ownerId !== peerId);
         setRoomSharedFiles(files);
         setMessages((prev) => [
@@ -193,8 +188,6 @@ export default function RoomPanel() {
     discovery.start(useStore.getState().roomSharedFiles.filter((f) => f.ownerId === localPeer.peerId));
     discoveryRef.current = discovery;
     setDiscoveryState("live");
-
-    // Ensure local peer is in the list
     setPeers([localPeer, ...useStore.getState().peers.filter((p) => p.peerId !== localPeer.peerId)]);
 
     return () => {
