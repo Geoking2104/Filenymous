@@ -5,14 +5,14 @@ interface HeaderProps {
   minimal?: boolean;
 }
 
-const tabs: Array<{ id: Tab; label: string; icon: string }> = [
-  { id: "send", label: "Send", icon: "up" },
-  { id: "receive", label: "Receive", icon: "down" },
-  { id: "rooms", label: "Rooms", icon: "room" },
-  { id: "contacts", label: "Contacts", icon: "contacts" },
-  { id: "identity", label: "Identity", icon: "id" },
-  { id: "history", label: "History", icon: "list" },
-  { id: "advanced", label: "Advanced", icon: "gear" },
+const tabs: Array<{ id: Tab; label: string; short: string; icon: string }> = [
+  { id: "send", label: "Send", short: "Send", icon: "up" },
+  { id: "receive", label: "Receive", short: "Recv", icon: "down" },
+  { id: "rooms", label: "Rooms", short: "Rooms", icon: "room" },
+  { id: "contacts", label: "Contacts", short: "Book", icon: "contacts" },
+  { id: "identity", label: "Identity", short: "ID", icon: "id" },
+  { id: "history", label: "History", short: "Hist", icon: "list" },
+  { id: "advanced", label: "Advanced", short: "More", icon: "gear" },
 ];
 
 function modeLabel(mode: string): string {
@@ -23,7 +23,6 @@ function modeLabel(mode: string): string {
   return "Checking";
 }
 
-/** Travelling pigeon logo (humoristic messenger with satchel) */
 function PigeonLogo() {
   return (
     <svg width="38" height="38" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -45,26 +44,45 @@ export default function Header({ minimal = false }: HeaderProps) {
   const { tab, setTab, net } = useStore();
 
   return (
-    <header className="site-header">
-      <div className="header-inner">
-        <button className="brand" type="button" onClick={() => setTab("send")} aria-label="Open Send">
-          <span className="brand-mark">
-            <PigeonLogo />
+    <>
+      <header className="site-header">
+        <div className="header-inner">
+          <button className="brand" type="button" onClick={() => setTab("send")} aria-label="Open Send">
+            <span className="brand-mark">
+              <PigeonLogo />
+            </span>
+            <span>
+              <strong>Filenymous</strong>
+              <small>Files that fly private</small>
+            </span>
+          </button>
+          <span className={`net-pill ${net.connected ? "is-online" : ""}`}>
+            <span aria-hidden="true" />
+            {modeLabel(net.mode)}
           </span>
-          <span>
-            <strong>Filenymous</strong>
-            <small>Files that fly private</small>
-          </span>
-        </button>
-        <span className={`net-pill ${net.connected ? "is-online" : ""}`}>
-          <span aria-hidden="true" />
-          {modeLabel(net.mode)}
-        </span>
-      </div>
+        </div>
+
+        {!minimal && (
+          <nav className="top-tabs top-tabs-desktop" aria-label="Main navigation">
+            {tabs.map(({ id, label, icon }) => (
+              <button
+                key={id}
+                type="button"
+                className={tab === id ? "active" : ""}
+                onClick={() => setTab(id)}
+                aria-current={tab === id ? "page" : undefined}
+              >
+                <span className="tab-icon" data-icon={icon} aria-hidden="true" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+        )}
+      </header>
 
       {!minimal && (
-        <nav className="top-tabs" aria-label="Main navigation">
-          {tabs.map(({ id, label, icon }) => (
+        <nav className="bottom-tabs" aria-label="Mobile navigation">
+          {tabs.map(({ id, short, icon }) => (
             <button
               key={id}
               type="button"
@@ -73,11 +91,11 @@ export default function Header({ minimal = false }: HeaderProps) {
               aria-current={tab === id ? "page" : undefined}
             >
               <span className="tab-icon" data-icon={icon} aria-hidden="true" />
-              <span>{label}</span>
+              <span className="bottom-tab-label">{short}</span>
             </button>
           ))}
         </nav>
       )}
-    </header>
+    </>
   );
 }
