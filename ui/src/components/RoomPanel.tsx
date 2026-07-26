@@ -164,7 +164,6 @@ export default function RoomPanel() {
 
     const discovery = new RoomDiscovery(roomId, inviteCode, localPeer, {
       onPeerJoin: (peer) => {
-        // Private ACL: if peer claims a contact, it must be allow-listed
         const st = useStore.getState();
         if (st.roomKind === "private" && peer.contact) {
           const ok = st.roomAllowedContacts.some(
@@ -304,9 +303,20 @@ export default function RoomPanel() {
       ]);
     }
     const room = roomId && inviteCode ? { roomId, inviteCode } : ensureRoom();
-    await navigator.clipboard?.writeText(roomInviteLink(room.roomId, room.inviteCode, roomKind));
+    const link = roomInviteLink(room.roomId, room.inviteCode, roomKind);
+    try {
+      await navigator.clipboard?.writeText(link);
+    } catch {
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = link;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
+    window.setTimeout(() => setCopied(false), 2000);
   };
 
   const addAllowedContact = (raw: string) => {
@@ -404,12 +414,11 @@ export default function RoomPanel() {
             Create room
           </button>
           <button className="btn-ghost" type="button" onClick={copyInvite}>
-            {copied ? "Copied" : "Copy invite"}
+            {copied ? "✓ Copied" : "Copy invite"}
           </button>
         </div>
       </div>
 
-      {/* Kind selector */}
       <div className="card">
         <div className="card-label">Room type</div>
         <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap" }}>
@@ -535,7 +544,7 @@ export default function RoomPanel() {
                 {publicExpired
                   ? "Public library expired — create a new room or extend duration."
                   : `Expires: ${formatExpiry(roomExpiresAtMs)}`}
-                {/* force re-render dependency */}{nowTick > 0 ? "" : ""}
+                {nowTick > 0 ? "" : ""}
               </p>
             )}
           </div>
@@ -556,12 +565,25 @@ export default function RoomPanel() {
               : "Configure type, then create a room."}
           </p>
         </div>
-        <input
-          readOnly
-          value={inviteUrl || "No room created yet"}
-          aria-label="Room invite link"
-          onFocus={(e) => e.currentTarget.select()}
-        />
+        <div style={{ display: "flex", gap: ".5rem", alignItems: "center", width: "100%" }}>
+          <input
+            readOnly
+            value={inviteUrl || "No room created yet"}
+            aria-label="Room invite link"
+            onFocus={(e) => e.currentTarget.select()}
+            style={{ flex: 1, minWidth: 0, fontFamily: "monospace", fontSize: ".82rem" }}
+          />
+          <button
+            type="button"
+            className={copied ? "btn-success" : "btn-primary"}
+            onClick={copyInvite}
+            disabled={!inviteUrl && !roomId}
+            style={{ flexShrink: 0, whiteSpace: "nowrap", minWidth: 110 }}
+            aria-label="Copy invite link"
+          >
+            {copied ? "✓ Copied" : "Copy link"}
+          </button>
+        </div>
       </div>
 
       <div className="card">
@@ -601,39 +623,18 @@ export default function RoomPanel() {
                 ref={libraryInputRef}
                 type="file"
                 multiple
-                // @ts-expect-error webkitdirectory is non-standard but widely supported
-                webkitdirectory=""
                 onChange={(e) => {
                   if (e.currentTarget.files) openToLibrary(e.currentTarget.files);
                   e.currentTarget.value = "";
                 }}
               />
-              <strong>Open files / folder to the library</strong>
+              <strong>Open files to the library</strong>
               <span>
                 {roomKind === "public"
                   ? "Visible to anyone with the link for the chosen duration"
                   : "Visible only to allow-listed contacts in this private room"}
               </span>
             </label>
-            <div style={{ marginBottom: ".8rem" }}>
-              <button
-                type="button"
-                className="btn-ghost btn-sm"
-                onClick={() => libraryInputRef.current?.click()}
-              >
-                Or pick individual files
-              </button>
-              <input
-                type="file"
-                multiple
-                style={{ display: "none" }}
-                id="room-lib-files"
-                onChange={(e) => {
-                  if (e.currentTarget.files) openToLibrary(e.currentTarget.files);
-                  e.currentTarget.value = "";
-                }}
-              />
-            </div>
             <div className="form-row">
               <input
                 type="search"
