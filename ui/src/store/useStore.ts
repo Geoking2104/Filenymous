@@ -2,11 +2,16 @@ import { create } from "zustand";
 import type { ClientMode } from "../holochain/client";
 import type { LocalParcel } from "../holochain/types";
 import type {
+  RoomAllowedContact,
+  RoomConfig,
+  RoomDurationKey,
   RoomHistorySnapshot,
+  RoomKind,
   RoomPeer,
   RoomSharedFile,
   RoomTransferRequest,
 } from "../rooms/types";
+import { computeRoomExpiry } from "../rooms/types";
 
 /** Address-book entry: someone you can send encrypted files to (M3 X25519 flow). */
 export interface AddressBookEntry {
@@ -29,6 +34,10 @@ interface State {
   pubkey: string;
   roomId: string;
   inviteCode: string;
+  roomKind: RoomKind;
+  roomAllowedContacts: RoomAllowedContact[];
+  roomDurationKey: RoomDurationKey;
+  roomExpiresAtMs: number;
   peers: RoomPeer[];
   roomTransfers: RoomTransferRequest[];
   roomSharedFiles: RoomSharedFile[];
@@ -36,7 +45,17 @@ interface State {
 
   setTab(t: Tab): void;
   setNet(n: NetInfo): void;
-  setRoom(room: { roomId: string; inviteCode: string }): void;
+  setRoom(room: {
+    roomId: string;
+    inviteCode: string;
+    kind?: RoomKind;
+    allowedContacts?: RoomAllowedContact[];
+    durationKey?: RoomDurationKey;
+    expiresAtMs?: number;
+  }): void;
+  setRoomKind(kind: RoomKind): void;
+  setRoomAllowedContacts(contacts: RoomAllowedContact[]): void;
+  setRoomDurationKey(key: RoomDurationKey): void;
   setPeers(peers: RoomPeer[]): void;
   setRoomTransfers(transfers: RoomTransferRequest[]): void;
   setRoomSharedFiles(files: RoomSharedFile[]): void;
@@ -52,9 +71,10 @@ interface State {
   setSelectedRecipient(contact: string): void;
   removeContact(hash: string): void;
   setPubkey(k: string): void;
+  getRoomConfig(): RoomConfig | null;
 }
 
-export const useStore = create<State>((set) => ({
+export const useStore = create<State>((set, get) => ({
   tab: "send",
   net: { connected: false, mode: "detecting", peers: 0 },
   parcels: [],
@@ -64,6 +84,10 @@ export const useStore = create<State>((set) => ({
   pubkey: "",
   roomId: "",
   inviteCode: "",
+  roomKind: "private",
+  roomAllowedContacts: [],
+  roomDurationKey: "24h",
+  roomExpiresAtMs: 0,
   peers: [],
   roomTransfers: [],
   roomSharedFiles: [],
@@ -72,7 +96,42 @@ export const useStore = create<State>((set) => ({
   setTab: (tab) => set({ tab }),
   setNet: (net) => set({ net }),
   setPubkey: (pubkey) => set({ pubkey }),
-  setRoom: ({ roomId, inviteCode }) => set({ roomId, inviteCode }),
+  setRoom: ({
+    roomId,
+    inviteCode,
+    kind,
+    allowedContacts,
+    durationKey,
+    expiresAtMs,
+  }) =>
+    set((s) => {
+      const nextKind = kind ?? s.roomKind;
+      const nextDuration = durationKey ?? s.roomDurationKey;
+      return {
+        roomId,
+        inviteCode,
+        roomKind: nextKind,
+        roomAllowedContacts: allowedContacts ?? s.roomAllowedContacts,
+        roomDurationKey: nextDuration,
+        roomExpiresAtMs:
+          expiresAtMs !== undefined
+            ? expiresAtMs
+            : nextKind === "public"
+              ? computeRoomExpiry(nextDuration)
+              : 0,
+      };
+    }),
+  setRoomKind: (roomKind) =>
+    set((s) => ({
+      roomKind,
+      roomExpiresAtMs: roomKind === "public" ? computeRoomExpiry(s.roomDurationKey) : 0,
+    })),
+  setRoomAllowedContacts: (roomAllowedContacts) => set({ roomAllowedContacts }),
+  setRoomDurationKey: (roomDurationKey) =>
+    set((s) => ({
+      roomDurationKey,
+      roomExpiresAtMs: s.roomKind === "public" ? computeRoomExpiry(roomDurationKey) : s.roomExpiresAtMs,
+    })),
   setPeers: (peers) => set({ peers }),
   setRoomTransfers: (roomTransfers) => set({ roomTransfers }),
   setRoomSharedFiles: (roomSharedFiles) => set({ roomSharedFiles }),
@@ -120,4 +179,18 @@ export const useStore = create<State>((set) => ({
     set((s) => ({
       contacts: s.contacts.filter((c) => c.hash !== hash),
     })),
+
+  getRoomConfig: () => {
+    const s = get();
+    if (!s.roomId || !s.inviteCode) return null;
+    return {
+      roomId: s.roomId,
+      inviteCode: s.inviteCode,
+      kind: s.roomKind,
+      allowedContacts: s.roomAllowedContacts,
+      durationKey: s.roomDurationKey,
+      expiresAtMs: s.roomExpiresAtMs,
+      createdAtMs: Date.now(),
+    };
+  },
 }));
