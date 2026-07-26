@@ -1,14 +1,19 @@
 import { create } from "zustand";
 import type { ClientMode } from "../holochain/client";
 import type { LocalParcel } from "../holochain/types";
-import type { RoomHistorySnapshot, RoomPeer, RoomTransferRequest } from "../rooms/types";
+import type {
+  RoomHistorySnapshot,
+  RoomPeer,
+  RoomSharedFile,
+  RoomTransferRequest,
+} from "../rooms/types";
 
 /** Address-book entry: someone you can send encrypted files to (M3 X25519 flow). */
 export interface AddressBookEntry {
-  contact: string;               // email or E.164 phone as typed by the user
-  hash: string;                  // SHA-256 contact hash (what lives on the DHT)
-  resolvedAgent: string | null;  // AgentPubKey (b64) if the contact claimed it on the DHT
-  x25519Key: string | null;      // recipient's published X25519 public key (b64)
+  contact: string;
+  hash: string;
+  resolvedAgent: string | null;
+  x25519Key: string | null;
 }
 
 export type Tab = "send" | "receive" | "rooms" | "contacts" | "identity" | "history" | "advanced";
@@ -26,6 +31,7 @@ interface State {
   inviteCode: string;
   peers: RoomPeer[];
   roomTransfers: RoomTransferRequest[];
+  roomSharedFiles: RoomSharedFile[];
   roomHistory: RoomHistorySnapshot | null;
 
   setTab(t: Tab): void;
@@ -33,6 +39,9 @@ interface State {
   setRoom(room: { roomId: string; inviteCode: string }): void;
   setPeers(peers: RoomPeer[]): void;
   setRoomTransfers(transfers: RoomTransferRequest[]): void;
+  setRoomSharedFiles(files: RoomSharedFile[]): void;
+  addRoomSharedFile(file: RoomSharedFile): void;
+  removeRoomSharedFile(shareId: string): void;
   setRoomHistory(history: RoomHistorySnapshot | null): void;
   addParcel(p: LocalParcel): void;
   updateParcelStatus(id: string, status: LocalParcel["status"]): void;
@@ -57,6 +66,7 @@ export const useStore = create<State>((set) => ({
   inviteCode: "",
   peers: [],
   roomTransfers: [],
+  roomSharedFiles: [],
   roomHistory: null,
 
   setTab: (tab) => set({ tab }),
@@ -65,6 +75,17 @@ export const useStore = create<State>((set) => ({
   setRoom: ({ roomId, inviteCode }) => set({ roomId, inviteCode }),
   setPeers: (peers) => set({ peers }),
   setRoomTransfers: (roomTransfers) => set({ roomTransfers }),
+  setRoomSharedFiles: (roomSharedFiles) => set({ roomSharedFiles }),
+  addRoomSharedFile: (file) =>
+    set((s) => ({
+      roomSharedFiles: s.roomSharedFiles.some((f) => f.shareId === file.shareId)
+        ? s.roomSharedFiles
+        : [file, ...s.roomSharedFiles],
+    })),
+  removeRoomSharedFile: (shareId) =>
+    set((s) => ({
+      roomSharedFiles: s.roomSharedFiles.filter((f) => f.shareId !== shareId),
+    })),
   setRoomHistory: (roomHistory) => set({ roomHistory }),
 
   addParcel: (p) => set((s) => ({ parcels: [p, ...s.parcels] })),
