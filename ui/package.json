@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "icons": "node scripts/decode-icons.mjs",
+    "prebuild": "node scripts/decode-icons.mjs",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
