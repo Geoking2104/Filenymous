@@ -1,5 +1,5 @@
 /**
- * SendPanel v2 — QR without external dependency
+ * SendPanel v2 — QR without external dependency + pure-browser UX
  */
 
 import { useState, useRef, useEffect } from "react";
@@ -40,6 +40,7 @@ export default function SendPanel() {
   const selectedRecipient    = useStore((s) => s.selectedRecipient);
   const setSelectedRecipient = useStore((s) => s.setSelectedRecipient);
   const addressBook          = useStore((st) => st.addressBook);
+  const net                  = useStore((s) => s.net);
 
   const [files, setFiles]               = useState<File[]>([]);
   const [recipient, setRecipient]       = useState("");
@@ -55,6 +56,9 @@ export default function SendPanel() {
   const [resolvedKey, setResolvedKey]   = useState<boolean | null>(null);
   const [uiMode, setUiMode]             = useState<"magic" | "contact">("magic");
   const resolveTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const writeReady = canWrite();
+  const browserOnly = net.mode === "local-only" || net.mode === "web-bridge" || !writeReady;
 
   const progress = (p: number, s: string) => { setPct(p); setStep(s); };
 
@@ -89,10 +93,7 @@ export default function SendPanel() {
 
   const send = async () => {
     if (!files.length || !isValidContact(recipient)) return;
-    if (!canWrite()) {
-      alert("Envoi impossible sans Holo Web Conductor ou conducteur Holochain local.");
-      return;
-    }
+    if (!canWrite()) return; // UI already shows the warning
 
     setState("uploading"); setPct(0);
 
@@ -266,6 +267,13 @@ export default function SendPanel() {
         <p style={{ color:"var(--muted)", marginTop:".35rem" }}>End-to-end encrypted • Sovereign options available</p>
       </div>
 
+      {browserOnly && (
+        <div className="warn-box" style={{ marginBottom: "1rem" }}>
+          ⚠ Mode navigateur seul — l'envoi nécessite <strong>Holo Web Conductor</strong> ou un conducteur Holochain local.
+          L'interface reste utilisable ; le chiffrement local fonctionne, mais la publication sur le DHT est indisponible.
+        </div>
+      )}
+
       <div style={{ display:"flex", background:"rgba(255,255,255,.05)", borderRadius:"16px", padding:"4px", marginBottom:"1rem", width:"fit-content" }}>
         <button type="button" onClick={() => setUiMode("magic")}
           style={{ padding:".5rem 1.4rem", borderRadius:"12px", fontSize:".86rem", fontWeight:600, transition:"all .2s",
@@ -378,7 +386,7 @@ export default function SendPanel() {
         </div>
 
         <button className="btn-primary btn-full" style={{ padding:".75rem" }}
-          disabled={!files.length || !isValidContact(recipient)} onClick={send}>
+          disabled={!files.length || !isValidContact(recipient) || !writeReady} onClick={send}>
           {uiMode === "magic" ? "Create Magic Link & Encrypt" : "Send Securely to Contact"}
         </button>
         <p style={{ textAlign:"center", fontSize:".72rem", color:"var(--muted)", marginTop:".7rem" }}>
