@@ -1,12 +1,8 @@
 /**
- * SendPanel v2 — with working QR code for Magic Links
- *
- * Mode A — Agent DHT (destinataire enregistré)
- * Mode B — Lien one-time (destinataire non enregistré)
+ * SendPanel v2 — QR without external dependency
  */
 
 import { useState, useRef, useEffect } from "react";
-import QRCode from "react-qr-code";
 import { hashContact }                          from "../crypto/contact";
 import { generateAesKey, exportAesKey }         from "../crypto/aes";
 import { encryptFile }                          from "../crypto/chunker";
@@ -17,7 +13,7 @@ import { parcelZome }                           from "../holochain/delivery";
 import { canWrite }                            from "../holochain/client";
 import { useStore }                             from "../store/useStore";
 
-const CHUNK_SIZE = 256 * 1024; // 256 KB
+const CHUNK_SIZE = 256 * 1024;
 
 type SendState = "idle" | "uploading" | "done";
 
@@ -40,24 +36,24 @@ function encodeB64Url(bytes: Uint8Array): string {
 }
 
 export default function SendPanel() {
-  const addParcel           = useStore((s) => s.addParcel);
-  const selectedRecipient   = useStore((s) => s.selectedRecipient);
+  const addParcel            = useStore((s) => s.addParcel);
+  const selectedRecipient    = useStore((s) => s.selectedRecipient);
   const setSelectedRecipient = useStore((s) => s.setSelectedRecipient);
+  const addressBook          = useStore((st) => st.addressBook);
 
-  const [files,       setFiles]       = useState<File[]>([]);
-  const [recipient,   setRecipient]   = useState("");
-  const [expiry,      setExpiry]      = useState("7d");
-  const [maxDl,       setMaxDl]       = useState("1");
-  const [state,       setState]       = useState<SendState>("idle");
-  const [pct,         setPct]         = useState(0);
-  const [step,        setStep]        = useState("");
-  const [link,        setLink]        = useState("");
-  const [mode,        setMode]        = useState<"agent"|"link"|null>(null);
-  const [copied,      setCopied]      = useState(false);
-  const [dragging,    setDragging]    = useState(false);
-  const [resolvedKey, setResolvedKey] = useState<boolean | null>(null);
-  const [uiMode,      setUiMode]      = useState<"magic" | "contact">("magic");
-  const addressBook = useStore((st) => st.addressBook);
+  const [files, setFiles]               = useState<File[]>([]);
+  const [recipient, setRecipient]       = useState("");
+  const [expiry, setExpiry]             = useState("7d");
+  const [maxDl, setMaxDl]               = useState("1");
+  const [state, setState]               = useState<SendState>("idle");
+  const [pct, setPct]                   = useState(0);
+  const [step, setStep]                 = useState("");
+  const [link, setLink]                 = useState("");
+  const [mode, setMode]                 = useState<"agent"|"link"|null>(null);
+  const [copied, setCopied]             = useState(false);
+  const [dragging, setDragging]         = useState(false);
+  const [resolvedKey, setResolvedKey]   = useState<boolean | null>(null);
+  const [uiMode, setUiMode]             = useState<"magic" | "contact">("magic");
   const resolveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const progress = (p: number, s: string) => { setPct(p); setStep(s); };
@@ -76,7 +72,6 @@ export default function SendPanel() {
     }, 800);
   };
 
-  // Pre-remplit le destinataire quand on arrive depuis l'onglet Contacts
   useEffect(() => {
     if (selectedRecipient) {
       setUiMode("contact");
@@ -102,17 +97,14 @@ export default function SendPanel() {
     setState("uploading"); setPct(0);
 
     try {
-      // ── 1. Résolution du contact ───────────────────────────────────────────
       progress(5, "Résolution du destinataire sur le DHT…");
-      const contactHash     = await hashContact(recipient);
-      const recipientAgent  = await identityZome.getAgentForContact(contactHash);
+      const contactHash    = await hashContact(recipient);
+      const recipientAgent = await identityZome.getAgentForContact(contactHash);
 
-      // ── 2. Génération + chiffrement AES ───────────────────────────────────
       progress(12, "Génération de la clé AES-256…");
-      const aesKey    = await generateAesKey();
-      const aesRaw    = await exportAesKey(aesKey);
+      const aesKey = await generateAesKey();
+      const aesRaw = await exportAesKey(aesKey);
 
-      // ── 3. Chiffrement des chunks ──────────────────────────────────────────
       const totalSize   = files.reduce((s, f) => s + f.size, 0);
       const totalChunks = Math.ceil(totalSize / CHUNK_SIZE);
       const fileName    = files.length === 1 ? files[0].name : `${files.length} fichiers`;
@@ -129,11 +121,9 @@ export default function SendPanel() {
         }
       }
 
-      // ── 4. Upload sur la DHT (file_storage_zome) ──────────────────────────
       progress(55, "Publication des chunks sur le DHT…");
       const fileHash = await fileStorageZome.createFile(fileName, encryptedChunks);
 
-      // ── 5. ECIES wrapping ou mode lien ────────────────────────────────────
       let encryptedKeyBlob = "";
       let deliveryMode: "agent" | "link" = "link";
 
@@ -141,24 +131,22 @@ export default function SendPanel() {
         progress(72, "Wrapping ECIES de la clé AES (X25519)…");
         const x25519B64 = await identityZome.getX25519Key(recipientAgent);
         if (x25519B64) {
-          const x25519Raw  = Uint8Array.from(atob(x25519B64), (c) => c.charCodeAt(0));
-          const recipKey   = await importX25519PublicKey(x25519Raw);
-          const blob       = await encryptAesKeyForRecipient(aesRaw, recipKey);
+          const x25519Raw = Uint8Array.from(atob(x25519B64), (c) => c.charCodeAt(0));
+          const recipKey  = await importX25519PublicKey(x25519Raw);
+          const blob      = await encryptAesKeyForRecipient(aesRaw, recipKey);
           encryptedKeyBlob = btoa(String.fromCharCode(...blob));
-          deliveryMode     = "agent";
+          deliveryMode = "agent";
         }
       }
 
-      // ── 6. Expiry ─────────────────────────────────────────────────────────
       const expiryMap: Record<string, number> = {
-        "24h":  24  * 3600 * 1e6,
-        "7d":   7   * 24 * 3600 * 1e6,
-        "30d":  30  * 24 * 3600 * 1e6,
-        never:  0,
+        "24h": 24 * 3600 * 1e6,
+        "7d":  7  * 24 * 3600 * 1e6,
+        "30d": 30 * 24 * 3600 * 1e6,
+        never: 0,
       };
       const expiry_us = expiryMap[expiry] ? Date.now() * 1000 + expiryMap[expiry] : 0;
 
-      // ── 7. Création du ParcelManifest sur le DHT ───────────────────────────
       progress(80, "Création du manifest sur le DHT…");
       const parcelOut = await parcelZome.createParcel({
         file_hash:              fileHash,
@@ -171,7 +159,6 @@ export default function SendPanel() {
         max_downloads:          parseInt(maxDl),
       });
 
-      // ── 8. Construction du lien de téléchargement ─────────────────────────
       progress(92, "Génération du lien…");
       const parcelEhB64 = encodeB64Url(new Uint8Array(parcelOut.parcel_eh as unknown as number[]));
 
@@ -225,21 +212,24 @@ export default function SendPanel() {
         </div>
       )}
 
-      {/* QR Code */}
-      <div style={{ display: "flex", justifyContent: "center", margin: "1.5rem 0" }}>
-        <div style={{ background: "white", padding: "16px", borderRadius: "16px" }}>
-          <QRCode
-            value={link}
-            size={180}
-            level="M"
-            bgColor="#ffffff"
-            fgColor="#0a0f1a"
-          />
-        </div>
-      </div>
-      <p style={{ fontSize: ".78rem", color: "var(--muted)", marginBottom: "1.2rem" }}>
-        Scannez ce QR code pour ouvrir le lien de téléchargement
-      </p>
+      {link && (
+        <>
+          <div style={{ display:"flex", justifyContent:"center", margin:"1.5rem 0" }}>
+            <div style={{ background:"white", padding:"16px", borderRadius:"16px" }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(link)}`}
+                alt="QR Code"
+                width={180}
+                height={180}
+                style={{ display:"block" }}
+              />
+            </div>
+          </div>
+          <p style={{ fontSize:".78rem", color:"var(--muted)", marginBottom:"1.2rem" }}>
+            Scannez ce QR code pour ouvrir le lien de téléchargement
+          </p>
+        </>
+      )}
 
       <div className="form-row" style={{ textAlign:"left" }}>
         <div className="form-label">Lien de téléchargement</div>
@@ -271,13 +261,11 @@ export default function SendPanel() {
 
   return (
     <div>
-      {/* En-tête */}
       <div style={{ marginBottom:"1.4rem" }}>
         <h1 style={{ fontSize:"2rem", fontWeight:600, letterSpacing:"-.03em", lineHeight:1.1 }}>Send files privately</h1>
         <p style={{ color:"var(--muted)", marginTop:".35rem" }}>End-to-end encrypted • Sovereign options available</p>
       </div>
 
-      {/* Sélecteur de mode */}
       <div style={{ display:"flex", background:"rgba(255,255,255,.05)", borderRadius:"16px", padding:"4px", marginBottom:"1rem", width:"fit-content" }}>
         <button type="button" onClick={() => setUiMode("magic")}
           style={{ padding:".5rem 1.4rem", borderRadius:"12px", fontSize:".86rem", fontWeight:600, transition:"all .2s",
@@ -293,7 +281,6 @@ export default function SendPanel() {
         </button>
       </div>
 
-      {/* Zone de dépôt */}
       <div className="card" style={{ padding:"1rem" }}>
         <div style={{ border:`2px dashed ${dragging?"var(--g1)":"rgba(255,255,255,.2)"}`,borderRadius:"18px",padding:"2.8rem 1.5rem",textAlign:"center",cursor:"pointer",position:"relative",background:dragging?"rgba(34,211,238,.07)":"rgba(255,255,255,.02)",transition:"all .2s" }}
           onDragOver={(e)=>{e.preventDefault();setDragging(true);}}
@@ -318,7 +305,6 @@ export default function SendPanel() {
         ))}
       </div>
 
-      {/* Destinataire + options */}
       <div className="card">
         <div className="card-label">Destinataire & options</div>
         {uiMode === "magic" ? (
