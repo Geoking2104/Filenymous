@@ -1,6 +1,6 @@
 /**
  * Composant racine — v2
- * Styles: ./styles.css
+ * Styles: ./styles.css + ./styles-notify.css
  */
 
 import { useEffect } from "react";
@@ -21,6 +21,7 @@ import ContactsPanel from "./components/ContactsPanel";
 import PrivacyPanel from "./components/PrivacyPanel";
 import WalletPanel from "./components/WalletPanel";
 import "./styles.css";
+import "./styles-notify.css";
 
 function AdvancedPanel() {
   const { t } = useTranslation();
