@@ -53,7 +53,7 @@ npm --prefix tests test -- \
   src/p2p_signal_relay.test.ts
 
 echo "4/ Uploading to OVH through SFTP"
-sftp -oBatchMode=no "$OVH_SFTP_USER@$OVH_SFTP_HOST" <<SFTP
+sftp -4 -oBatchMode=no "$OVH_SFTP_USER@$OVH_SFTP_HOST" <<SFTP
 -mkdir "$OVH_REMOTE_DIR/app"
 put "$LOCAL_SITE_DIR/index.html" "$REMOTE_INDEX_TMP"
 put "$LOCAL_APP_FILE" "$REMOTE_APP_TMP"

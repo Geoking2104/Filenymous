@@ -84,7 +84,7 @@ bye
 "@ | Set-Content -LiteralPath $batchPath -Encoding ascii
 
   Write-DeployLog "SFTP upload starting. Enter the OVH SFTP password in this window if prompted."
-  & sftp -oBatchMode=no -b $batchPath "$OvhSftpUser@$OvhSftpHost" 2>&1 | Tee-Object -FilePath $LogPath -Append
+  & sftp -4 -oBatchMode=no -b $batchPath "$OvhSftpUser@$OvhSftpHost" 2>&1 | Tee-Object -FilePath $LogPath -Append
   if ($LASTEXITCODE -ne 0) {
     throw "SFTP upload failed with exit code $LASTEXITCODE"
   }
