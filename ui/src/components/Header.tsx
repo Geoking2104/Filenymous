@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useStore } from "../store/useStore";
 import type { Tab } from "../store/useStore";
 import type { AppLanguage } from "../i18n";
+import NotificationCenter from "./NotificationCenter";
 
 interface HeaderProps {
   minimal?: boolean;
@@ -66,6 +67,7 @@ export default function Header({ minimal = false }: HeaderProps) {
           </button>
 
           <div className="header-right">
+            {!minimal && <NotificationCenter />}
             <label className="lang-switch" title={t("lang.label")}>
               <span className="sr-only">{t("lang.label")}</span>
               <select
