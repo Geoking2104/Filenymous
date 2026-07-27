@@ -7,7 +7,9 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { initClient, onSignal } from "./holochain/client";
 import { useStore } from "./store/useStore";
+import type { Tab } from "./store/useStore";
 import { notify } from "./store/notifications";
+import { listenSWMessages } from "./pwa/registerSW";
 import type { FilenymousSignal } from "./holochain/types";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -22,6 +24,8 @@ import PrivacyPanel from "./components/PrivacyPanel";
 import WalletPanel from "./components/WalletPanel";
 import "./styles.css";
 import "./styles-notify.css";
+
+const TABS: Tab[] = ["send", "receive", "rooms", "contacts", "identity", "history", "advanced"];
 
 function AdvancedPanel() {
   const { t } = useTranslation();
@@ -46,7 +50,7 @@ function AdvancedPanel() {
 }
 
 export default function App() {
-  const { tab, setNet } = useStore();
+  const { tab, setTab, setNet } = useStore();
 
   const urlHash = window.location.hash;
   const isLinkDl = urlHash.startsWith("#") && urlHash.includes(":");
@@ -69,10 +73,22 @@ export default function App() {
       }
     });
 
+    const unlisten = listenSWMessages((nextTab) => {
+      if (TABS.includes(nextTab as Tab)) setTab(nextTab as Tab);
+    });
+
+    // Deep-link from notification: #tab=receive
+    const hash = window.location.hash;
+    const tabMatch = hash.match(/tab=([a-z]+)/i);
+    if (tabMatch && TABS.includes(tabMatch[1] as Tab)) {
+      setTab(tabMatch[1] as Tab);
+    }
+
     return () => {
       alive = false;
+      unlisten();
     };
-  }, [setNet]);
+  }, [setNet, setTab]);
 
   if (isLinkDl) {
     return (

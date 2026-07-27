@@ -2,7 +2,11 @@
  * Register Filenymous Service Worker and optional Web Push subscription.
  */
 
-const SW_URL = `${import.meta.env.BASE_URL}sw.js`.replace(/\/\//g, "/").replace("https:/", "https://");
+function swScriptUrl(): string {
+  const base = import.meta.env.BASE_URL || "/";
+  const normalized = base.endsWith("/") ? base : `${base}/`;
+  return `${normalized}sw.js`;
+}
 
 export type SwStatus = "unsupported" | "registering" | "ready" | "error";
 
@@ -18,13 +22,12 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 
   try {
-    const reg = await navigator.serviceWorker.register(SW_URL, {
+    const reg = await navigator.serviceWorker.register(swScriptUrl(), {
       scope: import.meta.env.BASE_URL || "/",
       updateViaCache: "none",
     });
     registration = reg;
 
-    // Prefer waiting worker immediately in dev-friendly way
     reg.addEventListener("updatefound", () => {
       const worker = reg.installing;
       if (!worker) return;
@@ -72,7 +75,6 @@ export async function showSWNotification(payload: {
       return true;
     }
 
-    // Fallback: registration.showNotification from page context
     if ("showNotification" in reg && Notification.permission === "granted") {
       await reg.showNotification(payload.title, {
         body: payload.body ?? "",
