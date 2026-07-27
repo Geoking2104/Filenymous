@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const demoPath = resolve(__dirname, "..", "..", "docs/demo/index.html");
+const demoPath = resolve(__dirname, "..", "..", "docs/demo/app/index.html");
 
 describe("static room demo", () => {
   it("presents Magic Link-first standalone transfer copy", () => {
@@ -41,6 +41,6 @@ describe("static room demo", () => {
     expect(html).toContain('id="public-room-list-panel"');
     expect(html).toContain('id="public-room-avatar-picker"');
     expect(html).toContain("12 users maximum");
-    expect(html).toContain("showRoomList = roomEntries.length > 1");
+    expect(html).toContain("showRoomList = roomEntries.length >= 1");
   });
 });

@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 const root = resolve(__dirname, "..", "..");
 
 describe("P2P direct web mode", () => {
-  const html = readFileSync(resolve(root, "docs/demo/index.html"), "utf8");
+  const html = readFileSync(resolve(root, "docs/demo/app/index.html"), "utf8");
 
   it("exposes direct WebRTC transfer controls with one-time code wording", () => {
     expect(html).toContain("P2P direct");
@@ -24,7 +24,7 @@ describe("P2P direct web mode", () => {
   });
 
   it("keeps direct P2P available in advanced web sends before falling back to links", () => {
-    expect(html).toContain("if (!options.preferWebLink && p2pSupported())");
+    expect(html).toContain("if (!options.preferWebLink && p2pSupported() && !S.sendContact)");
     expect(html).toContain("return await startP2PSend()");
     expect(html).toContain("Direct P2P is unavailable");
     expect(html).not.toContain("S.file.size > CFG.webInlineMaxBytes");

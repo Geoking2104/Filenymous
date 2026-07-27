@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const html = readFileSync(path.join(__dirname, "../../docs/demo/index.html"), "utf8");
+const html = readFileSync(path.join(__dirname, "../../docs/demo/app/index.html"), "utf8");
 const packagedHtml = readFileSync(path.join(__dirname, "../../filenymous-app.html"), "utf8");
 const i18nMatch = html.match(/window\.FILENYMOUS_I18N = (\{[\s\S]*?\n\});/);
 const i18n = JSON.parse(i18nMatch?.[1] ?? "{}") as Record<string, Record<string, string>>;
@@ -104,7 +104,7 @@ describe("standalone web transfer mode", () => {
       "public-room-list-panel",
       "public-room-list",
       "has-room-list",
-      "showRoomList = roomEntries.length > 1",
+      "showRoomList = roomEntries.length >= 1",
       "publicRoomDirectory",
       "setPublicRoomAvatar",
       "public-room-avatar-picker",
@@ -197,10 +197,10 @@ describe("standalone web transfer mode", () => {
 
   it("creates WebRTC one-time codes directly from the public home", () => {
     expect(html).toContain("await window.handleSend(event, { preferP2PCode: true })");
-    expect(html).toContain("if (!options.preferWebLink && p2pSupported())");
+    expect(html).toContain("if (!options.preferWebLink && p2pSupported() && !S.sendContact)");
     expect(html).not.toContain("await window.handleSend(event, { preferWebLink: true })");
     expect(packagedHtml).toContain("await window.handleSend(event, { preferP2PCode: true })");
-    expect(packagedHtml).toContain("if (!options.preferWebLink && p2pSupported())");
+    expect(packagedHtml).toContain("if (!options.preferWebLink && p2pSupported() && !S.sendContact)");
     expect(packagedHtml).not.toContain("await window.handleSend(event, { preferWebLink: true })");
   });
 
@@ -287,7 +287,7 @@ describe("standalone web transfer mode", () => {
       "Public web mode",
       "Session created. Share this code with the recipient.",
       "Anonymous web link created.",
-      "No link to encode.",
+      "Local QR generator unavailable. Copy or share the link.",
       "No transfer yet.",
       "Revoke",
     ]) {
@@ -433,9 +433,10 @@ describe("standalone web transfer mode", () => {
     expect(html).not.toContain("Fichier dechiffre et envoye vers Telechargements.");
   });
 
-  it("keeps advanced panels out of the primary navigation", () => {
+  it("keeps nonessential panels out of the primary navigation", () => {
     expect(html).not.toContain('id="tab-privacy"');
-    expect(html).toContain('id="tab-identity" onclick="showTab(\'identity\')" data-i18n="nav.advanced"');
+    expect(html).toContain('id="tab-identity" onclick="showTab(\'identity\')" data-i18n="nav.identity"');
+    expect(html).toContain('id="tab-advanced" onclick="showTab(\'advanced\')" data-i18n="nav.advanced"');
     expect(visibleHtml).toContain("Advanced");
     expect(html).not.toContain("Coffre local");
     expect(html).not.toContain("showTab('wallet')");

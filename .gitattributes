@@ -5,3 +5,4 @@
 # on every clone.
 docs/demo/app/index.html -text
 filenymous-app.html -text
+scripts/*.sh text eol=lf

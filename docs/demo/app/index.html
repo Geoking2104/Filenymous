@@ -4190,6 +4190,8 @@ window.FILENYMOUS_I18N = {
     "history.badgeParcel": "DHT parcel",
     "history.linkNotStored": "link not stored",
     "history.tagPrompt": "Tags for this transfer (comma separated):",
+    "p2p.connecting": "Peer found - establishing the direct encrypted channel (NAT traversal, up to ~30s)...",
+    "p2p.connectTimeout": "Direct connection could not be established. Make sure BOTH devices stay on their page and retry with a fresh code.",
     "share.nothingYet": "Create a transfer first.",
     "share.codeText": "Encrypted file via Filenymous - one-time code:",
     "share.linkText": "Encrypted file via Filenymous - open this link:",
@@ -4886,6 +4888,38 @@ window.FILENYMOUS_I18N = {
     "advanced.x25519Missing": "아직 X25519 키가 없습니다. 에이전트 모드로 받으려면 키를 생성하세요",
     "nav.contacts": "연락처",
     "nav.identity": "신원",
+    "preview.button": "미리보기",
+    "preview.save": "디스크에 저장",
+    "preview.note": "보안 뷰어: 복호화된 파일은 메모리에만 남으며 저장하기 전에는 디스크에 쓰이지 않습니다.",
+    "preview.unsupported": "이 파일 형식은 인라인 미리보기를 지원하지 않습니다. 디스크에 저장을 사용하세요.",
+    "common.close": "닫기",
+    "receive.previewFirst": "저장하기 전에 미리보기(보안 뷰어)",
+    "rooms.selfDestruct": "룸 자동 삭제",
+    "rooms.sdOff": "꺼짐",
+    "rooms.activityTitle": "활동",
+    "rooms.activityEmpty": "아직 없습니다. 누군가를 초대하고 파일을 공유하세요.",
+    "rooms.isTyping": "입력 중...",
+    "rooms.actJoined": "룸에 참여했습니다",
+    "rooms.actLeft": "참가자가 룸을 떠났습니다",
+    "rooms.actDownloaded": "다운로드함",
+    "rooms.sdArmed": "자동 삭제 설정됨: {mins}분 후 룸이 지워집니다.",
+    "rooms.sdArmedBy": "{name}님이 자동 삭제를 설정했습니다({mins}분).",
+    "rooms.sdDisarmed": "자동 삭제가 해제되었습니다.",
+    "rooms.sdDone": "룸이 자동 삭제되었습니다: 파일, 채팅, 활동이 이 브라우저에서 지워졌습니다.",
+    "history.searchPlaceholder": "이름, 수신자, 태그 검색...",
+    "history.typeAll": "모든 유형",
+    "history.typeLink": "독립 링크",
+    "history.typeE2e": "연락처용 E2E",
+    "history.typeParcel": "DHT parcel",
+    "history.export": "내보내기",
+    "history.exported": "기록을 내보냈습니다(메타데이터만, 키와 링크 제외).",
+    "history.badgeLink": "독립 링크",
+    "history.badgeE2e": "연락처용 E2E",
+    "history.badgeParcel": "DHT parcel",
+    "history.linkNotStored": "링크 저장 안 됨",
+    "history.tagPrompt": "이 전송의 태그(쉼표로 구분):",
+    "p2p.connecting": "피어를 찾았습니다. 직접 암호화 채널을 설정 중입니다(NAT 통과, 최대 약 30초)...",
+    "p2p.connectTimeout": "직접 연결을 설정할 수 없습니다. 두 기기 모두 해당 페이지를 열어 둔 뒤 새 코드로 다시 시도하세요.",
     "share.nothingYet": "먼저 전송을 만드세요.",
     "share.codeText": "Filenymous 암호화 파일 - 일회용 코드:",
     "share.linkText": "Filenymous 암호화 파일 - 이 링크를 여세요:",
@@ -6979,11 +7013,9 @@ window.createFromHome = async function (event) {
   if (homeBtn) homeBtn.disabled = true;
   try {
     showTab('send');
-    // Files that fit in a self-contained link: use the link (no sender
-    // presence, no WebRTC, decrypts instantly on scan). Only oversized
-    // files fall back to the direct P2P code (both devices stay open).
-    const fitsInline = S.file && S.file.size <= (CFG.webInlineMaxBytes || 0) && !S.sendContact;
-    await window.handleSend(event, fitsInline ? { preferWebLink: true } : { preferP2PCode: true });
+    // The public home is code-first: selecting a file immediately leads to a
+    // shareable one-time P2P code, even when the file would fit in a link.
+    await window.handleSend(event, { preferP2PCode: true });
   } finally {
     if (homeBtn && S.file) homeBtn.disabled = false;
   }
