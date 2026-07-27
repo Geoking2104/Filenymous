@@ -2,6 +2,8 @@
  * Register Filenymous Service Worker and optional Web Push subscription.
  */
 
+import { registerSubscriptionOnServer, fetchVapidPublicKey } from "./pushClient";
+
 function swScriptUrl(): string {
   const base = import.meta.env.BASE_URL || "/";
   const normalized = base.endsWith("/") ? base : `${base}/`;
@@ -99,17 +101,23 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return out;
 }
 
-/**
- * Subscribe to Web Push if VITE_VAPID_PUBLIC_KEY is set.
- * Stores subscription JSON in localStorage for a future backend.
- */
-export async function subscribeWebPush(): Promise<PushSubscription | null> {
-  const vapid =
+async function resolveVapidPublicKey(): Promise<string> {
+  const fromEnv =
     (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_VAPID_PUBLIC_KEY ||
     "";
-  if (!vapid) return null;
+  if (fromEnv) return fromEnv;
+  return (await fetchVapidPublicKey()) || "";
+}
+
+/**
+ * Subscribe to Web Push and register on push-server when configured.
+ */
+export async function subscribeWebPush(): Promise<PushSubscription | null> {
   if (!("PushManager" in window)) return null;
   if (Notification.permission !== "granted") return null;
+
+  const vapid = await resolveVapidPublicKey();
+  if (!vapid) return null;
 
   const reg = registration || (await registerServiceWorker());
   if (!reg) return null;
@@ -123,6 +131,7 @@ export async function subscribeWebPush(): Promise<PushSubscription | null> {
       });
     }
     localStorage.setItem("filenymous:push_subscription", JSON.stringify(sub.toJSON()));
+    await registerSubscriptionOnServer(sub);
     return sub;
   } catch (e) {
     console.warn("[Filenymous] Push subscribe failed:", e);
