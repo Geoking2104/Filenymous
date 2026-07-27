@@ -1,5 +1,7 @@
 /**
- * RoomPanel — private (padlock) vs public rooms + open library + P2P discovery
+ * RoomPanel — redesigned navigation
+ * Lobby (create/join/configure) → Inside hub with sub-tabs:
+ * Library | People | Send | Chat | Invite
  */
 
 import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
@@ -16,6 +18,9 @@ import { computeRoomExpiry } from "../rooms/types";
 import { useStore } from "../store/useStore";
 
 const localFileHandles = new Map<string, File>();
+
+type RoomPhase = "lobby" | "inside";
+type RoomHubTab = "library" | "people" | "send" | "chat" | "invite";
 
 function createRoomId(): string {
   const fallback = createInviteCode().replace(/-/g, "").toLowerCase();
@@ -63,7 +68,11 @@ function GlobeIcon({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M3 12h18M12 3c2.5 2.8 4 6 4 9s-1.5 6.2-4 9c-2.5-2.8-4-6-4-9s1.5-6.2 4-9z" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M3 12h18M12 3c2.5 2.8 4 6 4 9s-1.5 6.2-4 9c-2.5-2.8-4-6-4-9s1.5-6.2 4-9z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
     </svg>
   );
 }
@@ -101,6 +110,14 @@ function shareFromFile(file: File, roomId: string, localPeer: RoomPeer): RoomSha
   };
 }
 
+const HUB_TABS: Array<{ id: RoomHubTab; label: string; short: string }> = [
+  { id: "library", label: "Bibliothèque", short: "Lib" },
+  { id: "people", label: "Participants", short: "Pairs" },
+  { id: "send", label: "Envoi direct", short: "Envoi" },
+  { id: "chat", label: "Chat", short: "Chat" },
+  { id: "invite", label: "Invitation", short: "Lien" },
+];
+
 export default function RoomPanel() {
   const {
     net,
@@ -130,6 +147,9 @@ export default function RoomPanel() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const libraryInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [phase, setPhase] = useState<RoomPhase>(roomId && inviteCode ? "inside" : "lobby");
+  const [hubTab, setHubTab] = useState<RoomHubTab>("library");
   const [selectedPeerId, setSelectedPeerId] = useState("");
   const [draft, setDraft] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -143,12 +163,16 @@ export default function RoomPanel() {
     {
       id: "welcome",
       author: "Filenymous",
-      text: "Choose Private (lock + contacts + code) or Public (open library for a set duration).",
+      text: "Bienvenue dans le salon. Partagez la bibliothèque ou envoyez en direct à un pair.",
     },
   ]);
 
   const localPeer = localPeerRef.current;
   const publicExpired = roomKind === "public" && roomExpiresAtMs > 0 && Date.now() > roomExpiresAtMs;
+
+  useEffect(() => {
+    if (roomId && inviteCode) setPhase("inside");
+  }, [roomId, inviteCode]);
 
   useEffect(() => {
     if (roomKind !== "public" || !roomExpiresAtMs) return;
@@ -160,7 +184,7 @@ export default function RoomPanel() {
     discoveryRef.current?.stop();
     discoveryRef.current = null;
     setDiscoveryState("off");
-    if (!roomId || !inviteCode) return;
+    if (!roomId || !inviteCode || phase !== "inside") return;
 
     const discovery = new RoomDiscovery(roomId, inviteCode, localPeer, {
       onPeerJoin: (peer) => {
@@ -174,7 +198,7 @@ export default function RoomPanel() {
               {
                 id: crypto.randomUUID?.() ?? `${Date.now()}`,
                 author: "System",
-                text: `Blocked ${peer.displayName} — contact not on private allow-list`,
+                text: `Bloqué ${peer.displayName} — contact hors liste privée`,
               },
               ...prev,
             ]);
@@ -188,7 +212,7 @@ export default function RoomPanel() {
           {
             id: crypto.randomUUID?.() ?? `${Date.now()}`,
             author: "System",
-            text: `${peer.displayName} joined`,
+            text: `${peer.displayName} a rejoint`,
           },
           ...prev,
         ]);
@@ -250,7 +274,7 @@ export default function RoomPanel() {
       setDiscoveryState("off");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, inviteCode]);
+  }, [roomId, inviteCode, phase]);
 
   const visiblePeers = useMemo(() => {
     if (!peers.length) return [localPeer];
@@ -260,8 +284,7 @@ export default function RoomPanel() {
   const remotePeers = visiblePeers.filter((p) => p.peerId !== localPeer.peerId);
   const selectedPeer = visiblePeers.find((p) => p.peerId === selectedPeerId);
   const canSend = Boolean(roomId && selectedPeer && selectedPeer.peerId !== localPeer.peerId && !publicExpired);
-  const inviteUrl =
-    roomId && inviteCode ? roomInviteLink(roomId, inviteCode, roomKind) : "";
+  const inviteUrl = roomId && inviteCode ? roomInviteLink(roomId, inviteCode, roomKind) : "";
 
   const filteredLibrary = useMemo(() => {
     if (publicExpired) return [];
@@ -291,13 +314,38 @@ export default function RoomPanel() {
     return { roomId: nextRoomId, inviteCode: nextInviteCode };
   };
 
+  const enterRoom = () => {
+    if (roomKind === "private" && roomAllowedContacts.length === 0) {
+      setMessages((prev) => [
+        {
+          id: crypto.randomUUID?.() ?? `${Date.now()}`,
+          author: "System",
+          text: "Salon privé : ajoutez au moins un contact avant d’entrer.",
+        },
+        ...prev,
+      ]);
+      return;
+    }
+    ensureRoom(roomKind);
+    setPhase("inside");
+    setHubTab("library");
+  };
+
+  const leaveRoom = () => {
+    discoveryRef.current?.stop();
+    discoveryRef.current = null;
+    setDiscoveryState("off");
+    setPhase("lobby");
+    setHubTab("library");
+  };
+
   const copyInvite = async () => {
     if (roomKind === "private" && roomAllowedContacts.length === 0) {
       setMessages((prev) => [
         {
           id: crypto.randomUUID?.() ?? `${Date.now()}`,
           author: "System",
-          text: "Private room: add at least one contact (email or +phone) before sharing the invite.",
+          text: "Salon privé : ajoutez un contact avant de partager l’invitation.",
         },
         ...prev,
       ]);
@@ -307,7 +355,6 @@ export default function RoomPanel() {
     try {
       await navigator.clipboard?.writeText(link);
     } catch {
-      // fallback
       const ta = document.createElement("textarea");
       ta.value = link;
       document.body.appendChild(ta);
@@ -398,293 +445,328 @@ export default function RoomPanel() {
     discoveryRef.current?.announceLibraryRemove([shareId]);
   };
 
-  return (
-    <section className="room-shell">
-      <div className="card room-hero">
-        <div>
-          <div className="card-label">Rooms</div>
-          <h1>Private or public rooms</h1>
-          <p>
-            <strong>Private</strong> (padlock): only selected contacts + invite code.
-            <strong> Public</strong>: open library visible to anyone with the link, for a chosen duration.
-          </p>
+  /* ── LOBBY ─────────────────────────────────────────────── */
+  if (phase === "lobby") {
+    return (
+      <section className="room-shell panel-enter">
+        <div className="card room-hero">
+          <div>
+            <div className="card-label">Salons</div>
+            <h1>Créer ou rejoindre un salon</h1>
+            <p>
+              Configurez un salon <strong>privé</strong> (cadenas + contacts) ou <strong>public</strong>{" "}
+              (bibliothèque ouverte pour une durée), puis entrez dans le hub.
+            </p>
+          </div>
         </div>
-        <div className="room-actions">
-          <button className="btn-primary" type="button" onClick={() => ensureRoom(roomKind)}>
-            Create room
+
+        <div className="card">
+          <div className="card-label">Type de salon</div>
+          <div className="room-type-grid">
+            <button
+              type="button"
+              className={`room-type-card ${roomKind === "private" ? "is-active" : ""}`}
+              onClick={() => setRoomKind("private")}
+            >
+              <PadlockIcon size={28} />
+              <strong>Privé</strong>
+              <span>Contacts sélectionnés + code d’invitation</span>
+            </button>
+            <button
+              type="button"
+              className={`room-type-card ${roomKind === "public" ? "is-active" : ""}`}
+              onClick={() => setRoomKind("public")}
+            >
+              <GlobeIcon size={28} />
+              <strong>Public</strong>
+              <span>Bibliothèque ouverte pour une durée choisie</span>
+            </button>
+          </div>
+
+          {roomKind === "private" ? (
+            <div style={{ marginTop: "1.1rem" }}>
+              <div className="info-box">
+                <span>
+                  <PadlockIcon size={16} /> Accès limité aux contacts ci-dessous + code d’invitation.
+                </span>
+              </div>
+              <div className="form-row">
+                <label className="form-label">Ajouter un contact (email ou +tél)</label>
+                <div style={{ display: "flex", gap: ".5rem" }}>
+                  <input
+                    type="text"
+                    value={contactDraft}
+                    onChange={(e) => setContactDraft(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addAllowedContact(contactDraft)}
+                    placeholder="alice@example.com ou +33612345678"
+                    style={{
+                      borderColor:
+                        contactDraft && !isValidContact(contactDraft) ? "var(--err)" : undefined,
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    disabled={!isValidContact(contactDraft)}
+                    onClick={() => addAllowedContact(contactDraft)}
+                  >
+                    Ajouter
+                  </button>
+                </div>
+              </div>
+
+              {addressBook.length > 0 && (
+                <div className="form-row">
+                  <label className="form-label">Depuis le carnet</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: ".4rem" }}>
+                    {addressBook.map((c) => {
+                      const on = roomAllowedContacts.some((x) => x.contact === c.contact);
+                      return (
+                        <button
+                          key={c.hash}
+                          type="button"
+                          className={on ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
+                          onClick={() => toggleAddressBookContact(c.contact)}
+                        >
+                          {c.contact}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {roomAllowedContacts.length === 0 ? (
+                <p className="empty" style={{ padding: "1rem 0" }}>
+                  Aucun contact — ajoutez email / téléphone pour verrouiller le salon.
+                </p>
+              ) : (
+                <div className="room-transfer-list">
+                  {roomAllowedContacts.map((c) => (
+                    <div key={c.contact} className="room-transfer-row" style={{ alignItems: "center" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: ".4rem" }}>
+                        <PadlockIcon size={14} /> {c.contact}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm"
+                        style={{ color: "var(--err)" }}
+                        onClick={() => removeAllowedContact(c.contact)}
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ marginTop: "1.1rem" }}>
+              <div className="info-box">
+                <span>
+                  <GlobeIcon size={16} /> Toute personne avec le lien voit la bibliothèque jusqu’à expiration.
+                </span>
+              </div>
+              <div className="form-row">
+                <label className="form-label">Durée de visibilité</label>
+                <select
+                  value={roomDurationKey}
+                  onChange={(e) => setRoomDurationKey(e.target.value as RoomDurationKey)}
+                >
+                  <option value="1h">1 heure</option>
+                  <option value="6h">6 heures</option>
+                  <option value="24h">24 heures</option>
+                  <option value="7d">7 jours</option>
+                  <option value="30d">30 jours</option>
+                  <option value="session">Session navigateur uniquement</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          <button className="btn-primary btn-full" type="button" style={{ marginTop: "1.2rem" }} onClick={enterRoom}>
+            Entrer dans le salon
           </button>
-          <button className="btn-ghost" type="button" onClick={copyInvite}>
-            {copied ? "✓ Copied" : "Copy invite"}
+
+          {roomId && inviteCode && (
+            <button
+              className="btn-ghost btn-full"
+              type="button"
+              style={{ marginTop: ".6rem" }}
+              onClick={() => setPhase("inside")}
+            >
+              Reprendre le salon en cours
+            </button>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  /* ── INSIDE HUB ────────────────────────────────────────── */
+  return (
+    <section className="room-shell panel-enter">
+      <div className="room-toolbar card">
+        <div className="room-toolbar-main">
+          <span className="room-kind-badge">
+            {roomKind === "private" ? <PadlockIcon size={16} /> : <GlobeIcon size={16} />}
+            {roomKind === "private" ? "Privé" : "Public"}
+          </span>
+          <div className="room-toolbar-meta">
+            <strong>{roomId || "Salon"}</strong>
+            <small>
+              Discovery {discoveryState}
+              {" · "}
+              {remotePeers.length} pair(s)
+              {roomKind === "public" ? ` · ${formatExpiry(roomExpiresAtMs)}` : ""}
+              {nowTick ? "" : ""}
+              {" · "}
+              {net.connected ? "réseau avancé" : "navigateur"}
+            </small>
+          </div>
+        </div>
+        <div className="room-toolbar-actions">
+          <button type="button" className="btn-ghost btn-sm" onClick={copyInvite}>
+            {copied ? "✓ Copié" : "Copier le lien"}
+          </button>
+          <button type="button" className="btn-ghost btn-sm" onClick={leaveRoom}>
+            Quitter
           </button>
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-label">Room type</div>
-        <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap" }}>
+      <nav className="room-hub-tabs" aria-label="Navigation du salon">
+        {HUB_TABS.map((tab) => (
           <button
+            key={tab.id}
             type="button"
-            className={roomKind === "private" ? "btn-primary" : "btn-ghost"}
-            onClick={() => setRoomKind("private")}
-            style={{ display: "inline-flex", alignItems: "center", gap: ".5rem", minWidth: 140 }}
+            className={hubTab === tab.id ? "active" : ""}
+            onClick={() => setHubTab(tab.id)}
+            aria-current={hubTab === tab.id ? "page" : undefined}
           >
-            <PadlockIcon /> Private
+            <span className="room-hub-label">{tab.label}</span>
+            <span className="room-hub-short">{tab.short}</span>
+            {tab.id === "library" && roomSharedFiles.length > 0 && (
+              <span className="room-hub-count">{roomSharedFiles.length}</span>
+            )}
+            {tab.id === "people" && remotePeers.length > 0 && (
+              <span className="room-hub-count">{remotePeers.length}</span>
+            )}
+            {tab.id === "send" && roomTransfers.length > 0 && (
+              <span className="room-hub-count">{Math.min(roomTransfers.length, 9)}</span>
+            )}
           </button>
-          <button
-            type="button"
-            className={roomKind === "public" ? "btn-primary" : "btn-ghost"}
-            onClick={() => setRoomKind("public")}
-            style={{ display: "inline-flex", alignItems: "center", gap: ".5rem", minWidth: 140 }}
-          >
-            <GlobeIcon /> Public
-          </button>
-        </div>
+        ))}
+      </nav>
 
-        {roomKind === "private" ? (
-          <div style={{ marginTop: "1.1rem" }}>
-            <div className="info-box">
-              <span>
-                <PadlockIcon size={16} /> Access limited to the contacts below + the invite code.
-                Others with the link cannot join the allow-list session.
-              </span>
-            </div>
-            <div className="form-row">
-              <label className="form-label">Add contact (email or +phone)</label>
-              <div style={{ display: "flex", gap: ".5rem" }}>
+      {hubTab === "library" && (
+        <div className="card room-panel">
+          <div className="card-label">
+            {roomKind === "public" ? "Bibliothèque publique" : "Bibliothèque partagée"}
+          </div>
+          {publicExpired ? (
+            <div className="warn-box">Ce salon public a expiré. Bibliothèque masquée.</div>
+          ) : (
+            <>
+              <p style={{ color: "var(--muted)", fontSize: ".9rem", marginBottom: "1rem" }}>
+                Catalogue live — les octets restent locaux jusqu’à une demande de transfert.
+              </p>
+              <label
+                className={`room-drop ${libDragging ? "is-dragging" : ""}`}
+                role="button"
+                tabIndex={0}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setLibDragging(true);
+                }}
+                onDragLeave={() => setLibDragging(false)}
+                onDrop={(e: DragEvent<HTMLLabelElement>) => {
+                  e.preventDefault();
+                  setLibDragging(false);
+                  openToLibrary(e.dataTransfer.files);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    libraryInputRef.current?.click();
+                  }
+                }}
+                style={{ marginBottom: "1rem" }}
+              >
                 <input
-                  type="text"
-                  value={contactDraft}
-                  onChange={(e) => setContactDraft(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addAllowedContact(contactDraft)}
-                  placeholder="alice@example.com or +33612345678"
-                  style={{
-                    borderColor:
-                      contactDraft && !isValidContact(contactDraft) ? "var(--err)" : undefined,
+                  ref={libraryInputRef}
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    if (e.currentTarget.files) openToLibrary(e.currentTarget.files);
+                    e.currentTarget.value = "";
                   }}
                 />
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  disabled={!isValidContact(contactDraft)}
-                  onClick={() => addAllowedContact(contactDraft)}
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-
-            {addressBook.length > 0 && (
+                <strong>Ouvrir des fichiers dans la bibliothèque</strong>
+                <span>
+                  {roomKind === "public"
+                    ? "Visibles avec le lien pendant la durée choisie"
+                    : "Visibles uniquement par les contacts autorisés"}
+                </span>
+              </label>
               <div className="form-row">
-                <label className="form-label">From address book</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: ".4rem" }}>
-                  {addressBook.map((c) => {
-                    const on = roomAllowedContacts.some((x) => x.contact === c.contact);
+                <input
+                  type="search"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder="Filtrer par nom, propriétaire, type…"
+                />
+              </div>
+              {filteredLibrary.length === 0 ? (
+                <p className="empty">Aucun fichier dans la bibliothèque.</p>
+              ) : (
+                <div className="room-transfer-list">
+                  {filteredLibrary.map((entry) => {
+                    const isMine = entry.ownerId === localPeer.peerId;
                     return (
-                      <button
-                        key={c.hash}
-                        type="button"
-                        className={on ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
-                        onClick={() => toggleAddressBookContact(c.contact)}
-                      >
-                        {c.contact}
-                      </button>
+                      <div key={entry.shareId} className="room-transfer-row" style={{ alignItems: "center" }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {entry.fileName}
+                          </div>
+                          <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>
+                            {formatBytes(entry.fileSize)} · {entry.ownerName}
+                            {isMine ? " · vous" : " · pair"}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: ".4rem" }}>
+                          <button type="button" className="btn-ghost btn-sm" onClick={() => requestSharedFile(entry)}>
+                            {isMine ? "Sauver" : "Demander"}
+                          </button>
+                          {isMine && (
+                            <button
+                              type="button"
+                              className="btn-ghost btn-sm"
+                              style={{ color: "var(--err)" }}
+                              onClick={() => unshare(entry.shareId)}
+                            >
+                              Retirer
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
-            )}
-
-            {roomAllowedContacts.length === 0 ? (
-              <p className="empty" style={{ padding: "1rem 0" }}>
-                No contacts yet — add email / phone to lock the room.
-              </p>
-            ) : (
-              <div className="room-transfer-list">
-                {roomAllowedContacts.map((c) => (
-                  <div key={c.contact} className="room-transfer-row" style={{ alignItems: "center" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: ".4rem" }}>
-                      <PadlockIcon size={14} /> {c.contact}
-                    </span>
-                    <button
-                      type="button"
-                      className="btn-ghost btn-sm"
-                      style={{ color: "var(--err)" }}
-                      onClick={() => removeAllowedContact(c.contact)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={{ marginTop: "1.1rem" }}>
-            <div className="info-box">
-              <span>
-                <GlobeIcon size={16} /> Anyone with the invite can see the open library until the duration ends.
-              </span>
-            </div>
-            <div className="form-row">
-              <label className="form-label">Visibility duration</label>
-              <select
-                value={roomDurationKey}
-                onChange={(e) => setRoomDurationKey(e.target.value as RoomDurationKey)}
-              >
-                <option value="1h">1 hour</option>
-                <option value="6h">6 hours</option>
-                <option value="24h">24 hours</option>
-                <option value="7d">7 days</option>
-                <option value="30d">30 days</option>
-                <option value="session">This browser session only</option>
-              </select>
-            </div>
-            {roomId && (
-              <p style={{ fontSize: ".82rem", color: publicExpired ? "var(--err)" : "var(--muted)" }}>
-                {publicExpired
-                  ? "Public library expired — create a new room or extend duration."
-                  : `Expires: ${formatExpiry(roomExpiresAtMs)}`}
-                {nowTick > 0 ? "" : ""}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="card room-invite-card">
-        <div>
-          <div className="card-label" style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
-            {roomKind === "private" ? <PadlockIcon size={14} /> : <GlobeIcon size={14} />}
-            Invite · {roomKind}
-          </div>
-          <p className="room-summary">
-            {roomId
-              ? discoveryState === "live"
-                ? `Discovery live · ${remotePeers.length} remote peer(s)`
-                : "Room ready — starting discovery…"
-              : "Configure type, then create a room."}
-          </p>
+              )}
+            </>
+          )}
         </div>
-        <div style={{ display: "flex", gap: ".5rem", alignItems: "center", width: "100%" }}>
-          <input
-            readOnly
-            value={inviteUrl || "No room created yet"}
-            aria-label="Room invite link"
-            onFocus={(e) => e.currentTarget.select()}
-            style={{ flex: 1, minWidth: 0, fontFamily: "monospace", fontSize: ".82rem" }}
-          />
-          <button
-            type="button"
-            className={copied ? "btn-success" : "btn-primary"}
-            onClick={copyInvite}
-            disabled={!inviteUrl && !roomId}
-            style={{ flexShrink: 0, whiteSpace: "nowrap", minWidth: 110 }}
-            aria-label="Copy invite link"
-          >
-            {copied ? "✓ Copied" : "Copy link"}
-          </button>
-        </div>
-      </div>
+      )}
 
-      <div className="card">
-        <div className="card-label">
-          {roomKind === "public" ? "Public open library" : "Shared library (private room)"}
-        </div>
-        {publicExpired ? (
-          <div className="warn-box">This public room has expired. Library is hidden.</div>
-        ) : (
-          <>
-            <p style={{ color: "var(--muted)", fontSize: ".9rem", marginBottom: "1rem" }}>
-              Select files or folders to list for peers. Catalog only — bytes stay local until requested.
-            </p>
-            <label
-              className={`room-drop ${libDragging ? "is-dragging" : ""}`}
-              role="button"
-              tabIndex={0}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setLibDragging(true);
-              }}
-              onDragLeave={() => setLibDragging(false)}
-              onDrop={(e: DragEvent<HTMLLabelElement>) => {
-                e.preventDefault();
-                setLibDragging(false);
-                openToLibrary(e.dataTransfer.files);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  libraryInputRef.current?.click();
-                }
-              }}
-              style={{ marginBottom: "1rem" }}
-            >
-              <input
-                ref={libraryInputRef}
-                type="file"
-                multiple
-                onChange={(e) => {
-                  if (e.currentTarget.files) openToLibrary(e.currentTarget.files);
-                  e.currentTarget.value = "";
-                }}
-              />
-              <strong>Open files to the library</strong>
-              <span>
-                {roomKind === "public"
-                  ? "Visible to anyone with the link for the chosen duration"
-                  : "Visible only to allow-listed contacts in this private room"}
-              </span>
-            </label>
-            <div className="form-row">
-              <input
-                type="search"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                placeholder="Filter by name, owner, type…"
-              />
-            </div>
-            {filteredLibrary.length === 0 ? (
-              <p className="empty">No files in the library yet.</p>
-            ) : (
-              <div className="room-transfer-list">
-                {filteredLibrary.map((entry) => {
-                  const isMine = entry.ownerId === localPeer.peerId;
-                  return (
-                    <div key={entry.shareId} className="room-transfer-row" style={{ alignItems: "center" }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {entry.fileName}
-                        </div>
-                        <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>
-                          {formatBytes(entry.fileSize)} · {entry.ownerName}
-                          {isMine ? " · you" : " · peer"}
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: ".4rem" }}>
-                        <button type="button" className="btn-ghost btn-sm" onClick={() => requestSharedFile(entry)}>
-                          {isMine ? "Save" : "Request"}
-                        </button>
-                        {isMine && (
-                          <button
-                            type="button"
-                            className="btn-ghost btn-sm"
-                            style={{ color: "var(--err)" }}
-                            onClick={() => unshare(entry.shareId)}
-                          >
-                            Unshare
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      <div className="room-grid">
+      {hubTab === "people" && (
         <div className="card room-panel">
           <div className="card-label">Participants</div>
           <div className="peer-grid">
@@ -694,20 +776,44 @@ export default function RoomPanel() {
                 <button
                   key={peer.peerId}
                   type="button"
-                  onClick={() => setSelectedPeerId(peer.peerId)}
+                  onClick={() => {
+                    setSelectedPeerId(peer.peerId);
+                    if (peer.peerId !== localPeer.peerId) setHubTab("send");
+                  }}
                   className={selected ? "btn-primary peer-card" : "btn-ghost peer-card"}
                 >
                   <span className="peer-avatar">{roomAvatarInitials(peer.displayName, peer.peerId)}</span>
                   <strong>{peer.displayName}</strong>
-                  <small>{peer.peerId === localPeer.peerId ? "you" : peer.status}</small>
+                  <small>{peer.peerId === localPeer.peerId ? "vous" : peer.status}</small>
                 </button>
               );
             })}
           </div>
+          {remotePeers.length === 0 && (
+            <p className="empty">En attente de pairs… partagez le lien d’invitation.</p>
+          )}
         </div>
+      )}
 
+      {hubTab === "send" && (
         <div className="card room-panel">
-          <div className="card-label">Direct send</div>
+          <div className="card-label">Envoi direct</div>
+          {remotePeers.length > 0 && (
+            <div className="form-row">
+              <label className="form-label">Destinataire</label>
+              <select
+                value={selectedPeerId}
+                onChange={(e) => setSelectedPeerId(e.target.value)}
+              >
+                <option value="">Choisir un pair…</option>
+                {remotePeers.map((p) => (
+                  <option key={p.peerId} value={p.peerId}>
+                    {p.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <label
             className={`room-drop ${dragging ? "is-dragging" : ""} ${canSend ? "" : "is-disabled"}`}
             role="button"
@@ -738,41 +844,47 @@ export default function RoomPanel() {
                 e.currentTarget.value = "";
               }}
             />
-            <strong>{canSend ? `Drop files for ${selectedPeer?.displayName}` : "Select a remote peer"}</strong>
-            <span>Point-to-point transfer</span>
+            <strong>
+              {canSend ? `Déposer pour ${selectedPeer?.displayName}` : "Sélectionnez un pair distant"}
+            </strong>
+            <span>Transfert point à point</span>
           </label>
-          <div className="room-transfer-list">
-            {roomTransfers.slice(0, 5).map((t) => (
+          <div className="room-transfer-list" style={{ marginTop: "1rem" }}>
+            {roomTransfers.slice(0, 8).map((t) => (
               <div key={t.transferId} className="room-transfer-row">
                 <span>{t.fileNameCiphertext}</span>
                 <strong>{formatBytes(t.fileSize)}</strong>
               </div>
             ))}
+            {roomTransfers.length === 0 && <p className="empty">Aucun transfert en file.</p>}
           </div>
         </div>
+      )}
 
-        <div className="card room-panel room-chat">
-          <div className="card-label">Room chat</div>
+      {hubTab === "chat" && (
+        <div className="card room-panel">
+          <div className="card-label">Chat du salon</div>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             maxLength={500}
-            placeholder="Note for the room…"
+            placeholder="Note pour le salon…"
           />
           <button
             className="btn-primary btn-full"
             type="button"
+            style={{ marginTop: ".6rem" }}
             onClick={() => {
               const text = sanitizeRoomText(draft.trim(), 500);
               if (!text) return;
-              setMessages([{ id: `${Date.now()}`, author: "You", text }, ...messages]);
+              setMessages([{ id: `${Date.now()}`, author: "Vous", text }, ...messages]);
               setDraft("");
             }}
           >
-            Send message
+            Envoyer
           </button>
           <div className="room-messages">
-            {messages.slice(0, 8).map((m) => (
+            {messages.slice(0, 12).map((m) => (
               <p key={m.id}>
                 <strong>{m.author}</strong>
                 <span>{m.text}</span>
@@ -780,22 +892,53 @@ export default function RoomPanel() {
             ))}
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="info-box room-footnote">
-        <span>
-          {roomKind === "private" ? (
-            <>
-              <PadlockIcon size={14} /> Private · {roomAllowedContacts.length} contact(s) · code required
-            </>
-          ) : (
-            <>
-              <GlobeIcon size={14} /> Public · {formatExpiry(roomExpiresAtMs)}
-            </>
-          )}{" "}
-          · Discovery {discoveryState} · {net.connected ? "advanced network" : "browser-first"}
-        </span>
-      </div>
+      {hubTab === "invite" && (
+        <div className="card room-panel">
+          <div className="card-label" style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
+            {roomKind === "private" ? <PadlockIcon size={14} /> : <GlobeIcon size={14} />}
+            Invitation · {roomKind === "private" ? "privé" : "public"}
+          </div>
+          <p className="room-summary" style={{ marginBottom: "1rem" }}>
+            Partagez ce lien pour faire rejoindre le salon.
+            {roomKind === "private" && ` ${roomAllowedContacts.length} contact(s) autorisé(s).`}
+          </p>
+          <div style={{ display: "flex", gap: ".5rem", alignItems: "center", width: "100%" }}>
+            <input
+              readOnly
+              value={inviteUrl || "Salon non créé"}
+              aria-label="Lien d’invitation"
+              onFocus={(e) => e.currentTarget.select()}
+              style={{ flex: 1, minWidth: 0, fontFamily: "monospace", fontSize: ".82rem" }}
+            />
+            <button
+              type="button"
+              className={copied ? "btn-success" : "btn-primary"}
+              onClick={copyInvite}
+              style={{ flexShrink: 0, whiteSpace: "nowrap", minWidth: 110 }}
+            >
+              {copied ? "✓ Copié" : "Copier"}
+            </button>
+          </div>
+
+          {roomKind === "private" && roomAllowedContacts.length > 0 && (
+            <div className="room-transfer-list" style={{ marginTop: "1rem" }}>
+              {roomAllowedContacts.map((c) => (
+                <div key={c.contact} className="room-transfer-row">
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: ".4rem" }}>
+                    <PadlockIcon size={14} /> {c.contact}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button className="btn-ghost btn-full" type="button" style={{ marginTop: "1rem" }} onClick={leaveRoom}>
+            Retour au lobby / modifier la config
+          </button>
+        </div>
+      )}
     </section>
   );
 }
