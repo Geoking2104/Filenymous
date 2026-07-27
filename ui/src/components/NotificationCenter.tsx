@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   useNotifications,
   type AppNotification,
   type NotifyKind,
 } from "../store/notifications";
 import { useStore } from "../store/useStore";
+import { subscribeWebPush, getPushSubscription } from "../pwa/registerSW";
 
 const KIND_ICON: Record<NotifyKind, string> = {
   info: "ℹ",
@@ -20,7 +21,12 @@ function timeAgo(ts: number): string {
   if (s < 60) return "à l’instant";
   if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
   if (s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
-  return new Date(ts).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  return new Date(ts).toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function Row({ n }: { n: AppNotification }) {
@@ -57,6 +63,12 @@ export default function NotificationCenter() {
   const unread = useNotifications((s) => s.items.filter((n) => !n.read).length);
   const browserPermission = useNotifications((s) => s.browserPermission);
   const setBrowserPermission = useNotifications((s) => s.setBrowserPermission);
+  const setPushEnabled = useNotifications((s) => s.setPushEnabled);
+  const pushEnabled = useNotifications((s) => s.pushEnabled);
+  const [pushBusy, setPushBusy] = useState(false);
+  const hasVapid = Boolean(
+    (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_VAPID_PUBLIC_KEY,
+  );
 
   useEffect(() => {
     if (!panelOpen) return;
@@ -67,13 +79,26 @@ export default function NotificationCenter() {
     return () => window.removeEventListener("keydown", onKey);
   }, [panelOpen, setPanelOpen]);
 
+  useEffect(() => {
+    void getPushSubscription().then((sub) => {
+      if (sub) setPushEnabled(true);
+    });
+  }, [setPushEnabled]);
+
   const requestBrowser = async () => {
     if (typeof Notification === "undefined") return;
+    setPushBusy(true);
     try {
       const p = await Notification.requestPermission();
       setBrowserPermission(p);
+      if (p === "granted") {
+        const sub = await subscribeWebPush();
+        setPushEnabled(Boolean(sub) || true);
+      }
     } catch {
       setBrowserPermission("denied");
+    } finally {
+      setPushBusy(false);
     }
   };
 
@@ -100,7 +125,12 @@ export default function NotificationCenter() {
 
       {panelOpen && (
         <>
-          <button type="button" className="notify-backdrop" aria-label="Fermer" onClick={() => setPanelOpen(false)} />
+          <button
+            type="button"
+            className="notify-backdrop"
+            aria-label="Fermer"
+            onClick={() => setPanelOpen(false)}
+          />
           <div className="notify-panel" role="dialog" aria-label="Centre de notifications">
             <div className="notify-panel-head">
               <strong>Notifications</strong>
@@ -114,12 +144,45 @@ export default function NotificationCenter() {
               </div>
             </div>
 
-            {browserPermission === "default" && (
+            {browserPermission !== "granted" && browserPermission !== "unsupported" && (
               <div className="notify-enable">
-                <span>Activer les alertes système pour les transferts et salons.</span>
-                <button type="button" className="btn-primary btn-sm" onClick={requestBrowser}>
-                  Autoriser
+                <span>
+                  Activer les notifications système (Service Worker)
+                  {hasVapid ? " + push distant" : ""}.
+                </span>
+                <button
+                  type="button"
+                  className="btn-primary btn-sm"
+                  onClick={requestBrowser}
+                  disabled={pushBusy}
+                >
+                  {pushBusy ? "…" : "Autoriser"}
                 </button>
+              </div>
+            )}
+
+            {browserPermission === "granted" && (
+              <div className="notify-enable" style={{ opacity: 0.9 }}>
+                <span>
+                  {pushEnabled && hasVapid
+                    ? "Push Web activé — abonnement enregistré localement."
+                    : "Notifications SW actives (onglet en arrière-plan inclus)."}
+                </span>
+                {hasVapid && !pushEnabled && (
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    onClick={async () => {
+                      setPushBusy(true);
+                      const sub = await subscribeWebPush();
+                      setPushEnabled(Boolean(sub));
+                      setPushBusy(false);
+                    }}
+                    disabled={pushBusy}
+                  >
+                    Push
+                  </button>
+                )}
               </div>
             )}
 

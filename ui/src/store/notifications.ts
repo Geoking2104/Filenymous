@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { showSWNotification } from "../pwa/registerSW";
 
 export type NotifyKind = "info" | "success" | "warn" | "error" | "room" | "transfer";
 
@@ -20,6 +21,7 @@ interface NotifyState {
   toasts: AppNotification[];
   panelOpen: boolean;
   browserPermission: NotificationPermission | "unsupported";
+  pushEnabled: boolean;
 
   push(input: {
     kind?: NotifyKind;
@@ -27,7 +29,7 @@ interface NotifyState {
     body?: string;
     ttlMs?: number;
     tab?: AppNotification["tab"];
-    /** Also fire OS/browser notification if allowed */
+    /** Also fire OS/browser notification via Service Worker when possible */
     system?: boolean;
   }): string;
   markRead(id: string): void;
@@ -36,11 +38,16 @@ interface NotifyState {
   clearAll(): void;
   setPanelOpen(open: boolean): void;
   setBrowserPermission(p: NotifyState["browserPermission"]): void;
+  setPushEnabled(v: boolean): void;
   unreadCount(): number;
 }
 
 function nid() {
   return `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function pageIsHidden(): boolean {
+  return typeof document !== "undefined" && document.visibilityState === "hidden";
 }
 
 export const useNotifications = create<NotifyState>((set, get) => ({
@@ -49,6 +56,7 @@ export const useNotifications = create<NotifyState>((set, get) => ({
   panelOpen: false,
   browserPermission:
     typeof Notification === "undefined" ? "unsupported" : Notification.permission,
+  pushEnabled: false,
 
   push: ({ kind = "info", title, body, ttlMs = 5200, tab, system = false }) => {
     const id = nid();
@@ -74,20 +82,37 @@ export const useNotifications = create<NotifyState>((set, get) => ({
       }, ttlMs);
     }
 
-    if (system && typeof Notification !== "undefined" && Notification.permission === "granted") {
-      try {
-        const n = new Notification(title, {
-          body: body ?? "",
-          icon: "/Filenymous/icons/icon-192.png",
+    const wantSystem =
+      system &&
+      typeof Notification !== "undefined" &&
+      Notification.permission === "granted";
+
+    if (wantSystem) {
+      const useSW = pageIsHidden() || get().pushEnabled;
+      if (useSW) {
+        void showSWNotification({
+          title,
+          body,
           tag: id,
-          silent: false,
+          tab,
+          kind,
+          requireInteraction: kind === "transfer" || kind === "room",
         });
-        n.onclick = () => {
-          window.focus();
-          n.close();
-        };
-      } catch {
-        /* ignore */
+      } else {
+        try {
+          const n = new Notification(title, {
+            body: body ?? "",
+            icon: `${import.meta.env.BASE_URL}icons/icon-192.png`,
+            tag: id,
+            silent: false,
+          });
+          n.onclick = () => {
+            window.focus();
+            n.close();
+          };
+        } catch {
+          void showSWNotification({ title, body, tag: id, tab, kind });
+        }
       }
     }
 
@@ -114,6 +139,8 @@ export const useNotifications = create<NotifyState>((set, get) => ({
   setPanelOpen: (panelOpen) => set({ panelOpen }),
 
   setBrowserPermission: (browserPermission) => set({ browserPermission }),
+
+  setPushEnabled: (pushEnabled) => set({ pushEnabled }),
 
   unreadCount: () => get().items.filter((n) => !n.read).length,
 }));
