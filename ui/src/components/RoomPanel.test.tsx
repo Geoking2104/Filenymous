@@ -49,13 +49,21 @@ describe("RoomPanel", () => {
       mountedRoot.render(<RoomPanel />);
     });
 
-    expect(document.body.textContent).toContain("Create a private room for a group");
-    expect(document.body.textContent).toContain("One temporary room, one invite link, many files");
-    expect(document.body.textContent).toContain("Create room");
-    expect((document.querySelector("[aria-label='Room invite link']") as HTMLInputElement).value).toContain(
+    expect(document.body.textContent).toContain("room-alpha");
+    const inviteTab = Array.from(document.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Invitation"),
+    );
+    expect(inviteTab).toBeTruthy();
+    await act(async () => inviteTab?.click());
+    expect((document.querySelector("[aria-label='Lien d’invitation']") as HTMLInputElement).value).toContain(
       "/#/room/room-alpha?key=ABCD-EFGH-JKLM",
     );
+    const peopleTab = Array.from(document.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Participants"),
+    );
+    expect(peopleTab).toBeTruthy();
+    await act(async () => peopleTab?.click());
     expect(document.body.textContent).toContain("Bob");
-    expect(document.body.textContent).toContain("Room chat");
+    expect(document.body.textContent).toContain("Bibliothèque");
   });
 });

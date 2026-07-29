@@ -17,6 +17,7 @@ import ReceiveWorkspace from "./components/ReceiveWorkspace";
 import RoomEntry from "./components/RoomEntry";
 import BottomDock from "./components/BottomDock";
 import SecondaryDrawer from "./components/SecondaryDrawer";
+import EnterprisePrivacySection from "./components/EnterprisePrivacySection";
 import type { DrawerId, PrimaryMode, RoomKind } from "./types";
 import "./styles/ux-v3.css";
 
@@ -117,6 +118,14 @@ export default function AppUxV3() {
             />
           )}
         </section>
+
+        <a className="v3-enterprise-link" href="#confidentialite-entreprises">
+          <span>Pour les entreprises</span>
+          <strong>Confidentialité, RGPD et échange souverain</strong>
+          <small>Comprendre l’exposition au CLOUD Act et découvrir les cas d’usage →</small>
+        </a>
+
+        <EnterprisePrivacySection />
       </main>
 
       <BottomDock active={drawer} onOpen={setDrawer} />
