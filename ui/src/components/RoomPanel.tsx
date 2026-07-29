@@ -40,7 +40,10 @@ function isValidContact(v: string) {
 
 function roomInviteLink(roomId: string, inviteCode: string, kind: RoomKind): string {
   const origin = window.location.origin || "https://geoking2104.github.io";
-  return `${origin}/Filenymous/#/room/${encodeURIComponent(roomId)}?key=${encodeURIComponent(inviteCode)}&kind=${kind}`;
+  const configuredBase = import.meta.env.BASE_URL || "/";
+  const base = configuredBase.startsWith("/") ? configuredBase : `/${configuredBase}`;
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  return `${origin}${normalizedBase}#/room/${encodeURIComponent(roomId)}?key=${encodeURIComponent(inviteCode)}&kind=${kind}`;
 }
 
 function formatExpiry(expiresAtMs: number): string {
