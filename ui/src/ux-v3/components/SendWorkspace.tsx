@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, type DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import {
   createShareCode,
@@ -14,7 +15,7 @@ interface Props {
   onShare?: (files: LocalFileItem[], path: SharePath) => Promise<ShareResult> | ShareResult;
 }
 
-/** Petit logo pigeon inline (SVG data-URI) — 100 % local, zéro réseau */
+/** Inline pigeon logo (SVG data-URI) — fully local */
 const PIGEON_LOGO =
   "data:image/svg+xml," +
   encodeURIComponent(
@@ -28,6 +29,7 @@ const PIGEON_LOGO =
   );
 
 export default function SendWorkspace({ onShare }: Props) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [files, setFiles] = useState<LocalFileItem[]>([]);
@@ -106,15 +108,14 @@ export default function SendWorkspace({ onShare }: Props) {
   if (result) {
     return (
       <div className="v3-result">
-        <div className="v3-step">Partage prêt</div>
+        <div className="v3-step">{t("ux.sendReady")}</div>
         <p className="v3-muted" style={{ marginBottom: 0 }}>
-          Donnez ce code ou ce lien au destinataire
+          {t("ux.sendGiveCode")}
         </p>
         <div className="v3-code">{result.code}</div>
 
         <div className="v3-qr-wrap">
           <div className="v3-qr">
-            {/* Affichage SVG net (écrans retina) */}
             <QRCodeSVG
               value={result.link}
               size={200}
@@ -122,7 +123,7 @@ export default function SendWorkspace({ onShare }: Props) {
               marginSize={2}
               bgColor="#ffffff"
               fgColor="#0f172a"
-              title="QR code Filenymous — scannez pour ouvrir le partage"
+              title={t("ux.sendQrTitle")}
               imageSettings={{
                 src: PIGEON_LOGO,
                 height: 36,
@@ -130,7 +131,6 @@ export default function SendWorkspace({ onShare }: Props) {
                 excavate: true,
               }}
             />
-            {/* Canvas caché pour export PNG haute qualité */}
             <div className="v3-qr-canvas-hidden" aria-hidden="true">
               <QRCodeCanvas
                 ref={qrCanvasRef}
@@ -149,24 +149,24 @@ export default function SendWorkspace({ onShare }: Props) {
               />
             </div>
           </div>
-          <p className="v3-qr-caption">Scannez pour ouvrir le partage</p>
+          <p className="v3-qr-caption">{t("ux.sendQrCaption")}</p>
           <button type="button" className="v3-qr-dl" onClick={downloadQr}>
-            ⬇ Télécharger le QR
+            {t("ux.sendQrDownload")}
           </button>
         </div>
 
         <div className="v3-link-row">
           <input readOnly value={result.link} onFocus={(e) => e.currentTarget.select()} />
           <button type="button" className="v3-copy-btn" onClick={copyLink}>
-            {copied ? "✓ Copié" : "Copier"}
+            {copied ? `✓ ${t("common.copied")}` : t("common.copy")}
           </button>
         </div>
         <button type="button" className="v3-btn-ghost" onClick={reset}>
-          Nouveau partage
+          {t("ux.sendNewShare")}
         </button>
         <div className="v3-status">
           <span className="v3-pulse" />
-          En attente du destinataire · restez sur cette page
+          {t("ux.sendWaiting")}
         </div>
       </div>
     );
@@ -174,7 +174,7 @@ export default function SendWorkspace({ onShare }: Props) {
 
   return (
     <div>
-      <div className="v3-step">1 · Fichier</div>
+      <div className="v3-step">{t("ux.sendStepFile")}</div>
       <div
         className={`v3-drop${dragging ? " is-drag" : ""}`}
         role="button"
@@ -206,8 +206,8 @@ export default function SendWorkspace({ onShare }: Props) {
         <div className="v3-drop-bird" aria-hidden="true">
           🕊
         </div>
-        <strong>Déposez vos fichiers ici</strong>
-        <span>ou cliquez pour parcourir — chiffrement local immédiat</span>
+        <strong>{t("ux.sendDropTitle")}</strong>
+        <span>{t("ux.sendDropHint")}</span>
       </div>
 
       {files.length > 0 && (
@@ -218,10 +218,15 @@ export default function SendWorkspace({ onShare }: Props) {
               <div className="v3-file-meta">
                 <strong>{f.name}</strong>
                 <small>
-                  {formatBytes(f.size)} · chiffré localement
+                  {formatBytes(f.size)} · {t("ux.sendEncryptedLocal")}
                 </small>
               </div>
-              <button type="button" className="v3-file-rm" onClick={() => removeFile(f.id)} aria-label="Retirer">
+              <button
+                type="button"
+                className="v3-file-rm"
+                onClick={() => removeFile(f.id)}
+                aria-label={t("common.remove")}
+              >
                 ✕
               </button>
             </div>
@@ -230,7 +235,7 @@ export default function SendWorkspace({ onShare }: Props) {
       )}
 
       <div className="v3-step" style={{ marginTop: "1.2rem" }}>
-        2 · Comment partager
+        {t("ux.sendStepShare")}
       </div>
       <div className="v3-paths">
         <button
@@ -238,16 +243,16 @@ export default function SendWorkspace({ onShare }: Props) {
           className={`v3-path${path === "link" ? " active" : ""}`}
           onClick={() => setPath("link")}
         >
-          <strong>🔗 Lien magique</strong>
-          <span>Un lien chiffré à coller. Simple et universel.</span>
+          <strong>{t("ux.sendPathLinkTitle")}</strong>
+          <span>{t("ux.sendPathLinkDesc")}</span>
         </button>
         <button
           type="button"
           className={`v3-path${path === "contact" ? " active" : ""}`}
           onClick={() => setPath("contact")}
         >
-          <strong>👤 Contact</strong>
-          <span>Envoyer à quelqu’un de votre carnet (clé X25519).</span>
+          <strong>{t("ux.sendPathContactTitle")}</strong>
+          <span>{t("ux.sendPathContactDesc")}</span>
         </button>
       </div>
 
@@ -257,7 +262,7 @@ export default function SendWorkspace({ onShare }: Props) {
         onClick={createShare}
         disabled={busy}
       >
-        {busy ? "Préparation…" : "Créer le partage privé"}
+        {busy ? t("ux.sendPreparing") : t("ux.sendCreate")}
       </button>
     </div>
   );

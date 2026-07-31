@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { RoomKind } from "../types";
 
 interface Props {
@@ -6,14 +7,13 @@ interface Props {
 }
 
 export default function RoomEntry({ onEnter }: Props) {
+  const { t } = useTranslation();
   const [kind, setKind] = useState<RoomKind>("private");
 
   return (
     <div>
-      <div className="v3-step">Créer un salon</div>
-      <p className="v3-muted">
-        Bibliothèque live entre navigateurs. Privé (contacts) ou public (durée limitée).
-      </p>
+      <div className="v3-step">{t("ux.roomStep")}</div>
+      <p className="v3-muted">{t("ux.roomHint")}</p>
       <div className="v3-room-types">
         <button
           type="button"
@@ -21,8 +21,8 @@ export default function RoomEntry({ onEnter }: Props) {
           onClick={() => setKind("private")}
         >
           <span aria-hidden="true">🔒</span>
-          <strong>Privé</strong>
-          <span>Contacts + code d’invitation</span>
+          <strong>{t("ux.roomPrivateTitle")}</strong>
+          <span>{t("ux.roomPrivateDesc")}</span>
         </button>
         <button
           type="button"
@@ -30,16 +30,16 @@ export default function RoomEntry({ onEnter }: Props) {
           onClick={() => setKind("public")}
         >
           <span aria-hidden="true">🌐</span>
-          <strong>Public</strong>
-          <span>Ouvert pour une durée choisie</span>
+          <strong>{t("ux.roomPublicTitle")}</strong>
+          <span>{t("ux.roomPublicDesc")}</span>
         </button>
       </div>
       <button type="button" className="v3-btn-primary" onClick={() => onEnter?.(kind)}>
-        Entrer dans le salon
+        {t("ux.roomEnter")}
       </button>
       <div className="v3-status">
         <span className="v3-pulse" />
-        Discovery navigateur · session seule
+        {t("ux.roomStatus")}
       </div>
     </div>
   );
