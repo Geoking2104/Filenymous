@@ -253,39 +253,21 @@
     0 12px 32px rgba(0, 0, 0, 0.35),
     0 0 40px rgba(34, 211, 238, 0.08);
 }
-.v3-qr svg {
-  display: block;
-  border-radius: 4px;
-}
+.v3-qr svg { display: block; border-radius: 4px; }
 .v3-qr-canvas-hidden {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
+  position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;
 }
 .v3-qr-caption {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--v3-muted);
-  letter-spacing: 0.01em;
+  margin: 0; font-size: 0.78rem; color: var(--v3-muted); letter-spacing: 0.01em;
 }
 .v3-qr-dl {
-  margin-top: 0.15rem;
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  border: 1px solid var(--v3-border);
-  background: var(--v3-surface);
-  color: var(--v3-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: 0.15s ease;
+  margin-top: 0.15rem; padding: 0.4rem 0.9rem; border-radius: 999px;
+  border: 1px solid var(--v3-border); background: var(--v3-surface);
+  color: var(--v3-muted); font-size: 0.78rem; font-weight: 600;
+  font-family: inherit; cursor: pointer; transition: 0.15s ease;
 }
 .v3-qr-dl:hover {
-  color: var(--v3-cyan);
-  border-color: rgba(34, 211, 238, 0.4);
+  color: var(--v3-cyan); border-color: rgba(34, 211, 238, 0.4);
   background: rgba(34, 211, 238, 0.08);
 }
 
@@ -331,6 +313,112 @@
 }
 @keyframes v3-pulse { 70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); } }
 .v3-muted { color: var(--v3-muted); font-size: 0.92rem; margin-bottom: 1rem; }
+
+/* Legacy panels embedded in UX v3 */
+.v3-legacy-panel {
+  text-align: left;
+}
+.v3-legacy-panel .card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--v3-border);
+  border-radius: 16px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+.v3-legacy-panel .card-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v3-cyan);
+  margin-bottom: 0.55rem;
+}
+.v3-legacy-panel input,
+.v3-legacy-panel select,
+.v3-legacy-panel textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  border: 1.5px solid var(--v3-border);
+  background: #121218;
+  color: var(--v3-text);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.v3-legacy-panel .btn-primary,
+.v3-legacy-panel .btn-success {
+  border: none;
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  background: #fff;
+  color: #09090b;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.v3-legacy-panel .btn-ghost {
+  border: 1px solid var(--v3-border);
+  border-radius: 12px;
+  padding: 0.55rem 0.85rem;
+  background: transparent;
+  color: var(--v3-cyan);
+  font-family: inherit;
+  cursor: pointer;
+}
+.v3-legacy-panel .btn-danger {
+  border: none;
+  border-radius: 12px;
+  padding: 0.45rem 0.7rem;
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--v3-err);
+  font-family: inherit;
+  cursor: pointer;
+}
+.v3-legacy-panel .btn-sm { font-size: 0.78rem; padding: 0.4rem 0.65rem; }
+.v3-legacy-panel .btn-full { width: 100%; }
+.v3-legacy-panel .info-box,
+.v3-legacy-panel .warn-box {
+  font-size: 0.82rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  margin-bottom: 0.85rem;
+  line-height: 1.4;
+}
+.v3-legacy-panel .info-box {
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  color: var(--v3-muted);
+}
+.v3-legacy-panel .warn-box {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+}
+.v3-legacy-panel .empty {
+  text-align: center;
+  color: var(--v3-muted);
+  font-size: 0.88rem;
+}
+.v3-legacy-panel .form-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--v3-muted);
+  margin-bottom: 0.35rem;
+}
+.v3-legacy-panel .form-row { margin-bottom: 0.85rem; }
+.v3-legacy-panel .progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.v3-legacy-panel .progress-fill {
+  height: 100%;
+  background: var(--v3-grad);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
 
 .v3-dock {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;

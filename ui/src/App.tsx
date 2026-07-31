@@ -1,9 +1,8 @@
 /**
- * Composant racine — UX v3 (shell unifié)
- * 3 modes: Envoyer · Recevoir · Salon + tiroirs secondaires
+ * Root — UX v3 shell + Magic Link deep receive
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { initClient, onSignal } from "./holochain/client";
 import { useStore } from "./store/useStore";
 import type { Tab } from "./store/useStore";
@@ -20,11 +19,19 @@ import "./styles-notify.css";
 
 const TABS: Tab[] = ["send", "receive", "rooms", "contacts", "identity", "history", "advanced"];
 
+function isMagicHash(hash: string): boolean {
+  return hash.startsWith("#") && hash.includes(":");
+}
+
 export default function App() {
   const { setTab, setNet } = useStore();
+  const [hash, setHash] = useState(() => window.location.hash);
 
-  const urlHash = window.location.hash;
-  const isLinkDl = urlHash.startsWith("#") && urlHash.includes(":");
+  useEffect(() => {
+    const onHash = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -48,8 +55,7 @@ export default function App() {
       if (TABS.includes(nextTab as Tab)) setTab(nextTab as Tab);
     });
 
-    const hash = window.location.hash;
-    const tabMatch = hash.match(/tab=([a-z]+)/i);
+    const tabMatch = window.location.hash.match(/tab=([a-z]+)/i);
     if (tabMatch && TABS.includes(tabMatch[1] as Tab)) {
       setTab(tabMatch[1] as Tab);
     }
@@ -60,8 +66,7 @@ export default function App() {
     };
   }, [setNet, setTab]);
 
-  // Magic-link deep receive — flux minimal existant
-  if (isLinkDl) {
+  if (isMagicHash(hash)) {
     return (
       <div className="app">
         <Header minimal />
