@@ -1,10 +1,5 @@
+import { useTranslation } from "react-i18next";
 import type { PrimaryMode } from "../types";
-
-const MODES: Array<{ id: PrimaryMode; icon: string; label: string }> = [
-  { id: "send", icon: "↑", label: "Envoyer" },
-  { id: "receive", icon: "↓", label: "Recevoir" },
-  { id: "room", icon: "◎", label: "Salon" },
-];
 
 interface Props {
   mode: PrimaryMode;
@@ -12,9 +7,17 @@ interface Props {
 }
 
 export default function ModeSwitcher({ mode, onChange }: Props) {
+  const { t } = useTranslation();
+
+  const modes: Array<{ id: PrimaryMode; icon: string; label: string }> = [
+    { id: "send", icon: "↑", label: t("ux.modeSend") },
+    { id: "receive", icon: "↓", label: t("ux.modeReceive") },
+    { id: "room", icon: "◎", label: t("ux.modeRoom") },
+  ];
+
   return (
-    <nav className="v3-modes" role="tablist" aria-label="Actions principales">
-      {MODES.map((m) => (
+    <nav className="v3-modes" role="tablist" aria-label={t("ux.modesAria")}>
+      {modes.map((m) => (
         <button
           key={m.id}
           type="button"

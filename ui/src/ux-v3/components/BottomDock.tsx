@@ -1,11 +1,5 @@
+import { useTranslation } from "react-i18next";
 import type { DrawerId } from "../types";
-
-const ITEMS: Array<{ id: NonNullable<DrawerId>; icon: string; label: string }> = [
-  { id: "contacts", icon: "👥", label: "Contacts" },
-  { id: "identity", icon: "🔑", label: "Identité" },
-  { id: "history", icon: "📋", label: "Historique" },
-  { id: "more", icon: "⋯", label: "Plus" },
-];
 
 interface Props {
   active: DrawerId;
@@ -13,10 +7,19 @@ interface Props {
 }
 
 export default function BottomDock({ active, onOpen }: Props) {
+  const { t } = useTranslation();
+
+  const items: Array<{ id: NonNullable<DrawerId>; icon: string; label: string }> = [
+    { id: "contacts", icon: "👥", label: t("ux.dockContacts") },
+    { id: "identity", icon: "🔑", label: t("ux.dockIdentity") },
+    { id: "history", icon: "📋", label: t("ux.dockHistory") },
+    { id: "more", icon: "⋯", label: t("ux.dockMore") },
+  ];
+
   return (
-    <nav className="v3-dock" aria-label="Navigation secondaire">
+    <nav className="v3-dock" aria-label={t("ux.dockAria")}>
       <div className="v3-dock-inner">
-        {ITEMS.map((item) => (
+        {items.map((item) => (
           <button
             key={item.id}
             type="button"

@@ -1,15 +1,9 @@
 /**
- * Filenymous UX v3 — shell unifié
- *
- * Intégration dans ui/src :
- *   1. Copier ce dossier vers ui/src/ux-v3/
- *   2. Dans App.tsx (ou main) :
- *        import AppUxV3 from "./ux-v3/AppUxV3";
- *        export default function App() { return <AppUxV3 />; }
- *   3. Brancher onShare / onEnterRoom / drawers sur vos panels existants
+ * Filenymous UX v3 — unified shell (i18n)
  */
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import TopBar from "./components/TopBar";
 import ModeSwitcher from "./components/ModeSwitcher";
 import SendWorkspace from "./components/SendWorkspace";
@@ -21,6 +15,7 @@ import type { DrawerId, PrimaryMode, RoomKind } from "./types";
 import "./styles/ux-v3.css";
 
 export default function AppUxV3() {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<PrimaryMode>("send");
   const [drawer, setDrawer] = useState<DrawerId>(null);
 
@@ -38,43 +33,43 @@ export default function AppUxV3() {
       ? {
           title: (
             <>
-              Envoyez un fichier.
+              {t("ux.heroSendTitle")}
               <br />
-              <span>Privé. Instantané.</span>
+              <span>{t("ux.heroSendHighlight")}</span>
             </>
           ),
-          subtitle: "Pas de cloud. Pas de compte. Un lien, un code, ou un salon — le reste est transparent.",
+          subtitle: t("ux.heroSendSubtitle"),
         }
       : mode === "receive"
         ? {
             title: (
               <>
-                Recevez un fichier.
+                {t("ux.heroReceiveTitle")}
                 <br />
-                <span>Code ou lien.</span>
+                <span>{t("ux.heroReceiveHighlight")}</span>
               </>
             ),
-            subtitle: "Collez ce que l’on vous a envoyé. Le déchiffrement reste dans votre navigateur.",
+            subtitle: t("ux.heroReceiveSubtitle"),
           }
         : {
             title: (
               <>
-                Ouvrez un salon.
+                {t("ux.heroRoomTitle")}
                 <br />
-                <span>Partage live.</span>
+                <span>{t("ux.heroRoomHighlight")}</span>
               </>
             ),
-            subtitle: "Bibliothèque visible entre pairs, privée ou publique — sans plugin.",
+            subtitle: t("ux.heroRoomSubtitle"),
           };
 
   return (
     <div className="v3-app">
       <TopBar
-        statusLabel="Prêt"
+        statusLabel={t("ux.statusReady")}
         online
         onBrandClick={() => setMode("send")}
         onNotifyClick={() => {
-          /* brancher NotificationCenter */
+          /* wire NotificationCenter */
         }}
       />
 
@@ -90,7 +85,6 @@ export default function AppUxV3() {
           {mode === "send" && (
             <SendWorkspace
               onShare={async (files, path) => {
-                // TODO: brancher SendPanel / Magic Link / X25519
                 console.info("[ux-v3] share", { count: files.length, path });
                 return {
                   code: "K7·M2·PX",
@@ -103,7 +97,6 @@ export default function AppUxV3() {
           {mode === "receive" && (
             <ReceiveWorkspace
               onOpen={(payload) => {
-                // TODO: brancher ReceivePanel
                 console.info("[ux-v3] receive", payload);
               }}
             />
@@ -111,7 +104,6 @@ export default function AppUxV3() {
           {mode === "room" && (
             <RoomEntry
               onEnter={(kind: RoomKind) => {
-                // TODO: brancher RoomPanel ensureRoom(kind) + phase inside
                 console.info("[ux-v3] enter room", kind);
               }}
             />

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { DrawerId } from "../types";
 
 interface Props {
@@ -6,70 +7,73 @@ interface Props {
 }
 
 function ContactsBody() {
+  const { t } = useTranslation();
   return (
     <>
-      <h2>Contacts</h2>
-      <p className="v3-muted">Carnet local. Ajoutez un code d’identité pour envoyer chiffré.</p>
+      <h2>{t("contacts.title")}</h2>
+      <p className="v3-muted">{t("ux.contactsSubtitle")}</p>
       <div className="v3-list">
         <div className="v3-list-item">
           <div className="v3-av">A</div>
           <div className="v3-list-tx">
             <strong>alice@proton.me</strong>
-            <small>Clé prête</small>
+            <small>{t("ux.contactsKeyReady")}</small>
           </div>
         </div>
         <div className="v3-list-item">
           <div className="v3-av">B</div>
           <div className="v3-list-tx">
             <strong>+33 6 12 34 56 78</strong>
-            <small>Pas encore de clé</small>
+            <small>{t("ux.contactsNoKey")}</small>
           </div>
         </div>
       </div>
       <button type="button" className="v3-btn-ghost" style={{ marginTop: "1rem" }}>
-        + Ajouter un contact
+        {t("ux.contactsAdd")}
       </button>
     </>
   );
 }
 
 function IdentityBody() {
+  const { t } = useTranslation();
   return (
     <>
-      <h2>Identité</h2>
-      <p className="v3-muted">Clé X25519 générée localement. Ne quitte jamais votre appareil.</p>
+      <h2>{t("identity.title")}</h2>
+      <p className="v3-muted">{t("ux.identitySubtitle")}</p>
       <div className="v3-list-item">
         <div className="v3-av">🔑</div>
         <div className="v3-list-tx">
           <strong>fn_x25519_7a3c…</strong>
-          <small>Publique · partageable</small>
+          <small>{t("ux.identityPublic")}</small>
         </div>
       </div>
       <button type="button" className="v3-btn-ghost" style={{ marginTop: "1rem" }}>
-        Exporter / importer
+        {t("ux.identityExportImport")}
       </button>
     </>
   );
 }
 
 function HistoryBody() {
+  const { t } = useTranslation();
   return (
     <>
-      <h2>Historique</h2>
-      <p className="v3-muted">Stocké localement dans ce navigateur.</p>
+      <h2>{t("history.title")}</h2>
+      <p className="v3-muted">{t("ux.historySubtitle")}</p>
       <div className="v3-list">
         <div className="v3-list-item">
           <div className="v3-av">📄</div>
           <div className="v3-list-tx">
             <strong>rapport.pdf</strong>
-            <small>Envoyé · il y a 2 h</small>
+            <small>{t("ux.historySent")}</small>
           </div>
         </div>
         <div className="v3-list-item">
           <div className="v3-av">🖼</div>
           <div className="v3-list-tx">
             <strong>photo.jpg</strong>
-            <small>Reçu · hier</small>
+            <small>{t("ux.historyReceived")}</small>
           </div>
         </div>
       </div>
@@ -78,30 +82,31 @@ function HistoryBody() {
 }
 
 function MoreBody() {
+  const { t } = useTranslation();
   return (
     <>
-      <h2>Plus</h2>
-      <p className="v3-muted">Réglages avancés, confidentialité, réseau, wallet.</p>
+      <h2>{t("ux.dockMore")}</h2>
+      <p className="v3-muted">{t("ux.moreSubtitle")}</p>
       <div className="v3-list">
         <div className="v3-list-item">
           <div className="v3-av">🛡</div>
           <div className="v3-list-tx">
-            <strong>Confidentialité</strong>
-            <small>Rétention, auto-purge</small>
+            <strong>{t("ux.morePrivacy")}</strong>
+            <small>{t("ux.morePrivacyDesc")}</small>
           </div>
         </div>
         <div className="v3-list-item">
           <div className="v3-av">⚙</div>
           <div className="v3-list-tx">
-            <strong>Réseau</strong>
-            <small>Holochain / bridge</small>
+            <strong>{t("ux.moreNetwork")}</strong>
+            <small>{t("ux.moreNetworkDesc")}</small>
           </div>
         </div>
         <div className="v3-list-item">
           <div className="v3-av">💳</div>
           <div className="v3-list-tx">
-            <strong>Wallet</strong>
-            <small>Optionnel</small>
+            <strong>{t("ux.moreWallet")}</strong>
+            <small>{t("ux.moreWalletDesc")}</small>
           </div>
         </div>
       </div>
@@ -110,6 +115,7 @@ function MoreBody() {
 }
 
 export default function SecondaryDrawer({ open, onClose }: Props) {
+  const { t } = useTranslation();
   if (!open) return null;
 
   return (
@@ -117,7 +123,7 @@ export default function SecondaryDrawer({ open, onClose }: Props) {
       <button
         type="button"
         className="v3-drawer-backdrop"
-        aria-label="Fermer"
+        aria-label={t("ux.drawerClose")}
         onClick={onClose}
       />
       <div className="v3-drawer-panel" role="dialog" aria-modal="true">

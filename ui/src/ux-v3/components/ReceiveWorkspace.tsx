@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   onOpen?: (payload: string) => void;
 }
 
 export default function ReceiveWorkspace({ onOpen }: Props) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
 
   const submit = () => {
@@ -15,23 +17,21 @@ export default function ReceiveWorkspace({ onOpen }: Props) {
 
   return (
     <div>
-      <div className="v3-step">Recevoir un fichier</div>
-      <p className="v3-muted">
-        Collez un lien, un code, ou scannez un QR. Rien d’autre à configurer.
-      </p>
+      <div className="v3-step">{t("ux.receiveStep")}</div>
+      <p className="v3-muted">{t("ux.receiveHint")}</p>
       <div className="v3-drop" style={{ minHeight: 120 }}>
         <div className="v3-drop-bird" style={{ fontSize: "1.8rem" }} aria-hidden="true">
           📥
         </div>
-        <strong>Coller un lien ou un code</strong>
+        <strong>{t("ux.receiveDropTitle")}</strong>
       </div>
       <div className="v3-receive-row">
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
-          placeholder="Code ou lien (ex. K7M2PX)"
-          aria-label="Code ou lien de réception"
+          placeholder={t("ux.receivePlaceholder")}
+          aria-label={t("ux.receiveAria")}
         />
         <button
           type="button"
@@ -40,12 +40,12 @@ export default function ReceiveWorkspace({ onOpen }: Props) {
           onClick={submit}
           disabled={!value.trim()}
         >
-          Ouvrir
+          {t("ux.receiveOpen")}
         </button>
       </div>
       <div className="v3-status" style={{ marginTop: "1.2rem" }}>
         <span className="v3-pulse" />
-        Navigateur prêt · déchiffrement local
+        {t("ux.receiveStatus")}
       </div>
     </div>
   );
