@@ -211,16 +211,64 @@
   background: var(--v3-grad); -webkit-background-clip: text; background-clip: text;
   color: transparent; margin: 0.6rem 0;
 }
+
+/* ——— QR optimisé ——— */
+.v3-qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 1rem 0 0.4rem;
+}
 .v3-qr {
+  position: relative;
   width: fit-content;
-  margin: 0.9rem auto;
-  padding: 12px;
-  border-radius: 16px;
+  padding: 14px;
+  border-radius: 20px;
   background: #ffffff;
   display: grid;
   place-items: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 12px 32px rgba(0, 0, 0, 0.35),
+    0 0 40px rgba(34, 211, 238, 0.08);
 }
+.v3-qr svg {
+  display: block;
+  border-radius: 4px;
+}
+.v3-qr-canvas-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.v3-qr-caption {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--v3-muted);
+  letter-spacing: 0.01em;
+}
+.v3-qr-dl {
+  margin-top: 0.15rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--v3-border);
+  background: var(--v3-surface);
+  color: var(--v3-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+.v3-qr-dl:hover {
+  color: var(--v3-cyan);
+  border-color: rgba(34, 211, 238, 0.4);
+  background: rgba(34, 211, 238, 0.08);
+}
+
 .v3-link-row { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
 .v3-link-row input {
   flex: 1; min-width: 0; padding: 0.75rem 0.9rem; border-radius: 12px;

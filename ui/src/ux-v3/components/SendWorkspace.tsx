@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type DragEvent } from "react";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import {
   createShareCode,
   fileExtLabel,
@@ -14,8 +14,22 @@ interface Props {
   onShare?: (files: LocalFileItem[], path: SharePath) => Promise<ShareResult> | ShareResult;
 }
 
+/** Petit logo pigeon inline (SVG data-URI) — 100 % local, zéro réseau */
+const PIGEON_LOGO =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <ellipse cx="14.5" cy="17" rx="5.2" ry="4.2" transform="rotate(-8 14.5 17)" fill="#0f172a"/>
+      <circle cx="21" cy="12.8" r="3.4" fill="#0f172a"/>
+      <path d="M24 12.5 L27.5 13.8 L24 14.8 Z" fill="#f59e0b"/>
+      <circle cx="22.3" cy="12.2" r="1.1" fill="#fff"/>
+      <path d="M9 14 Q6 8 11 7.5 Q15 9 14 14" fill="#22d3ee"/>
+    </svg>`,
+  );
+
 export default function SendWorkspace({ onShare }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [files, setFiles] = useState<LocalFileItem[]>([]);
   const [path, setPath] = useState<SharePath>("link");
   const [dragging, setDragging] = useState(false);
@@ -73,6 +87,16 @@ export default function SendWorkspace({ onShare }: Props) {
     window.setTimeout(() => setCopied(false), 1600);
   };
 
+  const downloadQr = () => {
+    const canvas = qrCanvasRef.current;
+    if (!canvas) return;
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `filenymous-qr-${result?.code?.replace(/·/g, "") ?? "share"}.png`;
+    a.click();
+  };
+
   const reset = () => {
     setResult(null);
     setFiles([]);
@@ -88,16 +112,47 @@ export default function SendWorkspace({ onShare }: Props) {
         </p>
         <div className="v3-code">{result.code}</div>
 
-        {/* QR généré entièrement dans le navigateur — aucune donnée ne quitte l'appareil */}
-        <div className="v3-qr">
-          <QRCodeSVG
-            value={result.link}
-            size={160}
-            level="M"
-            includeMargin
-            bgColor="#ffffff"
-            fgColor="#09090b"
-          />
+        <div className="v3-qr-wrap">
+          <div className="v3-qr">
+            {/* Affichage SVG net (écrans retina) */}
+            <QRCodeSVG
+              value={result.link}
+              size={200}
+              level="H"
+              marginSize={2}
+              bgColor="#ffffff"
+              fgColor="#0f172a"
+              title="QR code Filenymous — scannez pour ouvrir le partage"
+              imageSettings={{
+                src: PIGEON_LOGO,
+                height: 36,
+                width: 36,
+                excavate: true,
+              }}
+            />
+            {/* Canvas caché pour export PNG haute qualité */}
+            <div className="v3-qr-canvas-hidden" aria-hidden="true">
+              <QRCodeCanvas
+                ref={qrCanvasRef}
+                value={result.link}
+                size={400}
+                level="H"
+                marginSize={2}
+                bgColor="#ffffff"
+                fgColor="#0f172a"
+                imageSettings={{
+                  src: PIGEON_LOGO,
+                  height: 72,
+                  width: 72,
+                  excavate: true,
+                }}
+              />
+            </div>
+          </div>
+          <p className="v3-qr-caption">Scannez pour ouvrir le partage</p>
+          <button type="button" className="v3-qr-dl" onClick={downloadQr}>
+            ⬇ Télécharger le QR
+          </button>
         </div>
 
         <div className="v3-link-row">
