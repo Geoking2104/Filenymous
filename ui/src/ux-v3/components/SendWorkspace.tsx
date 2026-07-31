@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, type DragEvent } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import {
   createShareCode,
   fileExtLabel,
@@ -86,10 +87,19 @@ export default function SendWorkspace({ onShare }: Props) {
           Donnez ce code ou ce lien au destinataire
         </p>
         <div className="v3-code">{result.code}</div>
+
+        {/* QR généré entièrement dans le navigateur — aucune donnée ne quitte l'appareil */}
         <div className="v3-qr">
-          {/* Replace with real QR (qrserver / qrcode lib) */}
-          QR CODE
+          <QRCodeSVG
+            value={result.link}
+            size={160}
+            level="M"
+            includeMargin
+            bgColor="#ffffff"
+            fgColor="#09090b"
+          />
         </div>
+
         <div className="v3-link-row">
           <input readOnly value={result.link} onFocus={(e) => e.currentTarget.select()} />
           <button type="button" className="v3-copy-btn" onClick={copyLink}>
