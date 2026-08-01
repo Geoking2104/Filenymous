@@ -209,6 +209,88 @@
   box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.2);
 }
 
+/* Send form fields */
+.v3-field { margin: 0.75rem 0; }
+.v3-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--v3-muted);
+  margin-bottom: 0.35rem;
+}
+.v3-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  border: 1.5px solid var(--v3-border);
+  background: #121218;
+  color: var(--v3-text);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.v3-input:focus {
+  outline: none;
+  border-color: var(--v3-cyan);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+}
+.v3-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin: 0.75rem 0;
+}
+.v3-contact-list {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 12rem;
+  overflow: auto;
+}
+.v3-contact {
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+  border-radius: 14px;
+  border: 1.5px solid var(--v3-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+.v3-contact strong { display: block; font-size: 0.9rem; }
+.v3-contact small { font-size: 0.72rem; color: var(--v3-muted); }
+.v3-contact.active {
+  border-color: var(--v3-cyan);
+  background: rgba(34, 211, 238, 0.1);
+}
+.v3-warn {
+  font-size: 0.82rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+  line-height: 1.4;
+}
+.v3-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin: 1rem auto;
+  max-width: 280px;
+}
+.v3-progress-fill {
+  height: 100%;
+  background: var(--v3-grad);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+.v3-footnote {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--v3-muted);
+  margin-top: 0.65rem;
+}
+
 .v3-btn-primary {
   width: 100%; margin-top: 0.5rem; padding: 0.95rem 1.2rem; border-radius: 16px;
   border: none; background: #fff; color: #09090b; font-weight: 800;
@@ -315,9 +397,7 @@
 .v3-muted { color: var(--v3-muted); font-size: 0.92rem; margin-bottom: 1rem; }
 
 /* Legacy panels embedded in UX v3 */
-.v3-legacy-panel {
-  text-align: left;
-}
+.v3-legacy-panel { text-align: left; }
 .v3-legacy-panel .card {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--v3-border);
@@ -475,7 +555,7 @@
 .v3-list-tx small { color: var(--v3-muted); font-size: 0.75rem; }
 
 @media (max-width: 520px) {
-  .v3-paths, .v3-room-types { grid-template-columns: 1fr; }
+  .v3-paths, .v3-room-types, .v3-options { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
