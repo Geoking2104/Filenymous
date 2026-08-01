@@ -30,7 +30,6 @@ export default function AppUxV3() {
     return () => window.removeEventListener("keydown", onKey);
   }, [drawer]);
 
-  // Leaving room mode resets room panel
   useEffect(() => {
     if (mode !== "room") setRoomActive(false);
   }, [mode]);
@@ -74,12 +73,6 @@ export default function AppUxV3() {
     if (!value) return;
     if (value.includes("#")) value = value.split("#").pop() || value;
     if (value.startsWith("#")) value = value.slice(1);
-    // Full magic link fragment parcel:key — triggers App deep-receive
-    if (value.includes(":")) {
-      window.location.hash = value;
-      return;
-    }
-    // Bare code — still try as hash fragment (ReceivePanel may reject)
     window.location.hash = value;
   };
 
@@ -91,9 +84,6 @@ export default function AppUxV3() {
         onBrandClick={() => {
           setMode("send");
           setRoomActive(false);
-        }}
-        onNotifyClick={() => {
-          /* NotificationCenter lives in legacy Header; toast stack covers events */
         }}
       />
 
@@ -108,26 +98,10 @@ export default function AppUxV3() {
         <ModeSwitcher mode={mode} onChange={setMode} />
 
         <section className="v3-workspace" key={mode + String(roomActive)}>
-          {mode === "send" && (
-            <SendWorkspace
-              onShare={async (files, path) => {
-                // Placeholder until SendWorkspace drives full crypto pipeline
-                console.info("[ux-v3] share", { count: files.length, path });
-                return {
-                  code: "K7·M2·PX",
-                  link: "https://filenymous.eu/#K7M2PX:…",
-                  createdAt: Date.now(),
-                };
-              }}
-            />
-          )}
+          {mode === "send" && <SendWorkspace />}
           {mode === "receive" && <ReceiveWorkspace onOpen={openMagicLink} />}
           {mode === "room" && !roomActive && (
-            <RoomEntry
-              onEnter={(_kind: RoomKind) => {
-                setRoomActive(true);
-              }}
-            />
+            <RoomEntry onEnter={(_kind: RoomKind) => setRoomActive(true)} />
           )}
           {mode === "room" && roomActive && (
             <div className="v3-legacy-panel">

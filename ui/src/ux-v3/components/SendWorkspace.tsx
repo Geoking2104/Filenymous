@@ -1,19 +1,16 @@
-import { useCallback, useRef, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
+import { canWrite, initClient } from "../../holochain/client";
+import { isValidContact, sendTransfer } from "../../transfer/sendTransfer";
+import { useStore } from "../../store/useStore";
 import {
-  createShareCode,
   fileExtLabel,
   formatBytes,
   type LocalFileItem,
   type SharePath,
   type ShareResult,
 } from "../types";
-
-interface Props {
-  /** Hook real encryption / Magic Link here */
-  onShare?: (files: LocalFileItem[], path: SharePath) => Promise<ShareResult> | ShareResult;
-}
 
 /** Inline pigeon logo (SVG data-URI) — fully local */
 const PIGEON_LOGO =
@@ -28,19 +25,54 @@ const PIGEON_LOGO =
     </svg>`,
   );
 
-export default function SendWorkspace({ onShare }: Props) {
-  const { t } = useTranslation();
+export default function SendWorkspace() {
+  const { t, i18n } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const addressBook = useStore((s) => s.addressBook);
+  const selectedRecipient = useStore((s) => s.selectedRecipient);
+  const setSelectedRecipient = useStore((s) => s.setSelectedRecipient);
+  const addParcel = useStore((s) => s.addParcel);
+  const net = useStore((s) => s.net);
+
   const [files, setFiles] = useState<LocalFileItem[]>([]);
   const [path, setPath] = useState<SharePath>("link");
+  const [recipient, setRecipient] = useState("");
+  const [expiry, setExpiry] = useState("7d");
+  const [maxDl, setMaxDl] = useState("1");
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<ShareResult | null>(null);
+  const [pct, setPct] = useState(0);
+  const [step, setStep] = useState("");
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<(ShareResult & { mode?: string }) | null>(null);
   const [copied, setCopied] = useState(false);
+  const [writeReady, setWriteReady] = useState(false);
+
+  useEffect(() => {
+    void initClient().then(() => setWriteReady(canWrite()));
+  }, [net.mode]);
+
+  useEffect(() => {
+    if (selectedRecipient) {
+      setPath("contact");
+      setRecipient(selectedRecipient);
+      setSelectedRecipient("");
+    }
+  }, [selectedRecipient, setSelectedRecipient]);
+
+  const browserOnly = !writeReady;
 
   const addFiles = useCallback((list: FileList | File[]) => {
-    const next: LocalFileItem[] = Array.from(list).map((file) => ({
+    const arr = Array.from(list);
+    const total = arr.reduce((s, f) => s + f.size, 0);
+    const existing = files.reduce((s, f) => s + f.size, 0);
+    if (existing + total > 5 * 1024 ** 3) {
+      setError(t("send.limitExceeded"));
+      return;
+    }
+    const next: LocalFileItem[] = arr.map((file) => ({
       id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: file.name,
       size: file.size,
@@ -48,7 +80,8 @@ export default function SendWorkspace({ onShare }: Props) {
       file,
     }));
     setFiles((prev) => [...prev, ...next]);
-  }, []);
+    setError("");
+  }, [files, t]);
 
   const removeFile = (id: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== id));
@@ -65,14 +98,61 @@ export default function SendWorkspace({ onShare }: Props) {
       inputRef.current?.click();
       return;
     }
+    if (!isValidContact(recipient)) {
+      setError(t("send.emailOrPhone"));
+      return;
+    }
+    if (!writeReady) {
+      setError(t("send.browserOnly"));
+      return;
+    }
+
+    const realFiles = files.map((f) => f.file).filter((f): f is File => !!f);
+    if (!realFiles.length) {
+      setError(t("send.errorTransfer", { message: "no File handles" }));
+      return;
+    }
+
     setBusy(true);
+    setError("");
+    setPct(0);
+    setStep(t("send.progressAes"));
+
     try {
-      const code = createShareCode();
-      const link = `https://filenymous.eu/#${code.replace(/·/g, "")}:…`;
-      const res =
-        (await onShare?.(files, path)) ??
-        ({ code, link, createdAt: Date.now() } satisfies ShareResult);
-      setResult(res);
+      const out = await sendTransfer({
+        files: realFiles,
+        recipient,
+        expiry,
+        maxDownloads: parseInt(maxDl, 10) || 0,
+        onProgress: (p, key, params) => {
+          setPct(p);
+          setStep(t(key, params));
+        },
+      });
+
+      addParcel({
+        parcel_eh: out.parcelEhB64,
+        file_name: out.fileName,
+        to: recipient,
+        size: out.totalSize,
+        date: new Date().toLocaleDateString(i18n.language === "en" ? "en-GB" : "fr-FR"),
+        status: "pending",
+        downloads: 0,
+        max_dl: out.maxDownloads,
+        link: out.link,
+        mode: out.mode,
+      });
+
+      setResult({
+        code: out.code,
+        link: out.link,
+        createdAt: Date.now(),
+        mode: out.mode,
+      });
+    } catch (e) {
+      const msg = String(e);
+      if (msg.includes("no_write")) setError(t("send.browserOnly"));
+      else setError(t("send.errorTransfer", { message: msg }));
     } finally {
       setBusy(false);
     }
@@ -102,7 +182,11 @@ export default function SendWorkspace({ onShare }: Props) {
   const reset = () => {
     setResult(null);
     setFiles([]);
+    setRecipient("");
     setCopied(false);
+    setError("");
+    setPct(0);
+    setStep("");
   };
 
   if (result) {
@@ -110,7 +194,7 @@ export default function SendWorkspace({ onShare }: Props) {
       <div className="v3-result">
         <div className="v3-step">{t("ux.sendReady")}</div>
         <p className="v3-muted" style={{ marginBottom: 0 }}>
-          {t("ux.sendGiveCode")}
+          {result.mode === "agent" ? t("send.notified") : t("ux.sendGiveCode")}
         </p>
         <div className="v3-code">{result.code}</div>
 
@@ -172,8 +256,28 @@ export default function SendWorkspace({ onShare }: Props) {
     );
   }
 
+  if (busy) {
+    return (
+      <div className="v3-result">
+        <div style={{ fontSize: "2.5rem", marginBottom: "0.6rem" }}>🔒</div>
+        <div className="v3-step">{step || t("ux.sendPreparing")}</div>
+        <p className="v3-muted">{t("send.localOnlyProgress")}</p>
+        <div className="v3-progress">
+          <div className="v3-progress-fill" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="v3-status">{pct}%</div>
+      </div>
+    );
+  }
+
   return (
     <div>
+      {browserOnly && (
+        <div className="v3-warn" style={{ marginBottom: "1rem" }}>
+          ⚠ {t("send.browserOnly")}
+        </div>
+      )}
+
       <div className="v3-step">{t("ux.sendStepFile")}</div>
       <div
         className={`v3-drop${dragging ? " is-drag" : ""}`}
@@ -256,14 +360,78 @@ export default function SendWorkspace({ onShare }: Props) {
         </button>
       </div>
 
+      {path === "link" ? (
+        <div className="v3-field">
+          <label className="v3-label">{t("send.emailOrPhone")}</label>
+          <input
+            type="text"
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+            placeholder={t("send.placeholderContact")}
+            className="v3-input"
+          />
+        </div>
+      ) : (
+        <div className="v3-field">
+          <label className="v3-label">{t("send.chooseContact")}</label>
+          {addressBook.length === 0 ? (
+            <div className="v3-warn">{t("send.noContacts")}</div>
+          ) : (
+            <div className="v3-contact-list">
+              {addressBook.map((c) => (
+                <button
+                  key={c.hash}
+                  type="button"
+                  className={`v3-contact${recipient === c.contact ? " active" : ""}`}
+                  onClick={() => setRecipient(c.contact)}
+                >
+                  <strong>{c.contact}</strong>
+                  <small>
+                    {c.x25519Key
+                      ? t("send.keyReady")
+                      : c.resolvedAgent
+                        ? t("send.noX25519")
+                        : t("send.notResolved")}
+                  </small>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="v3-options">
+        <div>
+          <label className="v3-label">{t("send.expiry")}</label>
+          <select value={expiry} onChange={(e) => setExpiry(e.target.value)} className="v3-input">
+            <option value="24h">{t("send.expiry24h")}</option>
+            <option value="7d">{t("send.expiry7d")}</option>
+            <option value="30d">{t("send.expiry30d")}</option>
+            <option value="never">{t("common.never")}</option>
+          </select>
+        </div>
+        <div>
+          <label className="v3-label">{t("send.maxDownloads")}</label>
+          <select value={maxDl} onChange={(e) => setMaxDl(e.target.value)} className="v3-input">
+            <option value="1">{t("send.times1")}</option>
+            <option value="3">{t("send.times3")}</option>
+            <option value="10">{t("send.times10")}</option>
+            <option value="0">{t("common.unlimited")}</option>
+          </select>
+        </div>
+      </div>
+
+      {error && <div className="v3-warn" style={{ marginTop: "0.75rem" }}>⚠ {error}</div>}
+
       <button
         type="button"
         className="v3-btn-primary"
         onClick={createShare}
-        disabled={busy}
+        disabled={busy || (!!files.length && (!isValidContact(recipient) || browserOnly))}
       >
-        {busy ? t("ux.sendPreparing") : t("ux.sendCreate")}
+        {path === "link" ? t("send.btnMagic") : t("send.btnContact")}
       </button>
+      <p className="v3-footnote">{t("send.localEncryptNote")}</p>
     </div>
   );
 }
