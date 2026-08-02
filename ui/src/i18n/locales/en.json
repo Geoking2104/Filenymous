@@ -164,7 +164,10 @@
     "compressed": "Compressed",
     "autoRecommended": "Recommended for this file size",
     "throughput": "Throughput",
-    "transferComplete": "Transfer complete — decrypting…"
+    "transferComplete": "Transfer complete — decrypting…",
+    "lowThroughput": "Throughput too low — the camera may not keep up.",
+    "restartSlower": "Restart slower",
+    "receiveAnother": "Receive another"
   },
   "receive": {
     "title": "Receive a file",

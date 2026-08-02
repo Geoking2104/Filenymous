@@ -9,7 +9,8 @@ import { useTranslation } from "react-i18next";
 import { importX25519PublicKey } from "../crypto/ecies";
 import { identityZome } from "../holochain/identity";
 import type { OpticalSendHandle, ThroughputStats } from "../qrferry/opticalSend";
-import { PROFILE_KEYS, PROFILES, recommendProfile, setActiveProfile } from "../qrferry/turbo60";
+import { getSlowerProfile, PROFILE_KEYS, PROFILES, recommendProfile, setActiveProfile, estimateTransferDuration } from "../qrferry/turbo60";
+import { addHistoryEntry } from "../qrferry/history";
 
 type Phase = "idle" | "preparing" | "running" | "error";
 
@@ -23,6 +24,13 @@ function fmtBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function fmtDuration(seconds: number): string {
+  if (seconds < 60) return `~${Math.round(seconds)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `~${m}m ${s}s`;
+}
+
 export default function OpticalSendPanel({ contactHash }: Props) {
   const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
@@ -32,10 +40,13 @@ export default function OpticalSendPanel({ contactHash }: Props) {
   const [compressed, setCompressed] = useState(false);
   const [profileKey, setProfileKey] = useState<string>("turbo60");
   const [throughput, setThroughput] = useState<ThroughputStats | null>(null);
+  const [lowThroughput, setLowThroughput] = useState(false);
   const laneARef = useRef<HTMLCanvasElement>(null);
   const laneBRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<OpticalSendHandle | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const lowThroughputCountRef = useRef(0);
+  const transferStartTimeRef = useRef(0);
 
   // Auto-recommend profile when file changes
   useEffect(() => {
@@ -63,6 +74,9 @@ export default function OpticalSendPanel({ contactHash }: Props) {
     setPhase("preparing");
     setError(null);
     setThroughput(null);
+    setLowThroughput(false);
+    lowThroughputCountRef.current = 0;
+    transferStartTimeRef.current = Date.now();
     try {
       setActiveProfile(profileKey);
       const { prepareOpticalSend } = await import("../qrferry/opticalSend");
@@ -72,8 +86,17 @@ export default function OpticalSendPanel({ contactHash }: Props) {
       setEstimatedSeconds(Math.round(handle.estimatedSeconds));
       setCompressed(handle.compressed);
 
-      // Subscribe to throughput updates
-      handle.onThroughput = (stats) => setThroughput(stats);
+      // Subscribe to throughput updates with adaptive detection
+      handle.onThroughput = (stats) => {
+        setThroughput(stats);
+        // Adaptive: detect low throughput for 6+ seconds
+        if (stats.bytesPerSecond < 1000 && stats.elapsedSeconds > 3) {
+          lowThroughputCountRef.current += 1;
+          if (lowThroughputCountRef.current >= 6) setLowThroughput(true);
+        } else {
+          lowThroughputCountRef.current = 0;
+        }
+      };
 
       if (stageRef.current?.requestFullscreen) {
         await stageRef.current.requestFullscreen().catch(() => {});
@@ -98,9 +121,37 @@ export default function OpticalSendPanel({ contactHash }: Props) {
     handleRef.current?.stop();
     handleRef.current = null;
     if (document.fullscreenElement) void document.exitFullscreen();
+    // Log transfer to history
+    const durationMs = Date.now() - transferStartTimeRef.current;
+    if (durationMs > 2000) {
+      addHistoryEntry({
+        timestamp: Date.now(),
+        direction: "sent",
+        filename: file?.name ?? "unknown",
+        fileSize: file?.size ?? 0,
+        profile: profileKey,
+        durationSeconds: Math.round(durationMs / 1000),
+        compressed,
+        success: true,
+      }).catch(() => { /* best effort */ });
+    }
     setPhase("idle");
     setFile(null);
     setThroughput(null);
+    setLowThroughput(false);
+  }
+
+  function handleRestart() {
+    handleRef.current?.stop();
+    handleRef.current = null;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    // Downgrade profile
+    const slower = getSlowerProfile(profileKey);
+    if (slower) setProfileKey(slower);
+    setPhase("idle");
+    setThroughput(null);
+    setLowThroughput(false);
+    lowThroughputCountRef.current = 0;
   }
 
   const profile = PROFILES[profileKey];
@@ -126,6 +177,7 @@ export default function OpticalSendPanel({ contactHash }: Props) {
               {PROFILE_KEYS.map((key) => {
                 const p = PROFILES[key];
                 const isRecommended = key === recommendedProfile;
+                const est = file ? estimateTransferDuration(file.size, key) : null;
                 return (
                   <button
                     key={key}
@@ -146,6 +198,11 @@ export default function OpticalSendPanel({ contactHash }: Props) {
                     {p.label}
                     {isRecommended && (
                       <span style={{ fontSize: ".6rem", marginLeft: ".3rem", opacity: 0.7 }}>★</span>
+                    )}
+                    {est !== null && (
+                      <span style={{ display: "block", fontSize: ".6rem", fontWeight: 400, opacity: 0.7 }}>
+                        {fmtDuration(est)}
+                      </span>
                     )}
                   </button>
                 );
@@ -181,7 +238,19 @@ export default function OpticalSendPanel({ contactHash }: Props) {
         </div>
       )}
 
-      {error && <div className="warn-box">{error}</div>}
+      {error && (
+        <div>
+          <div className="warn-box">{error}</div>
+          <button
+            type="button"
+            onClick={() => { setError(null); setPhase("idle"); }}
+            className="btn-primary"
+            style={{ marginTop: ".6rem" }}
+          >
+            {t("common.retry")}
+          </button>
+        </div>
+      )}
 
       <div
         ref={stageRef}
@@ -235,9 +304,42 @@ export default function OpticalSendPanel({ contactHash }: Props) {
           {t("optical.estTime", { seconds: estimatedSeconds })}
           {compressed && <span style={{ color: "#34d399", marginLeft: ".5rem" }}>✓ {t("optical.compressed")}</span>}
         </p>
-        <button type="button" onClick={handleStop} style={{ padding: ".7rem 2rem" }}>
-          {t("optical.stop")}
-        </button>
+
+        {lowThroughput && (
+          <div style={{
+            background: "rgba(239,68,68,.15)",
+            border: "1px solid rgba(239,68,68,.3)",
+            borderRadius: 8,
+            padding: ".5rem .8rem",
+            fontSize: ".78rem",
+            color: "#fca5a5",
+            textAlign: "center",
+          }}>
+            {t("optical.lowThroughput")}
+            <button
+              type="button"
+              onClick={handleRestart}
+              style={{
+                marginLeft: ".8rem",
+                padding: ".3rem .8rem",
+                background: "rgba(239,68,68,.2)",
+                border: "1px solid rgba(239,68,68,.4)",
+                borderRadius: 6,
+                color: "#fca5a5",
+                cursor: "pointer",
+                fontSize: ".75rem",
+              }}
+            >
+              {t("optical.restartSlower")}
+            </button>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: ".6rem" }}>
+          <button type="button" onClick={handleStop} style={{ padding: ".7rem 2rem" }}>
+            {t("optical.stop")}
+          </button>
+        </div>
       </div>
     </div>
   );

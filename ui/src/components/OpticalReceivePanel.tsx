@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OpticalReceiver } from "../qrferry/opticalReceive";
+import { addHistoryEntry } from "../qrferry/history";
 
 type Phase = "idle" | "scanning" | "decrypting" | "done" | "error";
 
@@ -19,15 +20,25 @@ export default function OpticalReceivePanel() {
   const streamRef = useRef<MediaStream | null>(null);
   const receiverRef = useRef<OpticalReceiver | null>(null);
   const rafRef = useRef(0);
+  const transferStartTimeRef = useRef(0);
 
   useEffect(() => () => {
     cancelAnimationFrame(rafRef.current);
     streamRef.current?.getTracks().forEach((tr) => tr.stop());
   }, []);
 
+  function handleRetry() {
+    setPhase("idle");
+    setError(null);
+    setResult(null);
+    setNotified(false);
+    setProgress({ solved: 0, total: 0 });
+  }
+
   async function handleOpenCamera() {
     setError(null);
     setNotified(false);
+    transferStartTimeRef.current = Date.now();
     try {
       const { OpticalReceiver, openRearCamera } = await import("../qrferry/opticalReceive");
       if (!videoRef.current) return;
@@ -51,6 +62,18 @@ export default function OpticalReceivePanel() {
             const finished = await receiverRef.current.finish();
             const url = URL.createObjectURL(finished.file);
             setResult({ url, filename: finished.filename });
+            // Log successful receive to history
+            const durationMs = Date.now() - transferStartTimeRef.current;
+            addHistoryEntry({
+              timestamp: Date.now(),
+              direction: "received",
+              filename: finished.filename,
+              fileSize: finished.file.size,
+              profile: "optical",
+              durationSeconds: Math.round(durationMs / 1000),
+              compressed: false,
+              success: true,
+            }).catch(() => { /* best effort */ });
             setPhase("done");
           } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
@@ -80,7 +103,19 @@ export default function OpticalReceivePanel() {
         </>
       )}
 
-      {error && <div className="warn-box">{error}</div>}
+      {error && (
+        <div>
+          <div className="warn-box">{error}</div>
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="btn-primary"
+            style={{ marginTop: ".6rem" }}
+          >
+            {t("common.retry")}
+          </button>
+        </div>
+      )}
 
       <div style={{ display: phase === "scanning" || phase === "decrypting" ? "block" : "none" }}>
         <p style={{ fontSize: ".8rem", color: "var(--muted)", marginBottom: ".6rem" }}>{t("optical.scanTip")}</p>
@@ -109,6 +144,23 @@ export default function OpticalReceivePanel() {
           <a className="btn-primary" href={result.url} download={result.filename} style={{ display: "inline-block", marginTop: ".6rem" }}>
             {t("optical.saveFile")}
           </a>
+          <button
+            type="button"
+            onClick={handleRetry}
+            style={{
+              display: "block",
+              margin: ".6rem auto 0",
+              padding: ".4rem 1rem",
+              background: "transparent",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              color: "var(--muted)",
+              cursor: "pointer",
+              fontSize: ".8rem",
+            }}
+          >
+            {t("optical.receiveAnother")}
+          </button>
         </div>
       )}
     </div>

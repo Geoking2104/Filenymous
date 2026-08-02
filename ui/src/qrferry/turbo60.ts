@@ -78,6 +78,35 @@ export function recommendProfile(fileSizeBytes: number): string {
   return "turbo60";
 }
 
+/**
+ * Estimate transfer duration (seconds) for a given file size and profile.
+ * Accounts for compression ratio (assumes ~60% for text, ~95% for binary).
+ */
+export function estimateTransferDuration(fileSizeBytes: number, profileKey: string): number {
+  const profile = PROFILES[profileKey];
+  if (!profile) return Infinity;
+  // Rough compression ratio estimate: assume 60% compression for most files
+  const estimatedCompressedSize = fileSizeBytes * 0.6;
+  const transmittedSize = Math.max(fileSizeBytes, estimatedCompressedSize) + 128; // +128 for AES overhead
+  return transmittedSize / profile.nominalThroughput;
+}
+
+// ── Profile navigation helpers ──────────────────────────────────────────
+
+const PROFILE_ORDER = ["robust", "balanced", "turbo15", "turbo30", "turbo60"];
+
+/** Get the next slower profile, or null if already at the slowest. */
+export function getSlowerProfile(currentKey: string): string | null {
+  const idx = PROFILE_ORDER.indexOf(currentKey);
+  return idx > 0 ? PROFILE_ORDER[idx - 1]! : null;
+}
+
+/** Get the next faster profile, or null if already at the fastest. */
+export function getFasterProfile(currentKey: string): string | null {
+  const idx = PROFILE_ORDER.indexOf(currentKey);
+  return idx < PROFILE_ORDER.length - 1 ? PROFILE_ORDER[idx + 1]! : null;
+}
+
 // ── Backward-compatible exports ─────────────────────────────────────────
 
 export const LANES = 2 as const;

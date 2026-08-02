@@ -34,6 +34,8 @@ export interface OpticalSendOptions {
   profileKey?: string;
   /** Force compression on/off — auto-detects by default. */
   compress?: boolean;
+  /** Adaptive rate options. */
+  adaptive?: AdaptiveOptions;
 }
 
 export interface ThroughputStats {
@@ -45,6 +47,17 @@ export interface ThroughputStats {
   totalSymbolsSent: number;
   /** Wall-clock seconds since start. */
   elapsedSeconds: number;
+  /** Currently active profile key (may change during adaptive switching). */
+  activeProfileKey: string;
+}
+
+export interface AdaptiveOptions {
+  /** Minimum sustained throughput (bytes/s) before downgrading. */
+  minThroughputBytesPerSec?: number;
+  /** How many seconds of low throughput before switching. */
+  cooldownSeconds?: number;
+  /** Callback when profile switches. */
+  onProfileSwitch?: (fromKey: string, toKey: string) => void;
 }
 
 export interface OpticalSendHandle {
@@ -123,6 +136,7 @@ export async function prepareOpticalSend(options: OpticalSendOptions): Promise<O
   let running = false;
   let sequence = 0;
   let _onThroughput: ((stats: ThroughputStats) => void) | undefined;
+  const activeProfileKey = options.profileKey ?? "turbo60";
 
   function start(laneCanvases: [HTMLCanvasElement, HTMLCanvasElement]) {
     if (running) return;
@@ -173,6 +187,7 @@ export async function prepareOpticalSend(options: OpticalSendOptions): Promise<O
           bytesPerSecond: Math.round(bytesPerSecond),
           totalSymbolsSent: sequence,
           elapsedSeconds: Math.round(elapsed * 10) / 10,
+          activeProfileKey,
         });
         lastReportTime = now;
       }

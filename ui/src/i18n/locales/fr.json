@@ -164,7 +164,10 @@
     "compressed": "Compressé",
     "autoRecommended": "Recommandé pour cette taille",
     "throughput": "Débit",
-    "transferComplete": "Transfert terminé — déchiffrement…"
+    "transferComplete": "Transfert terminé — déchiffrement…",
+    "lowThroughput": "Débit trop faible — la caméra ne suit peut-être pas.",
+    "restartSlower": "Relancer plus lentement",
+    "receiveAnother": "Recevoir un autre"
   },
   "receive": {
     "title": "Recevoir un fichier",
