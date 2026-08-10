@@ -13,6 +13,7 @@ import { fileStorageZome } from "../holochain/fileStorage";
 import { parcelZome } from "../holochain/delivery";
 import { canWrite } from "../holochain/client";
 import { useStore } from "../store/useStore";
+import { buildDownloadUrl } from "../transfer/downloadUrl";
 
 const CHUNK_SIZE = 256 * 1024;
 
@@ -206,13 +207,13 @@ export default function SendPanel() {
       progress(92, t("send.progressLink"));
       const parcelEhB64 = encodeB64Url(new Uint8Array(parcelOut.parcel_eh as unknown as number[]));
 
-      let transferLink: string;
-      if (deliveryMode === "agent") {
-        transferLink = `${window.location.origin}/#${parcelEhB64}`;
-      } else {
-        const aesB64 = encodeB64Url(aesRaw);
-        transferLink = `${window.location.origin}/#${parcelEhB64}:${aesB64}`;
-      }
+      const aesB64 = encodeB64Url(aesRaw);
+      const transferLink = buildDownloadUrl(
+        window.location.origin,
+        import.meta.env.BASE_URL || "/",
+        parcelEhB64,
+        aesB64,
+      );
 
       progress(100, t("send.progressDone"));
       setLink(transferLink);

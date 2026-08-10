@@ -16,6 +16,7 @@ import { identityZome } from "../holochain/identity";
 import { fileStorageZome } from "../holochain/fileStorage";
 import { parcelZome } from "../holochain/delivery";
 import { canWrite, initClient } from "../holochain/client";
+import { buildDownloadUrl } from "./downloadUrl";
 
 const CHUNK_SIZE = 256 * 1024;
 
@@ -150,13 +151,16 @@ export async function sendTransfer(input: SendTransferInput): Promise<SendTransf
   progress(92, "send.progressLink");
   const parcelEhB64 = encodeB64Url(new Uint8Array(parcelOut.parcel_eh as unknown as number[]));
 
-  let transferLink: string;
-  if (deliveryMode === "agent") {
-    transferLink = `${window.location.origin}/#${parcelEhB64}`;
-  } else {
-    const aesB64 = encodeB64Url(aesRaw);
-    transferLink = `${window.location.origin}/#${parcelEhB64}:${aesB64}`;
-  }
+  // The QR code and copied link must always be a complete download address.
+  // Agent delivery still wraps the key in the parcel, but the sender may also
+  // hand off this fragment URL directly (the fragment never reaches the host).
+  const aesB64 = encodeB64Url(aesRaw);
+  const transferLink = buildDownloadUrl(
+    window.location.origin,
+    import.meta.env.BASE_URL || "/",
+    parcelEhB64,
+    aesB64,
+  );
 
   progress(100, "send.progressDone");
 
