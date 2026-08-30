@@ -129,6 +129,8 @@
     "progressEncrypt": "Chiffrement local des chunks…",
     "progressChunk": "Chunk {{current}}/{{total}} chiffré…",
     "progressPublish": "Publication des chunks sur le DHT…",
+    "browserOnlySingle": "Le mode navigateur seul envoie un fichier à la fois via un lien chiffré autonome. Veuillez envoyer un seul fichier.",
+    "browserOnlyTooLarge": "Ce fichier dépasse la limite de {{max}} Mo pour un lien autonome. Utilisez un Holo Web Conductor ou un conductor Holochain local pour les fichiers plus volumineux.",
     "progressWrap": "Wrapping ECIES de la clé AES (X25519)…",
     "progressManifest": "Création du manifest sur le DHT…",
     "progressLink": "Génération du lien…",
@@ -196,7 +198,8 @@
     "progressDone": "Terminé !",
     "errorDownload": "Erreur lors du téléchargement : {{message}}",
     "fileMissingDht": "Fichier introuvable sur le DHT.",
-    "fileMissingBridge": "Fichier introuvable via Web Bridge."
+    "fileMissingBridge": "Fichier introuvable via Web Bridge.",
+    "webLinkNote": "Lien chiffré autonome — aucun serveur, aucun conductor."
   },
   "contacts": {
     "title": "Contacts",

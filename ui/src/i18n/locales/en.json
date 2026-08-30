@@ -129,6 +129,8 @@
     "progressEncrypt": "Encrypting chunks locally…",
     "progressChunk": "Chunk {{current}}/{{total}} encrypted…",
     "progressPublish": "Publishing chunks on the DHT…",
+    "browserOnlySingle": "Browser-only mode can send one file at a time via a self-contained encrypted link. Please send a single file.",
+    "browserOnlyTooLarge": "This file exceeds the {{max}} MB limit for a self-contained link. Use a Holo Web Conductor or a local Holochain conductor for larger files.",
     "progressWrap": "ECIES wrapping of AES key (X25519)…",
     "progressManifest": "Creating manifest on the DHT…",
     "progressLink": "Generating link…",
@@ -196,7 +198,8 @@
     "progressDone": "Done!",
     "errorDownload": "Download error: {{message}}",
     "fileMissingDht": "File not found on the DHT.",
-    "fileMissingBridge": "File not found via Web Bridge."
+    "fileMissingBridge": "File not found via Web Bridge.",
+    "webLinkNote": "Self-contained encrypted link — no server, no conductor."
   },
   "contacts": {
     "title": "Contacts",

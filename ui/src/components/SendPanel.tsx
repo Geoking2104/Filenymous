@@ -12,6 +12,7 @@ import { identityZome } from "../holochain/identity";
 import { fileStorageZome } from "../holochain/fileStorage";
 import { parcelZome } from "../holochain/delivery";
 import { canWrite } from "../holochain/client";
+import { createWebLink, WEB_LINK_MAX_BYTES } from "../holochain/webLink";
 import { useStore } from "../store/useStore";
 
 const CHUNK_SIZE = 256 * 1024;
@@ -132,7 +133,47 @@ export default function SendPanel() {
 
   const send = async () => {
     if (!files.length || !isValidContact(recipient)) return;
-    if (!canWrite()) return;
+
+    // No Holochain conductor available (production reality for filenymous.eu
+    // when the Holo Web Conductor is not deployed): fall back to a fully
+    // client-side self-contained encrypted link so the file is still
+    // deliverable. Sending to a registered Holo contact is not possible here.
+    if (!canWrite()) {
+      if (files.length > 1) {
+        alert(t("send.browserOnlySingle"));
+        return;
+      }
+      if (files[0].size > WEB_LINK_MAX_BYTES) {
+        alert(t("send.browserOnlyTooLarge", { max: Math.round(WEB_LINK_MAX_BYTES / (1024 * 1024)) }));
+        return;
+      }
+      try {
+        setState("uploading");
+        setPct(20);
+        setStep(t("send.progressEncrypt"));
+        const { url } = await createWebLink(files[0]);
+        setLink(url);
+        setMode("link");
+        addParcel({
+          parcel_eh: "sl",
+          file_name: files[0].name,
+          to: recipient,
+          size: files[0].size,
+          date: new Date().toLocaleDateString(i18n.language === "en" ? "en-GB" : "fr-FR"),
+          status: "pending",
+          downloads: 0,
+          max_dl: parseInt(maxDl),
+          link: url,
+          mode: "link",
+        });
+        setState("done");
+      } catch (e) {
+        console.error(e);
+        alert(t("send.errorTransfer", { message: String(e) }));
+        setState("idle");
+      }
+      return;
+    }
 
     setState("uploading");
     setPct(0);

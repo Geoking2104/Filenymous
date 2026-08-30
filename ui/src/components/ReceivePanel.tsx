@@ -4,10 +4,11 @@
  * Format: #<parcel_eh_b64url>:<aes_key_b64url>
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { importAesKey } from "../crypto/aes";
 import { decryptChunks, saveBlob } from "../crypto/chunker";
+import { parseWebLink, decryptWebLinkBlob } from "../holochain/webLink";
 import { parcelZome, webBridgeGetParcel } from "../holochain/delivery";
 import { fileStorageZome, webBridgeGetFile } from "../holochain/fileStorage";
 import { hasConductor, initClient } from "../holochain/client";
@@ -49,15 +50,47 @@ export default function ReceivePanel() {
   const [step, setStep] = useState("");
   const [errMsg, setErrMsg] = useState("");
   const [paste, setPaste] = useState("");
+  const webLinkRef = useRef<import("../holochain/webLink").ParsedWebLink | null>(null);
+  const [webLinkName, setWebLinkName] = useState("");
+  const [webLinkSize, setWebLinkSize] = useState(0);
 
   useEffect(() => {
     const hash = window.location.hash.slice(1);
+    // Self-contained web link (#sl=...): decrypt locally, no conductor needed.
+    if (hash.startsWith("sl=")) {
+      resolveWebLink(hash);
+      return;
+    }
     if (!hash.includes(":")) return;
     const [parcelEhB64, aesKeyB64] = hash.split(":");
     if (!parcelEhB64 || !aesKeyB64) return;
     resolveFromUrl(parcelEhB64, aesKeyB64);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const resolveWebLink = async (fragment: string) => {
+    setState("idle");
+    setErrMsg("");
+    try {
+      setPct(10);
+      setStep(t("receive.progressManifest"));
+      const parsed = await parseWebLink(fragment);
+      if (!parsed) {
+        setErrMsg(t("receive.invalidLink"));
+        setState("error");
+        return;
+      }
+      // Stash the parsed link so download() can decrypt it locally.
+      webLinkRef.current = parsed;
+      setWebLinkName(parsed.name);
+      setWebLinkSize(parsed.size);
+      setPct(0);
+      setState("found");
+    } catch (e) {
+      setErrMsg(t("receive.errorPrefix", { message: String(e) }));
+      setState("error");
+    }
+  };
 
   const resolveFromUrl = async (parcelEhB64: string, aesKeyB64: string) => {
     setState("idle");
@@ -116,6 +149,25 @@ export default function ReceivePanel() {
   };
 
   const download = async () => {
+    // Self-contained web link: decrypt the embedded ciphertext locally.
+    if (webLinkRef.current) {
+      const p = webLinkRef.current;
+      setState("downloading");
+      setPct(0);
+      try {
+        setStep(t("receive.progressDecrypt"));
+        const blob = await decryptWebLinkBlob(p);
+        setPct(95);
+        setStep(t("receive.progressSave"));
+        saveBlob(blob, p.name);
+        setPct(100);
+        setState("done");
+      } catch (e) {
+        setErrMsg(t("receive.errorDownload", { message: String(e) }));
+        setState("error");
+      }
+      return;
+    }
     if (!parcel || !aesKey) return;
     setState("downloading");
     setPct(0);
@@ -203,7 +255,7 @@ export default function ReceivePanel() {
       </div>
     );
 
-  if ((state === "found" || state === "downloading") && parcel)
+  if ((state === "found" || state === "downloading") && (parcel || webLinkRef.current))
     return (
       <div className="card">
         <div style={{ display: "flex", alignItems: "center", gap: ".9rem", marginBottom: "1.3rem" }}>
@@ -223,10 +275,12 @@ export default function ReceivePanel() {
             📄
           </div>
           <div>
-            <div style={{ fontSize: "1rem", fontWeight: 700 }}>{parcel.manifest.file_name}</div>
+            <div style={{ fontSize: "1rem", fontWeight: 700 }}>{parcel?.manifest.file_name ?? webLinkName}</div>
             <div style={{ fontSize: ".78rem", color: "var(--muted)" }}>
-              {fmtSize(parcel.manifest.file_size, units)} ·{" "}
-              {t("receive.chunksEncrypted", { count: parcel.manifest.chunk_count })}
+              {fmtSize(parcel?.manifest.file_size ?? webLinkSize, units)} ·{" "}
+              {parcel
+                ? t("receive.chunksEncrypted", { count: parcel.manifest.chunk_count })
+                : t("receive.webLinkNote")}
             </div>
           </div>
         </div>
