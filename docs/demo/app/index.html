@@ -3321,7 +3321,7 @@ const CFG = {
   irohBlobs:      true,
   // Holo Web Conductor — passer à true quand le hApp est déployé sur Holo Host
   // Docs : https://developer.holo.host
-  holoDeployed:   true,
+  holoDeployed:   false,
   chaperoneUrl:   'https://chaperone.holo.host',
   hwcLinkerUrl:   'https://chaperone.holo.host',
   // URL des paquets web portables
@@ -3873,7 +3873,7 @@ async function getParcel(ehBytes) {
 }
 
 async function confirmDl(ehBytes) {
-  if (S.mode === 'bridge') return; // confirm_download nécessite un conducteur
+  if (S.mode === 'public') return; // confirm_download needs a conductor (skipped in public mode)
   return zomeCall('parcel', 'confirm_download', [...ehBytes]);
 }
 
@@ -5370,7 +5370,7 @@ function updateBadge() {
   const map = {
     local:     ['local',     tr('badge.local', 'P2P local')],
     holo:      ['holo',      tr('badge.holo', 'Holo Web')],
-    bridge:    ['bridge',    tr('badge.bridge', 'Web public')],
+    public:    ['bridge',    tr('badge.bridge', 'Web public')],
     detecting: ['detecting', tr('badge.detecting', 'Connexion...')],
   };
   const [cls, txt] = map[S.mode] ?? map.detecting;
@@ -7036,37 +7036,21 @@ window.handleSend = async function (event, options = {}) {
     return;
   }
 
-  if (S.mode === 'bridge') {
+  if (S.mode === 'public') {
     if (!options.preferWebLink && p2pSupported() && !S.sendContact) {
       btn.disabled = false;
       try {
         return await startP2PSend();
       } catch (e) {
-        if (options.preferP2PCode) {
-          setTransferState(TRANSFER_STATES.FAILED, {
-            percent: Math.min(S.transferProgressPercent || 0, 95),
-            label: tr('home.progressFailed', 'Transfer failed.'),
-            doneBytes: 0,
-            totalBytes: S.file.size,
-          });
-          setStatus('send-status', 'error', `Direct WebRTC code unavailable: ${esc(e.message)}`);
-          return;
-        }
+        // preferP2PCode: even if the code-first path failed, still deliver via a
+        // self-contained encrypted link so the file is never lost.
         btn.disabled = true;
         setStatus('send-status', 'warning', `Direct P2P is unavailable: ${esc(e.message)}. Creating a self-contained fallback link.`);
       }
     }
-    if (options.preferP2PCode && !p2pSupported()) {
-      setTransferState(TRANSFER_STATES.FAILED, {
-        percent: 0,
-        label: tr('home.progressFailed', 'Transfer failed.'),
-        doneBytes: 0,
-        totalBytes: S.file.size,
-      });
-      setStatus('send-status', 'error', 'This browser does not support WebRTC DataChannel.');
-      btn.disabled = false;
-      return;
-    }
+    // No-WebRTC browsers cannot open a live P2P code session, but the file
+    // must still be deliverable: fall through to a self-contained encrypted
+    // web link below (works with no conductor and no peer presence).
     markTransferActive('Creating web link');
     try {
       setTransferState(TRANSFER_STATES.ENCRYPTING, {
@@ -7565,8 +7549,10 @@ async function checkReceiveHash() {
   $('btn-download').disabled = false;
   S.parcel = null;
 
-  // Mode bridge sans infrastructure Holo : la réception DHT n'est pas disponible pour les anciens liens DHT
-  if (S.mode === 'bridge' && !CFG.holoDeployed) {
+  // En mode public (web, sans conductor) la réception DHT n'est pas disponible
+  // pour les anciens liens de parcel Holochain. Le mode holo (Web Conductor
+  // déployé) reste le chemin pour lire ces parcels.
+  if (S.mode === 'public') {
     setStatus('recv-status', 'warning',
       'Holo infrastructure deployment is in progress. Advanced receiving will be available soon. ' +
       `<a href="${CFG.dlUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">Portable web package</a>`);
@@ -7801,7 +7787,7 @@ async function initIdentity() {
   const ncFeatures  = $('id-nc-features');
   const feature = (key, color, fallback) => `<li style="color:var(--${color})">${esc(tr(key, fallback))}</li>`;
 
-  if (S.mode === 'bridge') {
+  if (S.mode === 'public') {
     if (ncTitle) { ncTitle.textContent = tr('advanced.publicModeTitle', 'Public web mode'); ncTitle.style.color = 'var(--accent)'; }
     if (ncDesc)  ncDesc.textContent = tr('advanced.publicModeDesc', "No Holochain conductor is required to send or receive. DHT contacts stay reserved for Holo Web Conductor; Iroh is prepared for large web transfers and encrypted relays.");
     if (ncFeatures) ncFeatures.innerHTML = [
