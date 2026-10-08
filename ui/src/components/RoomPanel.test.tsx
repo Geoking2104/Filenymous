@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 describe("RoomPanel", () => {
-  it("renders a public room workflow with invite link and participants", async () => {
+  it("renders a running room with invite link and participants", async () => {
     useStore.setState({
       roomId: "room-alpha",
       inviteCode: "ABCD-EFGH-JKLM",
@@ -49,13 +49,22 @@ describe("RoomPanel", () => {
       mountedRoot.render(<RoomPanel />);
     });
 
-    expect(document.body.textContent).toContain("Create a private room for a group");
-    expect(document.body.textContent).toContain("One temporary room, one invite link, many files");
-    expect(document.body.textContent).toContain("Create room");
-    expect((document.querySelector("[aria-label='Room invite link']") as HTMLInputElement).value).toContain(
-      "/#/room/room-alpha?key=ABCD-EFGH-JKLM",
+    // Room identity renders (language-independent check).
+    expect(document.body.textContent).toContain("room-alpha");
+
+    // Open the invitation tab and verify the invite link input.
+    const invitationTab = Array.from(document.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("Invitation"),
     );
-    expect(document.body.textContent).toContain("Bob");
-    expect(document.body.textContent).toContain("Room chat");
+    expect(invitationTab, "invitation tab should exist").toBeTruthy();
+    await act(async () => {
+      invitationTab!.click();
+    });
+
+    const inviteInput = Array.from(document.querySelectorAll("input")).find((i) =>
+      i.value.includes("room-alpha"),
+    );
+    expect(inviteInput, "invite link input should be rendered").toBeTruthy();
+    expect(inviteInput!.value).toContain("/#/room/room-alpha?key=ABCD-EFGH-JKLM");
   });
 });

@@ -20,7 +20,9 @@ import "./styles-notify.css";
 const TABS: Tab[] = ["send", "receive", "rooms", "contacts", "identity", "history", "advanced"];
 
 function isMagicHash(hash: string): boolean {
-  return hash.startsWith("#") && hash.includes(":");
+  if (!hash.startsWith("#")) return false;
+  const fragment = hash.slice(1);
+  return fragment.includes(":") || fragment.startsWith("sl=") || fragment.startsWith("slp=");
 }
 
 export default function App() {

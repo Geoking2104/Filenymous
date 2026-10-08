@@ -5,21 +5,30 @@
  * filenymous.eu, since the Holo Web Conductor is not deployed), the normal
  * DHT parcel flow cannot run. This module provides a fully client-side
  * fallback: the file is encrypted in the browser and the ciphertext is
- * embedded directly in the URL fragment, together with the AES key.
+ * embedded directly in the URL fragment, together with either the AES key
+ * or a password-wrapped version of it.
  *
- * The recipient opens the link; ReceivePanel detects the `sl` scheme and
- * decrypts the blob locally. No server, no conductor, no peer presence.
+ * The recipient opens the link; ReceivePanel detects the `sl`/`slp` scheme
+ * and decrypts the blob locally. No server, no conductor, no peer presence.
  *
- * Link format (URL fragment):
+ * Link formats (URL fragment):
  *   #sl=<b64url(ciphertext)>.<b64url(aesRawKey)>.<b64url(json meta)>
+ *   #slp=<b64url(ciphertext)>.<b64url(wrappedKey)>.<b64url(salt)>.<b64url(json meta)>
  * where meta = { name, type, size }.
  *
- * Security note: the key travels in the link, so the link IS the capability.
- * This matches the standalone app's documented "self-contained link" design.
+ * `slp` (password mode): the AES key is wrapped with a KEK derived from the
+ * password via Argon2id (see crypto/password.ts). The link alone is not
+ * enough to decrypt — the password must be shared out-of-band.
+ *
+ * Security note: the key travels in the link (or is password-derived), so
+ * the link (+ password) IS the capability. This matches the standalone
+ * app's documented "self-contained link" design.
  */
 
 import { generateAesKey, exportAesKey, importAesKey, decryptChunk } from "../crypto/aes";
 import { toArrayBuffer } from "../crypto/buffer";
+import { b64urlEncode, b64urlDecode } from "../crypto/b64url";
+import { wrapKeyWithPassword, unwrapKeyWithPassword } from "../crypto/password";
 
 // Keep the link shareable: URLs get unwieldy past a few MB. Match the
 // standalone app's 8 MiB ceiling for inline links.
@@ -27,29 +36,36 @@ export const WEB_LINK_MAX_BYTES = 8 * 1024 * 1024;
 
 const NONCE_LEN = 12; // matches aes.ts
 
-function b64url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-}
-
-function fromB64url(s: string): Uint8Array {
-  const b64 = s.replace(/-/g, "+").replace(/_/g, "/").padEnd(s.length + ((4 - (s.length % 4)) % 4), "=");
-  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-}
-
 export interface WebLinkResult {
   /** Full URL with the encrypted payload in the fragment. */
   url: string;
   size: number;
+  passwordProtected: boolean;
+}
+
+interface LinkMeta {
+  name: string;
+  type: string;
+  size: number;
+}
+
+function encodeMeta(meta: LinkMeta): string {
+  return b64urlEncode(new TextEncoder().encode(JSON.stringify(meta)));
+}
+
+function decodeMeta(b64: string): LinkMeta {
+  return JSON.parse(new TextDecoder().decode(b64urlDecode(b64))) as LinkMeta;
 }
 
 /**
  * Encrypt `file` entirely in the browser and return a self-contained link.
  * Throws if the file exceeds WEB_LINK_MAX_BYTES.
+ * When `password` is provided, the key is Argon2id-wrapped (slp format).
  */
-export async function createWebLink(file: File): Promise<WebLinkResult> {
+export async function createWebLink(
+  file: File,
+  opts: { password?: string } = {},
+): Promise<WebLinkResult> {
   if (file.size > WEB_LINK_MAX_BYTES) {
     throw new Error(
       `File too large for a self-contained link (max ${Math.round(WEB_LINK_MAX_BYTES / (1024 * 1024))} MB).`,
@@ -71,44 +87,96 @@ export async function createWebLink(file: File): Promise<WebLinkResult> {
   cipher.set(nonce, 0);
   cipher.set(new Uint8Array(ct), NONCE_LEN);
 
-  const meta = b64url(
-    new TextEncoder().encode(JSON.stringify({ name: file.name, type: file.type, size: file.size })),
-  );
+  const meta = encodeMeta({ name: file.name, type: file.type, size: file.size });
 
-  const fragment = `sl=${b64url(cipher)}.${b64url(aesRaw)}.${meta}`;
+  let fragment: string;
+  if (opts.password) {
+    const { salt, wrapped } = await wrapKeyWithPassword(opts.password, aesRaw);
+    fragment = `slp=${b64urlEncode(cipher)}.${b64urlEncode(wrapped)}.${b64urlEncode(salt)}.${meta}`;
+  } else {
+    fragment = `sl=${b64urlEncode(cipher)}.${b64urlEncode(aesRaw)}.${meta}`;
+  }
+
   const url = `${window.location.origin}${window.location.pathname}#${fragment}`;
-  return { url, size: file.size };
+  return { url, size: file.size, passwordProtected: Boolean(opts.password) };
+}
+
+/** True when a fragment (with or without leading #) is a self-contained link. */
+export function isWebLinkFragment(fragment: string): boolean {
+  const raw = fragment.startsWith("#") ? fragment.slice(1) : fragment;
+  return raw.startsWith("sl=") || raw.startsWith("slp=");
 }
 
 export interface ParsedWebLink {
   cipher: Uint8Array;
-  key: CryptoKey;
   name: string;
   type: string;
   size: number;
+  /** True until the password is supplied (slp links only). */
+  locked: boolean;
+  /** Present once unlocked (or immediately for plain sl links). */
+  key?: CryptoKey;
+  /** Password mode: wrapped key bytes ([nonce || ct]). */
+  wrapped?: Uint8Array;
+  /** Password mode: Argon2id salt. */
+  salt?: Uint8Array;
 }
 
-/** Parse a `#sl=...` fragment into its parts (does not decrypt yet). */
+/** Parse a `#sl=...` or `#slp=...` fragment into its parts (does not decrypt yet). */
 export async function parseWebLink(fragment: string): Promise<ParsedWebLink | null> {
   const raw = fragment.startsWith("#") ? fragment.slice(1) : fragment;
-  if (!raw.startsWith("sl=")) return null;
-  const body = raw.slice(3);
-  const [cipherB64, keyB64, metaB64] = body.split(".");
-  if (!cipherB64 || !keyB64 || !metaB64) return null;
 
-  const cipher = fromB64url(cipherB64);
-  const key = await importAesKey(fromB64url(keyB64));
-  const meta = JSON.parse(new TextDecoder().decode(fromB64url(metaB64))) as {
-    name: string;
-    type: string;
-    size: number;
-  };
+  if (raw.startsWith("sl=")) {
+    const [cipherB64, keyB64, metaB64] = raw.slice(3).split(".");
+    if (!cipherB64 || !keyB64 || !metaB64) return null;
+    const meta = decodeMeta(metaB64);
+    return {
+      cipher: b64urlDecode(cipherB64),
+      name: meta.name,
+      type: meta.type,
+      size: meta.size,
+      locked: false,
+      key: await importAesKey(b64urlDecode(keyB64)),
+    };
+  }
 
-  return { cipher, key, name: meta.name, type: meta.type, size: meta.size };
+  if (raw.startsWith("slp=")) {
+    const [cipherB64, wrappedB64, saltB64, metaB64] = raw.slice(4).split(".");
+    if (!cipherB64 || !wrappedB64 || !saltB64 || !metaB64) return null;
+    const meta = decodeMeta(metaB64);
+    return {
+      cipher: b64urlDecode(cipherB64),
+      name: meta.name,
+      type: meta.type,
+      size: meta.size,
+      locked: true,
+      wrapped: b64urlDecode(wrappedB64),
+      salt: b64urlDecode(saltB64),
+    };
+  }
+
+  return null;
 }
 
-/** Decrypt a parsed web link back into a Blob. */
+/**
+ * Unlock a password-protected (slp) link.
+ * Throws when the password is wrong. On success the parsed link carries
+ * the decryption key and `locked` flips to false.
+ */
+export async function unlockWebLink(parsed: ParsedWebLink, password: string): Promise<CryptoKey> {
+  if (!parsed.locked || !parsed.wrapped || !parsed.salt) {
+    throw new Error("link_not_locked");
+  }
+  const raw = await unwrapKeyWithPassword(password, parsed.salt, parsed.wrapped);
+  const key = await importAesKey(raw);
+  parsed.key = key;
+  parsed.locked = false;
+  return key;
+}
+
+/** Decrypt a parsed web link back into a Blob. Requires an unlocked link. */
 export async function decryptWebLinkBlob(p: ParsedWebLink): Promise<Blob> {
+  if (!p.key) throw new Error("link_locked");
   const plain = await decryptChunk(p.key, p.cipher);
   return new Blob([toBlobPartSafe(plain)], { type: p.type || "application/octet-stream" });
 }

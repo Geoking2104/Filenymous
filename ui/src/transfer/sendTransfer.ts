@@ -10,8 +10,10 @@
 
 import { hashContact } from "../crypto/contact";
 import { generateAesKey, exportAesKey } from "../crypto/aes";
+import { b64urlEncode } from "../crypto/b64url";
 import { encryptFile } from "../crypto/chunker";
 import { encryptAesKeyForRecipient, importX25519PublicKey } from "../crypto/ecies";
+import { wrapKeyWithPassword } from "../crypto/password";
 import { identityZome } from "../holochain/identity";
 import { fileStorageZome } from "../holochain/fileStorage";
 import { parcelZome } from "../holochain/delivery";
@@ -30,6 +32,8 @@ export interface SendTransferInput {
   expiry?: string;
   /** Max downloads; 0 = unlimited */
   maxDownloads?: number;
+  /** Optional password protection: the key is Argon2id-wrapped, link-only delivery */
+  password?: string;
   onProgress?: ProgressFn;
 }
 
@@ -42,20 +46,15 @@ export interface SendTransferResult {
   maxDownloads: number;
   /** Short display code derived from parcel hash */
   code: string;
+  /** True when the AES key is password-wrapped (Argon2id) */
+  passwordProtected?: boolean;
 }
 
 export function isValidContact(v: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+[1-9]\d{7,14}$/.test(v);
 }
 
-function encodeB64Url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-}
-
-function codeFromParcel(parcelEhB64: string): string {
+export function deriveShortCode(parcelEhB64: string): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";
   for (let i = 0; i < 6; i++) {
@@ -120,7 +119,7 @@ export async function sendTransfer(input: SendTransferInput): Promise<SendTransf
   let encryptedKeyBlob = "";
   let deliveryMode: DeliveryMode = "link";
 
-  if (recipientAgent) {
+  if (recipientAgent && !input.password) {
     progress(72, "send.progressWrap");
     const x25519B64 = await identityZome.getX25519Key(recipientAgent);
     if (x25519B64) {
@@ -148,14 +147,19 @@ export async function sendTransfer(input: SendTransferInput): Promise<SendTransf
   });
 
   progress(92, "send.progressLink");
-  const parcelEhB64 = encodeB64Url(new Uint8Array(parcelOut.parcel_eh as unknown as number[]));
+  const parcelEhB64 = b64urlEncode(new Uint8Array(parcelOut.parcel_eh as unknown as number[]));
 
   let transferLink: string;
-  if (deliveryMode === "agent") {
+  if (input.password) {
+    // Password-protected: wrap the AES key with an Argon2id-derived KEK.
+    // The link carries only the salt + wrapped key; the password travels
+    // out-of-band. Delivery via link (no ECIES in this mode).
+    const { salt, wrapped } = await wrapKeyWithPassword(input.password, aesRaw);
+    transferLink = `${window.location.origin}/#${parcelEhB64}:p.${b64urlEncode(salt)}.${b64urlEncode(wrapped)}`;
+  } else if (deliveryMode === "agent") {
     transferLink = `${window.location.origin}/#${parcelEhB64}`;
   } else {
-    const aesB64 = encodeB64Url(aesRaw);
-    transferLink = `${window.location.origin}/#${parcelEhB64}:${aesB64}`;
+    transferLink = `${window.location.origin}/#${parcelEhB64}:${b64urlEncode(aesRaw)}`;
   }
 
   progress(100, "send.progressDone");
@@ -167,6 +171,7 @@ export async function sendTransfer(input: SendTransferInput): Promise<SendTransf
     totalSize,
     mode: deliveryMode,
     maxDownloads,
-    code: codeFromParcel(parcelEhB64),
+    code: deriveShortCode(parcelEhB64),
+    passwordProtected: !!input.password,
   };
 }

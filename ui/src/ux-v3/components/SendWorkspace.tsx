@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState, type DragEvent } from "react"
 import { useTranslation } from "react-i18next";
 import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { canWrite, initClient } from "../../holochain/client";
-import { isValidContact, sendTransfer } from "../../transfer/sendTransfer";
+import { isValidContact, sendTransfer, deriveShortCode } from "../../transfer/sendTransfer";
+import { createWebLink, WEB_LINK_MAX_BYTES } from "../../holochain/webLink";
 import { useStore } from "../../store/useStore";
 import {
   fileExtLabel,
@@ -46,9 +47,21 @@ export default function SendWorkspace() {
   const [pct, setPct] = useState(0);
   const [step, setStep] = useState("");
   const [error, setError] = useState("");
-  const [result, setResult] = useState<(ShareResult & { mode?: string }) | null>(null);
+  const [result, setResult] = useState<
+    | (ShareResult & {
+        mode?: string;
+        passwordProtected?: boolean;
+        browserLink?: boolean;
+        fileName?: string;
+      })
+    | null
+  >(null);
   const [copied, setCopied] = useState(false);
   const [writeReady, setWriteReady] = useState(false);
+  const [pwEnabled, setPwEnabled] = useState(false);
+  const [password, setPassword] = useState("");
+  const [emailFrom, setEmailFrom] = useState("");
+  const [emailTo, setEmailTo] = useState("");
 
   useEffect(() => {
     void initClient().then(() => setWriteReady(canWrite()));
@@ -93,6 +106,12 @@ export default function SendWorkspace() {
     if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
   };
 
+  const maxDlNum = () => {
+    const n = parseInt(maxDl, 10);
+    if (!n || n < 1) return 0;
+    return Math.min(100, n);
+  };
+
   const createShare = async () => {
     if (!files.length) {
       inputRef.current?.click();
@@ -113,6 +132,60 @@ export default function SendWorkspace() {
       return;
     }
 
+    if (pwEnabled && password.trim().length < 8) {
+      setError(t("send.passwordTooShort"));
+      return;
+    }
+    const pw = pwEnabled ? password : undefined;
+
+    // No Holochain conductor available (production reality for filenymous.eu):
+    // fall back to a fully client-side self-contained encrypted link.
+    if (!writeReady) {
+      if (realFiles.length > 1) {
+        setError(t("send.browserOnlySingle"));
+        return;
+      }
+      if (realFiles[0]!.size > WEB_LINK_MAX_BYTES) {
+        setError(
+          t("send.browserOnlyTooLarge", { max: Math.round(WEB_LINK_MAX_BYTES / (1024 * 1024)) }),
+        );
+        return;
+      }
+      setBusy(true);
+      setError("");
+      setPct(10);
+      setStep(t("send.progressEncrypt"));
+      try {
+        const { url } = await createWebLink(realFiles[0]!, pw ? { password: pw } : {});
+        addParcel({
+          parcel_eh: "sl",
+          file_name: realFiles[0]!.name,
+          to: recipient,
+          size: realFiles[0]!.size,
+          date: new Date().toLocaleDateString(i18n.language === "en" ? "en-GB" : "fr-FR"),
+          status: "pending",
+          downloads: 0,
+          max_dl: maxDlNum(),
+          link: url,
+          mode: "link",
+        });
+        setResult({
+          code: deriveShortCode(url),
+          link: url,
+          createdAt: Date.now(),
+          mode: "link",
+          passwordProtected: !!pw,
+          browserLink: true,
+          fileName: realFiles[0]!.name,
+        });
+      } catch (e) {
+        setError(t("send.errorTransfer", { message: String(e) }));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     setBusy(true);
     setError("");
     setPct(0);
@@ -123,7 +196,8 @@ export default function SendWorkspace() {
         files: realFiles,
         recipient,
         expiry,
-        maxDownloads: parseInt(maxDl, 10) || 0,
+        maxDownloads: maxDlNum(),
+        password: pw,
         onProgress: (p, key, params) => {
           setPct(p);
           setStep(t(key, params));
@@ -148,6 +222,8 @@ export default function SendWorkspace() {
         link: out.link,
         createdAt: Date.now(),
         mode: out.mode,
+        passwordProtected: out.passwordProtected,
+        fileName: out.fileName,
       });
     } catch (e) {
       const msg = String(e);
@@ -190,6 +266,29 @@ export default function SendWorkspace() {
   };
 
   if (result) {
+    const mailtoTo = emailTo.trim();
+    const mailtoBody = [
+      i18n.language === "en" ? "Hi," : "Bonjour,",
+      "",
+      i18n.language === "en"
+        ? "I'm sharing a file with you via Filenymous:"
+        : "Je vous partage un fichier via Filenymous :",
+      result.link,
+      ...(result.passwordProtected
+        ? [
+            "",
+            i18n.language === "en"
+              ? "This transfer is password-protected — I'll send you the password separately."
+              : "Ce transfert est protégé par mot de passe — je vous le transmets séparément.",
+          ]
+        : []),
+      ...(emailFrom.trim() ? ["", `— ${emailFrom.trim()}`] : []),
+    ].join("\n");
+    const mailtoHref = mailtoTo
+      ? `mailto:${encodeURIComponent(mailtoTo)}?subject=${encodeURIComponent(
+          `Filenymous — ${result.fileName ?? "transfer"}`,
+        )}&body=${encodeURIComponent(mailtoBody)}`
+      : "";
     return (
       <div className="v3-result">
         <div className="v3-step">{t("ux.sendReady")}</div>
@@ -197,6 +296,12 @@ export default function SendWorkspace() {
           {result.mode === "agent" ? t("send.notified") : t("ux.sendGiveCode")}
         </p>
         <div className="v3-code">{result.code}</div>
+
+        {result.passwordProtected && (
+          <p className="v3-muted" style={{ margin: "0", fontSize: ".78rem" }}>
+            🔑 {t("send.passwordHint")}
+          </p>
+        )}
 
         <div className="v3-qr-wrap">
           <div className="v3-qr">
@@ -245,12 +350,26 @@ export default function SendWorkspace() {
             {copied ? `✓ ${t("common.copied")}` : t("common.copy")}
           </button>
         </div>
+        {mailtoHref && (
+          <a
+            className="v3-btn-ghost"
+            style={{
+              display: "block",
+              textAlign: "center",
+              textDecoration: "none",
+              marginBottom: ".6rem",
+            }}
+            href={mailtoHref}
+          >
+            {t("send.emailOpen")}
+          </a>
+        )}
         <button type="button" className="v3-btn-ghost" onClick={reset}>
           {t("ux.sendNewShare")}
         </button>
         <div className="v3-status">
           <span className="v3-pulse" />
-          {t("ux.sendWaiting")}
+          {result.browserLink ? t("ux.sendSelfContained") : t("ux.sendWaiting")}
         </div>
       </div>
     );
@@ -412,14 +531,72 @@ export default function SendWorkspace() {
         </div>
         <div>
           <label className="v3-label">{t("send.maxDownloads")}</label>
-          <select value={maxDl} onChange={(e) => setMaxDl(e.target.value)} className="v3-input">
-            <option value="1">{t("send.times1")}</option>
-            <option value="3">{t("send.times3")}</option>
-            <option value="10">{t("send.times10")}</option>
-            <option value="0">{t("common.unlimited")}</option>
-          </select>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            step={1}
+            inputMode="numeric"
+            className="v3-input"
+            value={maxDl}
+            placeholder="∞"
+            onChange={(e) => setMaxDl(e.target.value.replace(/[^\d]/g, ""))}
+          />
         </div>
       </div>
+
+      <div className="v3-field" style={{ marginTop: ".9rem" }}>
+        <label
+          className="v3-label"
+          style={{ display: "flex", alignItems: "center", gap: ".5rem", cursor: "pointer" }}
+        >
+          <input
+            type="checkbox"
+            checked={pwEnabled}
+            onChange={(e) => setPwEnabled(e.target.checked)}
+            style={{ width: "auto" }}
+          />
+          {t("send.passwordToggle")}
+        </label>
+        {pwEnabled && (
+          <>
+            <input
+              type="password"
+              className="v3-input"
+              style={{ marginTop: ".5rem" }}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t("send.passwordPlaceholder")}
+              autoComplete="new-password"
+            />
+            <p className="v3-footnote" style={{ marginTop: ".4rem" }}>
+              {t("send.passwordHint")}
+            </p>
+          </>
+        )}
+      </div>
+
+      <details className="v3-field" style={{ marginTop: ".4rem" }}>
+        <summary className="v3-label" style={{ cursor: "pointer" }}>
+          {t("send.emailSection")}
+        </summary>
+        <div style={{ display: "grid", gap: ".5rem", marginTop: ".6rem" }}>
+          <input
+            type="email"
+            className="v3-input"
+            value={emailFrom}
+            onChange={(e) => setEmailFrom(e.target.value)}
+            placeholder={t("send.emailFrom")}
+          />
+          <input
+            type="email"
+            className="v3-input"
+            value={emailTo}
+            onChange={(e) => setEmailTo(e.target.value)}
+            placeholder={t("send.emailTo")}
+          />
+        </div>
+      </details>
 
       {error && <div className="v3-warn" style={{ marginTop: "0.75rem" }}>⚠ {error}</div>}
 
@@ -427,7 +604,7 @@ export default function SendWorkspace() {
         type="button"
         className="v3-btn-primary"
         onClick={createShare}
-        disabled={busy || (!!files.length && (!isValidContact(recipient) || browserOnly))}
+        disabled={busy || (!!files.length && !isValidContact(recipient))}
       >
         {path === "link" ? t("send.btnMagic") : t("send.btnContact")}
       </button>

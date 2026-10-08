@@ -28,6 +28,7 @@
     "@scure/btc-signer": "^2.2.0",
     "ethers": "^6.17.0",
     "fflate": "^0.8.3",
+    "hash-wasm": "^4.12.0",
     "i18next": "^23.16.8",
     "i18next-browser-languagedetector": "^8.0.4",
     "qrcode.react": "^4.2.0",
