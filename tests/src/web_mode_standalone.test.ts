@@ -72,7 +72,7 @@ describe("standalone web transfer mode", () => {
     expect(packagedHtml).not.toContain("Mode bridge (lecture seule HTTP) : envoi impossible");
     expect(packagedHtml).not.toContain("Holo Web Conductor non connecté");
     expect(packagedHtml).toContain("createWebParcelLink");
-    expect(packagedHtml).toContain("S.mode === 'bridge'");
+    expect(packagedHtml).toContain("S.mode !== 'public'");
     expect(packagedHtml).toContain("link-result");
   });
 

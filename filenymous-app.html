@@ -7108,7 +7108,7 @@ window.handleSend = async function (event, options = {}) {
     let encKeyBlob  = '';
 
     // Lookup recipient in local and holo modes when a conductor is available.
-    if (recipRaw && S.mode !== 'bridge') {
+    if (recipRaw && S.mode !== 'public') {
       const norm  = recipRaw.includes('@') ? recipRaw.toLowerCase() : recipRaw;
       contactHash = await sha256hex(norm);
       setStatus('send-status', 'loading', 'Looking up the recipient key...');
@@ -7735,7 +7735,7 @@ function renderHistory() {
       <div class="hist-actions">
         <button class="btn btn-secondary btn-sm" onclick="tagHistItem('${esc(h.id)}')" title="Tags">🏷</button>
         <button class="btn btn-secondary btn-sm" onclick="copyHistLink('${esc(h.id)}')" title="Copy link">🔗</button>
-        ${h.status === 'pending' && S.mode !== 'bridge'
+        ${h.status === 'pending' && S.mode !== 'public'
           ? `<button class="btn btn-danger btn-sm" onclick="revokeHistItem('${esc(h.id)}')">Revoke</button>`
           : ''}
       </div>
