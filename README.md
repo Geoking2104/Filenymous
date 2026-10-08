@@ -16,7 +16,7 @@ The project no longer publishes `.exe`, `.dmg`, or `.AppImage` files while the n
 
 1. The sender selects a file in the browser.
 2. The file is encrypted locally with WebCrypto.
-3. Filenymous creates a one-time code, a self-contained encrypted link, a WebRTC P2P session, or a temporary Room invite.
+3. Filenymous creates a one-time code, a self-contained encrypted link (optionally password-protected with Argon2id), a WebRTC P2P session, or a temporary Room invite.
 4. The recipient opens the link or enters the code.
 5. Decryption stays local in the recipient's browser.
 
@@ -71,6 +71,7 @@ Holochain artifacts remain in the repository for advanced modules and Rust valid
 ## Security
 
 - Local encryption before transfer.
+- Optional password protection on links (Argon2id-derived key wrapping, zero-knowledge).
 - No account required.
 - One-time code for receive sessions.
 - History and keys stored locally in the browser.
