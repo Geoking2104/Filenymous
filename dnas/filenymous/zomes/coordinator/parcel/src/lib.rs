@@ -128,6 +128,11 @@ pub fn get_parcel(parcel_eh: EntryHash) -> ExternResult<Option<ParcelOutput>> {
                 .map_err(|e| wasm_error!(WasmErrorInner::Guest(format!("Déserialisation: {e}"))))?
                 .ok_or_else(|| wasm_error!(WasmErrorInner::Guest("Entrée vide".into())))?;
 
+            // Rejet à la lecture des parcelles expirées (accès périmé → introuvable).
+            if manifest.expiry_us > 0 && sys_time()?.as_micros() > manifest.expiry_us {
+                return Ok(None);
+            }
+
             let download_count = count_downloads(&parcel_eh)?;
             let is_revoked = check_revoked(&parcel_eh)?;
 
@@ -221,9 +226,32 @@ pub fn get_pending_parcels_for_contact(contact_hash: String) -> ExternResult<Vec
 
 /// Enregistre un téléchargement (append-only, immuable).
 /// Appelé après déchiffrement réussi côté client.
+/// Vérifie l'expiration et la limite de téléchargements avant d'enregistrer :
+/// un parcel expiré ou épuisé ne peut plus recevoir de téléchargement.
 #[hdk_extern]
 pub fn confirm_download(parcel_eh: EntryHash) -> ExternResult<ActionHash> {
     let downloader = agent_info()?.agent_initial_pubkey;
+
+    // Contrôles d'accès (expiration + quota).
+    let parcel_record = get(parcel_eh.clone(), GetOptions::default())?
+        .ok_or_else(|| wasm_error!(WasmErrorInner::Guest("Parcel introuvable".into())))?;
+    let manifest: ParcelManifest = parcel_record
+        .entry()
+        .to_app_option()
+        .map_err(|e| wasm_error!(WasmErrorInner::Guest(format!("{e}"))))?
+        .ok_or_else(|| wasm_error!(WasmErrorInner::Guest("Entrée vide".into())))?;
+
+    if manifest.expiry_us > 0 && sys_time()?.as_micros() > manifest.expiry_us {
+        return Err(wasm_error!(WasmErrorInner::Guest(
+            "Ce transfert a expiré — téléchargement refusé".into()
+        )));
+    }
+    if manifest.max_downloads > 0 && count_downloads(&parcel_eh)? >= manifest.max_downloads {
+        return Err(wasm_error!(WasmErrorInner::Guest(
+            "Limite de téléchargements atteinte".into()
+        )));
+    }
+
     let record = DownloadRecord {
         parcel_eh: parcel_eh.clone(),
         downloader: Some(downloader),

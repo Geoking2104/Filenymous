@@ -89,7 +89,9 @@ pub enum LinkTypes {
 pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
     match op.flattened::<EntryTypes, LinkTypes>()? {
         FlatOp::StoreEntry(OpEntry::CreateEntry { app_entry, action }) => match app_entry {
-            EntryTypes::ParcelManifest(m) => validate_parcel_manifest(&m, &action.author),
+            EntryTypes::ParcelManifest(m) => {
+                validate_parcel_manifest(&m, &action.author, action.timestamp)
+            }
             EntryTypes::DownloadRecord(d) => validate_download_record(&d),
             EntryTypes::PendingParcel(p) => validate_pending_parcel(&p),
         },
@@ -100,6 +102,7 @@ pub fn validate(op: Op) -> ExternResult<ValidateCallbackResult> {
 fn validate_parcel_manifest(
     m: &ParcelManifest,
     author: &AgentPubKey,
+    action_ts: Timestamp,
 ) -> ExternResult<ValidateCallbackResult> {
     if &m.sender != author {
         return Ok(ValidateCallbackResult::Invalid(
@@ -114,6 +117,17 @@ fn validate_parcel_manifest(
     if m.chunk_count == 0 {
         return Ok(ValidateCallbackResult::Invalid(
             "chunk_count doit être au moins 1".into(),
+        ));
+    }
+    if m.expiry_us < 0 {
+        return Ok(ValidateCallbackResult::Invalid(
+            "expiry_us ne doit pas être négatif".into(),
+        ));
+    }
+    // Règle : l'expiration doit être dans le futur au moment de la création.
+    if m.expiry_us > 0 && m.expiry_us <= action_ts.as_micros() {
+        return Ok(ValidateCallbackResult::Invalid(
+            "La date d'expiration doit être supérieure à la date de création.".into(),
         ));
     }
     if m.recipient_contact_hash.len() != 64
