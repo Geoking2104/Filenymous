@@ -1,0 +1,10 @@
+{
+  "name": "filenymous-deploy-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Out-of-band deployment tooling for filenymous.eu (OVH SFTP) — for machines without WinSCP or PowerShell 7.",
+  "license": "MIT",
+  "dependencies": {
+    "ssh2-sftp-client": "^12.1.1"
+  }
+}
