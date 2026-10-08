@@ -150,3 +150,10 @@ ghcr.io/filenymous/filenymous-bridge:latest      # Fastify OTP/email/SMS
 ```
 
 Publiées automatiquement à chaque push sur `main` via `.github/workflows/docker.yml`.
+
+---
+
+## Persistance & disponibilité
+
+Voir [`docs/STEWARD.md`](../docs/STEWARD.md) — nœuds gardiens (steward nodes) :
+épinglage des parcels/chunks jusqu'à expiration, exploitation et feuille de route.
