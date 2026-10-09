@@ -40,6 +40,19 @@ Verified facts (2026-07-14) — how the public site is actually hosted and updat
 - `main` head: `ae37cef` (Contacts/Identity tabs in the React UI — does not change
   `docs/demo/index.html`; the standalone file gained the rooms UX fixes up to `c4635bb`).
 
+## State as of 2026-10-09
+
+- `filenymous.eu` (root **and** `/app/`) now serves the React UI build from
+  `main@cf1de0d`+ — Argon2id password-protected links, browser-only
+  self-contained sends, `#sl`/`#slp` deep links, on-chain expiry enforcement.
+- Deployed over SFTP with `scripts/deploy-ovh-sftp.mjs` (Node +
+  ssh2-sftp-client; no WinSCP/PowerShell 7 required): `/app/` via full-dir
+  swap (previous dir kept as `app.bak-<ts>`), web root via per-file merge
+  (overwritten files kept under `www.bak-<ts>`).
+- OVH's web FTP client (Net2FTP "FTP Explorer") is discontinued — file
+  management must go through FTP/SFTP with the main `filenyb` account
+  (the Free hosting plan does not allow additional FTP users).
+
 ## Other OVH services of the account (context)
 
 | Service | Domain | Cluster |

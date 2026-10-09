@@ -64,7 +64,7 @@ if (!password) {
   process.exit(1);
 }
 
-const ts = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 15);
+const ts = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
 const backupDir = `${remote}.bak-${ts}`;
 
 /** Collect files recursively as [relativePosixPath, absolutePath]. */
