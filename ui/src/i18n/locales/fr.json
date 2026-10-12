@@ -97,6 +97,7 @@
     "limitExceeded": "Limite 5 Go dépassée",
     "recipientOptions": "Destinataire & options",
     "emailOrPhone": "Email ou téléphone *",
+    "invalidRecipient": "Saisissez un email ou un téléphone valide.",
     "placeholderContact": "alice@example.com ou +33612345678",
     "chooseContact": "Choisir un contact",
     "noContacts": "Aucun contact — ajoutez-en un dans l’onglet Contacts.",

@@ -118,11 +118,7 @@ export default function SendWorkspace() {
       return;
     }
     if (!isValidContact(recipient)) {
-      setError(t("send.emailOrPhone"));
-      return;
-    }
-    if (!writeReady) {
-      setError(t("send.browserOnly"));
+      setError(t("send.invalidRecipient"));
       return;
     }
 
@@ -604,7 +600,7 @@ export default function SendWorkspace() {
         type="button"
         className="v3-btn-primary"
         onClick={createShare}
-        disabled={busy || (!!files.length && !isValidContact(recipient))}
+        disabled={busy}
       >
         {path === "link" ? t("send.btnMagic") : t("send.btnContact")}
       </button>
