@@ -112,12 +112,52 @@ export default function SendWorkspace() {
     return Math.min(100, n);
   };
 
+  const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  const buildMailto = (to: string, link: string, fileName?: string, passwordProtected?: boolean) => {
+    const subject = `Filenymous — ${fileName ?? "transfert"}`;
+    const body = [
+      i18n.language === "en" ? "Hi," : "Bonjour,",
+      "",
+      i18n.language === "en"
+        ? "I'm sharing a file with you via Filenymous:"
+        : "Je vous partage un fichier via Filenymous :",
+      link,
+      ...(passwordProtected
+        ? [
+            "",
+            i18n.language === "en"
+              ? "This transfer is password-protected — I'll send you the password separately."
+              : "Ce transfert est protégé par mot de passe — je vous le transmets séparément.",
+          ]
+        : []),
+      ...(emailFrom.trim() ? ["", `— ${emailFrom.trim()}`] : []),
+    ].join("\n");
+    return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const autoSendEmail = (link: string, fileName?: string, passwordProtected?: boolean) => {
+    const to = emailTo.trim();
+    if (!isEmail(to)) return;
+    try {
+      window.location.href = buildMailto(to, link, fileName, passwordProtected);
+    } catch {
+      /* ignore — the result screen still offers the button */
+    }
+  };
+
   const createShare = async () => {
     if (!files.length) {
       inputRef.current?.click();
       return;
     }
-    if (!isValidContact(recipient)) {
+    // Recipient resolution: the main field, or the "send by email" target.
+    const target = isValidContact(recipient)
+      ? recipient.trim()
+      : isValidContact(emailTo.trim())
+        ? emailTo.trim()
+        : "";
+    if (!target) {
       setError(t("send.invalidRecipient"));
       return;
     }
@@ -156,7 +196,7 @@ export default function SendWorkspace() {
         addParcel({
           parcel_eh: "sl",
           file_name: realFiles[0]!.name,
-          to: recipient,
+          to: target,
           size: realFiles[0]!.size,
           date: new Date().toLocaleDateString(i18n.language === "en" ? "en-GB" : "fr-FR"),
           status: "pending",
@@ -174,6 +214,7 @@ export default function SendWorkspace() {
           browserLink: true,
           fileName: realFiles[0]!.name,
         });
+        autoSendEmail(url, realFiles[0]!.name, !!pw);
       } catch (e) {
         setError(t("send.errorTransfer", { message: String(e) }));
       } finally {
@@ -190,7 +231,7 @@ export default function SendWorkspace() {
     try {
       const out = await sendTransfer({
         files: realFiles,
-        recipient,
+        recipient: target,
         expiry,
         maxDownloads: maxDlNum(),
         password: pw,
@@ -203,7 +244,7 @@ export default function SendWorkspace() {
       addParcel({
         parcel_eh: out.parcelEhB64,
         file_name: out.fileName,
-        to: recipient,
+        to: target,
         size: out.totalSize,
         date: new Date().toLocaleDateString(i18n.language === "en" ? "en-GB" : "fr-FR"),
         status: "pending",
@@ -221,6 +262,7 @@ export default function SendWorkspace() {
         passwordProtected: out.passwordProtected,
         fileName: out.fileName,
       });
+      autoSendEmail(out.link, out.fileName, out.passwordProtected);
     } catch (e) {
       const msg = String(e);
       if (msg.includes("no_write")) setError(t("send.browserOnly"));
@@ -262,28 +304,13 @@ export default function SendWorkspace() {
   };
 
   if (result) {
-    const mailtoTo = emailTo.trim();
-    const mailtoBody = [
-      i18n.language === "en" ? "Hi," : "Bonjour,",
-      "",
-      i18n.language === "en"
-        ? "I'm sharing a file with you via Filenymous:"
-        : "Je vous partage un fichier via Filenymous :",
-      result.link,
-      ...(result.passwordProtected
-        ? [
-            "",
-            i18n.language === "en"
-              ? "This transfer is password-protected — I'll send you the password separately."
-              : "Ce transfert est protégé par mot de passe — je vous le transmets séparément.",
-          ]
-        : []),
-      ...(emailFrom.trim() ? ["", `— ${emailFrom.trim()}`] : []),
-    ].join("\n");
-    const mailtoHref = mailtoTo
-      ? `mailto:${encodeURIComponent(mailtoTo)}?subject=${encodeURIComponent(
-          `Filenymous — ${result.fileName ?? "transfer"}`,
-        )}&body=${encodeURIComponent(mailtoBody)}`
+    const mailTarget = isEmail(emailTo.trim())
+      ? emailTo.trim()
+      : isEmail(recipient.trim())
+        ? recipient.trim()
+        : "";
+    const mailtoHref = mailTarget
+      ? buildMailto(mailTarget, result.link, result.fileName, result.passwordProtected)
       : "";
     return (
       <div className="v3-result">
@@ -348,7 +375,7 @@ export default function SendWorkspace() {
         </div>
         {mailtoHref && (
           <a
-            className="v3-btn-ghost"
+            className="v3-btn-primary"
             style={{
               display: "block",
               textAlign: "center",
@@ -588,7 +615,13 @@ export default function SendWorkspace() {
             type="email"
             className="v3-input"
             value={emailTo}
-            onChange={(e) => setEmailTo(e.target.value)}
+            onChange={(e) => {
+              setEmailTo(e.target.value);
+              // Mirror into the required recipient field while it is still empty.
+              if (!recipient && isValidContact(e.target.value.trim())) {
+                setRecipient(e.target.value.trim());
+              }
+            }}
             placeholder={t("send.emailTo")}
           />
         </div>
