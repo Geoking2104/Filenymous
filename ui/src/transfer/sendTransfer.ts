@@ -14,6 +14,7 @@ import { b64urlEncode } from "../crypto/b64url";
 import { encryptFile } from "../crypto/chunker";
 import { encryptAesKeyForRecipient, importX25519PublicKey } from "../crypto/ecies";
 import { wrapKeyWithPassword } from "../crypto/password";
+import { newReceiptId } from "./receipt";
 import { identityZome } from "../holochain/identity";
 import { fileStorageZome } from "../holochain/fileStorage";
 import { parcelZome } from "../holochain/delivery";
@@ -48,6 +49,8 @@ export interface SendTransferResult {
   code: string;
   /** True when the AES key is password-wrapped (Argon2id) */
   passwordProtected?: boolean;
+  /** Opaque delivery-receipt id embedded in the link (optional). */
+  receiptId?: string;
 }
 
 export function isValidContact(v: string): boolean {
@@ -150,16 +153,17 @@ export async function sendTransfer(input: SendTransferInput): Promise<SendTransf
   const parcelEhB64 = b64urlEncode(new Uint8Array(parcelOut.parcel_eh as unknown as number[]));
 
   let transferLink: string;
+  const receiptId = newReceiptId();
   if (input.password) {
     // Password-protected: wrap the AES key with an Argon2id-derived KEK.
     // The link carries only the salt + wrapped key; the password travels
     // out-of-band. Delivery via link (no ECIES in this mode).
     const { salt, wrapped } = await wrapKeyWithPassword(input.password, aesRaw);
-    transferLink = `${window.location.origin}/#${parcelEhB64}:p.${b64urlEncode(salt)}.${b64urlEncode(wrapped)}`;
+    transferLink = `${window.location.origin}/#${parcelEhB64}:p.${b64urlEncode(salt)}.${b64urlEncode(wrapped)}:r.${receiptId}`;
   } else if (deliveryMode === "agent") {
     transferLink = `${window.location.origin}/#${parcelEhB64}`;
   } else {
-    transferLink = `${window.location.origin}/#${parcelEhB64}:${b64urlEncode(aesRaw)}`;
+    transferLink = `${window.location.origin}/#${parcelEhB64}:${b64urlEncode(aesRaw)}:r.${receiptId}`;
   }
 
   progress(100, "send.progressDone");
@@ -173,5 +177,6 @@ export async function sendTransfer(input: SendTransferInput): Promise<SendTransf
     maxDownloads,
     code: deriveShortCode(parcelEhB64),
     passwordProtected: !!input.password,
+    receiptId,
   };
 }

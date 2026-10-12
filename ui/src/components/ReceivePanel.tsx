@@ -2,10 +2,10 @@
  * ReceivePanel v2 — download via one-time link + manual paste + i18n
  *
  * Supported link formats:
- *   #<parcel_eh_b64url>:<aes_key_b64url>              (DHT parcel, key in fragment)
- *   #<parcel_eh_b64url>:p.<salt>.<wrapped_key>        (DHT parcel, password-protected)
- *   #sl=<cipher>.<key>.<meta>                         (self-contained, no conductor)
- *   #slp=<cipher>.<wrapped_key>.<salt>.<meta>         (self-contained, password-protected)
+ *   #<parcel_eh_b64url>:<key>[:r.<receipt_id>]        (DHT parcel, key in fragment)
+ *   #<parcel_eh_b64url>:p.<salt>.<wrapped>[:r.<rid>]  (DHT parcel, password-protected)
+ *   #sl=<cipher>.<key>.<meta>[.<receipt_id>]          (self-contained, no conductor)
+ *   #slp=<cipher>.<wrapped>.<salt>.<meta>[.<rid>]     (self-contained, password-protected)
  */
 
 import { useState, useEffect, useRef } from "react";
@@ -23,6 +23,7 @@ import {
 import { parcelZome, webBridgeGetParcel } from "../holochain/delivery";
 import { fileStorageZome, webBridgeGetFile } from "../holochain/fileStorage";
 import { hasConductor, initClient } from "../holochain/client";
+import { reportReceipt } from "../transfer/receipt";
 import type { ParcelOutput } from "../holochain/types";
 
 type RxState = "idle" | "found" | "locked" | "downloading" | "done" | "error";
@@ -30,7 +31,13 @@ type RxState = "idle" | "found" | "locked" | "downloading" | "done" | "error";
 /** A password-protected transfer waiting to be unlocked. */
 type LockedSource =
   | { kind: "weblink"; parsed: ParsedWebLink }
-  | { kind: "parcel"; parcel: ParcelOutput; saltB64: string; wrappedB64: string };
+  | {
+      kind: "parcel";
+      parcel: ParcelOutput;
+      saltB64: string;
+      wrappedB64: string;
+      receiptId?: string;
+    };
 
 function fmtSize(b: number, units: string[]) {
   if (!b) return `0 ${units[0]}`;
@@ -39,15 +46,21 @@ function fmtSize(b: number, units: string[]) {
   return parseFloat((b / Math.pow(k, i)).toFixed(1)) + " " + units[i];
 }
 
-function parseMagicInput(raw: string): { parcelEhB64: string; keyMaterial: string } | null {
+function parseMagicInput(
+  raw: string,
+): { parcelEhB64: string; keyMaterial: string; receiptId?: string } | null {
   let value = raw.trim();
   if (!value) return null;
   if (value.includes("#")) value = value.split("#").pop() || "";
   if (value.startsWith("#")) value = value.slice(1);
   if (!value.includes(":")) return null;
-  const [parcelEhB64, keyMaterial] = value.split(":");
+  const [parcelEhB64, keyMaterial, ridSeg] = value.split(":");
   if (!parcelEhB64 || !keyMaterial) return null;
-  return { parcelEhB64, keyMaterial };
+  const receiptId =
+    ridSeg && ridSeg.startsWith("r.") && /^[A-Za-z0-9_-]{10,64}$/.test(ridSeg.slice(2))
+      ? ridSeg.slice(2)
+      : undefined;
+  return { parcelEhB64, keyMaterial, receiptId };
 }
 
 export default function ReceivePanel() {
@@ -72,6 +85,24 @@ export default function ReceivePanel() {
   const [pwError, setPwError] = useState("");
   const [unlocking, setUnlocking] = useState(false);
 
+  // Delivery-receipt reporting (best effort, at most once per event).
+  const ridRef = useRef<string | undefined>(undefined);
+  const openReportedRef = useRef(false);
+  const downloadReportedRef = useRef(false);
+
+  const reportOpenOnce = (receiptId?: string) => {
+    if (receiptId) ridRef.current = receiptId;
+    if (openReportedRef.current || !ridRef.current) return;
+    openReportedRef.current = true;
+    reportReceipt(ridRef.current, "open");
+  };
+
+  const reportDownloadOnce = () => {
+    if (downloadReportedRef.current || !ridRef.current) return;
+    downloadReportedRef.current = true;
+    reportReceipt(ridRef.current, "download");
+  };
+
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     // Self-contained web link (#sl=... / #slp=...): decrypt locally, no conductor needed.
@@ -80,9 +111,13 @@ export default function ReceivePanel() {
       return;
     }
     if (!hash.includes(":")) return;
-    const [parcelEhB64, keyMaterial] = hash.split(":");
+    const [parcelEhB64, keyMaterial, ridSeg] = hash.split(":");
     if (!parcelEhB64 || !keyMaterial) return;
-    resolveFromUrl(parcelEhB64, keyMaterial);
+    const receiptId =
+      ridSeg && ridSeg.startsWith("r.") && /^[A-Za-z0-9_-]{10,64}$/.test(ridSeg.slice(2))
+        ? ridSeg.slice(2)
+        : undefined;
+    resolveFromUrl(parcelEhB64, keyMaterial, receiptId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -110,6 +145,7 @@ export default function ReceivePanel() {
       }
       // Unlocked link: stash it so download() can decrypt it locally.
       webLinkRef.current = parsed;
+      reportOpenOnce(parsed.receiptId);
       setPct(0);
       setState("found");
     } catch (e) {
@@ -118,7 +154,11 @@ export default function ReceivePanel() {
     }
   };
 
-  const resolveFromUrl = async (parcelEhB64: string, keyMaterial: string) => {
+  const resolveFromUrl = async (
+    parcelEhB64: string,
+    keyMaterial: string,
+    receiptId?: string,
+  ) => {
     setState("idle");
     setErrMsg("");
     try {
@@ -159,7 +199,13 @@ export default function ReceivePanel() {
           setState("error");
           return;
         }
-        setLocked({ kind: "parcel", parcel: result, saltB64: parts[1], wrappedB64: parts[2] });
+        setLocked({
+          kind: "parcel",
+          parcel: result,
+          saltB64: parts[1],
+          wrappedB64: parts[2],
+          receiptId,
+        });
         setPassword("");
         setPwError("");
         setPct(0);
@@ -172,6 +218,7 @@ export default function ReceivePanel() {
 
       setParcel(result);
       setAesKey(key);
+      reportOpenOnce(receiptId);
       setState("found");
       setPct(0);
     } catch (e) {
@@ -187,7 +234,7 @@ export default function ReceivePanel() {
       setState("error");
       return;
     }
-    resolveFromUrl(parsed.parcelEhB64, parsed.keyMaterial);
+    resolveFromUrl(parsed.parcelEhB64, parsed.keyMaterial, parsed.receiptId);
   };
 
   const unlock = async () => {
@@ -198,6 +245,7 @@ export default function ReceivePanel() {
       if (locked.kind === "weblink") {
         await unlockWebLink(locked.parsed, password);
         webLinkRef.current = locked.parsed;
+        reportOpenOnce(locked.parsed.receiptId);
         setLocked(null);
         setPassword("");
         setPct(0);
@@ -211,6 +259,7 @@ export default function ReceivePanel() {
         const key = await importAesKey(raw);
         setParcel(locked.parcel);
         setAesKey(key);
+        reportOpenOnce(locked.receiptId);
         setLocked(null);
         setPassword("");
         setPct(0);
@@ -236,6 +285,7 @@ export default function ReceivePanel() {
         setStep(t("receive.progressSave"));
         saveBlob(blob, p.name);
         setDoneName(p.name);
+        reportDownloadOnce();
         setPct(100);
         setState("done");
       } catch (e) {
@@ -278,6 +328,7 @@ export default function ReceivePanel() {
       prog(95, t("receive.progressSave"));
       saveBlob(blob, parcel.manifest.file_name);
       setDoneName(parcel.manifest.file_name);
+      reportDownloadOnce();
 
       if (hasConductor()) {
         try {
@@ -302,6 +353,9 @@ export default function ReceivePanel() {
     setPaste("");
     setLocked(null);
     setPassword("");
+    ridRef.current = undefined;
+    openReportedRef.current = false;
+    downloadReportedRef.current = false;
   };
 
   if (state === "error")

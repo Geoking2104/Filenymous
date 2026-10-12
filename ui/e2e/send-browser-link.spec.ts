@@ -9,6 +9,7 @@
 import { test, expect } from "@playwright/test";
 
 const SEND_BTN = /Créer (le )?Magic ?Link|Create (encrypted )?Magic ?Link/;
+const LIVE = process.env.FILENYMOUS_LIVE === "1";
 
 test.describe("Send — self-contained encrypted link (no conductor)", () => {
   test("creates a plain #sl= link on click", async ({ page }) => {
@@ -99,5 +100,76 @@ test.describe("Send — self-contained encrypted link (no conductor)", () => {
     await expect(
       page.getByText(/valid email or phone|email ou un téléphone valide/i),
     ).toBeVisible();
+  });
+
+  test("renders the result for a long link without a QR crash", async ({ page }) => {
+    await page.goto("/");
+
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles({
+      name: "e2e-big.bin",
+      mimeType: "application/octet-stream",
+      buffer: Buffer.alloc(4096, 7),
+    });
+
+    await page.locator('input[type="text"]').first().fill("test@example.com");
+    await page.getByRole("button", { name: SEND_BTN }).click();
+
+    const linkInput = page.locator(".v3-link-row input");
+    await expect(linkInput).toBeVisible({ timeout: 30_000 });
+    const link = await linkInput.inputValue();
+    expect(link.length).toBeGreaterThan(2900);
+    await expect(page.getByText(/too long for a QR|trop long pour un QR/i)).toBeVisible();
+  });
+
+  test("receipt: opening and downloading a link reports to the sender tracker", async ({
+    page,
+    request,
+  }) => {
+    test.skip(!LIVE, "requires live deployment (FILENYMOUS_LIVE=1)");
+    await page.goto("/");
+
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles({
+      name: "e2e-rcpt.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("receipt end-to-end test"),
+    });
+
+    await page.locator('input[type="text"]').first().fill("test@example.com");
+    await page.getByRole("button", { name: SEND_BTN }).click();
+
+    const linkInput = page.locator(".v3-link-row input");
+    await expect(linkInput).toBeVisible({ timeout: 30_000 });
+    const link = await linkInput.inputValue();
+
+    const frag = new URL(link).hash.slice(1);
+    const rid = frag.slice(3).split(".")[3];
+    expect(rid).toMatch(/^[A-Za-z0-9_-]{16}$/);
+
+    // The sender screen must show the tracking widget.
+    await expect(page.getByText(/Suivi de réception|Delivery tracking/i)).toBeVisible();
+
+    // Open the link as the recipient and complete the download.
+    await page.goto(link);
+    const dl = page.getByRole("button", { name: /Télécharger|Download/i }).first();
+    await expect(dl).toBeVisible({ timeout: 30_000 });
+    await dl.click();
+    await expect(page.getByText(/téléchargé|downloaded/i).first()).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // Give the beacons a moment, then check the status endpoint.
+    await page.waitForTimeout(1500);
+    const res = await request.get(`https://filenymous.eu/rcpt/status.php?id=${rid}`);
+    expect(res.ok()).toBeTruthy();
+    const j = (await res.json()) as {
+      ok: boolean;
+      open?: number | null;
+      download?: number | null;
+    };
+    expect(j.ok).toBe(true);
+    expect(j.open).toBeTruthy();
+    expect(j.download).toBeTruthy();
   });
 });

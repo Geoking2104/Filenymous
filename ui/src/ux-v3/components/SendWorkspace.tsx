@@ -4,6 +4,7 @@ import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { canWrite, initClient } from "../../holochain/client";
 import { isValidContact, sendTransfer, deriveShortCode } from "../../transfer/sendTransfer";
 import { createWebLink, WEB_LINK_MAX_BYTES } from "../../holochain/webLink";
+import { fetchReceiptStatus, type ReceiptStatus } from "../../transfer/receipt";
 import { useStore } from "../../store/useStore";
 import {
   fileExtLabel,
@@ -53,6 +54,7 @@ export default function SendWorkspace() {
         passwordProtected?: boolean;
         browserLink?: boolean;
         fileName?: string;
+        receiptId?: string;
       })
     | null
   >(null);
@@ -62,6 +64,7 @@ export default function SendWorkspace() {
   const [password, setPassword] = useState("");
   const [emailFrom, setEmailFrom] = useState("");
   const [emailTo, setEmailTo] = useState("");
+  const [receipt, setReceipt] = useState<ReceiptStatus | null>(null);
 
   useEffect(() => {
     void initClient().then(() => setWriteReady(canWrite()));
@@ -74,6 +77,23 @@ export default function SendWorkspace() {
       setSelectedRecipient("");
     }
   }, [selectedRecipient, setSelectedRecipient]);
+
+  // Poll delivery receipt while the result screen is visible.
+  useEffect(() => {
+    const rid = result?.receiptId;
+    if (!rid) return;
+    let active = true;
+    const tick = async () => {
+      const s = await fetchReceiptStatus(rid);
+      if (active && s) setReceipt(s);
+    };
+    void tick();
+    const iv = window.setInterval(tick, 8000);
+    return () => {
+      active = false;
+      window.clearInterval(iv);
+    };
+  }, [result?.receiptId]);
 
   const browserOnly = !writeReady;
 
@@ -113,6 +133,14 @@ export default function SendWorkspace() {
   };
 
   const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  const fmtTs = (ms: number) =>
+    new Date(ms).toLocaleString(i18n.language === "en" ? "en-GB" : "fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   const buildMailto = (to: string, link: string, fileName?: string, passwordProtected?: boolean) => {
     const subject = `Filenymous — ${fileName ?? "transfert"}`;
@@ -173,6 +201,7 @@ export default function SendWorkspace() {
       return;
     }
     const pw = pwEnabled ? password : undefined;
+    setReceipt(null);
 
     // No Holochain conductor available (production reality for filenymous.eu):
     // fall back to a fully client-side self-contained encrypted link.
@@ -192,7 +221,7 @@ export default function SendWorkspace() {
       setPct(10);
       setStep(t("send.progressEncrypt"));
       try {
-        const { url } = await createWebLink(realFiles[0]!, pw ? { password: pw } : {});
+        const { url, receiptId } = await createWebLink(realFiles[0]!, pw ? { password: pw } : {});
         addParcel({
           parcel_eh: "sl",
           file_name: realFiles[0]!.name,
@@ -213,6 +242,7 @@ export default function SendWorkspace() {
           passwordProtected: !!pw,
           browserLink: true,
           fileName: realFiles[0]!.name,
+          receiptId,
         });
         autoSendEmail(url, realFiles[0]!.name, !!pw);
       } catch (e) {
@@ -261,6 +291,7 @@ export default function SendWorkspace() {
         mode: out.mode,
         passwordProtected: out.passwordProtected,
         fileName: out.fileName,
+        receiptId: out.receiptId,
       });
       autoSendEmail(out.link, out.fileName, out.passwordProtected);
     } catch (e) {
@@ -295,6 +326,7 @@ export default function SendWorkspace() {
 
   const reset = () => {
     setResult(null);
+    setReceipt(null);
     setFiles([]);
     setRecipient("");
     setCopied(false);
@@ -312,6 +344,8 @@ export default function SendWorkspace() {
     const mailtoHref = mailTarget
       ? buildMailto(mailTarget, result.link, result.fileName, result.passwordProtected)
       : "";
+    const qrMode: "high" | "low" | "none" =
+      result.link.length <= 1200 ? "high" : result.link.length <= 2850 ? "low" : "none";
     return (
       <div className="v3-result">
         <div className="v3-step">{t("ux.sendReady")}</div>
@@ -326,46 +360,50 @@ export default function SendWorkspace() {
           </p>
         )}
 
-        <div className="v3-qr-wrap">
-          <div className="v3-qr">
-            <QRCodeSVG
-              value={result.link}
-              size={200}
-              level="H"
-              marginSize={2}
-              bgColor="#ffffff"
-              fgColor="#0f172a"
-              title={t("ux.sendQrTitle")}
-              imageSettings={{
-                src: PIGEON_LOGO,
-                height: 36,
-                width: 36,
-                excavate: true,
-              }}
-            />
-            <div className="v3-qr-canvas-hidden" aria-hidden="true">
-              <QRCodeCanvas
-                ref={qrCanvasRef}
+        {qrMode === "none" ? (
+          <p className="v3-muted" style={{ margin: "0 0 1rem", fontSize: ".8rem" }}>
+            {t("send.qrTooLong")}
+          </p>
+        ) : (
+          <div className="v3-qr-wrap">
+            <div className="v3-qr">
+              <QRCodeSVG
                 value={result.link}
-                size={400}
-                level="H"
+                size={200}
+                level={qrMode === "high" ? "H" : "L"}
                 marginSize={2}
                 bgColor="#ffffff"
                 fgColor="#0f172a"
-                imageSettings={{
-                  src: PIGEON_LOGO,
-                  height: 72,
-                  width: 72,
-                  excavate: true,
-                }}
+                title={t("ux.sendQrTitle")}
+                imageSettings={
+                  qrMode === "high"
+                    ? { src: PIGEON_LOGO, height: 36, width: 36, excavate: true }
+                    : undefined
+                }
               />
+              <div className="v3-qr-canvas-hidden" aria-hidden="true">
+                <QRCodeCanvas
+                  ref={qrCanvasRef}
+                  value={result.link}
+                  size={400}
+                  level={qrMode === "high" ? "H" : "L"}
+                  marginSize={2}
+                  bgColor="#ffffff"
+                  fgColor="#0f172a"
+                  imageSettings={
+                    qrMode === "high"
+                      ? { src: PIGEON_LOGO, height: 72, width: 72, excavate: true }
+                      : undefined
+                  }
+                />
+              </div>
             </div>
+            <p className="v3-qr-caption">{t("ux.sendQrCaption")}</p>
+            <button type="button" className="v3-qr-dl" onClick={downloadQr}>
+              {t("ux.sendQrDownload")}
+            </button>
           </div>
-          <p className="v3-qr-caption">{t("ux.sendQrCaption")}</p>
-          <button type="button" className="v3-qr-dl" onClick={downloadQr}>
-            {t("ux.sendQrDownload")}
-          </button>
-        </div>
+        )}
 
         <div className="v3-link-row">
           <input readOnly value={result.link} onFocus={(e) => e.currentTarget.select()} />
@@ -373,6 +411,24 @@ export default function SendWorkspace() {
             {copied ? `✓ ${t("common.copied")}` : t("common.copy")}
           </button>
         </div>
+
+        {result.receiptId && (
+          <div style={{ margin: "0 0 .8rem", textAlign: "left" }}>
+            <div className="v3-step" style={{ marginBottom: ".25rem" }}>
+              {t("send.receiptTitle")}
+            </div>
+            <div className="v3-muted" style={{ fontSize: ".8rem" }}>
+              {receipt?.open
+                ? `📬 ${t("send.receiptOpen")} · ${fmtTs(receipt.open)}`
+                : `⏳ ${t("send.receiptWaiting")}`}
+            </div>
+            <div className="v3-muted" style={{ fontSize: ".8rem", marginTop: ".15rem" }}>
+              {receipt?.download
+                ? `✅ ${t("send.receiptDownload")} · ${fmtTs(receipt.download)}`
+                : `⬜ ${t("send.receiptDownload")}`}
+            </div>
+          </div>
+        )}
         {mailtoHref && (
           <a
             className="v3-btn-primary"
@@ -407,7 +463,10 @@ export default function SendWorkspace() {
         <div className="v3-progress">
           <div className="v3-progress-fill" style={{ width: `${pct}%` }} />
         </div>
-        <div className="v3-status">{pct}%</div>
+        <div className="v3-status">
+          <span className="spin" />
+          {pct}%
+        </div>
       </div>
     );
   }

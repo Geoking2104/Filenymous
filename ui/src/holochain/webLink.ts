@@ -29,6 +29,7 @@ import { generateAesKey, exportAesKey, importAesKey, decryptChunk } from "../cry
 import { toArrayBuffer } from "../crypto/buffer";
 import { b64urlEncode, b64urlDecode } from "../crypto/b64url";
 import { wrapKeyWithPassword, unwrapKeyWithPassword } from "../crypto/password";
+import { newReceiptId } from "../transfer/receipt";
 
 // Keep the link shareable: URLs get unwieldy past a few MB. Match the
 // standalone app's 8 MiB ceiling for inline links.
@@ -41,6 +42,8 @@ export interface WebLinkResult {
   url: string;
   size: number;
   passwordProtected: boolean;
+  /** Opaque delivery-receipt id embedded in the link (optional). */
+  receiptId?: string;
 }
 
 interface LinkMeta {
@@ -64,7 +67,7 @@ function decodeMeta(b64: string): LinkMeta {
  */
 export async function createWebLink(
   file: File,
-  opts: { password?: string } = {},
+  opts: { password?: string; receipt?: boolean } = {},
 ): Promise<WebLinkResult> {
   if (file.size > WEB_LINK_MAX_BYTES) {
     throw new Error(
@@ -88,17 +91,18 @@ export async function createWebLink(
   cipher.set(new Uint8Array(ct), NONCE_LEN);
 
   const meta = encodeMeta({ name: file.name, type: file.type, size: file.size });
+  const receiptId = opts.receipt === false ? undefined : newReceiptId();
 
   let fragment: string;
   if (opts.password) {
     const { salt, wrapped } = await wrapKeyWithPassword(opts.password, aesRaw);
-    fragment = `slp=${b64urlEncode(cipher)}.${b64urlEncode(wrapped)}.${b64urlEncode(salt)}.${meta}`;
+    fragment = `slp=${b64urlEncode(cipher)}.${b64urlEncode(wrapped)}.${b64urlEncode(salt)}.${meta}${receiptId ? `.${receiptId}` : ""}`;
   } else {
-    fragment = `sl=${b64urlEncode(cipher)}.${b64urlEncode(aesRaw)}.${meta}`;
+    fragment = `sl=${b64urlEncode(cipher)}.${b64urlEncode(aesRaw)}.${meta}${receiptId ? `.${receiptId}` : ""}`;
   }
 
   const url = `${window.location.origin}${window.location.pathname}#${fragment}`;
-  return { url, size: file.size, passwordProtected: Boolean(opts.password) };
+  return { url, size: file.size, passwordProtected: Boolean(opts.password), receiptId };
 }
 
 /** True when a fragment (with or without leading #) is a self-contained link. */
@@ -120,14 +124,18 @@ export interface ParsedWebLink {
   wrapped?: Uint8Array;
   /** Password mode: Argon2id salt. */
   salt?: Uint8Array;
+  /** Delivery receipt id (optional, appended to the fragment). */
+  receiptId?: string;
 }
 
 /** Parse a `#sl=...` or `#slp=...` fragment into its parts (does not decrypt yet). */
 export async function parseWebLink(fragment: string): Promise<ParsedWebLink | null> {
   const raw = fragment.startsWith("#") ? fragment.slice(1) : fragment;
 
+  const rid = (s?: string) => (s && /^[A-Za-z0-9_-]{10,64}$/.test(s) ? s : undefined);
+
   if (raw.startsWith("sl=")) {
-    const [cipherB64, keyB64, metaB64] = raw.slice(3).split(".");
+    const [cipherB64, keyB64, metaB64, ridB64] = raw.slice(3).split(".");
     if (!cipherB64 || !keyB64 || !metaB64) return null;
     const meta = decodeMeta(metaB64);
     return {
@@ -137,11 +145,12 @@ export async function parseWebLink(fragment: string): Promise<ParsedWebLink | nu
       size: meta.size,
       locked: false,
       key: await importAesKey(b64urlDecode(keyB64)),
+      receiptId: rid(ridB64),
     };
   }
 
   if (raw.startsWith("slp=")) {
-    const [cipherB64, wrappedB64, saltB64, metaB64] = raw.slice(4).split(".");
+    const [cipherB64, wrappedB64, saltB64, metaB64, ridB64] = raw.slice(4).split(".");
     if (!cipherB64 || !wrappedB64 || !saltB64 || !metaB64) return null;
     const meta = decodeMeta(metaB64);
     return {
@@ -152,6 +161,7 @@ export async function parseWebLink(fragment: string): Promise<ParsedWebLink | nu
       locked: true,
       wrapped: b64urlDecode(wrappedB64),
       salt: b64urlDecode(saltB64),
+      receiptId: rid(ridB64),
     };
   }
 
