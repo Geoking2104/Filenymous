@@ -10,7 +10,11 @@ Group=filenymous-signal
 WorkingDirectory=/opt/filenymous-signal/app
 Environment=NODE_ENV=production
 Environment=PORT=8789
-Environment=ALLOWED_ORIGIN=https://filenymous.eu,https://geoking2104.github.io
+Environment=ALLOWED_ORIGIN=https://filenymous.eu,https://www.filenymous.eu,https://geoking2104.github.io
+# nginx forwards the client IP in X-Real-IP; required for per-client rate limiting.
+Environment=TRUST_PROXY=1
+# Optional TURN settings (TURN_URLS, TURN_SECRET, STUN_URLS). Keep secrets out of git:
+EnvironmentFile=-/etc/filenymous-signal.env
 ExecStart=/usr/bin/node /opt/filenymous-signal/app/server.js
 Restart=on-failure
 RestartSec=3

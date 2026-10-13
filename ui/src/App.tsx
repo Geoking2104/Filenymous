@@ -14,6 +14,8 @@ import Footer from "./components/Footer";
 import ToastStack from "./components/ToastStack";
 import ReceivePanel from "./components/ReceivePanel";
 import AppUxV3 from "./ux-v3/AppUxV3";
+import P2PReceivePanel from "./p2p/P2PReceivePanel";
+import { isP2PHash } from "./p2p/protocol";
 import "./styles.css";
 import "./styles-notify.css";
 
@@ -67,6 +69,19 @@ export default function App() {
       unlisten();
     };
   }, [setNet, setTab]);
+
+  if (isP2PHash(hash)) {
+    return (
+      <div className="app">
+        <Header minimal />
+        <main className="main panel-enter">
+          <P2PReceivePanel hash={hash} />
+        </main>
+        <Footer />
+        <ToastStack />
+      </div>
+    );
+  }
 
   if (isMagicHash(hash)) {
     return (
