@@ -65,6 +65,7 @@ export default function SendWorkspace() {
   const [emailFrom, setEmailFrom] = useState("");
   const [emailTo, setEmailTo] = useState("");
   const [receipt, setReceipt] = useState<ReceiptStatus | null>(null);
+  const [emailCopied, setEmailCopied] = useState(false);
 
   useEffect(() => {
     void initClient().then(() => setWriteReady(canWrite()));
@@ -142,7 +143,12 @@ export default function SendWorkspace() {
       minute: "2-digit",
     });
 
-  const buildMailto = (to: string, link: string, fileName?: string, passwordProtected?: boolean) => {
+  const buildEmailParts = (
+    to: string,
+    link: string,
+    fileName?: string,
+    passwordProtected?: boolean,
+  ) => {
     const subject = `Filenymous — ${fileName ?? "transfert"}`;
     const body = [
       i18n.language === "en" ? "Hi," : "Bonjour,",
@@ -161,17 +167,10 @@ export default function SendWorkspace() {
         : []),
       ...(emailFrom.trim() ? ["", `— ${emailFrom.trim()}`] : []),
     ].join("\n");
-    return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  };
-
-  const autoSendEmail = (link: string, fileName?: string, passwordProtected?: boolean) => {
-    const to = emailTo.trim();
-    if (!isEmail(to)) return;
-    try {
-      window.location.href = buildMailto(to, link, fileName, passwordProtected);
-    } catch {
-      /* ignore — the result screen still offers the button */
-    }
+    const header = i18n.language === "en" ? "Subject:" : "Objet :";
+    const text = `${header} ${subject}\n\n${body}`;
+    const mailtoHref = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    return { subject, body, text, mailtoHref };
   };
 
   const createShare = async () => {
@@ -244,7 +243,6 @@ export default function SendWorkspace() {
           fileName: realFiles[0]!.name,
           receiptId,
         });
-        autoSendEmail(url, realFiles[0]!.name, !!pw);
       } catch (e) {
         setError(t("send.errorTransfer", { message: String(e) }));
       } finally {
@@ -293,7 +291,6 @@ export default function SendWorkspace() {
         fileName: out.fileName,
         receiptId: out.receiptId,
       });
-      autoSendEmail(out.link, out.fileName, out.passwordProtected);
     } catch (e) {
       const msg = String(e);
       if (msg.includes("no_write")) setError(t("send.browserOnly"));
@@ -312,6 +309,28 @@ export default function SendWorkspace() {
     }
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
+  };
+
+  const copyEmail = async () => {
+    if (!result) return;
+    const target = isEmail(emailTo.trim())
+      ? emailTo.trim()
+      : isEmail(recipient.trim())
+        ? recipient.trim()
+        : "";
+    const { text } = buildEmailParts(
+      target,
+      result.link,
+      result.fileName,
+      result.passwordProtected,
+    );
+    try {
+      await navigator.clipboard?.writeText(text);
+    } catch {
+      /* ignore */
+    }
+    setEmailCopied(true);
+    window.setTimeout(() => setEmailCopied(false), 2000);
   };
 
   const downloadQr = () => {
@@ -341,9 +360,12 @@ export default function SendWorkspace() {
       : isEmail(recipient.trim())
         ? recipient.trim()
         : "";
-    const mailtoHref = mailTarget
-      ? buildMailto(mailTarget, result.link, result.fileName, result.passwordProtected)
-      : "";
+    const mailParts = buildEmailParts(
+      mailTarget,
+      result.link,
+      result.fileName,
+      result.passwordProtected,
+    );
     const qrMode: "high" | "low" | "none" =
       result.link.length <= 1200 ? "high" : result.link.length <= 2850 ? "low" : "none";
     return (
@@ -429,20 +451,31 @@ export default function SendWorkspace() {
             </div>
           </div>
         )}
-        {mailtoHref && (
-          <a
-            className="v3-btn-primary"
-            style={{
-              display: "block",
-              textAlign: "center",
-              textDecoration: "none",
-              marginBottom: ".6rem",
-            }}
-            href={mailtoHref}
-          >
-            {t("send.emailOpen")}
-          </a>
-        )}
+        <button
+          type="button"
+          className="v3-btn-primary"
+          style={{ display: "block", width: "100%", marginBottom: ".6rem", padding: ".75rem" }}
+          onClick={copyEmail}
+        >
+          {emailCopied ? t("send.emailCopyDone") : t("send.emailCopy")}
+        </button>
+        <a
+          className="v3-btn-ghost"
+          style={{
+            display: "block",
+            textAlign: "center",
+            textDecoration: "none",
+            marginBottom: ".5rem",
+          }}
+          href={mailParts.mailtoHref}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {t("send.emailOpen")}
+        </a>
+        <p className="v3-muted" style={{ fontSize: ".72rem", margin: "0 0 .7rem" }}>
+          {t("send.emailFallbackHint")}
+        </p>
         <button type="button" className="v3-btn-ghost" onClick={reset}>
           {t("ux.sendNewShare")}
         </button>

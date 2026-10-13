@@ -122,6 +122,43 @@ test.describe("Send — self-contained encrypted link (no conductor)", () => {
     await expect(page.getByText(/too long for a QR|trop long pour un QR/i)).toBeVisible();
   });
 
+  test("email handoff: copying works and the page never navigates away", async ({ page }) => {
+    await page.goto("/");
+    const origin = new URL(page.url()).origin;
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin });
+
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles({
+      name: "e2e-mail.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("mail handoff test"),
+    });
+
+    await page.locator('input[type="text"]').first().fill("dest@example.com");
+    await page.getByRole("button", { name: SEND_BTN }).click();
+
+    const linkInput = page.locator(".v3-link-row input");
+    await expect(linkInput).toBeVisible({ timeout: 30_000 });
+
+    // Copy the ready-to-send email.
+    const copyBtn = page.getByRole("button", { name: /Copier l'email|Copy the email/i });
+    await expect(copyBtn).toBeVisible();
+    await copyBtn.click();
+    const clip = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clip).toContain("#sl=");
+    expect(clip).toMatch(/Objet|Subject/);
+
+    // The open button is a new-tab link — the app page must stay put.
+    const openLink = page.getByRole("link", {
+      name: /Ouvrir mon application email|Open my email app/i,
+    });
+    await expect(openLink).toBeVisible();
+    await openLink.click();
+    await page.waitForTimeout(800);
+    expect(page.url()).not.toContain("about:blank");
+    expect(page.url().startsWith(origin)).toBe(true);
+  });
+
   test("receipt: opening and downloading a link reports to the sender tracker", async ({
     page,
     request,
