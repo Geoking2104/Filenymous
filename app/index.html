@@ -5684,13 +5684,8 @@ function createP2PPeer(sendSignal, statusId) {
   const pc = new RTCPeerConnection({
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      // Sovereign TURN relay (Filenymous VPS): only WebRTC negotiation +
-      // encrypted payload relaying when NAT blocks the direct path.
-      {
-        urls: ['turn:51.210.9.71:3478?transport=udp', 'turn:51.210.9.71:3478?transport=tcp'],
-        username: 'filenymous',
-        credential: '63c2ed2abf666f98001a2416b4770a7a',
-      },
+      // TURN relay credentials are short-lived and served by the signal
+      // server's /ice endpoint; no static credential is embedded here.
     ],
   });
   const connectTimer = setTimeout(() => {
