@@ -7,49 +7,16 @@
  */
 import { test, expect } from "@playwright/test";
 
-test.describe("Optical transfer", () => {
-  test("send panel renders profile selector with 5 profiles", async ({ page }) => {
-    await page.goto("/");
-    // Click the "No network" tab in SendPanel
-    await page.getByRole("button", { name: /sans réseau|no network/i }).click();
-
-    // Profile buttons should be visible
-    await expect(page.getByRole("button", { name: /Robust/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Balanced/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Turbo 15/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Turbo 30/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Turbo 60/i })).toBeVisible();
-  });
-
-  test("profile auto-recommends when file is selected", async ({ page }) => {
-    await page.goto("/");
-    await page.getByRole("button", { name: /sans réseau|no network/i }).click();
-
-    // Create a small test file via file input
-    const fileInput = page.locator('input[type="file"]');
-    const buffer = Buffer.alloc(10 * 1024, 0x42); // 10 KB file
-    await fileInput.setInputFiles({
-      name: "small-test.bin",
-      mimeType: "application/octet-stream",
-      buffer,
-    });
-
-    // Robust should be auto-selected for small files (< 50 KB)
-    await expect(page.getByRole("button", { name: /Robust/i })).toHaveCSS(
-      /border-color/,
-      /rgb/,
-    );
-  });
-
-  test("receive panel renders camera button", async ({ page }) => {
-    await page.goto("/#/receive");
-    // The OpticalReceivePanel should be available via the receive tab
-    await page.getByRole("button", { name: /ouvrir la caméra|open camera/i }).click();
-    // Should attempt to open camera (will fail in headless but button exists)
-  });
-});
+// The optical send/receive panels are no longer mounted in any reachable UI
+// (neither the file.pizza-style page nor #legacy), so their UI tests were
+// removed. The protocol itself stays covered here and in src/qrferry/*.test.ts.
 
 test.describe("Protocol round-trip", () => {
+  test.beforeEach(async ({ page }) => {
+    // Module imports need the Vite dev server origin.
+    await page.goto("/#legacy");
+  });
+
   test("encode and decode descriptor + data frames", async ({ page }) => {
     // Use the page context to run protocol code in the browser
     const result = await page.evaluate(async () => {
