@@ -15,13 +15,14 @@ import ToastStack from "./components/ToastStack";
 import ReceivePanel from "./components/ReceivePanel";
 import AppUxV3 from "./ux-v3/AppUxV3";
 import PizzaApp from "./pizza/PizzaApp";
+import { isP2PHash } from "./p2p/protocol";
 import "./styles.css";
 import "./styles-notify.css";
 
 const TABS: Tab[] = ["send", "receive", "rooms", "contacts", "identity", "history", "advanced"];
 
 function isMagicHash(hash: string): boolean {
-  if (!hash.startsWith("#")) return false;
+  if (!hash.startsWith("#") || isP2PHash(hash)) return false;
   const fragment = hash.slice(1);
   return fragment.includes(":") || fragment.startsWith("sl=") || fragment.startsWith("slp=");
 }
@@ -42,8 +43,6 @@ export default function App() {
       if (!alive) return;
       const connected = mode === "holo-web" || mode === "websocket";
       setNet({ connected, mode, peers: 0 });
-      if (connected) {
-      }
     });
 
     onSignal((raw) => {
