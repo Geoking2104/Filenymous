@@ -5,6 +5,8 @@ import { parseShareInput } from "./protocol";
 import { MEMORY_SINK_SOFT_LIMIT, canStreamToDisk, chooseSink } from "./sink";
 import { p2pSupported } from "./config";
 import { formatBytes } from "../ux-v3/types";
+import { describeDevice } from "./device";
+import PigeonFlight from "../pizza/PigeonFlight";
 
 interface Props {
   hash: string;
@@ -86,6 +88,7 @@ export default function P2PReceivePanel({ hash }: Props) {
     <div className="v3-result" data-testid="p2p-receive-panel">
       <div className="v3-step">{t("p2p.recvTitle")}</div>
       <div className="v3-code">{parsed.code}</div>
+      {state.peerDevice && <p className="pz-peer" data-testid="p2p-peer-device">{t("pz.senderDevice", { device: state.peerDevice })}</p>}
       {state.message && <p className="v3-muted">“{state.message}”</p>}
       {state.files.length > 0 && (
         <ul className="v3-muted" style={{ fontSize: ".85rem", textAlign: "left", paddingLeft: "1.1rem" }} data-testid="p2p-files">
@@ -102,7 +105,7 @@ export default function P2PReceivePanel({ hash }: Props) {
       </div>
       {(state.status === "receiving" || state.status === "complete") && (
         <>
-          <progress max={100} value={state.status === "complete" ? 100 : pct} style={{ width: "100%" }} aria-label={t("p2p.progress")} />
+          <PigeonFlight pct={state.status === "complete" ? 100 : pct} self="to" from={state.peerDevice} to={describeDevice()} done={state.status === "complete"} />
           <p className="v3-muted" data-testid="p2p-recv-bytes" style={{ fontSize: ".8rem", margin: ".3rem 0" }}>
             {formatBytes(state.receivedBytes)} / {formatBytes(state.totalBytes)}
             {state.status === "receiving" && state.speed > 0 ? ` · ${formatBytes(state.speed)}/s` : ""}

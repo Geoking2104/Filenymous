@@ -25,14 +25,15 @@ export interface P2PFileInfo {
 }
 
 export type P2PControl =
-  | { type: "manifest"; v: number; files: P2PFileInfo[]; chunkSize: number; wrappedSecret: string; message?: string }
+  | { type: "manifest"; v: number; files: P2PFileInfo[]; chunkSize: number; wrappedSecret: string; message?: string; device?: string }
   | { type: "start"; files?: number[] }
   | { type: "file-end"; index: number; chunks: number }
   | { type: "done" }
   | { type: "progress"; bytes: number }
   | { type: "file-ack"; index: number }
   | { type: "ack"; bytes?: number }
-  | { type: "cancel"; reason?: string };
+  | { type: "cancel"; reason?: string }
+  | { type: "hello"; device?: string };
 
 function b64urlEncode(bytes: Uint8Array): string {
   let s = "";
@@ -203,6 +204,10 @@ export function parseControl(text: string): P2PControl | null {
       if (!Array.isArray(msg.files) || msg.files.length === 0 || msg.files.length > 1000) return null;
       if (!msg.files.every((f) => typeof f?.name === "string" && Number.isSafeInteger(f.size) && f.size >= 0)) return null;
       if (typeof msg.wrappedSecret !== "string" || !Number.isSafeInteger(msg.chunkSize)) return null;
+    }
+    if ("device" in msg && msg.device !== undefined) {
+      if (typeof msg.device !== "string") return null;
+      (msg as { device?: string }).device = msg.device.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 80);
     }
     return msg;
   } catch {

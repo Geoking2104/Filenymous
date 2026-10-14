@@ -1,3 +1,4 @@
+import { describeDevice } from "./device";
 import { iceServers } from "./config";
 import {
   P2P_CHUNK_SIZE,
@@ -62,6 +63,8 @@ export interface SenderState {
   fileStates: FileDeliveryState[];
   downloads: number;
   log: TransferLogEntry[];
+  /** Browser · OS of the connected recipient (from its "hello"). */
+  peerDevice?: string;
   error?: string;
 }
 
@@ -81,6 +84,8 @@ export interface ReceiverState {
   receivedBytes: number;
   totalBytes: number;
   speed: number;
+  /** Browser · OS of the sender (from the manifest). */
+  peerDevice?: string;
   error?: string;
 }
 
@@ -369,6 +374,9 @@ export class P2PSender {
         case "cancel":
           this.fail(a, msg.reason || "cancelled");
           break;
+        case "hello":
+          this.update({ peerDevice: msg.device });
+          break;
         default:
           break;
       }
@@ -380,6 +388,7 @@ export class P2PSender {
       files: this.files.map((f) => ({ name: f.name, size: f.size, mime: f.type || "application/octet-stream" })),
       wrappedSecret: await wrapSecret(this.code, this.secret),
       ...(this.message ? { message: this.message } : {}),
+      device: describeDevice(),
     });
     if (this.attempt === a) this.update({ status: "connected", error: undefined });
   }
@@ -603,8 +612,10 @@ export class P2PReceiver {
           status: "ready",
           files: msg.files,
           message: msg.message,
+          peerDevice: msg.device,
           totalBytes: msg.files.reduce((n, f) => n + f.size, 0),
         });
+        this.channel?.send(JSON.stringify({ type: "hello", device: describeDevice() }));
       } else if (msg.type === "file-end") {
         const info = this.state.files[msg.index];
         if (!info || msg.index !== this.expected.file || msg.chunks !== chunkCount(info.size) || this.expected.chunk !== msg.chunks) {
