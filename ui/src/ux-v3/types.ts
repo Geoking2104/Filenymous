@@ -1,6 +1,6 @@
 export type PrimaryMode = "send" | "receive" | "room";
 
-export type SharePath = "link" | "contact";
+export type SharePath = "direct" | "link" | "contact";
 
 export type RoomKind = "private" | "public";
 

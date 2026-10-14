@@ -6,6 +6,8 @@ import { isValidContact, sendTransfer, deriveShortCode } from "../../transfer/se
 import { createWebLink, WEB_LINK_MAX_BYTES } from "../../holochain/webLink";
 import { fetchReceiptStatus, type ReceiptStatus } from "../../transfer/receipt";
 import { useStore } from "../../store/useStore";
+import P2PSendPanel from "../../p2p/P2PSendPanel";
+import { p2pSupported } from "../../p2p/config";
 import {
   fileExtLabel,
   formatBytes,
@@ -66,6 +68,7 @@ export default function SendWorkspace() {
   const [emailTo, setEmailTo] = useState("");
   const [receipt, setReceipt] = useState<ReceiptStatus | null>(null);
   const [emailCopied, setEmailCopied] = useState(false);
+  const [directFiles, setDirectFiles] = useState<File[] | null>(null);
 
   useEffect(() => {
     void initClient().then(() => setWriteReady(canWrite()));
@@ -176,6 +179,19 @@ export default function SendWorkspace() {
   const createShare = async () => {
     if (!files.length) {
       inputRef.current?.click();
+      return;
+    }
+    // Browser-only mode can't fit several or big files in a self-contained
+    // link: switch to the live direct transfer instead of failing.
+    const tooBigForLink =
+      !writeReady && (files.length > 1 || files.some((f) => f.size > WEB_LINK_MAX_BYTES));
+    if (path === "direct" || (path === "link" && tooBigForLink && p2pSupported())) {
+      if (!p2pSupported()) {
+        setError(t("p2p.unsupported"));
+        return;
+      }
+      const direct = files.map((f) => f.file).filter((f): f is File => !!f);
+      if (direct.length) setDirectFiles(direct);
       return;
     }
     // Recipient resolution: the main field, or the "send by email" target.
@@ -353,6 +369,10 @@ export default function SendWorkspace() {
     setPct(0);
     setStep("");
   };
+
+  if (directFiles) {
+    return <P2PSendPanel files={directFiles} onStop={() => setDirectFiles(null)} />;
+  }
 
   if (result) {
     const mailTarget = isEmail(emailTo.trim())
@@ -578,6 +598,15 @@ export default function SendWorkspace() {
       <div className="v3-paths">
         <button
           type="button"
+          data-testid="path-direct"
+          className={`v3-path${path === "direct" ? " active" : ""}`}
+          onClick={() => setPath("direct")}
+        >
+          <strong>{t("p2p.pathTitle")}</strong>
+          <span>{t("p2p.pathDesc")}</span>
+        </button>
+        <button
+          type="button"
           className={`v3-path${path === "link" ? " active" : ""}`}
           onClick={() => setPath("link")}
         >
@@ -594,6 +623,10 @@ export default function SendWorkspace() {
         </button>
       </div>
 
+      {path === "direct" ? (
+        <p className="v3-muted" style={{ fontSize: ".85rem" }}>{t("p2p.pathHint")}</p>
+      ) : (
+      <>
       {path === "link" ? (
         <div className="v3-field">
           <label className="v3-label">{t("send.emailOrPhone")}</label>
@@ -718,6 +751,8 @@ export default function SendWorkspace() {
           />
         </div>
       </details>
+      </>
+      )}
 
       {error && <div className="v3-warn" style={{ marginTop: "0.75rem" }}>⚠ {error}</div>}
 
@@ -727,7 +762,7 @@ export default function SendWorkspace() {
         onClick={createShare}
         disabled={busy}
       >
-        {path === "link" ? t("send.btnMagic") : t("send.btnContact")}
+        {path === "direct" ? t("p2p.start") : path === "link" ? t("send.btnMagic") : t("send.btnContact")}
       </button>
       <p className="v3-footnote">{t("send.localEncryptNote")}</p>
     </div>

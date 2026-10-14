@@ -13,6 +13,7 @@ import BottomDock from "./components/BottomDock";
 import SecondaryDrawer from "./components/SecondaryDrawer";
 import RoomPanel from "../components/RoomPanel";
 import type { DrawerId, PrimaryMode, RoomKind } from "./types";
+import { parseShareInput } from "../p2p/protocol";
 import "./styles/ux-v3.css";
 
 export default function AppUxV3() {
@@ -73,6 +74,9 @@ export default function AppUxV3() {
     if (!value) return;
     if (value.includes("#")) value = value.split("#").pop() || value;
     if (value.startsWith("#")) value = value.slice(1);
+    // A bare one-time code (123-456-ABC) or a p2p: fragment → live direct transfer.
+    const direct = !value.includes("=") ? parseShareInput(value) : null;
+    if (direct) value = `p2p:${direct.code}${direct.secret ? `/${direct.secret}` : ""}`;
     window.location.hash = value;
   };
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import QrScanButton from "../../p2p/QrScanButton";
 
 interface Props {
   onOpen?: (payload: string) => void;
@@ -43,6 +44,7 @@ export default function ReceiveWorkspace({ onOpen }: Props) {
           {t("ux.receiveOpen")}
         </button>
       </div>
+      <QrScanButton onResult={(text) => onOpen?.(text)} />
       <div className="v3-status" style={{ marginTop: "1.2rem" }}>
         <span className="v3-pulse" />
         {t("ux.receiveStatus")}

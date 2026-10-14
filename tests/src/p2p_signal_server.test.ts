@@ -35,7 +35,8 @@ describe("P2P signaling server", () => {
 
     expect(server).toContain("allowedOrigins");
     expect(server).toContain(".split(\",\")");
-    expect(server).toContain("allowedOrigins.includes(info.origin)");
+    expect(server).toContain("allowedOrigins.includes(origin)");
+    expect(server).toContain("originAllowed(info.origin)");
   });
 
   it("supports public group rooms without reusing one-to-one roles", () => {

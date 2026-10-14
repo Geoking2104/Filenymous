@@ -1,3 +1,5 @@
+import { createServer } from "node:http";
+import { createHmac } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
 
 const port = Number(process.env.PORT || 8789);
@@ -13,6 +15,21 @@ const MAX_SIGNAL_ICE_BYTES = Number(process.env.MAX_SIGNAL_ICE_BYTES || 16_000);
 const MAX_ROOM_PEERS = Number(process.env.MAX_ROOM_PEERS || 12);
 const MAX_ROOM_EVENT_BYTES = Number(process.env.MAX_ROOM_EVENT_BYTES || 768_000);
 const MAX_ROOM_META_BYTES = Number(process.env.MAX_ROOM_META_BYTES || 8_000);
+// Behind nginx every socket comes from 127.0.0.1: only trust X-Forwarded-For /
+// X-Real-IP when explicitly told so (TRUST_PROXY=1), otherwise all users would
+// share a single rate-limit bucket.
+const TRUST_PROXY = /^(1|true|yes)$/i.test(process.env.TRUST_PROXY || "");
+const PING_INTERVAL_MS = Number(process.env.PING_INTERVAL_MS || 25_000);
+// ICE / TURN configuration handed to browsers via GET /ice.
+// STUN_URLS: comma-separated stun: URLs (default Google STUN).
+// TURN_URLS: comma-separated turn:/turns: URLs (optional).
+// TURN_SECRET: coturn `static-auth-secret` (use-auth-secret / TURN REST API)
+//   -> short-lived per-request credentials, nothing static in the web app.
+// TURN_USERNAME + TURN_CREDENTIAL: fallback static credentials (discouraged).
+const STUN_URLS = (process.env.STUN_URLS ?? "stun:stun.l.google.com:19302").split(",").map(s => s.trim()).filter(Boolean);
+const TURN_URLS = (process.env.TURN_URLS || "").split(",").map(s => s.trim()).filter(Boolean);
+const TURN_SECRET = process.env.TURN_SECRET || "";
+const TURN_TTL_S = Number(process.env.TURN_TTL_S || 3600);
 const rooms = new Map();
 const roomSessions = new Map();
 const rateLimits = new Map();
@@ -84,8 +101,18 @@ function validateRoomEvent(event) {
   return true;
 }
 
+function clientIp(req) {
+  if (TRUST_PROXY) {
+    const real = req.headers["x-real-ip"];
+    if (typeof real === "string" && real) return real.trim();
+    const fwd = req.headers["x-forwarded-for"];
+    if (typeof fwd === "string" && fwd) return fwd.split(",")[0].trim();
+  }
+  return req.socket?.remoteAddress || "unknown";
+}
+
 function checkRateLimit(ws) {
-  const key = ws._socket?.remoteAddress || "unknown";
+  const key = ws.clientIp || ws._socket?.remoteAddress || "unknown";
   const current = now();
   const bucket = rateLimits.get(key) || { resetAt: current + RATE_LIMIT_WINDOW_MS, count: 0 };
   if (current > bucket.resetAt) {
@@ -107,7 +134,11 @@ function send(ws, msg) {
 
 function roomFor(code) {
   const existing = rooms.get(code);
-  if (existing && existing.expiresAt > now()) return existing;
+  if (existing && (existing.expiresAt > now() || isOpen(existing.sender) || isOpen(existing.receiver))) {
+    // A sender keeping its tab open must not lose its code after ROOM_TTL_MS.
+    existing.expiresAt = now() + ROOM_TTL_MS;
+    return existing;
+  }
   const room = { sender: null, receiver: null, createdAt: now(), expiresAt: now() + ROOM_TTL_MS };
   rooms.set(code, room);
   return room;
@@ -188,15 +219,78 @@ function leave(ws) {
   leaveRoomPeer(ws);
 }
 
+function originAllowed(origin) {
+  if (!allowedOrigins.length) return true;
+  return typeof origin === "string" && allowedOrigins.includes(origin);
+}
+
+function iceServers() {
+  const servers = [];
+  if (STUN_URLS.length) servers.push({ urls: STUN_URLS });
+  if (TURN_URLS.length) {
+    if (TURN_SECRET) {
+      const username = `${Math.floor(now() / 1000) + TURN_TTL_S}:filenymous`;
+      const credential = createHmac("sha1", TURN_SECRET).update(username).digest("base64");
+      servers.push({ urls: TURN_URLS, username, credential });
+    } else if (process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+      servers.push({ urls: TURN_URLS, username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL });
+    }
+  }
+  return servers;
+}
+
+function httpHandler(req, res) {
+  const path = (req.url || "/").split("?")[0].replace(/^\/filenymous-signal/, "") || "/";
+  const origin = req.headers.origin;
+  const headers = { "content-type": "application/json", "cache-control": "no-store", vary: "Origin" };
+  if (origin && originAllowed(origin)) {
+    headers["access-control-allow-origin"] = origin;
+    headers["access-control-allow-methods"] = "GET, OPTIONS";
+  }
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, headers);
+    return res.end();
+  }
+  if (req.method === "GET" && (path === "/health" || path === "/healthz")) {
+    res.writeHead(200, headers);
+    return res.end(JSON.stringify({ ok: true, rooms: rooms.size, roomSessions: roomSessions.size, turn: TURN_URLS.length > 0 }));
+  }
+  if (req.method === "GET" && path === "/ice") {
+    if (origin && !originAllowed(origin)) {
+      res.writeHead(403, headers);
+      return res.end(JSON.stringify({ error: "origin-not-allowed" }));
+    }
+    res.writeHead(200, headers);
+    return res.end(JSON.stringify({ iceServers: iceServers(), ttl: TURN_TTL_S }));
+  }
+  res.writeHead(426, { "content-type": "text/plain; charset=utf-8" });
+  res.end("Upgrade Required");
+}
+
+const httpServer = createServer(httpHandler);
 const wss = new WebSocketServer({
-  port,
+  server: httpServer,
   verifyClient(info, done) {
-    if (!allowedOrigins.length) return done(true);
-    done(allowedOrigins.includes(info.origin));
+    done(originAllowed(info.origin));
   },
 });
 
-wss.on("connection", ws => {
+const pingTimer = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) {
+      ws.terminate();
+      continue;
+    }
+    ws.isAlive = false;
+    try { ws.ping(); } catch {}
+  }
+}, PING_INTERVAL_MS);
+pingTimer.unref?.();
+
+wss.on("connection", (ws, req) => {
+  ws.clientIp = clientIp(req);
+  ws.isAlive = true;
+  ws.on("pong", () => { ws.isAlive = true; });
   ws.on("message", raw => {
     let msg;
     try {
@@ -340,6 +434,8 @@ wss.on("connection", ws => {
   ws.on("error", () => leave(ws));
 });
 
-console.log(`Filenymous p2p-signal listening on :${port}`);
+httpServer.listen(port, () => {
+  console.log(`Filenymous p2p-signal listening on :${port}`);
+});
 
 export { validateOneTimeCode, validateRoomEvent, validateRoomId, validateSignalPayload };

@@ -80,3 +80,13 @@ Verified facts (2026-07-14) — how the public site is actually hosted and updat
   vhosts); backups live in `/etc/nginx/vhost-backups/`.
 - SSH access: key `opendpe_vps_ed25519` (user `root`) — works from Linux; Windows
   OpenSSH may fail silently on this key (ACL), use the sandbox/WSL if needed.
+
+## Direct P2P transfer in the React UI (file.pizza-style), rollout checklist
+
+The React UI (what filenymous.eu serves) now has its own direct-transfer path (`ui/src/p2p/`). It uses the same relay, `wss://www.opendpe.net/filenymous-signal/`. To ship it:
+
+1. **Relay (VPS):** deploy the new `p2p-signal/server.js`. It adds `/health`, `/ice`, ws keepalive, proxy-aware rate limiting, and keeps the room alive while the sender stays connected. Install the updated unit (`TRUST_PROXY=1`, `www.filenymous.eu` origin, `EnvironmentFile=-/etc/filenymous-signal.env`), then `systemctl daemon-reload && systemctl restart filenymous-signal`.
+2. **nginx snippet:** align `/etc/nginx/snippets/filenymous-signal-location.conf` with `p2p-signal/nginx-opendpe-location.conf` (3600 s read/send timeouts). Then run `nginx -t && systemctl reload nginx`.
+3. **TURN:** configure coturn with `use-auth-secret`, and put `TURN_URLS` and `TURN_SECRET` in `/etc/filenymous-signal.env` (see `p2p-signal/README.md`). The standalone `docs/demo/app/index.html` still embeds a **static TURN username/password** for `51.210.9.71`. Once the TURN REST secret is in place, rotate that credential.
+4. **Check:** `curl https://www.opendpe.net/filenymous-signal/health` should return `{"ok":true,...}`, and `curl -H 'Origin: https://filenymous.eu' https://www.opendpe.net/filenymous-signal/ice` should list a `turn:` entry.
+5. **UI:** `cd ui && npm ci && npm run build`, then deploy `ui/dist` to `/app/` with `scripts/deploy-ovh-sftp.mjs` as usual. Smoke test: send from desktop with *Direct (P2P)*, scan the QR code with a phone on 4G, download.
