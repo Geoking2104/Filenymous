@@ -397,5 +397,27 @@
       "hostingTitle": "Hébergement",
       "hosting": "Le site est hébergé par OVHcloud (France). Les serveurs de signalisation et de relais TURN sont hébergés sur un VPS OVHcloud en Europe ; ils ne voient jamais le contenu des fichiers."
     }
+  },
+  "pw": {
+    "reviewTitle_one": "Vous allez envoyer {{count}} fichier.",
+    "reviewTitle_other": "Vous allez envoyer {{count}} fichiers.",
+    "addFiles": "Ajouter des fichiers",
+    "unknownType": "type inconnu",
+    "remove": "Retirer {{name}}",
+    "label": "Mot de passe (facultatif)",
+    "info": "Le destinataire devra saisir ce mot de passe avant tout envoi. Il n’est jamais transmis ni inclus dans le lien ou le QR code : communiquez-le par un autre canal.",
+    "start": "Démarrer",
+    "senderProtected": "Protégé par mot de passe (non inclus dans le lien)",
+    "senderFailures": "{{count}}/{{max}} tentative(s) erronée(s)",
+    "senderWaitingPassword": "Destinataire connecté — en attente du mot de passe…",
+    "reasonTooMany": "trop de mots de passe erronés",
+    "recvPrompt": "Ce transfert est protégé par un mot de passe.",
+    "recvLabel": "Mot de passe",
+    "unlock": "Déverrouiller",
+    "checking": "Vérification…",
+    "wrong_one": "Mot de passe incorrect. Il reste {{count}} tentative.",
+    "wrong_other": "Mot de passe incorrect. Il reste {{count}} tentatives.",
+    "tooMany": "Trop de mots de passe erronés : l’expéditeur a verrouillé ce partage.",
+    "unsupportedProtocol": "Ce transfert utilise une version plus récente de Filenymous. Rechargez la page (Ctrl+F5) puis réessayez."
   }
 }

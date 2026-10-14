@@ -51,6 +51,8 @@ export default function PizzaApp({ hash }: { hash: string }) {
   const [code, setCode] = useState("");
   const [err, setErr] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  const more = useRef<HTMLInputElement>(null);
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     document.title = t("pz.docTitle");
@@ -62,9 +64,15 @@ export default function PizzaApp({ hash }: { hash: string }) {
     setErr("");
   }, []);
 
+  const addMore = (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    setPicked((prev) => [...prev, ...Array.from(list)]);
+  };
+
   const reset = () => {
     setSending(null);
     setPicked([]);
+    setPassword("");
     if (location.hash) history.replaceState(null, "", location.pathname + location.search);
   };
 
@@ -84,27 +92,47 @@ export default function PizzaApp({ hash }: { hash: string }) {
   if (receiving) {
     body = <P2PReceivePanel hash={hash} />;
   } else if (sending) {
-    body = <P2PSendPanel files={sending} onStop={reset} />;
+    body = <P2PSendPanel files={sending} password={password} onStop={reset} />;
   } else if (picked.length > 0) {
     body = (
-      <div className="pz-card">
-        <h2 className="pz-h2">{t("pz.readyTitle")}</h2>
-        <ul className="pz-files">
+      <div className="pz-card" data-testid="review-step">
+        <h2 className="pz-h2">
+          {t("pw.reviewTitle", { count: picked.length })}{" "}
+          <button type="button" className="pz-link" data-testid="add-files" onClick={() => more.current?.click()}>
+            {t("pw.addFiles")}
+          </button>
+        </h2>
+        <input ref={more} type="file" multiple hidden data-testid="add-files-input" onChange={(e) => { addMore(e.currentTarget.files); e.currentTarget.value = ""; }} />
+        <ul className="pz-files" data-testid="review-files">
           {picked.map((f, i) => (
             <li key={`${f.name}-${i}`}>
-              <span className="pz-fname">{f.name}</span>
+              <span className="pz-fmeta">
+                <span className="pz-fname">{f.name}</span>
+                <span className="pz-fmime">{f.type || t("pw.unknownType")}</span>
+              </span>
               <span className="pz-fsize">{formatBytes(f.size)}</span>
+              <button type="button" className="pz-remove" aria-label={t("pw.remove", { name: f.name })} title={t("pw.remove", { name: f.name })} onClick={() => setPicked(picked.filter((_, k) => k !== i))}>
+                ✕
+              </button>
             </li>
           ))}
         </ul>
         {picked.length > 1 && <p className="pz-muted">{t("pz.totalSize", { count: picked.length, size: formatBytes(total) })}</p>}
+        <div className="pz-pw">
+          <label htmlFor="pz-password">
+            {t("pw.label")}{" "}
+            <span className="pz-info" tabIndex={0} role="img" aria-label={t("pw.info")} title={t("pw.info")} aria-describedby="pz-pw-info">ⓘ</span>
+          </label>
+          <input id="pz-password" type="password" autoComplete="new-password" data-testid="send-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <span id="pz-pw-info" className="pz-pw-hint">{t("pw.info")}</span>
+        </div>
         {!p2pSupported() && <div className="v3-warn">{t("p2p.unsupported")}</div>}
         <div className="pz-actions">
-          <button type="button" className="pz-btn" disabled={!p2pSupported()} onClick={() => setSending(picked)}>
-            {t("p2p.start")}
-          </button>
-          <button type="button" className="pz-btn-ghost" onClick={() => setPicked([])}>
+          <button type="button" className="pz-btn-ghost" onClick={() => { setPicked([]); setPassword(""); }}>
             {t("common.cancel")}
+          </button>
+          <button type="button" className="pz-btn" data-testid="start-send" disabled={!p2pSupported()} onClick={() => setSending(picked)}>
+            {t("pw.start")}
           </button>
         </div>
       </div>

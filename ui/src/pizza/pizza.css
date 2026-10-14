@@ -50,3 +50,15 @@
 .pz-footer dl { margin: 1rem 0 0; display: grid; gap: .8rem; text-align: left; }
 .pz-footer dt { font-weight: 700; color: #334155; }
 .pz-footer dd { margin: .2rem 0 0; line-height: 1.5; }
+/* review step + password */
+.pz-link { background: none; border: 0; padding: 0; color: #0369a1; text-decoration: underline; font: inherit; font-size: .9rem; cursor: pointer; }
+.pz-files li { align-items: center; }
+.pz-fmeta { display: flex; flex-direction: column; min-width: 0; flex: 1; text-align: left; }
+.pz-fmime { font-size: .72rem; color: #94a3b8; }
+.pz-remove { border: 0; background: #f1f5f9; color: #475569; border-radius: 999px; width: 1.7rem; height: 1.7rem; cursor: pointer; flex: none; }
+.pz-remove:hover { background: #fee2e2; color: #b91c1c; }
+.pz-pw { display: flex; flex-direction: column; gap: .35rem; text-align: left; margin: 1rem 0 .4rem; font-size: .88rem; }
+.pz-pw input, .pz-pw-form input { padding: .6rem .8rem; border: 1px solid #cbd5e1; border-radius: .6rem; font-size: .95rem; background: #fff; color: inherit; }
+.pz-info { display: inline-block; cursor: help; color: #64748b; }
+.pz-pw-hint { font-size: .75rem; color: #94a3b8; }
+.pz-pw-form { display: flex; flex-direction: column; gap: .5rem; max-width: 320px; margin: .8rem auto; text-align: left; font-size: .9rem; }
