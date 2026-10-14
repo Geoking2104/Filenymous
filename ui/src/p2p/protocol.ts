@@ -29,7 +29,9 @@ export type P2PControl =
   | { type: "start"; files?: number[] }
   | { type: "file-end"; index: number; chunks: number }
   | { type: "done" }
-  | { type: "ack" }
+  | { type: "progress"; bytes: number }
+  | { type: "file-ack"; index: number }
+  | { type: "ack"; bytes?: number }
   | { type: "cancel"; reason?: string };
 
 function b64urlEncode(bytes: Uint8Array): string {

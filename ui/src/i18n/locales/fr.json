@@ -332,7 +332,6 @@
     "waitingReceiver": "En attente que le destinataire ouvre le lien…",
     "peerConnecting": "Destinataire trouvé — établissement du canal direct chiffré…",
     "sending": "Envoi… {{pct}} %",
-    "sentComplete": "Transfert terminé ({{count}} téléchargement(s)). Gardez l’onglet ouvert pour d’autres destinataires.",
     "reconnecting": "Connexion au relais de signalisation perdue — reconnexion…",
     "errorSignal": "Erreur de signalisation : {{message}}",
     "iceFailed": "Connexion directe impossible (NAT/pare-feu strict). Un relais TURN est nécessaire sur ce réseau.",
@@ -353,6 +352,20 @@
     "download": "Télécharger ({{size}})",
     "scanQr": "📷 Scanner un QR code",
     "scanStop": "Fermer la caméra",
-    "scanError": "Erreur caméra/QR : {{message}}"
+    "scanError": "Erreur caméra/QR : {{message}}",
+    "senderStopped": "L’expéditeur a arrêté le partage.",
+    "stalled": "Transfert bloqué : aucune donnée reçue depuis 30 s. L’onglet de l’expéditeur est peut-être fermé ou en veille.",
+    "integrityError": "Contrôle d’intégrité échoué (données corrompues ou altérées). Transfert annulé.",
+    "retry": "Réessayer",
+    "reasonConnectionLost": "connexion perdue",
+    "reasonRecipientLeft": "destinataire parti avant de commencer",
+    "reasonStalled": "blocage signalé par le destinataire",
+    "reasonSenderStopped": "partage arrêté",
+    "reasonUnknown": "erreur inconnue",
+    "recipientChoosing": "Destinataire connecté — en attente de son clic sur Télécharger…",
+    "deliveredByRecipient": "Téléchargement terminé par le destinataire",
+    "transferFailed": "Échec / interrompu : {{reason}}",
+    "confirmedBytes": "Reçu par le destinataire : {{done}} / {{total}} ({{pct}} %)",
+    "logTitle": "Téléchargements de cette session ({{count}} terminé(s))"
   }
 }

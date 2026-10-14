@@ -13,16 +13,20 @@ interface Props {
 /** Recipient landing for `#p2p:CODE/SECRET`: connects automatically. */
 export default function P2PReceivePanel({ hash }: Props) {
   const { t } = useTranslation();
-  const [state, setState] = useState<ReceiverState>({ status: "connecting", files: [], receivedBytes: 0, totalBytes: 0 });
+  const [state, setState] = useState<ReceiverState>({ status: "connecting", files: [], receivedBytes: 0, totalBytes: 0, speed: 0 });
   const receiverRef = useRef<P2PReceiver | null>(null);
   const parsed = parseShareInput(hash);
 
   useEffect(() => {
     if (!parsed || !p2pSupported()) return;
-    const r = new P2PReceiver(parsed.code, parsed.secret, setState);
+    let alive = true;
+    const r = new P2PReceiver(parsed.code, parsed.secret, (st) => alive && setState(st));
     receiverRef.current = r;
     void r.start();
-    return () => r.close();
+    return () => {
+      alive = false;
+      r.close();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsed?.code, parsed?.secret]);
 
@@ -69,6 +73,9 @@ export default function P2PReceivePanel({ hash }: Props) {
         if (state.error === "ice-failed" || state.error === "ice-timeout") return t("p2p.iceFailed");
         if (state.error === "role-taken") return t("p2p.roleTaken");
         if (state.error === "sender-disconnected") return t("p2p.senderGone");
+        if (state.error === "sender-stopped") return t("p2p.senderStopped");
+        if (state.error === "stalled") return t("p2p.stalled");
+        if (state.error === "decrypt-error" || state.error === "integrity-error") return t("p2p.integrityError");
         return t("p2p.errorSignal", { message: state.error ?? "" });
       default:
         return "";
@@ -94,7 +101,18 @@ export default function P2PReceivePanel({ hash }: Props) {
         {statusText}
       </div>
       {(state.status === "receiving" || state.status === "complete") && (
-        <progress max={100} value={state.status === "complete" ? 100 : pct} style={{ width: "100%" }} aria-label={t("p2p.progress")} />
+        <>
+          <progress max={100} value={state.status === "complete" ? 100 : pct} style={{ width: "100%" }} aria-label={t("p2p.progress")} />
+          <p className="v3-muted" data-testid="p2p-recv-bytes" style={{ fontSize: ".8rem", margin: ".3rem 0" }}>
+            {formatBytes(state.receivedBytes)} / {formatBytes(state.totalBytes)}
+            {state.status === "receiving" && state.speed > 0 ? ` · ${formatBytes(state.speed)}/s` : ""}
+          </p>
+        </>
+      )}
+      {state.status === "error" && (
+        <button type="button" className="v3-btn-ghost" onClick={() => location.reload()}>
+          {t("p2p.retry")}
+        </button>
       )}
       {state.status === "ready" && (
         <>
