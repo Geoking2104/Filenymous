@@ -395,7 +395,9 @@
       "erasureTitle": "Droit à l’effacement",
       "erasure": "Rien n’étant stocké sur un serveur, il n’y a rien à effacer côté éditeur : fermer l’onglet de l’expéditeur met fin au partage et rend le lien inutilisable. La clé de déchiffrement n’existe que dans le lien partagé.",
       "hostingTitle": "Hébergement",
-      "hosting": "Le site est hébergé par OVHcloud (France). Les serveurs de signalisation et de relais TURN sont hébergés sur un VPS OVHcloud en Europe ; ils ne voient jamais le contenu des fichiers."
+      "hosting": "Le site est hébergé par OVHcloud (France). Les serveurs de signalisation et de relais TURN sont hébergés sur un VPS OVHcloud en Europe ; ils ne voient jamais le contenu des fichiers.",
+      "termsTitle": "Conditions d’utilisation",
+      "terms": "Les fichiers sont partagés directement entre navigateurs, sans stockage sur un serveur. N’envoyez que des fichiers que vous avez le droit de partager, partagez les liens uniquement avec des destinataires connus, et n’utilisez pas Filenymous pour du contenu illégal ou nuisible. En envoyant un fichier, vous confirmez avoir compris et accepté ces conditions."
     }
   },
   "pw": {
@@ -419,5 +421,17 @@
     "wrong_other": "Mot de passe incorrect. Il reste {{count}} tentatives.",
     "tooMany": "Trop de mots de passe erronés : l’expéditeur a verrouillé ce partage.",
     "unsupportedProtocol": "Ce transfert utilise une version plus récente de Filenymous. Rechargez la page (Ctrl+F5) puis réessayez."
+  },
+  "terms": {
+    "title": "Conditions d’utilisation Filenymous",
+    "direct": "Les fichiers sont partagés directement entre navigateurs, sans stockage sur un serveur.",
+    "rights": "N’envoyez que des fichiers que vous avez le droit de partager.",
+    "known": "Partagez les liens uniquement avec des destinataires que vous connaissez.",
+    "illegal": "Aucun contenu illégal ou nuisible.",
+    "accept": "En envoyant un fichier, vous confirmez avoir compris et accepté ces conditions.",
+    "ok": "Compris !",
+    "link": "Conditions",
+    "notePrefix": "En envoyant, vous acceptez les",
+    "noteLink": "conditions d’utilisation"
   }
 }

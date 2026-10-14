@@ -395,7 +395,9 @@
       "erasureTitle": "Right to erasure",
       "erasure": "Since nothing is stored on a server, there is nothing to erase on the publisher’s side: closing the sender’s tab ends the share and makes the link useless. The decryption key only exists inside the shared link.",
       "hostingTitle": "Hosting",
-      "hosting": "The site is hosted by OVHcloud (France). The signaling and TURN relay servers run on an OVHcloud VPS in Europe; they never see file contents."
+      "hosting": "The site is hosted by OVHcloud (France). The signaling and TURN relay servers run on an OVHcloud VPS in Europe; they never see file contents.",
+      "termsTitle": "Terms of use",
+      "terms": "Files are shared directly between browsers, with no server storage. Only send files you have the right to share, only share links with recipients you know, and do not use Filenymous for illegal or harmful content. By sending a file, you confirm that you understand and accept these terms."
     }
   },
   "pw": {
@@ -419,5 +421,17 @@
     "wrong_other": "Wrong password. {{count}} attempts left.",
     "tooMany": "Too many wrong passwords: the sender has locked this share.",
     "unsupportedProtocol": "This transfer uses a newer version of Filenymous. Reload the page (Ctrl+F5) and try again."
+  },
+  "terms": {
+    "title": "Filenymous terms of use",
+    "direct": "Files are shared directly between browsers, with no server storage.",
+    "rights": "Only send files you have the right to share.",
+    "known": "Only share links with recipients you know.",
+    "illegal": "No illegal or harmful content.",
+    "accept": "By sending a file, you confirm that you understand and accept these terms.",
+    "ok": "Got it!",
+    "link": "Terms",
+    "notePrefix": "By sending, you accept the",
+    "noteLink": "terms of use"
   }
 }
