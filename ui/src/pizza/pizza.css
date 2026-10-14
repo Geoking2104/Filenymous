@@ -62,3 +62,18 @@
 .pz-info { display: inline-block; cursor: help; color: #64748b; }
 .pz-pw-hint { font-size: .75rem; color: #94a3b8; }
 .pz-pw-form { display: flex; flex-direction: column; gap: .5rem; max-width: 320px; margin: .8rem auto; text-align: left; font-size: .9rem; }
+/* terms of use */
+.pz-footer-row { display: flex; flex-direction: column; align-items: center; gap: .4rem; }
+.pz-footer-row details { width: 100%; }
+.pz-terms-link { font-size: .8rem; color: #64748b; }
+.pz-terms-note { font-size: .75rem; color: #94a3b8; margin: .6rem 0 0; }
+.pz-terms-note .pz-link { font-size: .75rem; color: #64748b; }
+.pz-modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 100; }
+.pz-modal { background: #fff; color: #0f172a; border-radius: 1.25rem; padding: 1.6rem; max-width: 560px; width: 100%; max-height: 90vh; overflow: auto; text-align: center; box-shadow: 0 20px 50px rgba(15,23,42,.3); }
+.pz-modal h2 { margin: 0 0 1rem; font-size: 1.25rem; }
+.pz-terms-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.pz-term { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .9rem; padding: .9rem; display: flex; flex-direction: column; align-items: center; gap: .4rem; }
+.pz-term-icon { font-size: 1.6rem; }
+.pz-term p { margin: 0; font-size: .85rem; line-height: 1.4; }
+.pz-terms-accept { font-size: .85rem; color: #475569; margin: 1rem 0; }
+@media (max-width: 480px) { .pz-terms-grid { grid-template-columns: 1fr; } }

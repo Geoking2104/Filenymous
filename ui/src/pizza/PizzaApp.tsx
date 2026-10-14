@@ -11,6 +11,7 @@ import { p2pSupported } from "../p2p/config";
 import { formatBytes } from "../ux-v3/types";
 import type { AppLanguage } from "../i18n";
 import LegalFooter from "./LegalFooter";
+import { openTerms } from "./TermsModal";
 import "../ux-v3/styles/ux-v3.css";
 import "./pizza.css";
 
@@ -135,6 +136,10 @@ export default function PizzaApp({ hash }: { hash: string }) {
             {t("pw.start")}
           </button>
         </div>
+        <p className="pz-terms-note" data-testid="terms-note">
+          {t("terms.notePrefix")}{" "}
+          <button type="button" className="pz-link" onClick={openTerms}>{t("terms.noteLink")}</button>
+        </p>
       </div>
     );
   } else {
