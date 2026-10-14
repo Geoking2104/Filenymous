@@ -65,6 +65,8 @@ export default function P2PReceivePanel({ hash }: Props) {
         return t("p2p.recvWaitingSender");
       case "negotiating":
         return t("p2p.peerConnecting");
+      case "password":
+        return state.authChecking ? t("pw.checking") : t("pw.recvPrompt");
       case "ready":
         return t("p2p.recvReady");
       case "receiving":
@@ -77,6 +79,8 @@ export default function P2PReceivePanel({ hash }: Props) {
         if (state.error === "sender-disconnected") return t("p2p.senderGone");
         if (state.error === "sender-stopped") return t("p2p.senderStopped");
         if (state.error === "stalled") return t("p2p.stalled");
+        if (state.error === "too-many-attempts") return t("pw.tooMany");
+        if (state.error === "unsupported-protocol") return t("pw.unsupportedProtocol");
         if (state.error === "decrypt-error" || state.error === "integrity-error") return t("p2p.integrityError");
         return t("p2p.errorSignal", { message: state.error ?? "" });
       default:
@@ -111,6 +115,28 @@ export default function P2PReceivePanel({ hash }: Props) {
             {state.status === "receiving" && state.speed > 0 ? ` · ${formatBytes(state.speed)}/s` : ""}
           </p>
         </>
+      )}
+      {state.status === "password" && (
+        <form
+          className="pz-pw-form"
+          data-testid="p2p-password-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const input = e.currentTarget.elements.namedItem("pw") as HTMLInputElement;
+            void receiverRef.current?.submitPassword(input.value);
+          }}
+        >
+          <label htmlFor="p2p-pw">🔒 {t("pw.recvLabel")}</label>
+          <input id="p2p-pw" name="pw" type="password" autoComplete="off" autoFocus data-testid="p2p-password" disabled={state.authChecking} />
+          {state.authError && (
+            <p className="pz-err" role="alert" data-testid="p2p-password-error">
+              {t("pw.wrong", { count: state.authRemaining ?? 0 })}
+            </p>
+          )}
+          <button type="submit" className="pz-btn" data-testid="p2p-password-submit" disabled={state.authChecking}>
+            {state.authChecking ? t("pw.checking") : t("pw.unlock")}
+          </button>
+        </form>
       )}
       {state.status === "error" && (
         <button type="button" className="v3-btn-ghost" onClick={() => location.reload()}>

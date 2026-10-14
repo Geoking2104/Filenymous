@@ -397,5 +397,27 @@
       "hostingTitle": "Hosting",
       "hosting": "The site is hosted by OVHcloud (France). The signaling and TURN relay servers run on an OVHcloud VPS in Europe; they never see file contents."
     }
+  },
+  "pw": {
+    "reviewTitle_one": "You are about to send {{count}} file.",
+    "reviewTitle_other": "You are about to send {{count}} files.",
+    "addFiles": "Add files",
+    "unknownType": "unknown type",
+    "remove": "Remove {{name}}",
+    "label": "Password (optional)",
+    "info": "The recipient must enter this password before anything is sent. It is never transmitted nor included in the link or QR code: share it through another channel.",
+    "start": "Start",
+    "senderProtected": "Password protected (not included in the link)",
+    "senderFailures": "{{count}}/{{max}} wrong attempt(s)",
+    "senderWaitingPassword": "Recipient connected — waiting for the password…",
+    "reasonTooMany": "too many wrong passwords",
+    "recvPrompt": "This transfer is password protected.",
+    "recvLabel": "Password",
+    "unlock": "Unlock",
+    "checking": "Checking…",
+    "wrong_one": "Wrong password. {{count}} attempt left.",
+    "wrong_other": "Wrong password. {{count}} attempts left.",
+    "tooMany": "Too many wrong passwords: the sender has locked this share.",
+    "unsupportedProtocol": "This transfer uses a newer version of Filenymous. Reload the page (Ctrl+F5) and try again."
   }
 }

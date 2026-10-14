@@ -10,6 +10,8 @@ import PigeonFlight from "../pizza/PigeonFlight";
 interface Props {
   files: File[];
   message?: string;
+  /** Optional password: never put in the link or QR code. */
+  password?: string;
   onStop: () => void;
 }
 
@@ -18,7 +20,7 @@ function shareBaseUrl(): string {
 }
 
 /** Sender view for a live, file.pizza-style direct transfer. */
-export default function P2PSendPanel({ files, message, onStop }: Props) {
+export default function P2PSendPanel({ files, message, password, onStop }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<SenderState | null>(null);
   const [error, setError] = useState("");
@@ -28,7 +30,7 @@ export default function P2PSendPanel({ files, message, onStop }: Props) {
   useEffect(() => {
     let alive = true;
     setError("");
-    const sender = new P2PSender(files, (st) => alive && setState(st), { message });
+    const sender = new P2PSender(files, (st) => alive && setState(st), { message, password: password || undefined });
     senderRef.current = sender;
     sender.start().catch((e) => {
       if (alive) setError(String((e as Error).message || e));
@@ -43,7 +45,7 @@ export default function P2PSendPanel({ files, message, onStop }: Props) {
       window.removeEventListener("beforeunload", onUnload);
       sender.stop();
     };
-  }, [files, message]);
+  }, [files, message, password]);
 
   const link = useMemo(() => (state ? buildShareLink(shareBaseUrl(), state.code, state.secret) : ""), [state?.code, state?.secret]);
   const pct = state && state.totalBytes ? Math.min(100, Math.round((state.confirmedBytes / state.totalBytes) * 100)) : 0;
@@ -57,6 +59,8 @@ export default function P2PSendPanel({ files, message, onStop }: Props) {
         return t("p2p.reasonStalled");
       case "sender-stopped":
         return t("p2p.reasonSenderStopped");
+      case "too-many-attempts":
+        return t("pw.reasonTooMany");
       case "decrypt-error":
       case "integrity-error":
         return t("p2p.integrityError");
@@ -99,13 +103,15 @@ export default function P2PSendPanel({ files, message, onStop }: Props) {
       case "connecting":
         return t("p2p.peerConnecting");
       case "connected":
-        return t("p2p.recipientChoosing");
+        return state.protected ? t("pw.senderWaitingPassword") : t("p2p.recipientChoosing");
       case "transferring":
         return t("p2p.sending", { pct });
       case "complete":
         return t("p2p.deliveredByRecipient");
       case "failed":
-        return t("p2p.transferFailed", { reason: reasonText(state.error) });
+        return t("p2p.transferFailed", {
+          reason: reasonText(state.protected && (state.authFailures ?? 0) >= 5 ? "too-many-attempts" : state.error),
+        });
       case "reconnecting":
         return t("p2p.reconnecting");
       case "error":
@@ -142,6 +148,12 @@ export default function P2PSendPanel({ files, message, onStop }: Props) {
             </button>
           )}
         </>
+      )}
+      {state?.protected && (
+        <p className="pz-peer" data-testid="p2p-send-protected">
+          🔒 {t("pw.senderProtected")}
+          {state.authFailures ? ` · ${t("pw.senderFailures", { count: state.authFailures, max: 5 })}` : ""}
+        </p>
       )}
       <ul className="v3-muted" style={{ fontSize: ".8rem", textAlign: "left", paddingLeft: "1.1rem" }} data-testid="p2p-send-files">
         {files.map((f, i) => {

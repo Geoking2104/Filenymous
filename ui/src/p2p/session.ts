@@ -1,6 +1,15 @@
 import { describeDevice } from "./device";
 import { iceServers } from "./config";
 import {
+  MAX_PASSWORD_ATTEMPTS,
+  P2P_LOCKED_VERSION,
+  PASSWORD_ITERATIONS,
+  derivePasswordKeys,
+  passwordProof,
+  randomB64,
+  verifyPasswordProof,
+  type P2PAuthChallenge,
+  type PasswordKeys,
   P2P_CHUNK_SIZE,
   P2P_PROTOCOL_VERSION,
   chunkCount,
@@ -63,6 +72,10 @@ export interface SenderState {
   fileStates: FileDeliveryState[];
   downloads: number;
   log: TransferLogEntry[];
+  /** Password-protected session. */
+  protected?: boolean;
+  /** Wrong-password attempts so far (whole session). */
+  authFailures?: number;
   /** Browser · OS of the connected recipient (from its "hello"). */
   peerDevice?: string;
   error?: string;
@@ -72,6 +85,7 @@ export type ReceiverStatus =
   | "connecting"
   | "waiting-sender"
   | "negotiating"
+  | "password"
   | "ready"
   | "receiving"
   | "complete"
@@ -84,6 +98,11 @@ export interface ReceiverState {
   receivedBytes: number;
   totalBytes: number;
   speed: number;
+  /** Password gate: a check is in flight. */
+  authChecking?: boolean;
+  /** Password gate: last attempt was wrong; attempts left. */
+  authError?: boolean;
+  authRemaining?: number;
   /** Browser · OS of the sender (from the manifest). */
   peerDevice?: string;
   error?: string;
@@ -140,6 +159,9 @@ interface Attempt {
   open: boolean;
   started: boolean;
   finished: boolean;
+  /** Password sessions: set once the recipient proved the password. */
+  authed: boolean;
+  nonce: string;
   startedAt: number;
   lastConfirm: { at: number; bytes: number };
 }
@@ -156,6 +178,9 @@ export class P2PSender {
   readonly code: string;
   readonly secret: string;
   private readonly message?: string;
+  private readonly pwKeys?: Promise<PasswordKeys>;
+  private readonly pwSalt?: string;
+  private authFailures = 0;
   private signal: SignalClient;
   private attempt: Attempt | null = null;
   private pendingIce: RTCIceCandidateInit[] = [];
@@ -169,8 +194,12 @@ export class P2PSender {
   constructor(
     private readonly files: File[],
     private readonly onState: (s: SenderState) => void,
-    opts: { code?: string; secret?: string; message?: string; signalUrl?: string } = {},
+    opts: { code?: string; secret?: string; message?: string; signalUrl?: string; password?: string } = {},
   ) {
+    if (opts.password) {
+      this.pwSalt = randomB64(16);
+      this.pwKeys = derivePasswordKeys(opts.password, this.pwSalt);
+    }
     this.code = opts.code ?? createShareCode();
     this.secret = opts.secret ?? createSecret();
     this.message = opts.message;
@@ -185,6 +214,8 @@ export class P2PSender {
       fileStates: files.map(() => "pending"),
       downloads: 0,
       log: [],
+      protected: !!opts.password,
+      authFailures: 0,
     };
     this.signal = new SignalClient(
       this.code,
@@ -215,6 +246,7 @@ export class P2PSender {
   }
 
   private idleStatus(): SenderStatus {
+    if (this.pwKeys && this.authFailures >= MAX_PASSWORD_ATTEMPTS) return "failed";
     const last = this.state.log[0];
     return last ? (last.result === "complete" ? "complete" : "failed") : "waiting";
   }
@@ -288,6 +320,8 @@ export class P2PSender {
       channel,
       open: false,
       started: false,
+      authed: false,
+      nonce: "",
       finished: false,
       startedAt: 0,
       lastConfirm: { at: 0, bytes: 0 },
@@ -347,7 +381,14 @@ export class P2PSender {
       if (!msg) return;
       switch (msg.type) {
         case "start":
+          if (this.pwKeys && !a.authed) {
+            this.fail(a, "auth-required");
+            break;
+          }
           void this.stream(a);
+          break;
+        case "auth":
+          void this.checkAuth(a, msg.proof);
           break;
         case "progress": {
           const now = Date.now();
@@ -381,6 +422,57 @@ export class P2PSender {
           break;
       }
     };
+    if (this.pwKeys) {
+      if (this.authFailures >= MAX_PASSWORD_ATTEMPTS) {
+        sendJson(channel, { type: "cancel", reason: "too-many-attempts" });
+        this.fail(a, "too-many-attempts");
+        return;
+      }
+      a.nonce = randomB64(16);
+      sendJson(channel, {
+        type: "manifest",
+        v: P2P_LOCKED_VERSION,
+        chunkSize: P2P_CHUNK_SIZE,
+        files: [{ name: "locked", size: 0, mime: "" }],
+        wrappedSecret: "",
+        auth: { salt: this.pwSalt!, iter: PASSWORD_ITERATIONS, nonce: a.nonce },
+        device: describeDevice(),
+      });
+      if (this.attempt === a) this.update({ status: "connected", error: undefined });
+      return;
+    }
+    await this.sendManifest(a);
+  }
+
+  private async checkAuth(a: Attempt, proof: string) {
+    if (!this.pwKeys || a.authed || a.finished) return;
+    const ok = typeof proof === "string" && (await verifyPasswordProof(await this.pwKeys, this.code, a.nonce, proof));
+    if (this.attempt !== a) return;
+    if (ok) {
+      a.authed = true;
+      sendJson(a.channel, { type: "auth-ok" });
+      await this.sendManifest(a);
+      return;
+    }
+    this.authFailures += 1;
+    const remaining = Math.max(0, MAX_PASSWORD_ATTEMPTS - this.authFailures);
+    this.update({ authFailures: this.authFailures });
+    sendJson(a.channel, { type: "auth-fail", remaining });
+    if (remaining === 0) {
+      sendJson(a.channel, { type: "cancel", reason: "too-many-attempts" });
+      this.fail(a, "too-many-attempts");
+      // Lock the share for good: leave the signaling room so nobody else can
+      // keep guessing. The sender must start a new share.
+      setTimeout(() => {
+        this.stopped = true;
+        this.signal.close();
+        this.update({ status: "failed", error: "too-many-attempts" });
+      }, 1000);
+    }
+  }
+
+  private async sendManifest(a: Attempt) {
+    const { channel } = a;
     sendJson(channel, {
       type: "manifest",
       v: P2P_PROTOCOL_VERSION,
@@ -389,6 +481,7 @@ export class P2PSender {
       wrappedSecret: await wrapSecret(this.code, this.secret),
       ...(this.message ? { message: this.message } : {}),
       device: describeDevice(),
+      ...(this.pwKeys ? { protected: true } : {}),
     });
     if (this.attempt === a) this.update({ status: "connected", error: undefined });
   }
@@ -408,7 +501,7 @@ export class P2PSender {
       error: undefined,
     });
     try {
-      const key = await deriveFileKey(this.secret);
+      const key = await deriveFileKey(this.secret, this.pwKeys ? (await this.pwKeys).mix : undefined);
       let sent = 0;
       let lastUi = 0;
       for (let i = 0; i < this.files.length; i++) {
@@ -470,6 +563,8 @@ export class P2PReceiver {
   private speedRef = { at: 0, bytes: 0 };
   private closed = false;
   private offerGen = 0;
+  private challenge: P2PAuthChallenge | null = null;
+  private pwMix: Uint8Array | null = null;
 
   constructor(
     private readonly code: string,
@@ -579,7 +674,7 @@ export class P2PReceiver {
       this.queue = this.queue.then(() => this.handle(data)).catch((e) => this.fail(String((e as Error).message || e)));
     };
     channel.onclose = () => {
-      if (this.state.status === "receiving" || this.state.status === "ready") this.fail("sender-disconnected");
+      if (this.state.status === "receiving" || this.state.status === "ready" || this.state.status === "password") this.fail("sender-disconnected");
     };
   }
 
@@ -603,13 +698,26 @@ export class P2PReceiver {
     if (typeof data === "string") {
       const msg = parseControl(data);
       if (!msg) return;
-      if (msg.type === "manifest") {
+      if (msg.type === "manifest" && msg.v === P2P_LOCKED_VERSION && msg.auth) {
         clearTimeout(this.connectTimer);
+        this.challenge = msg.auth;
+        this.pwMix = null;
+        this.update({ status: "password", peerDevice: msg.device, authChecking: false, authRemaining: MAX_PASSWORD_ATTEMPTS });
+      } else if (msg.type === "auth-fail") {
+        this.pwMix = null;
+        this.update({ authChecking: false, authError: true, authRemaining: Math.max(0, Number(msg.remaining) || 0) });
+      } else if (msg.type === "auth-ok") {
+        this.update({ authError: false });
+      } else if (msg.type === "manifest") {
+        clearTimeout(this.connectTimer);
+        if (msg.protected && !this.pwMix) throw new Error("auth-required");
         if (msg.v !== P2P_PROTOCOL_VERSION || msg.chunkSize !== P2P_CHUNK_SIZE) throw new Error("unsupported-protocol");
         const secret = this.secret ?? (await unwrapSecret(this.code, msg.wrappedSecret));
-        this.key = await deriveFileKey(secret);
+        this.key = await deriveFileKey(secret, msg.protected ? this.pwMix! : undefined);
         this.update({
           status: "ready",
+          authChecking: false,
+          authError: false,
           files: msg.files,
           message: msg.message,
           peerDevice: msg.device,
@@ -651,6 +759,21 @@ export class P2PReceiver {
     this.state = { ...this.state, receivedBytes: this.state.receivedBytes + plain.byteLength };
     this.onState(this.state);
     this.sendProgress();
+  }
+
+  /** Password gate: answer the sender's challenge (the password never leaves this browser). */
+  async submitPassword(password: string): Promise<void> {
+    if (this.state.status !== "password" || !this.challenge || this.state.authChecking) return;
+    if (!this.channel || this.channel.readyState !== "open") {
+      this.fail("sender-disconnected");
+      return;
+    }
+    this.update({ authChecking: true, authError: false });
+    const c = this.challenge;
+    const keys = await derivePasswordKeys(password, c.salt, c.iter);
+    const proof = await passwordProof(keys, this.code, c.nonce);
+    this.pwMix = keys.mix;
+    this.channel.send(JSON.stringify({ type: "auth", proof }));
   }
 
   /** Call after the user picked a destination (chooseSink in a click handler). */

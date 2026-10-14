@@ -76,7 +76,7 @@ test("streams two files sender → receiver over WebRTC with a short link", asyn
     { name: "big.bin", mimeType: "application/octet-stream", buffer: big },
     { name: "hello.txt", mimeType: "text/plain", buffer: small },
   ]);
-  await sender.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
+  await sender.getByRole("button", { name: /^(Démarrer|Start)$/ }).click();
 
   const linkInput = sender.getByTestId("p2p-link");
   await expect(linkInput).toBeVisible();
@@ -131,7 +131,7 @@ test("typed code (no secret in URL) still decrypts via the code-wrapped secret",
   await prepare(sender);
   await sender.goto("/");
   await sender.locator('input[type="file"]').first().setInputFiles({ name: "x.bin", mimeType: "application/octet-stream", buffer: data });
-  await sender.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
+  await sender.getByRole("button", { name: /^(Démarrer|Start)$/ }).click();
   const code = (await sender.getByTestId("p2p-code").textContent())!.trim();
 
   const receiver = await (await browser.newContext({ acceptDownloads: true })).newPage();
@@ -155,7 +155,7 @@ test("survives a receiver signaling reconnect, shows live progress on both sides
   await prepare(sender);
   await sender.goto("/");
   await sender.locator('input[type="file"]').first().setInputFiles({ name: "big.bin", mimeType: "application/octet-stream", buffer: data });
-  await sender.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
+  await sender.getByRole("button", { name: /^(Démarrer|Start)$/ }).click();
   const link = await sender.getByTestId("p2p-link").inputValue();
 
   const receiver = await (await browser.newContext({ acceptDownloads: true })).newPage();
@@ -186,7 +186,7 @@ test("sender reports failure with a reason when the recipient closes mid-transfe
   await prepare(sender);
   await sender.goto("/");
   await sender.locator('input[type="file"]').first().setInputFiles({ name: "huge.bin", mimeType: "application/octet-stream", buffer: data });
-  await sender.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
+  await sender.getByRole("button", { name: /^(Démarrer|Start)$/ }).click();
   const link = await sender.getByTestId("p2p-link").inputValue();
 
   const rctx = await browser.newContext({ acceptDownloads: true });
@@ -200,4 +200,72 @@ test("sender reports failure with a reason when the recipient closes mid-transfe
   await rctx.close();
   await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "failed", { timeout: 30_000 });
   await expect(sender.locator('[data-testid="p2p-send-log"] li[data-result="failed"]')).toContainText(/Échec \/ interrompu|Failed \/ interrupted/);
+});
+
+test.describe("password-protected transfers", () => {
+  async function startProtected(browser: import("@playwright/test").Browser, password: string, data: Buffer, shot = false) {
+    const sender = await (await browser.newContext()).newPage();
+    await prepare(sender);
+    await sender.goto("/");
+    await sender.locator('input[type="file"]').first().setInputFiles([
+      { name: "secret.bin", mimeType: "application/octet-stream", buffer: data },
+      { name: "note.txt", mimeType: "text/plain", buffer: Buffer.from("x") },
+    ]);
+    await expect(sender.getByTestId("review-step")).toContainText(/Vous allez envoyer 2 fichiers|You are about to send 2 files/);
+    await expect(sender.getByTestId("review-files")).toContainText("text/plain");
+    await sender.getByRole("button", { name: /Retirer note.txt|Remove note.txt/ }).click();
+    await expect(sender.getByTestId("review-step")).toContainText(/Vous allez envoyer 1 fichier\.|You are about to send 1 file\./);
+    await sender.getByTestId("send-password").fill(password);
+    if (shot) await sender.screenshot({ path: "/workspace/filenymous-review-step.png", fullPage: true });
+    await sender.getByTestId("start-send").click();
+    const link = await sender.getByTestId("p2p-link").inputValue();
+    expect(link).not.toContain(password);
+    expect(decodeURIComponent(link)).not.toContain(password);
+    await expect(sender.getByTestId("p2p-send-protected")).toBeVisible();
+    const receiver = await (await browser.newContext({ acceptDownloads: true })).newPage();
+    await prepare(receiver, { noPicker: true });
+    await receiver.goto(link.replace(/^https?:\/\/[^/]+/, ""));
+    await expect(receiver.getByTestId("p2p-recv-status")).toHaveAttribute("data-status", "password", { timeout: 45_000 });
+    // No file names leak before the password is proven.
+    await expect(receiver.getByTestId("p2p-files")).toHaveCount(0);
+    return { sender, receiver };
+  }
+
+  test("wrong password shows an error and allows a retry; the right one decrypts", async ({ browser }) => {
+    const data = randomBytes(300 * 1024 + 5);
+    const { sender, receiver } = await startProtected(browser, "s3cret-pass", data, true);
+    await receiver.screenshot({ path: "/workspace/filenymous-receiver-password.png", fullPage: true });
+    await receiver.getByTestId("p2p-password").fill("nope");
+    await receiver.getByTestId("p2p-password-submit").click();
+    await expect(receiver.getByTestId("p2p-password-error")).toContainText(/4/, { timeout: 30_000 });
+    await receiver.screenshot({ path: "/workspace/filenymous-receiver-password-wrong.png", fullPage: true });
+    await expect(sender.getByTestId("p2p-send-protected")).toContainText("1/5");
+    await receiver.getByTestId("p2p-password").fill("s3cret-pass");
+    await receiver.getByTestId("p2p-password-submit").click();
+    await expect(receiver.getByTestId("p2p-recv-status")).toHaveAttribute("data-status", "ready", { timeout: 30_000 });
+    await expect(receiver.getByTestId("p2p-files")).toContainText("secret.bin");
+    const dl = receiver.waitForEvent("download");
+    await receiver.getByTestId("p2p-download").click();
+    expect(sha(readFileSync((await (await dl).path())!))).toBe(sha(data));
+    await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "complete", { timeout: 15_000 });
+  });
+
+  test("locks the share after 5 wrong passwords", async ({ browser }) => {
+    const { sender, receiver } = await startProtected(browser, "right", randomBytes(1024));
+    for (let i = 0; i < 5; i++) {
+      await expect(receiver.getByTestId("p2p-password")).toBeEnabled({ timeout: 30_000 });
+      await receiver.getByTestId("p2p-password").fill(`wrong-${i}`);
+      await receiver.getByTestId("p2p-password-submit").click();
+      if (i < 4) await expect(receiver.getByTestId("p2p-password-error")).toContainText(String(4 - i), { timeout: 30_000 });
+    }
+    await expect(receiver.getByTestId("p2p-recv-status")).toHaveAttribute("data-status", "error", { timeout: 30_000 });
+    await expect(receiver.getByTestId("p2p-recv-status")).toContainText(/Trop de mots de passe|Too many wrong passwords/);
+    await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "failed");
+    // A fresh recipient is refused too.
+    const again = await (await browser.newContext()).newPage();
+    await prepare(again, { noPicker: true });
+    await again.goto((await sender.getByTestId("p2p-link").inputValue()).replace(/^https?:\/\/[^/]+/, ""));
+    await again.waitForTimeout(5000);
+    await expect(again.getByTestId("p2p-recv-status")).not.toHaveAttribute("data-status", /password|ready/);
+  });
 });
