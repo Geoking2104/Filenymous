@@ -324,7 +324,7 @@
     "pathHint": "Your files stream directly to the recipient over an end-to-end encrypted WebRTC channel. Keep this tab open until the download finishes.",
     "start": "Start direct transfer",
     "sendTitle": "Direct transfer ready",
-    "keepTabOpen": "Keep this tab open: the files are sent straight from your browser. Closing it stops the transfer.",
+    "keepTabOpen": "Keep this tab open until the download finishes: the file is sent straight from your browser.",
     "qrTitle": "QR code of the direct-transfer link",
     "qrCaption": "Scan to receive on another device",
     "shareNative": "Share…",
@@ -367,5 +367,35 @@
     "transferFailed": "Failed / interrupted: {{reason}}",
     "confirmedBytes": "Received by recipient: {{done}} / {{total}} ({{pct}}%)",
     "logTitle": "Downloads this session ({{count}} completed)"
+  },
+  "pz": {
+    "docTitle": "Filenymous — peer-to-peer file transfer",
+    "tagline": "Peer-to-peer, encrypted file transfers in your browser.",
+    "language": "Language",
+    "dropTitle": "Drop a file to get started",
+    "dropSub": "or click to choose — no size limit, nothing is stored",
+    "codePlaceholder": "Got a code? 123-456-ABC",
+    "codeLabel": "Transfer code",
+    "codeOpen": "Receive",
+    "badCode": "Invalid code or link.",
+    "readyTitle": "You are about to share",
+    "totalSize": "{{count}} files · {{size}}",
+    "you": "You",
+    "peer": "Peer",
+    "unknownDevice": "waiting…",
+    "flightAria": "Transfer progress: {{pct}} %",
+    "peerDevice": "Recipient: {{device}}",
+    "senderDevice": "Sender: {{device}}",
+    "legal": {
+      "title": "📋 Legal notice & GDPR",
+      "controllerTitle": "Data controller",
+      "controller": "Filenymous is open-source software. Files travel directly from one browser to the other (WebRTC) and are never stored by the publisher: there is no file database. Each user remains responsible for the files they share.",
+      "dataTitle": "Data collected",
+      "data": "To connect the two browsers, a signaling server temporarily exchanges the transfer code and network connection details (IP addresses, WebRTC parameters). When a direct connection is impossible, a TURN relay forwards the already-encrypted bytes (AES-256-GCM) without being able to read or keep them. Nothing is persisted. The browser and OS name (e.g. “Chrome · Windows”) is exchanged only between the two peers. No cookies, no analytics, no ads.",
+      "erasureTitle": "Right to erasure",
+      "erasure": "Since nothing is stored on a server, there is nothing to erase on the publisher’s side: closing the sender’s tab ends the share and makes the link useless. The decryption key only exists inside the shared link.",
+      "hostingTitle": "Hosting",
+      "hosting": "The site is hosted by OVHcloud (France). The signaling and TURN relay servers run on an OVHcloud VPS in Europe; they never see file contents."
+    }
   }
 }

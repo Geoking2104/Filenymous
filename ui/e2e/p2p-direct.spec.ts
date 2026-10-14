@@ -76,7 +76,6 @@ test("streams two files sender → receiver over WebRTC with a short link", asyn
     { name: "big.bin", mimeType: "application/octet-stream", buffer: big },
     { name: "hello.txt", mimeType: "text/plain", buffer: small },
   ]);
-  await sender.getByTestId("path-direct").click();
   await sender.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
 
   const linkInput = sender.getByTestId("p2p-link");
@@ -110,6 +109,11 @@ test("streams two files sender → receiver over WebRTC with a short link", asyn
   await expect(sender.locator('[data-testid="p2p-send-log"] li[data-result="complete"]')).toHaveCount(1);
   await expect(sender.locator('[data-testid="p2p-send-files"] li[data-file-state="delivered"]')).toHaveCount(2);
   await expect(receiver.getByTestId("p2p-recv-bytes")).toBeVisible();
+  // Pigeon landed on both sides, peers' browser/OS exchanged over the channel.
+  await expect(receiver.getByTestId("pigeon-pct")).toHaveText("100 %");
+  await expect(sender.getByTestId("pigeon-pct")).toHaveText("100 %");
+  await expect(receiver.getByTestId("p2p-peer-device")).toContainText(/Chrome|Chromium|Web/);
+  await expect(sender.getByTestId("device-to")).toContainText(/Chrome|Web/);
 
   // A second recipient can use the same link while the sender's tab stays open.
   const second = await (await browser.newContext()).newPage();
@@ -127,14 +131,12 @@ test("typed code (no secret in URL) still decrypts via the code-wrapped secret",
   await prepare(sender);
   await sender.goto("/");
   await sender.locator('input[type="file"]').first().setInputFiles({ name: "x.bin", mimeType: "application/octet-stream", buffer: data });
-  await sender.getByTestId("path-direct").click();
   await sender.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
   const code = (await sender.getByTestId("p2p-code").textContent())!.trim();
 
   const receiver = await (await browser.newContext({ acceptDownloads: true })).newPage();
   await prepare(receiver, { noPicker: true });
   await receiver.goto("/");
-  await receiver.getByRole("tab", { name: /Recevoir|Receive/ }).click();
   await receiver.locator(".v3-receive-row input").fill(code);
   await receiver.locator(".v3-receive-row button").click();
   await expect(receiver.getByTestId("p2p-recv-status")).toHaveAttribute("data-status", "ready", { timeout: 45_000 });
@@ -153,7 +155,6 @@ test("survives a receiver signaling reconnect, shows live progress on both sides
   await prepare(sender);
   await sender.goto("/");
   await sender.locator('input[type="file"]').first().setInputFiles({ name: "big.bin", mimeType: "application/octet-stream", buffer: data });
-  await sender.getByTestId("path-direct").click();
   await sender.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
   const link = await sender.getByTestId("p2p-link").inputValue();
 
@@ -185,7 +186,6 @@ test("sender reports failure with a reason when the recipient closes mid-transfe
   await prepare(sender);
   await sender.goto("/");
   await sender.locator('input[type="file"]').first().setInputFiles({ name: "huge.bin", mimeType: "application/octet-stream", buffer: data });
-  await sender.getByTestId("path-direct").click();
   await sender.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
   const link = await sender.getByTestId("p2p-link").inputValue();
 

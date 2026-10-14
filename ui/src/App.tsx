@@ -14,8 +14,7 @@ import Footer from "./components/Footer";
 import ToastStack from "./components/ToastStack";
 import ReceivePanel from "./components/ReceivePanel";
 import AppUxV3 from "./ux-v3/AppUxV3";
-import P2PReceivePanel from "./p2p/P2PReceivePanel";
-import { isP2PHash } from "./p2p/protocol";
+import PizzaApp from "./pizza/PizzaApp";
 import "./styles.css";
 import "./styles-notify.css";
 
@@ -44,7 +43,6 @@ export default function App() {
       const connected = mode === "holo-web" || mode === "websocket";
       setNet({ connected, mode, peers: 0 });
       if (connected) {
-        notify.success("Réseau connecté", `Mode ${mode}`);
       }
     });
 
@@ -70,19 +68,6 @@ export default function App() {
     };
   }, [setNet, setTab]);
 
-  if (isP2PHash(hash)) {
-    return (
-      <div className="app">
-        <Header minimal />
-        <main className="main panel-enter">
-          <P2PReceivePanel hash={hash} />
-        </main>
-        <Footer />
-        <ToastStack />
-      </div>
-    );
-  }
-
   if (isMagicHash(hash)) {
     return (
       <div className="app">
@@ -96,9 +81,19 @@ export default function App() {
     );
   }
 
+  // Legacy multi-panel shell stays reachable at #legacy for advanced features.
+  if (hash === "#legacy") {
+    return (
+      <>
+        <AppUxV3 />
+        <ToastStack />
+      </>
+    );
+  }
+
   return (
     <>
-      <AppUxV3 />
+      <PizzaApp hash={hash} />
       <ToastStack />
     </>
   );

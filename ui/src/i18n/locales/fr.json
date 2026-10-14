@@ -324,7 +324,7 @@
     "pathHint": "Vos fichiers sont envoyés directement au destinataire par un canal WebRTC chiffré de bout en bout. Gardez cet onglet ouvert jusqu’à la fin du téléchargement.",
     "start": "Démarrer le transfert direct",
     "sendTitle": "Transfert direct prêt",
-    "keepTabOpen": "Gardez cet onglet ouvert : les fichiers partent directement de votre navigateur. Le fermer arrête le transfert.",
+    "keepTabOpen": "Gardez cet onglet ouvert jusqu’à la fin du téléchargement : le fichier part directement de votre navigateur.",
     "qrTitle": "QR code du lien de transfert direct",
     "qrCaption": "Scannez pour recevoir sur un autre appareil",
     "shareNative": "Partager…",
@@ -367,5 +367,35 @@
     "transferFailed": "Échec / interrompu : {{reason}}",
     "confirmedBytes": "Reçu par le destinataire : {{done}} / {{total}} ({{pct}} %)",
     "logTitle": "Téléchargements de cette session ({{count}} terminé(s))"
+  },
+  "pz": {
+    "docTitle": "Filenymous — transfert de fichiers pair-à-pair",
+    "tagline": "Transfert de fichiers pair-à-pair, chiffré, dans votre navigateur.",
+    "language": "Langue",
+    "dropTitle": "Déposez un fichier pour commencer",
+    "dropSub": "ou cliquez pour choisir — aucune limite de taille, rien n’est stocké",
+    "codePlaceholder": "Vous avez reçu un code ? 123-456-ABC",
+    "codeLabel": "Code de transfert",
+    "codeOpen": "Recevoir",
+    "badCode": "Code ou lien invalide.",
+    "readyTitle": "Vous allez partager",
+    "totalSize": "{{count}} fichiers · {{size}}",
+    "you": "Vous",
+    "peer": "Correspondant",
+    "unknownDevice": "en attente…",
+    "flightAria": "Progression du transfert : {{pct}} %",
+    "peerDevice": "Destinataire : {{device}}",
+    "senderDevice": "Expéditeur : {{device}}",
+    "legal": {
+      "title": "📋 Mentions légales & RGPD",
+      "controllerTitle": "Responsable de traitement",
+      "controller": "Filenymous est un logiciel open-source. Les fichiers passent directement d’un navigateur à l’autre (WebRTC) et ne sont jamais stockés par l’éditeur : il n’existe pas de base de données de fichiers. Chaque utilisateur reste responsable des fichiers qu’il partage.",
+      "dataTitle": "Données collectées",
+      "data": "Pour mettre les deux navigateurs en relation, un serveur de signalisation échange temporairement le code de transfert et les informations de connexion réseau (adresses IP, paramètres WebRTC). Si la connexion directe est impossible, un relais TURN transmet les octets déjà chiffrés (AES-256-GCM) sans pouvoir les lire ni les conserver. Rien n’est persisté. Le nom du navigateur et du système (ex. « Chrome · Windows ») est échangé uniquement entre les deux pairs. Aucun cookie, aucune analytics, aucune publicité.",
+      "erasureTitle": "Droit à l’effacement",
+      "erasure": "Rien n’étant stocké sur un serveur, il n’y a rien à effacer côté éditeur : fermer l’onglet de l’expéditeur met fin au partage et rend le lien inutilisable. La clé de déchiffrement n’existe que dans le lien partagé.",
+      "hostingTitle": "Hébergement",
+      "hosting": "Le site est hébergé par OVHcloud (France). Les serveurs de signalisation et de relais TURN sont hébergés sur un VPS OVHcloud en Europe ; ils ne voient jamais le contenu des fichiers."
+    }
   }
 }

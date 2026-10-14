@@ -4,6 +4,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { P2PSender, type SenderState } from "./session";
 import { buildShareLink } from "./protocol";
 import { formatBytes } from "../ux-v3/types";
+import { describeDevice } from "./device";
+import PigeonFlight from "../pizza/PigeonFlight";
 
 interface Props {
   files: File[];
@@ -156,17 +158,22 @@ export default function P2PSendPanel({ files, message, onStop }: Props) {
         <span className="v3-pulse" />
         {statusText}
       </div>
-      {state?.status === "transferring" && (
+      {state?.peerDevice && (state.status === "connected" || state.status === "transferring" || state.status === "complete") && (
+        <p className="pz-peer" data-testid="p2p-peer-device">{t("pz.peerDevice", { device: state.peerDevice })}</p>
+      )}
+      {(state?.status === "transferring" || state?.status === "complete") && (
         <>
-          <progress max={100} value={pct} style={{ width: "100%" }} aria-label={t("p2p.progress")} />
-          <p className="v3-muted" data-testid="p2p-send-bytes" style={{ fontSize: ".8rem", margin: ".3rem 0" }}>
-            {t("p2p.confirmedBytes", {
-              done: formatBytes(state.confirmedBytes),
-              total: formatBytes(state.totalBytes),
-              pct,
-            })}
-            {state.speed > 0 ? ` · ${formatBytes(state.speed)}/s` : ""}
-          </p>
+          <PigeonFlight pct={state.status === "complete" ? 100 : pct} self="from" from={describeDevice()} to={state.peerDevice} done={state.status === "complete"} />
+          {state.status === "transferring" && (
+            <p className="v3-muted" data-testid="p2p-send-bytes" style={{ fontSize: ".8rem", margin: ".3rem 0" }}>
+              {t("p2p.confirmedBytes", {
+                done: formatBytes(state.confirmedBytes),
+                total: formatBytes(state.totalBytes),
+                pct,
+              })}
+              {state.speed > 0 ? ` · ${formatBytes(state.speed)}/s` : ""}
+            </p>
+          )}
         </>
       )}
       {state && state.log.length > 0 && (
