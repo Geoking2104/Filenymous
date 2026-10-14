@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
 
 const port = Number(process.env.PORT || 8789);
@@ -229,7 +229,10 @@ function iceServers() {
   if (STUN_URLS.length) servers.push({ urls: STUN_URLS });
   if (TURN_URLS.length) {
     if (TURN_SECRET) {
-      const username = `${Math.floor(now() / 1000) + TURN_TTL_S}:filenymous`;
+      // Unique per request: coturn quotas (user-quota) are per username, so a
+      // shared "<expiry>:filenymous" made two peers fetching in the same second
+      // compete for one quota and the second allocation could be refused.
+      const username = `${Math.floor(now() / 1000) + TURN_TTL_S}:fn-${randomBytes(6).toString("hex")}`;
       const credential = createHmac("sha1", TURN_SECRET).update(username).digest("base64");
       servers.push({ urls: TURN_URLS, username, credential });
     } else if (process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {

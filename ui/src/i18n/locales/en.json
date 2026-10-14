@@ -332,7 +332,6 @@
     "waitingReceiver": "Waiting for the recipient to open the link…",
     "peerConnecting": "Recipient found — establishing the encrypted direct channel…",
     "sending": "Sending… {{pct}}%",
-    "sentComplete": "Transfer complete ({{count}} download(s)). Keep the tab open to serve more recipients.",
     "reconnecting": "Connection to the signaling relay lost — reconnecting…",
     "errorSignal": "Signaling error: {{message}}",
     "iceFailed": "Direct connection failed (strict NAT/firewall). A TURN relay is required for this network.",
@@ -353,6 +352,20 @@
     "download": "Download ({{size}})",
     "scanQr": "📷 Scan a QR code",
     "scanStop": "Close camera",
-    "scanError": "Camera/QR error: {{message}}"
+    "scanError": "Camera/QR error: {{message}}",
+    "senderStopped": "The sender stopped sharing.",
+    "stalled": "Transfer stalled: no data received for 30 s. The sender's tab may be closed or asleep.",
+    "integrityError": "Integrity check failed (corrupted or tampered data). Transfer aborted.",
+    "retry": "Retry",
+    "reasonConnectionLost": "connection lost",
+    "reasonRecipientLeft": "recipient left before starting",
+    "reasonStalled": "recipient reported a stall",
+    "reasonSenderStopped": "sharing stopped",
+    "reasonUnknown": "unknown error",
+    "recipientChoosing": "Recipient connected — waiting for them to click Download…",
+    "deliveredByRecipient": "Download completed by the recipient",
+    "transferFailed": "Failed / interrupted: {{reason}}",
+    "confirmedBytes": "Received by recipient: {{done}} / {{total}} ({{pct}}%)",
+    "logTitle": "Downloads this session ({{count}} completed)"
   }
 }

@@ -38,8 +38,19 @@ test.afterAll(() => {
 });
 
 async function prepare(page: Page, { noPicker = false } = {}) {
+  page.on("pageerror", (e) => console.log(`[pageerror] ${e.message}`));
   await page.addInitScript(
     ([url, strip]) => {
+      // Keep handles on signaling sockets so tests can simulate network blips.
+      const Native = window.WebSocket;
+      const sockets: WebSocket[] = [];
+      (window as unknown as { __sockets: WebSocket[] }).__sockets = sockets;
+      (window as unknown as { WebSocket: unknown }).WebSocket = class extends Native {
+        constructor(u: string | URL, p?: string | string[]) {
+          super(u, p);
+          sockets.push(this);
+        }
+      };
       (window as unknown as { __FILENYMOUS_SIGNAL_URL__: string }).__FILENYMOUS_SIGNAL_URL__ = url as string;
       if (strip) {
         // Headless can't answer the File System Access picker: use the Blob fallback.
@@ -95,6 +106,10 @@ test("streams two files sender → receiver over WebRTC with a short link", asyn
   expect(byName["hello.txt"].toString()).toBe(small.toString());
 
   await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "complete", { timeout: 15_000 });
+  await expect(sender.getByTestId("p2p-send-status")).toContainText(/Téléchargement terminé par le destinataire|Download completed by the recipient/);
+  await expect(sender.locator('[data-testid="p2p-send-log"] li[data-result="complete"]')).toHaveCount(1);
+  await expect(sender.locator('[data-testid="p2p-send-files"] li[data-file-state="delivered"]')).toHaveCount(2);
+  await expect(receiver.getByTestId("p2p-recv-bytes")).toBeVisible();
 
   // A second recipient can use the same link while the sender's tab stays open.
   const second = await (await browser.newContext()).newPage();
@@ -127,4 +142,62 @@ test("typed code (no secret in URL) still decrypts via the code-wrapped secret",
   await receiver.getByTestId("p2p-download").click();
   const file = readFileSync((await (await dl).path())!);
   expect(sha(file)).toBe(sha(data));
+});
+
+test("survives a receiver signaling reconnect, shows live progress on both sides, then the completion ack", async ({ browser }) => {
+  // Regression: a receiver WebSocket blip (peer-left/peer-joined on the relay)
+  // used to tear down the live DataChannel → download stuck at 0 % and the
+  // sender never learnt whether the recipient finished.
+  const data = randomBytes(6 * 1024 * 1024 + 7);
+  const sender = await (await browser.newContext()).newPage();
+  await prepare(sender);
+  await sender.goto("/");
+  await sender.locator('input[type="file"]').first().setInputFiles({ name: "big.bin", mimeType: "application/octet-stream", buffer: data });
+  await sender.getByTestId("path-direct").click();
+  await sender.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
+  const link = await sender.getByTestId("p2p-link").inputValue();
+
+  const receiver = await (await browser.newContext({ acceptDownloads: true })).newPage();
+  await prepare(receiver, { noPicker: true });
+  await receiver.goto(link.replace(/^https?:\/\/[^/]+/, ""));
+  await expect(receiver.getByTestId("p2p-recv-status")).toHaveAttribute("data-status", "ready", { timeout: 45_000 });
+  await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "connected");
+
+  // Simulate a network blip on the receiver's signaling socket.
+  await receiver.evaluate(() => (window as unknown as { __sockets: WebSocket[] }).__sockets.forEach((ws) => ws.close()));
+  await receiver.waitForTimeout(2000);
+  await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "connected");
+
+  const dl = receiver.waitForEvent("download");
+  await receiver.getByTestId("p2p-download").click();
+  await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", /transferring|complete/);
+  const file = readFileSync((await (await dl).path())!);
+  expect(sha(file)).toBe(sha(data));
+  await expect(receiver.getByTestId("p2p-recv-status")).toHaveAttribute("data-status", "complete");
+  await expect(receiver.getByTestId("p2p-recv-bytes")).toContainText("6.0 Mo / 6.0 Mo");
+  await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "complete", { timeout: 15_000 });
+  await expect(sender.locator('[data-testid="p2p-send-log"] li[data-result="complete"]')).toHaveCount(1);
+});
+
+test("sender reports failure with a reason when the recipient closes mid-transfer", async ({ browser }) => {
+  const data = randomBytes(24 * 1024 * 1024);
+  const sender = await (await browser.newContext()).newPage();
+  await prepare(sender);
+  await sender.goto("/");
+  await sender.locator('input[type="file"]').first().setInputFiles({ name: "huge.bin", mimeType: "application/octet-stream", buffer: data });
+  await sender.getByTestId("path-direct").click();
+  await sender.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
+  const link = await sender.getByTestId("p2p-link").inputValue();
+
+  const rctx = await browser.newContext({ acceptDownloads: true });
+  const receiver = await rctx.newPage();
+  await prepare(receiver, { noPicker: true });
+  await receiver.goto(link.replace(/^https?:\/\/[^/]+/, ""));
+  await expect(receiver.getByTestId("p2p-recv-status")).toHaveAttribute("data-status", "ready", { timeout: 45_000 });
+  await receiver.getByTestId("p2p-download").click();
+  await expect(sender.getByTestId("p2p-send-bytes")).toBeVisible();
+  await expect.poll(async () => (await sender.getByTestId("p2p-send-bytes").textContent()) ?? "").toMatch(/[1-9]\d*(\.\d)? (Ko|Mo)/);
+  await rctx.close();
+  await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "failed", { timeout: 30_000 });
+  await expect(sender.locator('[data-testid="p2p-send-log"] li[data-result="failed"]')).toContainText(/Échec \/ interrompu|Failed \/ interrupted/);
 });
