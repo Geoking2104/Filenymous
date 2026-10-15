@@ -18,8 +18,8 @@ import { SignalClient, iceCandidateInit, type SignalPayload } from "./signal";
 import type { FileSink } from "./sink";
 
 const HIGH_WATER = 4 * 1024 * 1024;
-const LOW_WATER = 1 * 1024 * 1024;
-const CONNECT_TIMEOUT_MS = 45_000;
+export const LOW_WATER = 1 * 1024 * 1024;
+export const CONNECT_TIMEOUT_MS = 45_000;
 
 export type SenderStatus =
   | "starting"
@@ -63,7 +63,7 @@ function sendJson(channel: RTCDataChannel, msg: P2PControl) {
   channel.send(JSON.stringify(msg));
 }
 
-function waitForDrain(channel: RTCDataChannel): Promise<void> {
+export function waitForDrain(channel: RTCDataChannel): Promise<void> {
   if (channel.bufferedAmount <= HIGH_WATER) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const onLow = () => {
@@ -83,7 +83,7 @@ function waitForDrain(channel: RTCDataChannel): Promise<void> {
   });
 }
 
-async function addRemoteCandidate(pc: RTCPeerConnection, payload: SignalPayload, pending: RTCIceCandidateInit[]) {
+export async function addRemoteCandidate(pc: RTCPeerConnection, payload: SignalPayload, pending: RTCIceCandidateInit[]) {
   if (payload.kind !== "ice") return;
   if (!pc.remoteDescription) {
     pending.push(payload.candidate);

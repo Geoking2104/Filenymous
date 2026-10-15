@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
 
 const port = Number(process.env.PORT || 8789);
@@ -33,6 +33,15 @@ const TURN_TTL_S = Number(process.env.TURN_TTL_S || 3600);
 const rooms = new Map();
 const roomSessions = new Map();
 const rateLimits = new Map();
+// Dropzones (100 % P2P collection links): the owner's tab is the receiver.
+// The relay only routes SDP/ICE between the owner and each contributor; no
+// file byte ever goes through it. dropId = "drop-" + sha256(ownerSecret)[:24],
+// so only the holder of the owner link can take the owner role.
+const DROP_MAX_TTL_MS = Number(process.env.DROP_MAX_TTL_MS || 30 * 24 * 3600 * 1000);
+const DROP_DEFAULT_TTL_MS = Number(process.env.DROP_DEFAULT_TTL_MS || 7 * 24 * 3600 * 1000);
+const MAX_DROP_CONTRIBUTORS = Number(process.env.MAX_DROP_CONTRIBUTORS || 8);
+const DROP_SWEEP_MS = Number(process.env.DROP_SWEEP_MS || 30_000);
+const drops = new Map();
 
 function now() {
   return Date.now();
@@ -44,6 +53,15 @@ function validateOneTimeCode(code) {
 
 function validateRoomId(roomId) {
   return typeof roomId === "string" && /^room-[a-z0-9]{6,32}$/i.test(roomId);
+}
+
+function validateDropId(dropId) {
+  return typeof dropId === "string" && /^drop-[a-f0-9]{24}$/.test(dropId);
+}
+
+function dropIdForOwnerSecret(ownerSecret) {
+  if (typeof ownerSecret !== "string" || !/^[A-Za-z0-9_-]{22,64}$/.test(ownerSecret)) return null;
+  return `drop-${createHash("sha256").update(ownerSecret, "utf8").digest("hex").slice(0, 24)}`;
 }
 
 function validateRoomPeerId(peerId) {
@@ -204,6 +222,48 @@ function closeRoom(roomId, reason) {
   return true;
 }
 
+function dropFor(dropId) {
+  const existing = drops.get(dropId);
+  if (existing) return existing;
+  const drop = { owner: null, contributors: new Map(), expiresAt: 0 };
+  drops.set(dropId, drop);
+  return drop;
+}
+
+function expireDrop(dropId) {
+  const drop = drops.get(dropId);
+  if (!drop) return;
+  for (const ws of [drop.owner, ...drop.contributors.values()]) {
+    if (!ws) continue;
+    send(ws, { type: "drop-expired", dropId });
+    ws.dropId = undefined;
+    ws.dropRole = undefined;
+    ws.dropPeerId = undefined;
+  }
+  drops.delete(dropId);
+}
+
+function leaveDrop(ws) {
+  const dropId = ws.dropId;
+  if (!dropId) return;
+  const drop = drops.get(dropId);
+  if (drop) {
+    if (ws.dropRole === "owner" && drop.owner === ws) {
+      drop.owner = null;
+      for (const c of drop.contributors.values()) send(c, { type: "drop-owner-offline", dropId });
+    } else if (ws.dropRole === "contributor" && drop.contributors.get(ws.dropPeerId) === ws) {
+      drop.contributors.delete(ws.dropPeerId);
+      send(drop.owner, { type: "drop-peer-left", dropId, peerId: ws.dropPeerId });
+    }
+    // Keep the expiry known while the drop is idle only if an owner set it;
+    // an empty drop is forgotten (the expiry is also enforced client-side).
+    if (!drop.owner && drop.contributors.size === 0) drops.delete(dropId);
+  }
+  ws.dropId = undefined;
+  ws.dropRole = undefined;
+  ws.dropPeerId = undefined;
+}
+
 function leave(ws) {
   for (const [code, room] of rooms) {
     for (const role of ["sender", "receiver"]) {
@@ -217,6 +277,7 @@ function leave(ws) {
   ws.roomCode = undefined;
   ws.roomRole = undefined;
   leaveRoomPeer(ws);
+  leaveDrop(ws);
 }
 
 function originAllowed(origin) {
@@ -253,7 +314,7 @@ function httpHandler(req, res) {
   }
   if (req.method === "GET" && (path === "/health" || path === "/healthz")) {
     res.writeHead(200, headers);
-    return res.end(JSON.stringify({ ok: true, rooms: rooms.size, roomSessions: roomSessions.size, turn: TURN_URLS.length > 0 }));
+    return res.end(JSON.stringify({ ok: true, rooms: rooms.size, roomSessions: roomSessions.size, drops: drops.size, turn: TURN_URLS.length > 0 }));
   }
   if (req.method === "GET" && path === "/ice") {
     if (origin && !originAllowed(origin)) {
@@ -286,6 +347,14 @@ const pingTimer = setInterval(() => {
   }
 }, PING_INTERVAL_MS);
 pingTimer.unref?.();
+
+const dropSweepTimer = setInterval(() => {
+  const t = now();
+  for (const [dropId, drop] of drops) {
+    if (drop.expiresAt && drop.expiresAt <= t) expireDrop(dropId);
+  }
+}, DROP_SWEEP_MS);
+dropSweepTimer.unref?.();
 
 wss.on("connection", (ws, req) => {
   ws.clientIp = clientIp(req);
@@ -401,6 +470,109 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
+    if (msg.type === "drop-join") {
+      const { dropId, role } = msg;
+      if (!validateDropId(dropId) || !["owner", "contributor"].includes(role)) {
+        send(ws, { type: "error", error: "invalid-drop" });
+        return;
+      }
+      const existing = drops.get(dropId);
+      if (existing?.expiresAt && existing.expiresAt <= now()) {
+        expireDrop(dropId);
+        send(ws, { type: "error", error: "drop-expired" });
+        return;
+      }
+      if (role === "owner") {
+        if (dropIdForOwnerSecret(msg.ownerSecret) !== dropId) {
+          send(ws, { type: "error", error: "drop-owner-denied" });
+          return;
+        }
+        const requested = Number(msg.expiresAt);
+        const maxAt = now() + DROP_MAX_TTL_MS;
+        const expiresAt = Number.isSafeInteger(requested) && requested > 0 ? Math.min(requested, maxAt) : now() + DROP_DEFAULT_TTL_MS;
+        if (expiresAt <= now()) {
+          send(ws, { type: "error", error: "drop-expired" });
+          return;
+        }
+        leave(ws);
+        const drop = dropFor(dropId);
+        if (drop.owner && drop.owner !== ws) {
+          // Holding the owner secret is the authority: the newest owner tab
+          // (e.g. after a reload whose old socket is not yet timed out) wins.
+          const previous = drop.owner;
+          previous.dropId = undefined;
+          previous.dropRole = undefined;
+          send(previous, { type: "error", error: "drop-owner-replaced" });
+        }
+        drop.owner = ws;
+        drop.expiresAt = expiresAt;
+        ws.dropId = dropId;
+        ws.dropRole = "owner";
+        send(ws, { type: "drop-joined", dropId, role, expiresAt, contributors: Array.from(drop.contributors.keys()) });
+        for (const c of drop.contributors.values()) send(c, { type: "drop-owner-online", dropId });
+        return;
+      }
+      const { peerId } = msg;
+      if (!validateRoomPeerId(peerId)) {
+        send(ws, { type: "error", error: "invalid-drop" });
+        return;
+      }
+      leave(ws);
+      const drop = dropFor(dropId);
+      const current = drop.contributors.get(peerId);
+      if (current && isOpen(current) && current !== ws) {
+        send(ws, { type: "error", error: "drop-peer-taken" });
+        return;
+      }
+      if (!current && drop.contributors.size >= MAX_DROP_CONTRIBUTORS) {
+        send(ws, { type: "error", error: "drop-full" });
+        return;
+      }
+      drop.contributors.set(peerId, ws);
+      ws.dropId = dropId;
+      ws.dropRole = "contributor";
+      ws.dropPeerId = peerId;
+      const ownerOnline = !!isOpen(drop.owner);
+      // Contributors never learn about each other: only the owner is told.
+      send(ws, { type: "drop-joined", dropId, role, ownerOnline });
+      if (ownerOnline) send(drop.owner, { type: "drop-peer-joined", dropId, peerId });
+      return;
+    }
+
+    if (msg.type === "drop-signal") {
+      const { payload } = msg;
+      if (!validateSignalPayload(payload)) {
+        send(ws, { type: "error", error: "unsupported-signal-payload" });
+        return;
+      }
+      const drop = ws.dropId ? drops.get(ws.dropId) : null;
+      if (!drop) {
+        send(ws, { type: "error", error: "not-in-drop" });
+        return;
+      }
+      if (ws.dropRole === "owner") {
+        const target = drop.contributors.get(msg.to);
+        if (!isOpen(target)) {
+          send(ws, { type: "drop-peer-left", dropId: ws.dropId, peerId: msg.to });
+          return;
+        }
+        send(target, { type: "drop-signal", payload });
+        return;
+      }
+      if (!isOpen(drop.owner)) {
+        send(ws, { type: "drop-owner-offline", dropId: ws.dropId });
+        return;
+      }
+      send(drop.owner, { type: "drop-signal", from: ws.dropPeerId, payload });
+      return;
+    }
+
+    if (msg.type === "drop-leave") {
+      leaveDrop(ws);
+      send(ws, { type: "drop-left" });
+      return;
+    }
+
     if (msg.type === "signal") {
       const { code, payload } = msg;
       if (!validateSignalPayload(payload)) {
@@ -438,4 +610,4 @@ httpServer.listen(port, () => {
   console.log(`Filenymous p2p-signal listening on :${port}`);
 });
 
-export { validateOneTimeCode, validateRoomEvent, validateRoomId, validateSignalPayload };
+export { dropIdForOwnerSecret, validateDropId, validateOneTimeCode, validateRoomEvent, validateRoomId, validateSignalPayload };

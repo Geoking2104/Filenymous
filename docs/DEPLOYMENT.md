@@ -90,3 +90,14 @@ The React UI (what filenymous.eu serves) now has its own direct-transfer path (`
 3. **TURN:** configure coturn with `use-auth-secret`, and put `TURN_URLS` and `TURN_SECRET` in `/etc/filenymous-signal.env` (see `p2p-signal/README.md`). The standalone `docs/demo/app/index.html` still embeds a **static TURN username/password** for `51.210.9.71`. Once the TURN REST secret is in place, rotate that credential.
 4. **Check:** `curl https://www.opendpe.net/filenymous-signal/health` should return `{"ok":true,...}`, and `curl -H 'Origin: https://filenymous.eu' https://www.opendpe.net/filenymous-signal/ice` should list a `turn:` entry.
 5. **UI:** `cd ui && npm ci && npm run build`, then deploy `ui/dist` to `/app/` with `scripts/deploy-ovh-sftp.mjs` as usual. Smoke test: send from desktop with *Direct (P2P)*, scan the QR code with a phone on 4G, download.
+
+## Dropzone (100 % P2P) — relay settings
+
+The Dropzone reuses `p2p-signal` (new message types `drop-join`, `drop-signal`, `drop-leave`); no file byte goes through the VPS. Optional environment variables:
+
+- `DROP_MAX_TTL_MS` (default 30 days): upper bound for the expiry an owner can request.
+- `DROP_DEFAULT_TTL_MS` (default 7 days): room TTL when the owner chose no expiry.
+- `MAX_DROP_CONTRIBUTORS` (default 8): simultaneous contributors per Dropzone.
+- `DROP_SWEEP_MS` (default 30 s): expiry sweep interval.
+
+Relay tests: `cd p2p-signal && npm ci && npm test`. Restart `filenymous-signal.service` after deploying the new `server.js`.
