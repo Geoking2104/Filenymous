@@ -15,7 +15,7 @@ function shareBaseUrl(): string {
   return `${location.origin}${location.pathname}`;
 }
 
-/** Sender view for a live, file.pizza-style direct transfer. */
+/** Sender view for a live, direct transfer. */
 export default function P2PSendPanel({ files, message, onStop }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<SenderState | null>(null);

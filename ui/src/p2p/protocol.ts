@@ -1,5 +1,5 @@
 /**
- * Filenymous direct P2P (file.pizza-style) protocol, v2.
+ * Filenymous direct P2P protocol, v2.
  *
  * - Share code: `123-456-ABC` (same format the signaling relay validates).
  * - Share link: `<app>#p2p:123-456-ABC/<secret>` — the secret never leaves the

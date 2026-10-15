@@ -98,7 +98,7 @@ async function addRemoteCandidate(pc: RTCPeerConnection, payload: SignalPayload,
 
 /**
  * Sender side: holds the files (never loaded fully in memory), serves them to
- * successive receivers for as long as the tab stays open — like file.pizza.
+ * successive receivers for as long as the tab stays open.
  */
 export class P2PSender {
   readonly code: string;
@@ -325,7 +325,7 @@ export class P2PReceiver {
 
   async start(): Promise<void> {
     // Someone else may be downloading right now (one receiver at a time per
-    // code): keep retrying quietly, like file.pizza's "waiting" state.
+    // code): keep retrying quietly ("waiting" state).
     for (let attempt = 0; !this.closed; attempt++) {
       try {
         await this.signal.connect();

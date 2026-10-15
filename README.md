@@ -22,7 +22,7 @@ The project no longer publishes `.exe`, `.dmg`, or `.AppImage` files while the n
 
 For small files, the self-contained link remains the simplest path. For larger files, the direct P2P flow keeps both browsers open during the transfer.
 
-## Direct transfer (file.pizza-style)
+## Direct transfer
 
 The **⚡ Direct (P2P)** path in *Send* streams files straight from the sender's browser to the recipient's, with nothing stored anywhere:
 

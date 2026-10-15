@@ -81,7 +81,7 @@ Verified facts (2026-07-14) — how the public site is actually hosted and updat
 - SSH access: key `opendpe_vps_ed25519` (user `root`) — works from Linux; Windows
   OpenSSH may fail silently on this key (ACL), use the sandbox/WSL if needed.
 
-## Direct P2P transfer in the React UI (file.pizza-style), rollout checklist
+## Direct P2P transfer in the React UI, rollout checklist
 
 The React UI (what filenymous.eu serves) now has its own direct-transfer path (`ui/src/p2p/`). It uses the same relay, `wss://www.opendpe.net/filenymous-signal/`. To ship it:
 
