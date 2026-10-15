@@ -414,5 +414,43 @@
     "sendMore": "Envoyer d’autres fichiers",
     "contribPrivacy": "Vos fichiers vont directement au propriétaire, chiffrés de bout en bout. Rien n’est stocké sur un serveur.",
     "ownerReceiving": "Réception en cours ({{count}} contributeurs) : ne fermez pas l’onglet."
+  },
+  "vault": {
+    "entry": "🔐 Envoyer un secret",
+    "createTitle": "Envoyer un secret",
+    "createIntro": "Mot de passe, clé d’API, jeton… Le secret est chiffré dans votre navigateur et détruit dès sa lecture.",
+    "placeholder": "Collez votre secret ici",
+    "modeOnce": "1 seule lecture",
+    "modeTtl": "Durée limitée",
+    "hours": "Durée (heures, 1 à 168) :",
+    "passwordOptional": "Mot de passe (facultatif)",
+    "generate": "Générer le lien secret",
+    "createdTitle": "Lien secret prêt (copié)",
+    "copy": "Copier",
+    "createdOnce": "Le secret sera détruit à la première lecture, ou au bout de 7 jours s’il n’est jamais lu.",
+    "createdTtl_one": "Le secret pourra être lu pendant {{count}} heure, puis il sera détruit.",
+    "createdTtl_other": "Le secret pourra être lu pendant {{count}} heures, puis il sera détruit.",
+    "createdTtl": "Le secret pourra être lu pendant {{count}} heures, puis il sera détruit.",
+    "another": "Envoyer un autre secret",
+    "securityNote": "Chiffrement AES-256-GCM dans le navigateur ; la clé n’est que dans le lien (après #) et n’est jamais envoyée au serveur, qui ne stocke que du chiffré.",
+    "revealTitle": "Secret partagé avec vous",
+    "loading": "Vérification du lien…",
+    "gone": "Ce secret a déjà été consulté ou a expiré.",
+    "invalid": "Lien secret invalide ou incomplet.",
+    "revealOnceWarning": "Ce secret ne peut être affiché qu’une seule fois : il sera détruit dès que vous cliquerez.",
+    "revealTtlInfo": "Ce secret reste lisible jusqu’au {{date}}.",
+    "passwordRequired": "Mot de passe",
+    "badPassword": "Mot de passe incorrect. Le secret n’a pas été détruit.",
+    "show": "Afficher le secret",
+    "burned": "Ce secret vient d’être détruit sur le serveur : copiez-le maintenant.",
+    "notBurned": "Ce secret reste disponible jusqu’à son expiration.",
+    "error": {
+      "gone": "Ce secret a déjà été consulté ou a expiré.",
+      "denied": "Accès refusé.",
+      "rate-limited": "Trop de tentatives, réessayez dans une minute.",
+      "too-large": "Secret trop volumineux (64 Kio maximum).",
+      "invalid": "Requête invalide.",
+      "network": "Service de secrets injoignable, réessayez plus tard."
+    }
   }
 }

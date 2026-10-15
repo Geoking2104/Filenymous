@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test server.test.mjs"
+    "test": "node --test server.test.mjs vault.test.mjs"
   },
   "dependencies": {
+    "redis": "^4.7.1",
     "ws": "^8.18.0"
   }
 }

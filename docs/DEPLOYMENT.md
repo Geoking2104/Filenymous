@@ -101,3 +101,55 @@ The Dropzone reuses `p2p-signal` (new message types `drop-join`, `drop-signal`, 
 - `DROP_SWEEP_MS` (default 30 s): expiry sweep interval.
 
 Relay tests: `cd p2p-signal && npm ci && npm test`. Restart `filenymous-signal.service` after deploying the new `server.js`.
+
+## Secrets Vault (burn-after-reading) — VPS deployment
+
+The Vault API is served by the same `p2p-signal` process (`vault.js`), under the existing nginx location: `https://www.opendpe.net/filenymous-signal/api/v1/secrets`. The static site on OVH calls it directly (CORS limited to `ALLOWED_ORIGIN`). Browsers encrypt with AES-256-GCM before upload; the key only lives in the link fragment (`#s:<id>/<key>`). The server stores ciphertext + `sha256(auth token)` only.
+
+Endpoints:
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/api/v1/secrets` | `{ v:1, ct, iv, salt?, pw, auth, ttl, reads }` → `201 { id, expiresAt }`. `reads`: `1` = burn after reading (default), `0` = readable until `ttl` (60 s to 7 days). |
+| `GET` | `/api/v1/secrets/:id/meta` | Non-consuming: `{ pw, salt?, reads, expiresAt }` or `404`. Lets the page show "Afficher le secret" first (link previewers don't burn it). |
+| `POST` | `/api/v1/secrets/:id/reveal` | `{ token }` → `{ ct, iv, burned }`; `403` wrong token/password (not burned); `404` gone. Atomic read-and-delete (Lua script on Redis). |
+
+Every response carries `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, HSTS and `Cache-Control: no-store`.
+
+### Steps on the VPS
+
+1. Install Redis bound to localhost, without persistence:
+   ```bash
+   sudo apt install redis-server
+   # /etc/redis/redis.conf
+   #   bind 127.0.0.1 ::1
+   #   protected-mode yes
+   #   save ""
+   #   appendonly no
+   #   maxmemory 256mb
+   #   maxmemory-policy noeviction
+   sudo systemctl enable --now redis-server
+   ```
+2. Deploy the new `p2p-signal` files (`server.js`, `vault.js`, `package.json`, `package-lock.json`) to `/opt/filenymous-signal/app` and run `npm ci --omit=dev` there (adds the `redis` client).
+3. Add to `/etc/filenymous-signal.env`:
+   ```
+   REDIS_URL=redis://127.0.0.1:6379
+   ```
+   Without `REDIS_URL` the relay falls back to an in-memory store (secrets lost on restart, single process only). That is fine for tests, not for production.
+4. `sudo systemctl restart filenymous-signal` then check:
+   `curl -si -X POST https://www.opendpe.net/filenymous-signal/api/v1/secrets -H 'content-type: application/json' -d '{}'` → `400 invalid-secret` with the security headers.
+5. nginx: no change needed (the `/filenymous-signal/` location already proxies HTTP). Optionally add `client_max_body_size 128k;` in that location.
+
+Optional tuning (env): `VAULT_MAX_TTL_S` (7 days), `VAULT_DEFAULT_TTL_S` (24 h), `VAULT_MAX_CT_CHARS` (90 000 ≈ 64 KiB plaintext), `VAULT_MAX_BODY_BYTES` (100 000), `VAULT_CREATE_PER_MIN` (20 per IP), `VAULT_READ_PER_MIN` (60 per IP), `VAULT_MAX_MEMORY_SECRETS` (in-memory fallback cap). Per-IP limits need `TRUST_PROXY=1` behind nginx (already set in the unit file).
+
+### Static site (OVH)
+
+The reveal page adds a restrictive `<meta>` CSP at runtime (`object-src 'none'; base-uri 'none'; form-action 'none'; connect-src 'self' <vault API>`) and `referrer=no-referrer`. `frame-ancestors` cannot be set from a meta tag: to forbid framing, add to the OVH `.htaccess` (merge with any existing rules, do not overwrite):
+```
+Header always set X-Frame-Options "DENY"
+Header always set Referrer-Policy "no-referrer"
+Header always set X-Content-Type-Options "nosniff"
+```
+The front-end uses `VITE_VAULT_URL` if set at build time, otherwise the signal relay's HTTP base.
+
+Tests: `cd p2p-signal && npm ci && npm test` (relay + vault, in-memory and, if `redis-server` is installed, Redis).

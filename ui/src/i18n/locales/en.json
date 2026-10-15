@@ -414,5 +414,43 @@
     "sendMore": "Send more files",
     "contribPrivacy": "Your files go straight to the owner, end-to-end encrypted. Nothing is stored on a server.",
     "ownerReceiving": "Receiving ({{count}} contributors): do not close this tab."
+  },
+  "vault": {
+    "entry": "🔐 Send a secret",
+    "createTitle": "Send a secret",
+    "createIntro": "Password, API key, token… The secret is encrypted in your browser and destroyed as soon as it is read.",
+    "placeholder": "Paste your secret here",
+    "modeOnce": "Read once",
+    "modeTtl": "Time-limited",
+    "hours": "Duration (hours, 1 to 168):",
+    "passwordOptional": "Password (optional)",
+    "generate": "Generate secret link",
+    "createdTitle": "Secret link ready (copied)",
+    "copy": "Copy",
+    "createdOnce": "The secret is destroyed on first read, or after 7 days if never read.",
+    "createdTtl_one": "The secret can be read for {{count}} hour, then it is destroyed.",
+    "createdTtl_other": "The secret can be read for {{count}} hours, then it is destroyed.",
+    "createdTtl": "The secret can be read for {{count}} hours, then it is destroyed.",
+    "another": "Send another secret",
+    "securityNote": "AES-256-GCM encryption in your browser; the key is only in the link (after #) and never sent to the server, which stores ciphertext only.",
+    "revealTitle": "A secret was shared with you",
+    "loading": "Checking the link…",
+    "gone": "This secret has already been viewed or has expired.",
+    "invalid": "Invalid or incomplete secret link.",
+    "revealOnceWarning": "This secret can only be shown once: it is destroyed as soon as you click.",
+    "revealTtlInfo": "This secret stays readable until {{date}}.",
+    "passwordRequired": "Password",
+    "badPassword": "Wrong password. The secret was not destroyed.",
+    "show": "Show secret",
+    "burned": "This secret was just destroyed on the server: copy it now.",
+    "notBurned": "This secret stays available until it expires.",
+    "error": {
+      "gone": "This secret has already been viewed or has expired.",
+      "denied": "Access denied.",
+      "rate-limited": "Too many attempts, try again in a minute.",
+      "too-large": "Secret too large (64 KiB max).",
+      "invalid": "Invalid request.",
+      "network": "Secrets service unreachable, try again later."
+    }
   }
 }

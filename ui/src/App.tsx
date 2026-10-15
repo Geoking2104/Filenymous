@@ -19,6 +19,9 @@ import { isP2PHash } from "./p2p/protocol";
 import DropOwnerPanel from "./p2p/dropzone/DropOwnerPanel";
 import DropContributorPanel from "./p2p/dropzone/DropContributorPanel";
 import { isDropHash, isDropOwnerHash } from "./p2p/dropzone/link";
+import VaultCreatePanel from "./vault/VaultCreatePanel";
+import VaultRevealPanel from "./vault/VaultRevealPanel";
+import { isSecretHash } from "./vault/crypto";
 import "./styles.css";
 import "./styles-notify.css";
 
@@ -72,6 +75,19 @@ export default function App() {
       unlisten();
     };
   }, [setNet, setTab]);
+
+  if (hash === "#secret-new" || isSecretHash(hash)) {
+    return (
+      <div className="app">
+        <Header minimal />
+        <main className="main panel-enter">
+          {isSecretHash(hash) ? <VaultRevealPanel hash={hash} /> : <VaultCreatePanel />}
+        </main>
+        <Footer />
+        <ToastStack />
+      </div>
+    );
+  }
 
   if (isDropOwnerHash(hash) || isDropHash(hash)) {
     return (

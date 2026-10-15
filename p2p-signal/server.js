@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { createHash, createHmac } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
+import { createVault } from "./vault.js";
 
 const port = Number(process.env.PORT || 8789);
 const allowedOrigins = (process.env.ALLOWED_ORIGIN || "")
@@ -300,6 +301,8 @@ function iceServers() {
   return servers;
 }
 
+const vault = createVault({ clientIp });
+
 function httpHandler(req, res) {
   const path = (req.url || "/").split("?")[0].replace(/^\/filenymous-signal/, "") || "/";
   const origin = req.headers.origin;
@@ -307,6 +310,14 @@ function httpHandler(req, res) {
   if (origin && originAllowed(origin)) {
     headers["access-control-allow-origin"] = origin;
     headers["access-control-allow-methods"] = "GET, OPTIONS";
+  }
+  if (path.startsWith("/api/v1/secrets")) {
+    if (origin && !originAllowed(origin)) {
+      res.writeHead(403, headers);
+      return res.end(JSON.stringify({ error: "origin-not-allowed" }));
+    }
+    vault.handle(req, res, path, headers);
+    return;
   }
   if (req.method === "OPTIONS") {
     res.writeHead(204, headers);
