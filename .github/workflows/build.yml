@@ -95,6 +95,29 @@ jobs:
           src/web_mode_standalone.test.ts
         working-directory: tests
 
+  cli-tests:
+    name: CLI (filenymous) tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cli/package-lock.json
+      - name: Install relay dependencies
+        run: npm ci
+        working-directory: p2p-signal
+      - name: Install CLI dependencies
+        run: npm ci
+        working-directory: cli
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: cli
+      - name: Unit + CLI⇄CLI loopback over a local relay
+        run: npm test
+        working-directory: cli
+
   # ── UI single-file HTML → ui.zip ─────────────────────────────────────────────
   # L'UI est filenymous-app.html (standalone, pas de build step Vite).
   # Holochain Launcher + Holo Host attendent index.html à la racine du zip.

@@ -23,5 +23,7 @@ test.describe("home services carousel", () => {
     await expect(teaserBtn).toHaveAttribute("aria-expanded", "true");
     await expect(page.getByTestId("soon-whistle").locator(".pz-teaser")).toBeVisible();
     await expect(page.getByTestId("pro-entry")).toHaveAttribute("href", "#drop-new");
+    await expect(page.getByTestId("cli-docs")).toHaveAttribute("href", /\/cli#readme$/);
+    await expect(page.getByTestId("soon-cli")).toHaveCount(0);
   });
 });

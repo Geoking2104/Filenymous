@@ -75,6 +75,8 @@ function Benefits({ prefix }: { prefix: string }) {
   );
 }
 
+const CLI_DOCS_URL = "https://github.com/Geoking2104/Filenymous/tree/main/cli#readme";
+
 function SoonCard({ id, emoji }: { id: string; emoji: string }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -276,7 +278,16 @@ export default function HomeApp({ hash }: { hash: string }) {
             <a className="pz-btn pz-btn-block" href="#secret-new" data-testid="vault-entry">{t("home.secret.cta")}</a>
           </article>
           <SoonCard id="whistle" emoji="🛡️" />
-          <SoonCard id="cli" emoji="🤖" />
+          <article className="pz-service pz-service--cli" aria-labelledby="svc-cli">
+            <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
+            <div className="pz-service-head">
+              <span className="pz-service-icon" aria-hidden="true">🤖</span>
+              <h2 id="svc-cli">{t("home.cli.title")}</h2>
+            </div>
+            <p className="pz-service-lead">{t("home.cli.lead")}</p>
+            <Benefits prefix="home.cli" />
+            <a className="pz-btn pz-btn-block" href={CLI_DOCS_URL} target="_blank" rel="noopener noreferrer" data-testid="cli-docs">{t("home.cli.cta")}</a>
+          </article>
           <article className="pz-service pz-service--pro" aria-labelledby="svc-pro">
             <span className="pz-badge pz-badge--pro">{t("home.badgePro")}</span>
             <div className="pz-service-head">

@@ -606,14 +606,14 @@
     },
     "cli": {
       "title": "CLI & API CI/CD",
-      "lead": "Partagez builds, logs et sauvegardes depuis vos pipelines.",
+      "lead": "Partagez builds, logs et sauvegardes depuis vos pipelines, en pair-à-pair.",
       "b1": "Une commande",
-      "b1d": "filenymous upload app.zip --ttl 1h",
+      "b1d": "npx filenymous upload app.zip --ttl 1h",
       "b2": "Liens éphémères",
-      "b2d": "Expiration automatique pour artefacts, logs et backups.",
+      "b2d": "Expire après le TTL ou N téléchargements ; webhook à chaque étape.",
       "b3": "Aucun bucket S3",
-      "b3d": "Rien à configurer, donc rien à mal configurer.",
-      "teaser": "CLI et API REST en préparation pour GitHub Actions, GitLab CI et scripts."
+      "b3d": "Rien n'est stocké sur un serveur : la CLI envoie directement au destinataire.",
+      "cta": "Lire la documentation"
     },
     "stream": {
       "title": "Partage streamé",
@@ -626,6 +626,7 @@
       "b3d": "Même chiffrement que le transfert direct.",
       "teaser": "Lecture progressive via Media Source Extensions, en cours de prototypage."
     },
-    "badgePro": "Pro"
+    "badgePro": "Pro",
+    "badgeNew": "Nouveau"
   }
 }

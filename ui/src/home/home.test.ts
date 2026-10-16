@@ -51,7 +51,7 @@ describe("carousel", () => {
   it("coming-soon cards have honest, translated teasers and badges", () => {
     for (const loc of [fr, en] as Array<{ home: Record<string, any> }>) {
       expect(loc.home.soon).toBeTruthy();
-      for (const id of ["whistle", "cli", "stream"]) expect(loc.home[id].teaser).toBeTruthy();
+      for (const id of ["whistle", "stream"]) expect(loc.home[id].teaser).toBeTruthy();
       const w = JSON.stringify(loc.home.whistle).toLowerCase();
       for (const bad of ["anonymat absolu", "absolute anonymity", "certifi", "iso 27001", "iso27001", "masqu"]) expect(w).not.toContain(bad);
     }
