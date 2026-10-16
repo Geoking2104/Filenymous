@@ -534,7 +534,7 @@
   },
   "home": {
     "title": "Share with confidence, no account, no cloud.",
-    "subtitle": "Three end-to-end encrypted tools, right in your browser. Pick one, you’re set in two clicks.",
+    "subtitle": "End-to-end encrypted tools, right in your browser. Pick one, you’re set in two clicks.",
     "back": "Home",
     "leaveConfirm": "A transfer is in progress. Leaving now will interrupt it. Continue?",
     "codeLabel": "Got a code?",
@@ -570,6 +570,62 @@
       "b3d": "Extra protection in case the link travels.",
       "cta": "Create a secret link"
     },
-    "codePlaceholder": "123-456-ABC or link"
+    "codePlaceholder": "123-456-ABC or link",
+    "carousel": {
+      "label": "Filenymous services",
+      "hint": "Services — use left/right arrows to navigate",
+      "prev": "Previous service",
+      "next": "Next service",
+      "dots": "Choose a service",
+      "slide": "Service {{n}} of {{total}}"
+    },
+    "soon": "Coming soon",
+    "pro": {
+      "title": "Client–Provider Space",
+      "lead": "Collect confidential documents from your clients, with no infrastructure.",
+      "cta": "Create a project space",
+      "b1": "One link per project",
+      "b1d": "For lawyers, accountants and freelancers.",
+      "b2": "End-to-end encrypted",
+      "b2d": "Files land directly on your device.",
+      "b3": "Zero infrastructure",
+      "b3d": "No server and no client accounts to manage."
+    },
+    "teaser": "Learn more",
+    "teaserClose": "Hide",
+    "whistle": {
+      "title": "Whistleblowing channel",
+      "lead": "Anonymous encrypted drop for whistleblowers, journalists and internal audits.",
+      "b1": "No IP kept, Tor-friendly",
+      "b1d": "No address logs, no cookies or trackers; works over Tor.",
+      "b2": "Metadata stripped",
+      "b2d": "EXIF and PDF properties removed in the browser before upload.",
+      "b3": "Follow-up key, no email",
+      "b3d": "One-way follow-up with no account or email address.",
+      "teaser": "Designed with GDPR and the EU Whistleblower Directive requirements in mind. In design."
+    },
+    "cli": {
+      "title": "CLI & API for CI/CD",
+      "lead": "Share builds, logs and backups straight from your pipelines.",
+      "b1": "One command",
+      "b1d": "filenymous upload app.zip --ttl 1h",
+      "b2": "Ephemeral links",
+      "b2d": "Auto-expiry for artifacts, logs and backups.",
+      "b3": "No S3 bucket",
+      "b3d": "Nothing to configure, so nothing to misconfigure.",
+      "teaser": "CLI and REST API in the works for GitHub Actions, GitLab CI and scripts."
+    },
+    "stream": {
+      "title": "Streamed sharing",
+      "lead": "Play large video or audio while it downloads.",
+      "b1": "Instant playback",
+      "b1d": "Playback starts before the transfer ends.",
+      "b2": "Spares your disk",
+      "b2d": "Quick review of rushes without storing everything.",
+      "b3": "Still peer-to-peer",
+      "b3d": "Same encryption as direct transfer.",
+      "teaser": "Progressive playback via Media Source Extensions, being prototyped."
+    },
+    "badgePro": "Pro"
   }
 }
