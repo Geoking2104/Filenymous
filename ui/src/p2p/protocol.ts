@@ -25,7 +25,7 @@ export interface P2PFileInfo {
 }
 
 export type P2PControl =
-  | { type: "manifest"; v: number; files: P2PFileInfo[]; chunkSize: number; wrappedSecret: string; message?: string; device?: string; auth?: P2PAuthChallenge; protected?: boolean }
+  | { type: "manifest"; v: number; files: P2PFileInfo[]; chunkSize: number; wrappedSecret: string; message?: string; device?: string; auth?: P2PAuthChallenge; protected?: boolean; streamable?: boolean }
   | { type: "start"; files?: number[] }
   | { type: "file-end"; index: number; chunks: number }
   | { type: "done" }
@@ -36,7 +36,18 @@ export type P2PControl =
   | { type: "hello"; device?: string }
   | { type: "auth"; proof: string }
   | { type: "auth-ok" }
-  | { type: "auth-fail"; remaining: number };
+  | { type: "auth-fail"; remaining: number }
+  /**
+   * Streaming (manifest.streamable): the receiver asks for chunks [from..to]
+   * of one file, out of order. The sender answers with the usual sealed
+   * frames (same per-(file, chunk) IV, so a resent chunk is byte-identical).
+   * `prefetch` ranges are served after any on-demand range (player seeks).
+ * Receivers/senders that don't know this message simply never send it.
+   */
+  | { type: "range"; index: number; from: number; to: number; prefetch?: boolean };
+
+/** Max chunks one range request may ask for (4 MiB). */
+export const MAX_RANGE_CHUNKS = 64;
 
 /**
  * Password gate. A protected session first sends a v3 "locked" manifest
@@ -273,6 +284,11 @@ export function parseControl(text: string): P2PControl | null {
         if (!a || typeof a.salt !== "string" || typeof a.nonce !== "string" || !Number.isSafeInteger(a.iter)) return null;
         if (a.iter < 100_000 || a.iter > 5_000_000) return null;
       }
+    }
+    if (msg.type === "range") {
+      const { index, from, to } = msg;
+      if (![index, from, to].every((n) => Number.isSafeInteger(n) && n >= 0)) return null;
+      if (to < from || to - from >= MAX_RANGE_CHUNKS) return null;
     }
     if ("device" in msg && msg.device !== undefined) {
       if (typeof msg.device !== "string") return null;

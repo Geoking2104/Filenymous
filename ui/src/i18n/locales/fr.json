@@ -617,16 +617,30 @@
     },
     "stream": {
       "title": "Partage streamé",
-      "lead": "Lisez une vidéo ou un son volumineux pendant son téléchargement.",
+      "lead": "Lisez une vidéo ou un son volumineux pendant son transfert, en pair-à-pair.",
       "b1": "Lecture immédiate",
-      "b1d": "La lecture démarre sans attendre la fin du transfert.",
+      "b1d": "La lecture démarre sans attendre la fin ; l'avance rapide charge à la demande.",
       "b2": "Disque épargné",
-      "b2d": "Revue rapide de rushes sans tout stocker.",
-      "b3": "Toujours pair-à-pair",
-      "b3d": "Même chiffrement que le transfert direct.",
-      "teaser": "Lecture progressive via Media Source Extensions, en cours de prototypage."
+      "b2d": "Revue rapide de rushes sans tout stocker ; enregistrement possible.",
+      "b3": "Toujours chiffré",
+      "b3d": "Mêmes blocs AES-GCM et même mot de passe que le transfert direct.",
+      "cta": "Partager une vidéo ou un son"
     },
     "badgePro": "Pro",
     "badgeNew": "Nouveau"
+  },
+  "stream": {
+    "senderOption": "Partager en streaming",
+    "senderOptionHint": "Le destinataire peut lire la vidéo ou l'audio pendant le transfert (et l'enregistrer).",
+    "senderStreaming": "Lecture en streaming chez le destinataire · {{size}} envoyés",
+    "play": "Lire en streaming",
+    "playing": "Lecture en streaming — déchiffrée dans votre navigateur",
+    "preparing": "Préparation du lecteur…",
+    "buffered": "{{size}} reçus sur {{total}}",
+    "choose": "Choisir le fichier à lire",
+    "save": "Enregistrer le fichier ({{size}})",
+    "saving": "Enregistrement…",
+    "afterDownload": "Format non lisible en streaming dans ce navigateur : lecture après téléchargement.",
+    "noWorker": "Le streaming n'est pas disponible dans ce navigateur (Service Worker bloqué) : lecture après téléchargement."
   }
 }

@@ -7,6 +7,9 @@ import { p2pSupported } from "./config";
 import { formatBytes } from "../ux-v3/types";
 import { describeDevice } from "./device";
 import PigeonFlight from "../home/PigeonFlight";
+import StreamPlayer from "./StreamPlayer";
+import { canPlayInBrowser, mediaKind } from "./media";
+import { streamingAvailable, type StreamReader } from "./stream";
 
 interface Props {
   hash: string;
@@ -17,6 +20,8 @@ export default function P2PReceivePanel({ hash }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<ReceiverState>({ status: "connecting", files: [], receivedBytes: 0, totalBytes: 0, speed: 0 });
   const receiverRef = useRef<P2PReceiver | null>(null);
+  const [reader, setReader] = useState<StreamReader | null>(null);
+  const [noSw, setNoSw] = useState(false);
   const parsed = parseShareInput(hash);
 
   useEffect(() => {
@@ -48,6 +53,18 @@ export default function P2PReceivePanel({ hash }: Props) {
   const pct = state.totalBytes ? Math.min(100, Math.round((state.receivedBytes / state.totalBytes) * 100)) : 0;
   const streaming = canStreamToDisk(state.files.length);
 
+  const playable = state.streamable ? state.files.map((f, i) => (canPlayInBrowser(f.name, f.mime) ? i : -1)).filter((i) => i >= 0) : [];
+  const hasMedia = state.files.some((f) => mediaKind(f.name, f.mime));
+  const canStream = playable.length > 0 && !noSw && typeof navigator !== "undefined" && "serviceWorker" in navigator;
+  const startStream = async () => {
+    if (!(await streamingAvailable())) return setNoSw(true);
+    try {
+      setReader(receiverRef.current?.startStreaming() ?? null);
+    } catch {
+      setNoSw(true);
+    }
+  };
+
   const download = async () => {
     try {
       const sink = await chooseSink(state.files);
@@ -73,6 +90,8 @@ export default function P2PReceivePanel({ hash }: Props) {
         return t("p2p.receiving", { pct });
       case "complete":
         return t("p2p.recvComplete");
+      case "streaming":
+        return t("stream.playing");
       case "error":
         if (state.error === "ice-failed" || state.error === "ice-timeout") return t("p2p.iceFailed");
         if (state.error === "role-taken") return t("p2p.roleTaken");
@@ -142,6 +161,18 @@ export default function P2PReceivePanel({ hash }: Props) {
         <button type="button" className="v3-btn-ghost" onClick={() => location.reload()}>
           {t("p2p.retry")}
         </button>
+      )}
+      {state.status === "streaming" && reader && (
+        <StreamPlayer reader={reader} files={state.files} playable={playable} receivedBytes={state.receivedBytes} onUnavailable={() => setNoSw(true)} />
+      )}
+      {state.status === "streaming" && noSw && <div className="v3-warn" data-testid="p2p-stream-unsupported">{t("stream.noWorker")}</div>}
+      {state.status === "ready" && state.streamable && canStream && (
+        <button type="button" className="v3-btn-primary pz-stream-play" data-testid="p2p-stream-play" onClick={() => void startStream()}>
+          ▶ {t("stream.play")}
+        </button>
+      )}
+      {state.status === "ready" && state.streamable && hasMedia && !canStream && (
+        <div className="v3-warn" data-testid="p2p-stream-unsupported">{t("stream.afterDownload")}</div>
       )}
       {state.status === "ready" && (
         <>

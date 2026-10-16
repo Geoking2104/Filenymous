@@ -4,6 +4,7 @@
  * in the same shell (header, card, legal footer).
  */
 import { Carousel } from "./Carousel";
+import { mediaKind } from "../p2p/media";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import P2PSendPanel from "../p2p/P2PSendPanel";
@@ -121,6 +122,8 @@ export default function HomeApp({ hash }: { hash: string }) {
   const input = useRef<HTMLInputElement>(null);
   const more = useRef<HTMLInputElement>(null);
   const [password, setPassword] = useState("");
+  const [stream, setStream] = useState(false);
+  const mediaInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.title = t("pz.docTitle");
@@ -143,6 +146,7 @@ export default function HomeApp({ hash }: { hash: string }) {
     setSending(null);
     setPicked([]);
     setPassword("");
+    setStream(false);
     if (location.hash) {
       history.replaceState(null, "", location.pathname + location.search);
       window.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -174,7 +178,7 @@ export default function HomeApp({ hash }: { hash: string }) {
   } else if (receiving) {
     body = <P2PReceivePanel hash={hash} />;
   } else if (sending) {
-    body = <P2PSendPanel files={sending} password={password} onStop={reset} />;
+    body = <P2PSendPanel files={sending} password={password} stream={stream} onStop={reset} />;
   } else if (picked.length > 0) {
     body = (
       <div className="pz-card" data-testid="review-step">
@@ -208,9 +212,18 @@ export default function HomeApp({ hash }: { hash: string }) {
           <input id="pz-password" type="password" autoComplete="new-password" data-testid="send-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           <span id="pz-pw-info" className="pz-pw-hint">{t("pw.info")}</span>
         </div>
+        {picked.some((f) => mediaKind(f.name, f.type)) && (
+          <label className="pz-stream-opt">
+            <input type="checkbox" data-testid="send-stream" checked={stream} onChange={(e) => setStream(e.target.checked)} />
+            <span>
+              <strong>🎥 {t("stream.senderOption")}</strong>
+              <small>{t("stream.senderOptionHint")}</small>
+            </span>
+          </label>
+        )}
         {!p2pSupported() && <div className="v3-warn">{t("p2p.unsupported")}</div>}
         <div className="pz-actions">
-          <button type="button" className="pz-btn-ghost" onClick={() => { setPicked([]); setPassword(""); }}>
+          <button type="button" className="pz-btn-ghost" onClick={() => { setPicked([]); setPassword(""); setStream(false); }}>
             {t("common.cancel")}
           </button>
           <button type="button" className="pz-btn" data-testid="start-send" disabled={!p2pSupported()} onClick={() => setSending(picked)}>
@@ -298,7 +311,17 @@ export default function HomeApp({ hash }: { hash: string }) {
             <Benefits prefix="home.pro" />
             <a className="pz-btn pz-btn-block" href="#drop-new" data-testid="pro-entry">{t("home.pro.cta")}</a>
           </article>
-          <SoonCard id="stream" emoji="🎥" />
+          <article className="pz-service pz-service--stream" aria-labelledby="svc-stream">
+            <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
+            <div className="pz-service-head">
+              <span className="pz-service-icon" aria-hidden="true">🎥</span>
+              <h2 id="svc-stream">{t("home.stream.title")}</h2>
+            </div>
+            <p className="pz-service-lead">{t("home.stream.lead")}</p>
+            <Benefits prefix="home.stream" />
+            <input ref={mediaInput} type="file" accept="video/*,audio/*" multiple hidden data-testid="stream-input" onChange={(e) => { if (e.currentTarget.files?.length) setStream(true); add(e.currentTarget.files); e.currentTarget.value = ""; }} />
+            <button type="button" className="pz-btn pz-btn-block" data-testid="stream-entry" onClick={() => mediaInput.current?.click()}>{t("home.stream.cta")}</button>
+          </article>
         </Carousel>
         <form
           className="pz-code v3-receive-row"

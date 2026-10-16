@@ -26,6 +26,7 @@ import {
 } from "./protocol";
 import { SignalClient, iceCandidateInit, type SignalPayload } from "./signal";
 import type { FileSink } from "./sink";
+import { StreamReader } from "./stream";
 
 const HIGH_WATER = 4 * 1024 * 1024;
 export const LOW_WATER = 1 * 1024 * 1024;
@@ -44,7 +45,9 @@ export type SenderStatus =
   | "failed"
   | "reconnecting"
   | "error"
-  | "stopped";
+  | "stopped"
+  /** Streaming share: serving byte ranges to a player. */
+  | "streaming";
 
 export type FileDeliveryState = "pending" | "sending" | "delivered" | "failed";
 
@@ -89,7 +92,8 @@ export type ReceiverStatus =
   | "ready"
   | "receiving"
   | "complete"
-  | "error";
+  | "error"
+  | "streaming";
 
 export interface ReceiverState {
   status: ReceiverStatus;
@@ -105,6 +109,8 @@ export interface ReceiverState {
   authRemaining?: number;
   /** Browser · OS of the sender (from the manifest). */
   peerDevice?: string;
+  /** The sender offers streaming (range requests). */
+  streamable?: boolean;
   error?: string;
 }
 
@@ -159,6 +165,10 @@ interface Attempt {
   open: boolean;
   started: boolean;
   finished: boolean;
+  /** Streaming: chunks still to send, on-demand before prefetch. */
+  demand?: Array<[number, number]>;
+  prefetch?: Array<[number, number]>;
+  pumping?: boolean;
   /** Password sessions: set once the recipient proved the password. */
   authed: boolean;
   nonce: string;
@@ -190,12 +200,15 @@ export class P2PSender {
   /** Coalesces concurrent offer() calls (start + peer-joined racing). */
   private offerGen = 0;
   private connectTimer: ReturnType<typeof setTimeout> | undefined;
+  private readonly streamable: boolean;
+  private fileKey?: Promise<CryptoKey>;
 
   constructor(
     private readonly files: File[],
     private readonly onState: (s: SenderState) => void,
-    opts: { code?: string; secret?: string; message?: string; signalUrl?: string; password?: string } = {},
+    opts: { code?: string; secret?: string; message?: string; signalUrl?: string; password?: string; stream?: boolean } = {},
   ) {
+    this.streamable = !!opts.stream;
     if (opts.password) {
       this.pwSalt = randomB64(16);
       this.pwKeys = derivePasswordKeys(opts.password, this.pwSalt);
@@ -390,6 +403,14 @@ export class P2PSender {
         case "auth":
           void this.checkAuth(a, msg.proof);
           break;
+        case "range":
+          if (!this.streamable) break;
+          if (this.pwKeys && !a.authed) {
+            this.fail(a, "auth-required");
+            break;
+          }
+          this.queueRange(a, msg.index, msg.from, msg.to, msg.prefetch === true);
+          break;
         case "progress": {
           const now = Date.now();
           const bytes = Math.min(this.state.totalBytes, Math.max(0, Number(msg.bytes) || 0));
@@ -482,8 +503,51 @@ export class P2PSender {
       ...(this.message ? { message: this.message } : {}),
       device: describeDevice(),
       ...(this.pwKeys ? { protected: true } : {}),
+      ...(this.streamable ? { streamable: true } : {}),
     });
     if (this.attempt === a) this.update({ status: "connected", error: undefined });
+  }
+
+  private key(): Promise<CryptoKey> {
+    this.fileKey ??= (async () => deriveFileKey(this.secret, this.pwKeys ? (await this.pwKeys).mix : undefined))();
+    return this.fileKey;
+  }
+
+  /** Streaming: queue a range request; on-demand chunks jump ahead of prefetch. */
+  private queueRange(a: Attempt, index: number, from: number, to: number, prefetch: boolean) {
+    const file = this.files[index];
+    if (!file) return;
+    const last = chunkCount(file.size) - 1;
+    const list = prefetch ? (a.prefetch ??= []) : (a.demand ??= []);
+    for (let c = from; c <= Math.min(to, last); c++) list.push([index, c]);
+    if (!a.pumping) void this.pumpRanges(a).catch((e) => this.fail(a, String((e as Error).message || e)));
+  }
+
+  private async pumpRanges(a: Attempt) {
+    a.pumping = true;
+    try {
+      const key = await this.key();
+      const delay = Number((globalThis as { __FILENYMOUS_TEST_CHUNK_DELAY_MS__?: number }).__FILENYMOUS_TEST_CHUNK_DELAY_MS__) || 0;
+      const sent = new Set<string>();
+      for (;;) {
+        const next = a.demand?.shift() ?? a.prefetch?.shift();
+        if (!next) break;
+        const [index, c] = next;
+        // Skip a prefetch chunk that was just sent on demand (and vice versa).
+        const k = `${index}:${c}`;
+        if (sent.has(k)) continue;
+        sent.add(k);
+        if (sent.size > 4096) sent.clear();
+        if (this.attempt !== a || a.channel.readyState !== "open") throw new Error("connection-lost");
+        const slice = new Uint8Array(await this.files[index]!.slice(c * P2P_CHUNK_SIZE, (c + 1) * P2P_CHUNK_SIZE).arrayBuffer());
+        await waitForDrain(a.channel);
+        if (delay) await new Promise((r) => setTimeout(r, delay));
+        a.channel.send(await sealChunk(key, index, c, slice));
+        this.update({ status: "streaming", sentBytes: this.state.sentBytes + slice.byteLength, error: undefined });
+      }
+    } finally {
+      a.pumping = false;
+    }
   }
 
   private async stream(a: Attempt) {
@@ -565,6 +629,7 @@ export class P2PReceiver {
   private offerGen = 0;
   private challenge: P2PAuthChallenge | null = null;
   private pwMix: Uint8Array | null = null;
+  private streamReader: StreamReader | null = null;
 
   constructor(
     private readonly code: string,
@@ -677,7 +742,7 @@ export class P2PReceiver {
       this.queue = this.queue.then(() => this.handle(data)).catch((e) => this.fail(String((e as Error).message || e)));
     };
     channel.onclose = () => {
-      if (this.state.status === "receiving" || this.state.status === "ready" || this.state.status === "password") this.fail("sender-disconnected");
+      if (["receiving", "ready", "password", "streaming"].includes(this.state.status)) this.fail("sender-disconnected");
     };
   }
 
@@ -724,6 +789,7 @@ export class P2PReceiver {
           files: msg.files,
           message: msg.message,
           peerDevice: msg.device,
+          streamable: msg.streamable === true,
           totalBytes: msg.files.reduce((n, f) => n + f.size, 0),
         });
         this.channel?.send(JSON.stringify({ type: "hello", device: describeDevice() }));
@@ -749,6 +815,12 @@ export class P2PReceiver {
       } else if (msg.type === "cancel") {
         this.fail(msg.reason === "sender-stopped" ? "sender-stopped" : msg.reason || "cancelled");
       }
+      return;
+    }
+    if (this.streamReader) {
+      await this.streamReader.onFrame(data).catch(() => {
+        throw new Error("decrypt-error");
+      });
       return;
     }
     if (!this.key || !this.sink) throw new Error("unexpected-data");
@@ -777,6 +849,25 @@ export class P2PReceiver {
     const proof = await passwordProof(keys, this.code, c.nonce);
     this.pwMix = keys.mix;
     this.channel.send(JSON.stringify({ type: "auth", proof }));
+  }
+
+  /**
+   * Streaming mode (sender advertised `streamable`): instead of the sequential
+   * download, chunks are fetched on demand by byte range for a media player.
+   */
+  startStreaming(): StreamReader {
+    if (this.streamReader) return this.streamReader;
+    if (this.state.status !== "ready" || !this.state.streamable || !this.key) throw new Error("not-streamable");
+    if (!this.channel || this.channel.readyState !== "open") throw new Error("sender-disconnected");
+    const channel = this.channel;
+    this.streamReader = new StreamReader(
+      this.key,
+      this.state.files,
+      (msg) => channel.readyState === "open" && channel.send(JSON.stringify(msg)),
+      (bytes) => this.update({ receivedBytes: bytes }),
+    );
+    this.update({ status: "streaming", receivedBytes: 0 });
+    return this.streamReader;
   }
 
   /** Call after the user picked a destination (chooseSink in a click handler). */
