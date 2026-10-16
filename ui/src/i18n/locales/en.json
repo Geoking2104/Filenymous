@@ -531,5 +531,45 @@
       "invalid": "Invalid request.",
       "network": "Secrets service unreachable, try again later."
     }
+  },
+  "home": {
+    "title": "Share with confidence, no account, no cloud.",
+    "subtitle": "Three end-to-end encrypted tools, right in your browser. Pick one, you’re set in two clicks.",
+    "back": "Home",
+    "leaveConfirm": "A transfer is in progress. Leaving now will interrupt it. Continue?",
+    "codeLabel": "Got a code?",
+    "send": {
+      "title": "Send files",
+      "lead": "Straight from your browser to your recipient’s.",
+      "b1": "End-to-end encrypted",
+      "b1d": "AES-256; the key never leaves the link.",
+      "b2": "Nothing stored",
+      "b2d": "Files go straight to the recipient, no size limit.",
+      "b3": "No account",
+      "b3d": "A link, a QR code or a short code is all it takes."
+    },
+    "drop": {
+      "title": "Receive files",
+      "lead": "A drop link so your contacts can send you their files.",
+      "b1": "No sign-up for anyone",
+      "b1d": "Your contacts just drag and drop.",
+      "b2": "100% peer-to-peer",
+      "b2d": "Nothing on a server: everything lands on your device.",
+      "b3": "Password and expiry",
+      "b3d": "You decide who can drop, and until when.",
+      "cta": "Create a Dropzone"
+    },
+    "secret": {
+      "title": "Send a secret",
+      "lead": "Password, API key, access code: delivered exactly once.",
+      "b1": "Read once",
+      "b1d": "The secret self-destructs as soon as it’s read.",
+      "b2": "Key never sent",
+      "b2d": "Encrypted in your browser; the server only sees ciphertext.",
+      "b3": "Optional password",
+      "b3d": "Extra protection in case the link travels.",
+      "cta": "Create a secret link"
+    },
+    "codePlaceholder": "123-456-ABC or link"
   }
 }

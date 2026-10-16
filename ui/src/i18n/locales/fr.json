@@ -531,5 +531,45 @@
       "invalid": "Requête invalide.",
       "network": "Service de secrets injoignable, réessayez plus tard."
     }
+  },
+  "home": {
+    "title": "Partagez en toute confiance, sans compte ni nuage.",
+    "subtitle": "Trois outils chiffrés de bout en bout, directement dans votre navigateur. Choisissez, c’est prêt en deux clics.",
+    "back": "Accueil",
+    "leaveConfirm": "Un transfert est en cours. Quitter maintenant l’interrompra. Continuer ?",
+    "codeLabel": "Vous avez reçu un code ?",
+    "send": {
+      "title": "Envoyer des fichiers",
+      "lead": "De votre navigateur à celui du destinataire, en direct.",
+      "b1": "Chiffré de bout en bout",
+      "b1d": "AES-256 ; la clé ne quitte jamais le lien.",
+      "b2": "Aucun stockage",
+      "b2d": "Les fichiers vont droit au destinataire, sans limite de taille.",
+      "b3": "Sans compte",
+      "b3d": "Un lien, un QR code ou un code court suffit."
+    },
+    "drop": {
+      "title": "Recevoir des fichiers",
+      "lead": "Un lien de dépôt pour que vos contacts vous envoient leurs fichiers.",
+      "b1": "Collecte sans compte",
+      "b1d": "Vos contacts glissent-déposent, c’est tout.",
+      "b2": "100 % pair-à-pair",
+      "b2d": "Rien sur un serveur : tout arrive sur votre appareil.",
+      "b3": "Mot de passe et expiration",
+      "b3d": "Vous décidez qui dépose, et jusqu’à quand.",
+      "cta": "Créer une Dropzone"
+    },
+    "secret": {
+      "title": "Envoyer un secret",
+      "lead": "Mot de passe, clé d’API, code d’accès : transmis une seule fois.",
+      "b1": "Lecture unique",
+      "b1d": "Le secret s’autodétruit dès qu’il est lu.",
+      "b2": "Clé jamais envoyée",
+      "b2d": "Chiffré dans votre navigateur ; le serveur ne voit que du chiffré.",
+      "b3": "Mot de passe optionnel",
+      "b3d": "Une protection de plus, si le lien circule.",
+      "cta": "Créer un lien secret"
+    },
+    "codePlaceholder": "123-456-ABC ou lien"
   }
 }

@@ -8,7 +8,7 @@
 import { test, expect } from "@playwright/test";
 
 // The optical send/receive panels are no longer mounted in any reachable UI
-// (neither the file.pizza-style page nor #legacy), so their UI tests were
+// (neither the single page nor #legacy), so their UI tests were
 // removed. The protocol itself stays covered here and in src/qrferry/*.test.ts.
 
 test.describe("Protocol round-trip", () => {

@@ -5,7 +5,7 @@ import { P2PSender, type SenderState } from "./session";
 import { buildShareLink } from "./protocol";
 import { formatBytes } from "../ux-v3/types";
 import { describeDevice } from "./device";
-import PigeonFlight from "../pizza/PigeonFlight";
+import PigeonFlight from "../home/PigeonFlight";
 
 interface Props {
   files: File[];

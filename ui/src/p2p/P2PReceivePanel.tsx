@@ -6,7 +6,7 @@ import { MEMORY_SINK_SOFT_LIMIT, canStreamToDisk, chooseSink } from "./sink";
 import { p2pSupported } from "./config";
 import { formatBytes } from "../ux-v3/types";
 import { describeDevice } from "./device";
-import PigeonFlight from "../pizza/PigeonFlight";
+import PigeonFlight from "../home/PigeonFlight";
 
 interface Props {
   hash: string;

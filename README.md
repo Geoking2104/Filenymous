@@ -54,7 +54,7 @@ The previous multi-panel UI (self-contained `#sl=` links, rooms, contacts…) is
 
 | Part | Where | What |
 |---|---|---|
-| UI | `ui/` (React 18 + Vite + TypeScript, i18next) | `src/pizza/` single-page shell, `src/p2p/` protocol, session, signaling client, sinks and UA parsing. |
+| UI | `ui/` (React 18 + Vite + TypeScript, i18next) | `src/home/` single-page shell, `src/p2p/` protocol, session, signaling client, sinks and UA parsing. |
 | Signaling | `p2p-signal/server.js` (Node + `ws`, port 8789) | On a VPS behind nginx at `wss://www.opendpe.net/filenymous-signal/`. Relays only offers, answers and ICE candidates for a one-time code room. `GET /ice` returns STUN plus short-lived TURN credentials. Stores nothing. |
 | TURN | coturn with `use-auth-secret` (TURN REST API) | Used only when a direct connection is impossible (strict NAT, corporate firewall). Credentials are per-request and valid for 1 h. The relay forwards encrypted bytes only. |
 | Hosting | OVH shared hosting | Static build served at `https://filenymous.eu/app/`. |
@@ -158,7 +158,7 @@ L'ancienne interface multi-panneaux (liens autonomes `#sl=`, salons, contacts…
 
 | Élément | Où | Rôle |
 |---|---|---|
-| Interface | `ui/` (React 18 + Vite + TypeScript, i18next) | `src/pizza/` pour la page unique, `src/p2p/` pour le protocole, la session, le client de signalisation, l'écriture des fichiers et l'analyse du user agent. |
+| Interface | `ui/` (React 18 + Vite + TypeScript, i18next) | `src/home/` pour la page unique, `src/p2p/` pour le protocole, la session, le client de signalisation, l'écriture des fichiers et l'analyse du user agent. |
 | Signalisation | `p2p-signal/server.js` (Node + `ws`, port 8789) | VPS derrière nginx, `wss://www.opendpe.net/filenymous-signal/`. Ne relaie que les offres, réponses et candidats ICE d'un salon à code unique. `GET /ice` fournit le STUN et des identifiants TURN éphémères. Ne stocke rien. |
 | TURN | coturn en `use-auth-secret` (API REST TURN) | Utilisé seulement si la connexion directe est impossible. Identifiants par requête, valables 1 h. Le relais ne transmet que des octets chiffrés. |
 | Hébergement | Hébergement mutualisé OVH | Build statique servi sur `https://filenymous.eu/app/`. |
