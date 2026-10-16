@@ -1,6 +1,7 @@
 /**
- * Single-page, file.pizza-style shell: drop a file → link + QR → the
- * recipient opens it and downloads. Minimal header, legal-only footer.
+ * Single-page shell. Home shows the three services (direct transfer,
+ * Dropzone, Secrets Vault), each with three benefits; every flow then renders
+ * in the same shell (header, card, legal footer).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,20 +14,63 @@ import type { AppLanguage } from "../i18n";
 import LegalFooter from "./LegalFooter";
 import { openTerms } from "./TermsModal";
 import "../ux-v3/styles/ux-v3.css";
-import "./pizza.css";
+import DropOwnerPanel from "../p2p/dropzone/DropOwnerPanel";
+import DropContributorPanel from "../p2p/dropzone/DropContributorPanel";
+import VaultCreatePanel from "../vault/VaultCreatePanel";
+import VaultRevealPanel from "../vault/VaultRevealPanel";
+import { serviceRoute } from "./routes";
+import { unloadGuardActive } from "../p2p/unloadGuard";
+import "./home.css";
 
 function Logo() {
   return (
-    <svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true">
-      <circle cx="16" cy="16" r="15" fill="#0f172a" />
+    <svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true" className="pz-logo">
+      <defs>
+        <linearGradient id="fy-logo" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="var(--fy-accent)" />
+          <stop offset="1" stopColor="var(--fy-accent-2)" />
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="30" height="30" rx="9" fill="url(#fy-logo)" />
       <ellipse cx="14.5" cy="17" rx="5.2" ry="4.2" transform="rotate(-8 14.5 17)" fill="white" />
       <circle cx="21" cy="12.8" r="3.4" fill="white" />
-      <path d="M24 12.5 L27.5 13.8 L24 14.8 Z" fill="#f59e0b" />
+      <path d="M24 12.5 L27.5 13.8 L24 14.8 Z" fill="#fbbf24" />
       <circle cx="22.3" cy="12.2" r="1.1" fill="#0f172a" />
-      <path d="M9 14 Q6 8 11 7.5 Q15 9 14 14" fill="#22d3ee" />
+      <path d="M9 14 Q6 8 11 7.5 Q15 9 14 14" fill="rgba(255,255,255,.75)" />
       <rect x="11.5" y="17.5" width="3.2" height="2.8" rx="0.6" fill="#fbbf24" />
-      <path d="M9 19.5 L5 21.5 L6 23 L9.5 21.8 Z" fill="white" />
     </svg>
+  );
+}
+
+type IconName = "send" | "inbox" | "key" | "check";
+function Icon({ name }: { name: IconName }) {
+  const paths: Record<IconName, JSX.Element> = {
+    send: <path d="M12 16V4m0 0L7 9m5-5 5 5M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />,
+    inbox: <path d="M12 4v11m0 0-4-4m4 4 4-4M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />,
+    key: <path d="M14.5 9.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Zm-1 2.5L20 18.5M17 15.5l2-2M15 13.5l2-2" />,
+    check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  };
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths[name]}
+    </svg>
+  );
+}
+
+function Benefits({ prefix }: { prefix: string }) {
+  const { t } = useTranslation();
+  return (
+    <ul className="pz-benefits">
+      {[1, 2, 3].map((n) => (
+        <li key={n}>
+          <span className="pz-check"><Icon name="check" /></span>
+          <span>
+            <strong>{t(`${prefix}.b${n}`)}</strong>
+            <small>{t(`${prefix}.b${n}d`)}</small>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -44,7 +88,7 @@ function LangSwitch() {
   );
 }
 
-export default function PizzaApp({ hash }: { hash: string }) {
+export default function HomeApp({ hash }: { hash: string }) {
   const { t } = useTranslation();
   const [picked, setPicked] = useState<File[]>([]);
   const [sending, setSending] = useState<File[] | null>(null);
@@ -71,10 +115,15 @@ export default function PizzaApp({ hash }: { hash: string }) {
   };
 
   const reset = () => {
+    // In-app navigation bypasses beforeunload: ask the same question ourselves.
+    if (unloadGuardActive() && !window.confirm(t("home.leaveConfirm"))) return;
     setSending(null);
     setPicked([]);
     setPassword("");
-    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+    if (location.hash) {
+      history.replaceState(null, "", location.pathname + location.search);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    }
   };
 
   const openCode = () => {
@@ -87,10 +136,19 @@ export default function PizzaApp({ hash }: { hash: string }) {
   };
 
   const receiving = isP2PHash(hash);
+  const route = serviceRoute(hash);
   const total = picked.reduce((n, f) => n + f.size, 0);
 
   let body: JSX.Element;
-  if (receiving) {
+  if (route === "drop-contrib") {
+    body = <DropContributorPanel hash={hash} />;
+  } else if (route === "drop-owner") {
+    body = <DropOwnerPanel hash={hash} />;
+  } else if (route === "secret-reveal") {
+    body = <VaultRevealPanel hash={hash} />;
+  } else if (route === "secret-new") {
+    body = <VaultCreatePanel />;
+  } else if (receiving) {
     body = <P2PReceivePanel hash={hash} />;
   } else if (sending) {
     body = <P2PSendPanel files={sending} password={password} onStop={reset} />;
@@ -145,24 +203,58 @@ export default function PizzaApp({ hash }: { hash: string }) {
   } else {
     body = (
       <>
-        <label
-          className={`pz-drop${drag ? " is-drag" : ""}`}
-          data-testid="dropzone"
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDrag(true);
-          }}
-          onDragLeave={() => setDrag(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDrag(false);
-            add(e.dataTransfer.files);
-          }}
-        >
-          <input ref={input} type="file" multiple hidden onChange={(e) => add(e.currentTarget.files)} />
-          <span className="pz-drop-title">{t("pz.dropTitle")}</span>
-          <span className="pz-drop-sub">{t("pz.dropSub")}</span>
-        </label>
+        <section className="pz-hero">
+          <h1>{t("home.title")}</h1>
+          <p>{t("home.subtitle")}</p>
+        </section>
+        <div className="pz-services">
+          <article className="pz-service pz-service--send" aria-labelledby="svc-send">
+            <div className="pz-service-head">
+              <span className="pz-service-icon"><Icon name="send" /></span>
+              <h2 id="svc-send">{t("home.send.title")}</h2>
+            </div>
+            <p className="pz-service-lead">{t("home.send.lead")}</p>
+            <Benefits prefix="home.send" />
+            <label
+              className={`pz-drop${drag ? " is-drag" : ""}`}
+              data-testid="dropzone"
+              tabIndex={0}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), input.current?.click())}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDrag(true);
+              }}
+              onDragLeave={() => setDrag(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDrag(false);
+                add(e.dataTransfer.files);
+              }}
+            >
+              <input ref={input} type="file" multiple hidden onChange={(e) => add(e.currentTarget.files)} />
+              <span className="pz-drop-title">{t("pz.dropTitle")}</span>
+              <span className="pz-drop-sub">{t("pz.dropSub")}</span>
+            </label>
+          </article>
+          <article className="pz-service pz-service--drop" aria-labelledby="svc-drop">
+            <div className="pz-service-head">
+              <span className="pz-service-icon"><Icon name="inbox" /></span>
+              <h2 id="svc-drop">{t("home.drop.title")}</h2>
+            </div>
+            <p className="pz-service-lead">{t("home.drop.lead")}</p>
+            <Benefits prefix="home.drop" />
+            <a className="pz-btn pz-btn-block" href="#drop-new" data-testid="dropzone-entry">{t("home.drop.cta")}</a>
+          </article>
+          <article className="pz-service pz-service--secret" aria-labelledby="svc-secret">
+            <div className="pz-service-head">
+              <span className="pz-service-icon"><Icon name="key" /></span>
+              <h2 id="svc-secret">{t("home.secret.title")}</h2>
+            </div>
+            <p className="pz-service-lead">{t("home.secret.lead")}</p>
+            <Benefits prefix="home.secret" />
+            <a className="pz-btn pz-btn-block" href="#secret-new" data-testid="vault-entry">{t("home.secret.cta")}</a>
+          </article>
+        </div>
         <form
           className="pz-code v3-receive-row"
           onSubmit={(e) => {
@@ -170,13 +262,16 @@ export default function PizzaApp({ hash }: { hash: string }) {
             openCode();
           }}
         >
-          <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("pz.codePlaceholder")} aria-label={t("pz.codeLabel")} autoComplete="off" />
+          <span className="pz-code-label">{t("home.codeLabel")}</span>
+          <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("home.codePlaceholder")} aria-label={t("pz.codeLabel")} autoComplete="off" />
           <button type="submit" className="pz-btn-ghost">{t("pz.codeOpen")}</button>
         </form>
-        {err && <p className="pz-err">{err}</p>}
+        {err && <p className="pz-err" role="alert">{err}</p>}
       </>
     );
   }
+
+  const isHome = route === "home" && !receiving && !sending && picked.length === 0;
 
   return (
     <div className="pz-app">
@@ -198,14 +293,14 @@ export default function PizzaApp({ hash }: { hash: string }) {
         </a>
         <LangSwitch />
       </header>
-      <main className="pz-main">{body}</main>
-      {!sending && (
-        <nav className="pz-extra" style={{ textAlign: "center", fontSize: ".85rem", margin: ".5rem 0" }}>
-          <a href="#drop-new" data-testid="dropzone-entry">{t("dropzone.entry")}</a>
-          {" · "}
-          <a href="#secret-new" data-testid="vault-entry">{t("vault.entry")}</a>
-        </nav>
-      )}
+      <main className={`pz-main${isHome ? " is-wide" : ""}`} key={isHome ? "home" : route}>
+        {!isHome && !sending && (
+          <a className="pz-back" href={location.pathname} onClick={(e) => { e.preventDefault(); reset(); }} data-testid="back-home">
+            ← {t("home.back")}
+          </a>
+        )}
+        {body}
+      </main>
       <LegalFooter />
     </div>
   );

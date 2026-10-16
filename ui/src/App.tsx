@@ -14,21 +14,16 @@ import Footer from "./components/Footer";
 import ToastStack from "./components/ToastStack";
 import ReceivePanel from "./components/ReceivePanel";
 import AppUxV3 from "./ux-v3/AppUxV3";
-import PizzaApp from "./pizza/PizzaApp";
+import HomeApp from "./home/HomeApp";
 import { isP2PHash } from "./p2p/protocol";
-import DropOwnerPanel from "./p2p/dropzone/DropOwnerPanel";
-import DropContributorPanel from "./p2p/dropzone/DropContributorPanel";
-import { isDropHash, isDropOwnerHash } from "./p2p/dropzone/link";
-import VaultCreatePanel from "./vault/VaultCreatePanel";
-import VaultRevealPanel from "./vault/VaultRevealPanel";
-import { isSecretHash } from "./vault/crypto";
+import { isServiceHash } from "./home/routes";
 import "./styles.css";
 import "./styles-notify.css";
 
 const TABS: Tab[] = ["send", "receive", "rooms", "contacts", "identity", "history", "advanced"];
 
 function isMagicHash(hash: string): boolean {
-  if (!hash.startsWith("#") || isP2PHash(hash)) return false;
+  if (!hash.startsWith("#") || isP2PHash(hash) || isServiceHash(hash)) return false;
   const fragment = hash.slice(1);
   return fragment.includes(":") || fragment.startsWith("sl=") || fragment.startsWith("slp=");
 }
@@ -73,32 +68,6 @@ export default function App() {
     };
   }, [setNet, setTab]);
 
-  if (hash === "#secret-new" || isSecretHash(hash)) {
-    return (
-      <div className="app">
-        <Header minimal />
-        <main className="main panel-enter">
-          {isSecretHash(hash) ? <VaultRevealPanel hash={hash} /> : <VaultCreatePanel />}
-        </main>
-        <Footer />
-        <ToastStack />
-      </div>
-    );
-  }
-
-  if (isDropOwnerHash(hash) || isDropHash(hash)) {
-    return (
-      <div className="app">
-        <Header minimal />
-        <main className="main panel-enter">
-          {isDropHash(hash) ? <DropContributorPanel hash={hash} /> : <DropOwnerPanel hash={hash} />}
-        </main>
-        <Footer />
-        <ToastStack />
-      </div>
-    );
-  }
-
   if (isMagicHash(hash)) {
     return (
       <div className="app">
@@ -124,7 +93,7 @@ export default function App() {
 
   return (
     <>
-      <PizzaApp hash={hash} />
+      <HomeApp hash={hash} />
       <ToastStack />
     </>
   );

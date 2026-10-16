@@ -11,7 +11,7 @@ const CARDS = [
   { id: "illegal", icon: "🚫" },
 ] as const;
 
-/** FilePizza-style terms of use dialog. */
+/** Terms of use dialog. */
 export default function TermsModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const btn = useRef<HTMLButtonElement>(null);
