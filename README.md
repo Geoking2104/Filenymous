@@ -17,7 +17,7 @@
 
 ### What it is
 
-Filenymous is a **direct, browser-to-browser file transfer** web app in the style of [file.pizza](https://file.pizza). Drop a file, share a link, a code or a QR code, and the recipient downloads it straight from your browser over WebRTC. No account and no cloud storage. The file is encrypted end to end, and it only exists in the two browsers.
+Filenymous is a **direct, browser-to-browser file transfer** web app. Drop a file, share a link, a code or a QR code, and the recipient downloads it straight from your browser over WebRTC. No account and no cloud storage. The file is encrypted end to end, and it only exists in the two browsers.
 
 - **App:** https://filenymous.eu/app/
 - **Landing page:** https://filenymous.eu/
@@ -25,7 +25,7 @@ Filenymous is a **direct, browser-to-browser file transfer** web app in the styl
 
 ### Features
 
-- **Single page, file.pizza flow:**
+- **Single page flow:**
   1. Drop or pick files.
   2. Review them: list with MIME type and size, remove or add files, optional password.
   3. Click **Start** to get the link, the short code (`123-456-ABC`) and the QR code.
@@ -127,7 +127,7 @@ License: see [LICENSE](LICENSE).
 
 ### Qu'est-ce que c'est
 
-Filenymous est une application web de **transfert de fichiers direct, de navigateur à navigateur**, sur le modèle de [file.pizza](https://file.pizza). On dépose un fichier, on partage un lien, un code ou un QR code, et le destinataire le télécharge directement depuis votre navigateur via WebRTC. Pas de compte, pas de stockage dans le cloud. Le fichier est chiffré de bout en bout et n'existe que dans les deux navigateurs.
+Filenymous est une application web de **transfert de fichiers direct, de navigateur à navigateur**, On dépose un fichier, on partage un lien, un code ou un QR code, et le destinataire le télécharge directement depuis votre navigateur via WebRTC. Pas de compte, pas de stockage dans le cloud. Le fichier est chiffré de bout en bout et n'existe que dans les deux navigateurs.
 
 - **Application :** https://filenymous.eu/app/
 - **Page d'accueil :** https://filenymous.eu/
@@ -135,7 +135,7 @@ Filenymous est une application web de **transfert de fichiers direct, de navigat
 
 ### Fonctionnalités
 
-- **Page unique, parcours file.pizza :**
+- **Page unique :**
   1. Déposer ou choisir des fichiers.
   2. Vérifier : liste avec type MIME et taille, retrait ou ajout de fichiers, mot de passe facultatif.
   3. Cliquer sur **Démarrer** pour obtenir le lien, le code court (`123-456-ABC`) et le QR code.

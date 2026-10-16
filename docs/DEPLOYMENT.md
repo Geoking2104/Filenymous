@@ -81,7 +81,7 @@ Verified facts (2026-07-14) — how the public site is actually hosted and updat
 - SSH access: key `opendpe_vps_ed25519` (user `root`) — works from Linux; Windows
   OpenSSH may fail silently on this key (ACL), use the sandbox/WSL if needed.
 
-## Direct P2P transfer in the React UI (file.pizza-style), rollout checklist
+## Direct P2P transfer in the React UI, rollout checklist
 
 The React UI (what filenymous.eu serves) now has its own direct-transfer path (`ui/src/p2p/`). It uses the same relay, `wss://www.opendpe.net/filenymous-signal/`. To ship it:
 
@@ -93,7 +93,7 @@ The React UI (what filenymous.eu serves) now has its own direct-transfer path (`
 
 ## State as of 2026-10-14
 
-- `https://filenymous.eu/app/` serves the file.pizza-style single page (PRs #11 and #12): review step, optional password, pigeon progress, peer device, FR/EN legal footer. The previous multi-panel UI is still at `/app/#legacy`.
+- `https://filenymous.eu/app/` serves the single page (PRs #11 and #12): review step, optional password, pigeon progress, peer device, FR/EN legal footer. The previous multi-panel UI is still at `/app/#legacy`.
 - UI deploys go through `scripts/deploy-ovh-sftp.mjs --dist ui/dist --remote /home/filenyb/www/app --merge` after `npm run build -- --base=/app/`. The `.ps1` / `.sh` OVH scripts are older alternatives.
 - The signaling relay and coturn (TURN REST credentials via `/ice`) run on the VPS behind `www.opendpe.net/filenymous-signal/`. Setup is in `p2p-signal/README.md`.
 - Archived: `docs/archive/` holds the deprecated v1 bridge, the Holochain-era design plans (`superpowers/`), the steward-node notes and the old standalone deploy script.
