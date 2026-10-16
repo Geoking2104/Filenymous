@@ -1,5 +1,5 @@
 /**
- * E2E: file.pizza-style direct transfer between two browser contexts,
+ * E2E: direct transfer between two browser contexts,
  * through a locally started p2p-signal relay (no external network needed).
  */
 import { test, expect, type Page } from "@playwright/test";
