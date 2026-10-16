@@ -199,6 +199,13 @@ export default function PizzaApp({ hash }: { hash: string }) {
         <LangSwitch />
       </header>
       <main className="pz-main">{body}</main>
+      {!sending && (
+        <nav className="pz-extra" style={{ textAlign: "center", fontSize: ".85rem", margin: ".5rem 0" }}>
+          <a href="#drop-new" data-testid="dropzone-entry">{t("dropzone.entry")}</a>
+          {" · "}
+          <a href="#secret-new" data-testid="vault-entry">{t("vault.entry")}</a>
+        </nav>
+      )}
       <LegalFooter />
     </div>
   );
