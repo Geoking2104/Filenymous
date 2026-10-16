@@ -60,7 +60,7 @@ describe("p2p-signal HTTP endpoints", () => {
     const body = await res.json();
     const turn = body.iceServers.find((s: { urls: string[] }) => s.urls[0]!.startsWith("turn:"));
     expect(body.iceServers[0].urls).toEqual(["stun:stun.example.org:3478"]);
-    expect(turn.username).toMatch(/^\d+:filenymous$/);
+    expect(turn.username).toMatch(/^\d+:fn-[0-9a-f]{12}$/);
     expect(turn.credential).toBe(createHmac("sha1", "s3cret").update(turn.username).digest("base64"));
     expect(Number(turn.username.split(":")[0])).toBeGreaterThan(Date.now() / 1000);
 

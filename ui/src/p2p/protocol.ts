@@ -25,12 +25,42 @@ export interface P2PFileInfo {
 }
 
 export type P2PControl =
-  | { type: "manifest"; v: number; files: P2PFileInfo[]; chunkSize: number; wrappedSecret: string; message?: string }
+  | { type: "manifest"; v: number; files: P2PFileInfo[]; chunkSize: number; wrappedSecret: string; message?: string; device?: string; auth?: P2PAuthChallenge; protected?: boolean }
   | { type: "start"; files?: number[] }
   | { type: "file-end"; index: number; chunks: number }
   | { type: "done" }
-  | { type: "ack" }
-  | { type: "cancel"; reason?: string };
+  | { type: "progress"; bytes: number }
+  | { type: "file-ack"; index: number }
+  | { type: "ack"; bytes?: number }
+  | { type: "cancel"; reason?: string }
+  | { type: "hello"; device?: string }
+  | { type: "auth"; proof: string }
+  | { type: "auth-ok" }
+  | { type: "auth-fail"; remaining: number };
+
+/**
+ * Password gate. A protected session first sends a v3 "locked" manifest
+ * (no file names, no wrapped secret): v2-only clients reject it as an
+ * unsupported protocol. The receiver answers an HMAC challenge-response; the
+ * password itself never crosses the wire, and a PBKDF2-derived half of it is
+ * mixed into the AES file key, so the link alone can't decrypt the data.
+ */
+export const P2P_LOCKED_VERSION = 3;
+export const PASSWORD_ITERATIONS = 310_000;
+export const MAX_PASSWORD_ATTEMPTS = 5;
+
+export interface P2PAuthChallenge {
+  salt: string;
+  iter: number;
+  nonce: string;
+}
+
+export interface PasswordKeys {
+  /** HMAC-SHA256 key for the challenge-response. */
+  auth: CryptoKey;
+  /** 32 bytes mixed into the AES file key. */
+  mix: Uint8Array;
+}
 
 export function b64urlEncode(bytes: Uint8Array): string {
   let s = "";
@@ -95,14 +125,51 @@ export function isP2PHash(hash: string): boolean {
   return /^#p2p:/i.test(hash) && parseShareInput(hash) !== null;
 }
 
-export async function deriveFileKey(secret: string): Promise<CryptoKey> {
-  const ikm = await crypto.subtle.importKey("raw", buf(b64urlDecode(secret)), "HKDF", false, ["deriveKey"]);
+export function randomB64(bytes = 16): string {
+  return b64urlEncode(crypto.getRandomValues(new Uint8Array(bytes)));
+}
+
+export async function derivePasswordKeys(password: string, salt: string, iterations = PASSWORD_ITERATIONS): Promise<PasswordKeys> {
+  const material = await crypto.subtle.importKey("raw", buf(new TextEncoder().encode(password.normalize("NFC"))), "PBKDF2", false, ["deriveBits"]);
+  const bits = new Uint8Array(
+    await crypto.subtle.deriveBits({ name: "PBKDF2", salt: buf(b64urlDecode(salt)), iterations, hash: "SHA-256" }, material, 512),
+  );
+  const auth = await crypto.subtle.importKey("raw", buf(bits.slice(0, 32)), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+  return { auth, mix: bits.slice(32) };
+}
+
+function authMessage(code: string, nonce: string): ArrayBuffer {
+  return buf(new TextEncoder().encode(`filenymous-p2p-auth-v3:${code}:${nonce}`));
+}
+
+export async function passwordProof(keys: PasswordKeys, code: string, nonce: string): Promise<string> {
+  return b64urlEncode(new Uint8Array(await crypto.subtle.sign("HMAC", keys.auth, authMessage(code, nonce))));
+}
+
+/** Constant-time (WebCrypto HMAC verify). */
+export async function verifyPasswordProof(keys: PasswordKeys, code: string, nonce: string, proof: string): Promise<boolean> {
+  try {
+    return await crypto.subtle.verify("HMAC", keys.auth, buf(b64urlDecode(proof)), authMessage(code, nonce));
+  } catch {
+    return false;
+  }
+}
+
+export async function deriveFileKey(secret: string, passwordMix?: Uint8Array): Promise<CryptoKey> {
+  const sec = b64urlDecode(secret);
+  let raw = sec;
+  if (passwordMix) {
+    raw = new Uint8Array(sec.length + passwordMix.length);
+    raw.set(sec);
+    raw.set(passwordMix, sec.length);
+  }
+  const ikm = await crypto.subtle.importKey("raw", buf(raw), "HKDF", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
     {
       name: "HKDF",
       hash: "SHA-256",
       salt: buf(new TextEncoder().encode("filenymous-p2p-v2")),
-      info: buf(new TextEncoder().encode("file-key")),
+      info: buf(new TextEncoder().encode(passwordMix ? "file-key+password" : "file-key")),
     },
     ikm,
     { name: "AES-GCM", length: 256 },
@@ -201,6 +268,15 @@ export function parseControl(text: string): P2PControl | null {
       if (!Array.isArray(msg.files) || msg.files.length === 0 || msg.files.length > 1000) return null;
       if (!msg.files.every((f) => typeof f?.name === "string" && Number.isSafeInteger(f.size) && f.size >= 0)) return null;
       if (typeof msg.wrappedSecret !== "string" || !Number.isSafeInteger(msg.chunkSize)) return null;
+      if (msg.auth !== undefined) {
+        const a = msg.auth;
+        if (!a || typeof a.salt !== "string" || typeof a.nonce !== "string" || !Number.isSafeInteger(a.iter)) return null;
+        if (a.iter < 100_000 || a.iter > 5_000_000) return null;
+      }
+    }
+    if ("device" in msg && msg.device !== undefined) {
+      if (typeof msg.device !== "string") return null;
+      (msg as { device?: string }).device = msg.device.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 80);
     }
     return msg;
   } catch {

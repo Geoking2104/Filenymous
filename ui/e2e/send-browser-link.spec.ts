@@ -13,7 +13,7 @@ const LIVE = process.env.FILENYMOUS_LIVE === "1";
 
 test.describe("Send — self-contained encrypted link (no conductor)", () => {
   test("creates a plain #sl= link on click", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#legacy");
 
     // The browser-only banner confirms runtime detection settled.
     await expect(page.getByText(/Mode navigateur|Browser-only mode/i).first()).toBeVisible();
@@ -39,7 +39,7 @@ test.describe("Send — self-contained encrypted link (no conductor)", () => {
   test("creates a password-protected #slp= link when the password option is on", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/#legacy");
 
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles({
@@ -61,7 +61,7 @@ test.describe("Send — self-contained encrypted link (no conductor)", () => {
   });
 
   test("fills the recipient from the 'send by email' section alone", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#legacy");
 
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles({
@@ -86,7 +86,7 @@ test.describe("Send — self-contained encrypted link (no conductor)", () => {
   });
 
   test("shows validation feedback when the recipient is missing", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#legacy");
 
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles({
@@ -103,7 +103,7 @@ test.describe("Send — self-contained encrypted link (no conductor)", () => {
   });
 
   test("renders the result for a long link without a QR crash", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#legacy");
 
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles({
@@ -123,7 +123,7 @@ test.describe("Send — self-contained encrypted link (no conductor)", () => {
   });
 
   test("email handoff: copying works and the page never navigates away", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#legacy");
     const origin = new URL(page.url()).origin;
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin });
 
@@ -164,7 +164,7 @@ test.describe("Send — self-contained encrypted link (no conductor)", () => {
     request,
   }) => {
     test.skip(!LIVE, "requires live deployment (FILENYMOUS_LIVE=1)");
-    await page.goto("/");
+    await page.goto("/#legacy");
 
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles({
