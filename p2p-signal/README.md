@@ -13,7 +13,7 @@ npm start          # ws://127.0.0.1:8789, http://127.0.0.1:8789/health
 
 | Path | Purpose |
 |---|---|
-| `ws(s)://…/` | Signaling (`join`, `signal`, `leave`, `room-*`). Origin checked against `ALLOWED_ORIGIN`. |
+| `ws(s)://…/` | Signaling (`join`, `signal`, `leave`, `room-*`). A browser Origin must match `ALLOWED_ORIGIN`; clients without an Origin header (the Filenymous CLI) are accepted. |
 | `GET /health` | `{ ok, rooms, roomSessions, turn }`, for monitoring. |
 | `GET /ice` | `{ iceServers }` for `RTCPeerConnection`: STUN plus short-lived TURN credentials. CORS is limited to `ALLOWED_ORIGIN`. |
 

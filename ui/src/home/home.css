@@ -285,3 +285,4 @@
 .pz-teaser { margin: 0; font-size: .85rem; color: var(--fy-text-2); padding: .6rem .8rem; border-radius: var(--fy-radius-sm); background: var(--fy-surface-2); border: 1px solid var(--fy-border); }
 @media (prefers-reduced-motion: reduce) { .pz-carousel-track { scroll-behavior: auto; } .pz-dot, .pz-arrow { transition: none; } }
 .pz-service:has(.pz-badge) .pz-service-head { padding-right: 5.5rem; }
+.pz-badge--new { background: linear-gradient(135deg, #22c55e, #0ea5e9); color: #fff; border-color: transparent; }

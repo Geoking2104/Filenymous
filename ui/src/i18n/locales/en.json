@@ -606,14 +606,14 @@
     },
     "cli": {
       "title": "CLI & API for CI/CD",
-      "lead": "Share builds, logs and backups straight from your pipelines.",
+      "lead": "Share builds, logs and backups from your pipelines, peer to peer.",
       "b1": "One command",
-      "b1d": "filenymous upload app.zip --ttl 1h",
+      "b1d": "npx filenymous upload app.zip --ttl 1h",
       "b2": "Ephemeral links",
-      "b2d": "Auto-expiry for artifacts, logs and backups.",
+      "b2d": "Expires after the TTL or N downloads; webhook at each step.",
       "b3": "No S3 bucket",
-      "b3d": "Nothing to configure, so nothing to misconfigure.",
-      "teaser": "CLI and REST API in the works for GitHub Actions, GitLab CI and scripts."
+      "b3d": "Nothing is stored on a server: the CLI sends straight to the recipient.",
+      "cta": "Read the docs"
     },
     "stream": {
       "title": "Streamed sharing",
@@ -626,6 +626,7 @@
       "b3d": "Same encryption as direct transfer.",
       "teaser": "Progressive playback via Media Source Extensions, being prototyped."
     },
-    "badgePro": "Pro"
+    "badgePro": "Pro",
+    "badgeNew": "New"
   }
 }

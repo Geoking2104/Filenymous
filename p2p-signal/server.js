@@ -346,7 +346,9 @@ const httpServer = createServer(httpHandler);
 const wss = new WebSocketServer({
   server: httpServer,
   verifyClient(info, done) {
-    done(originAllowed(info.origin));
+    // Browsers always send Origin, so ALLOWED_ORIGIN still blocks other web
+    // sites; non-browser clients (the Filenymous CLI) send none and are allowed.
+    done(!info.origin || originAllowed(info.origin));
   },
 });
 

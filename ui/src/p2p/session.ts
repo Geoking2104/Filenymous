@@ -660,8 +660,11 @@ export class P2PReceiver {
       await pc.setLocalDescription(answer);
       if (gen !== this.offerGen) return;
       this.signal.send({ kind: "answer", sdp: answer.sdp ?? "" });
-    } else if (payload.kind === "ice" && this.pc) {
-      await addRemoteCandidate(this.pc, payload, this.pendingIce);
+    } else if (payload.kind === "ice") {
+      // Candidates can arrive while the RTCPeerConnection is still being set up
+      // (ICE server fetch): keep them for after setRemoteDescription.
+      if (this.pc) await addRemoteCandidate(this.pc, payload, this.pendingIce);
+      else this.pendingIce.push(payload.candidate);
     }
   }
 
