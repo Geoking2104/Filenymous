@@ -622,8 +622,8 @@
       "b1d": "La lecture démarre sans attendre la fin ; l'avance rapide charge à la demande.",
       "b2": "Disque épargné",
       "b2d": "Revue rapide de rushes sans tout stocker ; enregistrement possible.",
-      "b3": "Toujours chiffré",
-      "b3d": "Mêmes blocs AES-GCM et même mot de passe que le transfert direct.",
+      "b3": "Mot de passe et expiration",
+      "b3d": "Revue avant publication : lien protégé qui expire à la date choisie, chiffré AES-GCM.",
       "cta": "Partager une vidéo ou un son"
     },
     "badgePro": "Pro",
@@ -642,5 +642,28 @@
     "saving": "Enregistrement…",
     "afterDownload": "Format non lisible en streaming dans ce navigateur : lecture après téléchargement.",
     "noWorker": "Le streaming n'est pas disponible dans ce navigateur (Service Worker bloqué) : lecture après téléchargement."
+  },
+  "expiry": {
+    "in": "Expire dans {{left}}",
+    "expired": "Expiré",
+    "linkExpired": "Ce lien a expiré.",
+    "senderExpired": "Lien expiré : le partage est fermé et plus aucun destinataire ne peut s'y connecter."
+  },
+  "protect": {
+    "title": "Protection de la revue",
+    "lead": "Pour les agences et marques : mot de passe et date d'expiration, liés au chiffrement du lien.",
+    "password": "Mot de passe (recommandé)",
+    "passwordPlaceholder": "Communiqué séparément au client",
+    "expiry": "Expiration du lien",
+    "choice": {
+      "none": "Jamais",
+      "1h": "1 h",
+      "24h": "24 h",
+      "7d": "7 j",
+      "custom": "Date…"
+    },
+    "badDate": "Choisissez une date entre maintenant (+1 min) et 30 jours.",
+    "passwordOn": "Protégé par mot de passe",
+    "expiryOn": "Lien à durée limitée"
   }
 }

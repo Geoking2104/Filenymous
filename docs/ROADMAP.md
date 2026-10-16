@@ -8,7 +8,7 @@
 | CLI DevOps (CI/CD) | Moyen | DevOps, équipes CI | `npx filenymous upload app.zip --ttl 1h` : 100 % pair-à-pair, liens éphémères (TTL, N téléchargements), webhooks, `filenymous receive`. Voir [cli/README.md](../cli/README.md) | ✅ Livré (CLI) — API REST hébergée : non prévue (pas de stockage serveur) |
 | Espace Client-Prestataire | Faible (réutilise la Dropzone) | Avocats, comptables, freelances | Une Dropzone par projet pour collecter les documents confidentiels des clients, sans infrastructure | 🟠 Pro (via Dropzone) |
 | Canal de signalement (lanceurs d'alerte) | Élevé | Journalistes, conformité, audit interne | Dépôt chiffré anonyme : aucune IP conservée, compatible Tor, métadonnées (EXIF/PDF) supprimées dans le navigateur, clé de suivi sans e-mail. Pensé pour les exigences RGPD et de la directive lanceurs d'alerte (sans certification revendiquée) | 🔜 Bientôt |
-| Partage streamé | Moyen | Vidéastes, studios, podcasteurs | Lecture vidéo/audio pendant le transfert : requêtes de plages sur le canal P2P + Service Worker (Range HTTP), avance rapide, enregistrement possible, mêmes blocs AES-GCM et mot de passe. CLI : `--stream` | ✅ Livré |
+| Partage streamé | Moyen | Vidéastes, studios, podcasteurs | Lecture vidéo/audio pendant le transfert : requêtes de plages sur le canal P2P + Service Worker (Range HTTP), avance rapide, enregistrement possible, mêmes blocs AES-GCM. **Protection de revue** (agences/marques) : mot de passe + expiration (1 h, 24 h, 7 j ou date) liée au lien et à la clé AES, compte à rebours, arrêt du lecteur à l'expiration. CLI : `--stream`, `--expires` | ✅ Livré |
 
 Notes :
 - Le canal de signalement ne masque pas l'adresse IP de l'utilisateur ; pour cela, utiliser Tor Browser.

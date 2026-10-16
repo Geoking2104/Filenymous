@@ -622,8 +622,8 @@
       "b1d": "Playback starts right away; seeking loads on demand.",
       "b2": "Spares your disk",
       "b2d": "Quick review of rushes without storing everything; save if you want.",
-      "b3": "Still encrypted",
-      "b3d": "Same AES-GCM chunks and password as direct transfer.",
+      "b3": "Password and expiry",
+      "b3d": "Pre-publication review: a protected link that expires when you choose, AES-GCM encrypted.",
       "cta": "Share a video or audio"
     },
     "badgePro": "Pro",
@@ -642,5 +642,28 @@
     "saving": "Saving…",
     "afterDownload": "This format can't be streamed in this browser: play it after downloading.",
     "noWorker": "Streaming isn't available in this browser (Service Worker blocked): play it after downloading."
+  },
+  "expiry": {
+    "in": "Expires in {{left}}",
+    "expired": "Expired",
+    "linkExpired": "This link has expired.",
+    "senderExpired": "Link expired: the share is closed and no recipient can connect anymore."
+  },
+  "protect": {
+    "title": "Review protection",
+    "lead": "For agencies and brands: password and expiry date, bound into the link's encryption.",
+    "password": "Password (recommended)",
+    "passwordPlaceholder": "Shared with the client separately",
+    "expiry": "Link expiry",
+    "choice": {
+      "none": "Never",
+      "1h": "1 h",
+      "24h": "24 h",
+      "7d": "7 d",
+      "custom": "Date…"
+    },
+    "badDate": "Pick a date between now (+1 min) and 30 days.",
+    "passwordOn": "Password-protected",
+    "expiryOn": "Time-limited link"
   }
 }

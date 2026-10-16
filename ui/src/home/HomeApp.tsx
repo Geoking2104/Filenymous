@@ -9,7 +9,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import P2PSendPanel from "../p2p/P2PSendPanel";
 import P2PReceivePanel from "../p2p/P2PReceivePanel";
-import { isP2PHash, parseShareInput } from "../p2p/protocol";
+import { isP2PHash, parseShareInput, shareFragment } from "../p2p/protocol";
+import { expiryFromChoice, localInputValue, type ExpiryChoice } from "../p2p/expiry";
 import { p2pSupported } from "../p2p/config";
 import { formatBytes } from "../ux-v3/types";
 import type { AppLanguage } from "../i18n";
@@ -123,6 +124,9 @@ export default function HomeApp({ hash }: { hash: string }) {
   const more = useRef<HTMLInputElement>(null);
   const [password, setPassword] = useState("");
   const [stream, setStream] = useState(false);
+  const [expiryChoice, setExpiryChoice] = useState<ExpiryChoice>("none");
+  const [expiryCustom, setExpiryCustom] = useState(() => localInputValue(Date.now() + 2 * 86_400_000));
+  const [expires, setExpires] = useState<number | undefined>(undefined);
   const mediaInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -147,6 +151,8 @@ export default function HomeApp({ hash }: { hash: string }) {
     setPicked([]);
     setPassword("");
     setStream(false);
+    setExpiryChoice("none");
+    setExpires(undefined);
     if (location.hash) {
       history.replaceState(null, "", location.pathname + location.search);
       window.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -159,7 +165,7 @@ export default function HomeApp({ hash }: { hash: string }) {
       setErr(t("pz.badCode"));
       return;
     }
-    window.location.hash = `p2p:${parsed.code}${parsed.secret ? `/${parsed.secret}` : ""}`;
+    window.location.hash = shareFragment(parsed);
   };
 
   const receiving = isP2PHash(hash);
@@ -178,7 +184,7 @@ export default function HomeApp({ hash }: { hash: string }) {
   } else if (receiving) {
     body = <P2PReceivePanel hash={hash} />;
   } else if (sending) {
-    body = <P2PSendPanel files={sending} password={password} stream={stream} onStop={reset} />;
+    body = <P2PSendPanel files={sending} password={password} stream={stream} expires={expires} onStop={reset} />;
   } else if (picked.length > 0) {
     body = (
       <div className="pz-card" data-testid="review-step">
@@ -204,14 +210,6 @@ export default function HomeApp({ hash }: { hash: string }) {
           ))}
         </ul>
         {picked.length > 1 && <p className="pz-muted">{t("pz.totalSize", { count: picked.length, size: formatBytes(total) })}</p>}
-        <div className="pz-pw">
-          <label htmlFor="pz-password">
-            {t("pw.label")}{" "}
-            <span className="pz-info" tabIndex={0} role="img" aria-label={t("pw.info")} title={t("pw.info")} aria-describedby="pz-pw-info">ⓘ</span>
-          </label>
-          <input id="pz-password" type="password" autoComplete="new-password" data-testid="send-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <span id="pz-pw-info" className="pz-pw-hint">{t("pw.info")}</span>
-        </div>
         {picked.some((f) => mediaKind(f.name, f.type)) && (
           <label className="pz-stream-opt">
             <input type="checkbox" data-testid="send-stream" checked={stream} onChange={(e) => setStream(e.target.checked)} />
@@ -221,12 +219,54 @@ export default function HomeApp({ hash }: { hash: string }) {
             </span>
           </label>
         )}
+        {stream ? (
+          <fieldset className="pz-protect" data-testid="stream-protect">
+            <legend>🔒 {t("protect.title")}</legend>
+            <p className="pz-protect-lead">{t("protect.lead")}</p>
+            <label htmlFor="pz-password">{t("protect.password")}</label>
+            <input id="pz-password" type="password" autoComplete="new-password" data-testid="send-password" placeholder={t("protect.passwordPlaceholder")} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <span className="pz-pw-hint">{t("pw.info")}</span>
+            <label htmlFor="pz-expiry">{t("protect.expiry")}</label>
+            <div className="pz-expiry-choices" role="radiogroup" aria-label={t("protect.expiry")}>
+              {(["none", "1h", "24h", "7d", "custom"] as const).map((c) => (
+                <button key={c} type="button" role="radio" aria-checked={expiryChoice === c} className={expiryChoice === c ? "on" : ""} data-testid={`expiry-${c}`} onClick={() => setExpiryChoice(c)}>
+                  {t(`protect.choice.${c}`)}
+                </button>
+              ))}
+            </div>
+            {expiryChoice === "custom" && (
+              <input id="pz-expiry" type="datetime-local" data-testid="expiry-custom" value={expiryCustom} min={localInputValue(Date.now() + 60_000)} onChange={(e) => setExpiryCustom(e.target.value)} />
+            )}
+            {expiryChoice !== "none" && !expiryFromChoice(expiryChoice, expiryCustom) && <p className="pz-err" role="alert">{t("protect.badDate")}</p>}
+          </fieldset>
+        ) : (
+          <div className="pz-pw">
+          <label htmlFor="pz-password">
+            {t("pw.label")}{" "}
+            <span className="pz-info" tabIndex={0} role="img" aria-label={t("pw.info")} title={t("pw.info")} aria-describedby="pz-pw-info">ⓘ</span>
+          </label>
+          <input id="pz-password" type="password" autoComplete="new-password" data-testid="send-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <span id="pz-pw-info" className="pz-pw-hint">{t("pw.info")}</span>
+        </div>
+        )}
+
         {!p2pSupported() && <div className="v3-warn">{t("p2p.unsupported")}</div>}
         <div className="pz-actions">
-          <button type="button" className="pz-btn-ghost" onClick={() => { setPicked([]); setPassword(""); setStream(false); }}>
+          <button type="button" className="pz-btn-ghost" onClick={() => { setPicked([]); setPassword(""); setStream(false); setExpiryChoice("none"); }}>
             {t("common.cancel")}
           </button>
-          <button type="button" className="pz-btn" data-testid="start-send" disabled={!p2pSupported()} onClick={() => setSending(picked)}>
+          <button
+            type="button"
+            className="pz-btn"
+            data-testid="start-send"
+            disabled={!p2pSupported() || (stream && expiryChoice !== "none" && !expiryFromChoice(expiryChoice, expiryCustom))}
+            onClick={() => {
+              // Durations count from now; tests may force a short expiry.
+              const testS = Number((window as { __FILENYMOUS_TEST_EXPIRY_S__?: number }).__FILENYMOUS_TEST_EXPIRY_S__) || 0;
+              setExpires(stream ? (testS ? Math.floor(Date.now() / 1000) + testS : expiryFromChoice(expiryChoice, expiryCustom)) : undefined);
+              setSending(picked);
+            }}
+          >
             {t("pw.start")}
           </button>
         </div>

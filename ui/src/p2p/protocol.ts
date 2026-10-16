@@ -25,7 +25,7 @@ export interface P2PFileInfo {
 }
 
 export type P2PControl =
-  | { type: "manifest"; v: number; files: P2PFileInfo[]; chunkSize: number; wrappedSecret: string; message?: string; device?: string; auth?: P2PAuthChallenge; protected?: boolean; streamable?: boolean }
+  | { type: "manifest"; v: number; files: P2PFileInfo[]; chunkSize: number; wrappedSecret: string; message?: string; device?: string; auth?: P2PAuthChallenge; protected?: boolean; streamable?: boolean; expires?: number }
   | { type: "start"; files?: number[] }
   | { type: "file-end"; index: number; chunks: number }
   | { type: "done" }
@@ -57,6 +57,13 @@ export const MAX_RANGE_CHUNKS = 64;
  * mixed into the AES file key, so the link alone can't decrypt the data.
  */
 export const P2P_LOCKED_VERSION = 3;
+/**
+ * Expiring shares: manifest v4 carries `expires` (Unix seconds). The expiry is
+ * also in the link (`#p2p:CODE/SECRET/e<base36>`) and mixed into the AES key,
+ * so editing it in the link makes decryption fail. v2-only receivers reject v4
+ * cleanly ("unsupported-protocol"); non-expiring shares stay v2.
+ */
+export const P2P_EXPIRING_VERSION = 4;
 export const PASSWORD_ITERATIONS = 310_000;
 export const MAX_PASSWORD_ATTEMPTS = 5;
 
@@ -108,13 +115,19 @@ export function createSecret(): string {
   return b64urlEncode(crypto.getRandomValues(new Uint8Array(16)));
 }
 
-export function buildShareLink(baseUrl: string, code: string, secret?: string): string {
+export function buildShareLink(baseUrl: string, code: string, secret?: string, expires?: number): string {
   const base = baseUrl.split("#")[0]!;
-  return `${base}#p2p:${code}${secret ? `/${secret}` : ""}`;
+  const exp = secret && expires ? `/e${expires.toString(36)}` : "";
+  return `${base}#p2p:${code}${secret ? `/${secret}` : ""}${exp}`;
+}
+
+/** The `#p2p:` fragment for a parsed share (keeps the expiry segment). */
+export function shareFragment(p: { code: string; secret?: string; expires?: number }): string {
+  return buildShareLink("", p.code, p.secret, p.expires).slice(1);
 }
 
 /** Accepts a full link, a `#p2p:...` fragment or a bare code. */
-export function parseShareInput(input: string): { code: string; secret?: string } | null {
+export function parseShareInput(input: string): { code: string; secret?: string; expires?: number } | null {
   let raw = String(input || "").trim();
   if (!raw) return null;
   const hashAt = raw.indexOf("#");
@@ -125,11 +138,13 @@ export function parseShareInput(input: string): { code: string; secret?: string 
     /* keep raw */
   }
   if (raw.startsWith("p2p:")) raw = raw.slice(4);
-  const [codePart, secretPart] = raw.split("/");
+  const [codePart, secretPart, expPart] = raw.split("/");
   const code = normalizeShareCode(codePart ?? "");
   if (!code) return null;
   const secret = secretPart && /^[A-Za-z0-9_-]{16,64}$/.test(secretPart) ? secretPart : undefined;
-  return secret ? { code, secret } : { code };
+  if (!secret) return { code };
+  const expires = expPart && /^e[0-9a-z]{1,10}$/.test(expPart) ? parseInt(expPart.slice(1), 36) : undefined;
+  return expires ? { code, secret, expires } : { code, secret };
 }
 
 export function isP2PHash(hash: string): boolean {
@@ -166,7 +181,7 @@ export async function verifyPasswordProof(keys: PasswordKeys, code: string, nonc
   }
 }
 
-export async function deriveFileKey(secret: string, passwordMix?: Uint8Array): Promise<CryptoKey> {
+export async function deriveFileKey(secret: string, passwordMix?: Uint8Array, expires?: number): Promise<CryptoKey> {
   const sec = b64urlDecode(secret);
   let raw = sec;
   if (passwordMix) {
@@ -180,7 +195,7 @@ export async function deriveFileKey(secret: string, passwordMix?: Uint8Array): P
       name: "HKDF",
       hash: "SHA-256",
       salt: buf(new TextEncoder().encode("filenymous-p2p-v2")),
-      info: buf(new TextEncoder().encode(passwordMix ? "file-key+password" : "file-key")),
+      info: buf(new TextEncoder().encode(`${passwordMix ? "file-key+password" : "file-key"}${expires ? `|exp=${expires}` : ""}`)),
     },
     ikm,
     { name: "AES-GCM", length: 256 },
@@ -279,6 +294,7 @@ export function parseControl(text: string): P2PControl | null {
       if (!Array.isArray(msg.files) || msg.files.length === 0 || msg.files.length > 1000) return null;
       if (!msg.files.every((f) => typeof f?.name === "string" && Number.isSafeInteger(f.size) && f.size >= 0)) return null;
       if (typeof msg.wrappedSecret !== "string" || !Number.isSafeInteger(msg.chunkSize)) return null;
+      if (msg.expires !== undefined && !(Number.isSafeInteger(msg.expires) && msg.expires > 0)) return null;
       if (msg.auth !== undefined) {
         const a = msg.auth;
         if (!a || typeof a.salt !== "string" || typeof a.nonce !== "string" || !Number.isSafeInteger(a.iter)) return null;
