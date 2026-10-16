@@ -1,6 +1,6 @@
 {
   "name": "filenymous",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Ultra-light end-to-end encrypted P2P file sharing from the terminal (WebRTC, no server storage). Compatible with https://filenymous.eu/app/",
   "license": "MIT",
   "type": "module",
