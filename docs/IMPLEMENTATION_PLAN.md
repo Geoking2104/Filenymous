@@ -105,6 +105,8 @@ Plusieurs contributeurs sont gérés par une `RTCPeerConnection` et une sous-cl�
 
 ## Phase 2 : Module B, Secrets Vault burn-after-reading (4 à 5 jours)
 
+> **État** : implémentée. API servie par `p2p-signal` (`vault.js`, Redis via `REDIS_URL`, repli en mémoire) sous `/filenymous-signal/api/v1/secrets`, UI dans `ui/src/vault/`. Écarts : lien `#s:<id>/<clé>` (fragment uniquement, pas de chemin `/s/`) ; la lecture exige un jeton dérivé de la clé (et du mot de passe), le serveur ne stockant que son empreinte : un mauvais mot de passe ou l'identifiant seul ne détruisent pas le secret ; modes « 1 lecture » (détruit à la lecture, 7 jours max) ou « durée » (1 à 168 h, lectures multiples) ; CSP de la page posée par balise meta (frame-ancestors via `.htaccess`, voir DEPLOYMENT.md).
+
 ### B.1 Cryptographie (client)
 
 - Clé aléatoire AES-GCM 256 générée par `crypto.subtle.generateKey`, IV de 12 octets.

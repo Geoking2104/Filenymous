@@ -533,7 +533,7 @@ export default function SendWorkspace() {
       )}
 
       <p className="v3-muted" style={{ fontSize: ".8rem", textAlign: "right", margin: "0 0 .6rem" }}>
-        <a href="#drop-new" data-testid="dropzone-entry">{t("dropzone.entry")}</a>
+        <a href="#drop-new" data-testid="dropzone-entry">{t("dropzone.entry")}</a> · <a href="#secret-new" data-testid="vault-entry">{t("vault.entry")}</a>
       </p>
       <div className="v3-step">{t("ux.sendStepFile")}</div>
       <div
