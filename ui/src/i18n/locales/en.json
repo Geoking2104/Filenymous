@@ -617,16 +617,30 @@
     },
     "stream": {
       "title": "Streamed sharing",
-      "lead": "Play large video or audio while it downloads.",
+      "lead": "Play large video or audio while it transfers, peer to peer.",
       "b1": "Instant playback",
-      "b1d": "Playback starts before the transfer ends.",
+      "b1d": "Playback starts right away; seeking loads on demand.",
       "b2": "Spares your disk",
-      "b2d": "Quick review of rushes without storing everything.",
-      "b3": "Still peer-to-peer",
-      "b3d": "Same encryption as direct transfer.",
-      "teaser": "Progressive playback via Media Source Extensions, being prototyped."
+      "b2d": "Quick review of rushes without storing everything; save if you want.",
+      "b3": "Still encrypted",
+      "b3d": "Same AES-GCM chunks and password as direct transfer.",
+      "cta": "Share a video or audio"
     },
     "badgePro": "Pro",
     "badgeNew": "New"
+  },
+  "stream": {
+    "senderOption": "Share as a stream",
+    "senderOptionHint": "The recipient can play the video or audio while it transfers (and save it).",
+    "senderStreaming": "Recipient is streaming · {{size}} sent",
+    "play": "Play as stream",
+    "playing": "Streaming — decrypted in your browser",
+    "preparing": "Preparing the player…",
+    "buffered": "{{size}} received of {{total}}",
+    "choose": "Choose the file to play",
+    "save": "Save the file ({{size}})",
+    "saving": "Saving…",
+    "afterDownload": "This format can't be streamed in this browser: play it after downloading.",
+    "noWorker": "Streaming isn't available in this browser (Service Worker blocked): play it after downloading."
   }
 }

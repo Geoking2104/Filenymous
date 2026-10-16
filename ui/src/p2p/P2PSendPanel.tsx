@@ -12,6 +12,8 @@ interface Props {
   message?: string;
   /** Optional password: never put in the link or QR code. */
   password?: string;
+  /** Offer streaming (range requests) to the recipient. */
+  stream?: boolean;
   onStop: () => void;
 }
 
@@ -20,7 +22,7 @@ function shareBaseUrl(): string {
 }
 
 /** Sender view for a live, direct transfer. */
-export default function P2PSendPanel({ files, message, password, onStop }: Props) {
+export default function P2PSendPanel({ files, message, password, stream, onStop }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<SenderState | null>(null);
   const [error, setError] = useState("");
@@ -30,7 +32,7 @@ export default function P2PSendPanel({ files, message, password, onStop }: Props
   useEffect(() => {
     let alive = true;
     setError("");
-    const sender = new P2PSender(files, (st) => alive && setState(st), { message, password: password || undefined });
+    const sender = new P2PSender(files, (st) => alive && setState(st), { message, password: password || undefined, stream: !!stream });
     senderRef.current = sender;
     sender.start().catch((e) => {
       if (alive) setError(String((e as Error).message || e));
@@ -45,7 +47,7 @@ export default function P2PSendPanel({ files, message, password, onStop }: Props
       window.removeEventListener("beforeunload", onUnload);
       sender.stop();
     };
-  }, [files, message, password]);
+  }, [files, message, password, stream]);
 
   const link = useMemo(() => (state ? buildShareLink(shareBaseUrl(), state.code, state.secret) : ""), [state?.code, state?.secret]);
   const pct = state && state.totalBytes ? Math.min(100, Math.round((state.confirmedBytes / state.totalBytes) * 100)) : 0;
@@ -106,6 +108,8 @@ export default function P2PSendPanel({ files, message, password, onStop }: Props
         return state.protected ? t("pw.senderWaitingPassword") : t("p2p.recipientChoosing");
       case "transferring":
         return t("p2p.sending", { pct });
+      case "streaming":
+        return t("stream.senderStreaming", { size: formatBytes(state.sentBytes) });
       case "complete":
         return t("p2p.deliveredByRecipient");
       case "failed":

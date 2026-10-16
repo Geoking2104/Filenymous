@@ -286,3 +286,17 @@
 @media (prefers-reduced-motion: reduce) { .pz-carousel-track { scroll-behavior: auto; } .pz-dot, .pz-arrow { transition: none; } }
 .pz-service:has(.pz-badge) .pz-service-head { padding-right: 5.5rem; }
 .pz-badge--new { background: linear-gradient(135deg, #22c55e, #0ea5e9); color: #fff; border-color: transparent; }
+
+/* streaming */
+.pz-stream-opt { display: flex; gap: .7rem; align-items: flex-start; text-align: left; padding: .8rem 1rem; border-radius: var(--fy-radius-sm); background: var(--fy-surface-2); border: 1px solid var(--fy-border); cursor: pointer; margin: .4rem 0; }
+.pz-stream-opt input { margin-top: .2rem; accent-color: var(--fy-accent); }
+.pz-stream-opt strong { display: block; font-size: .93rem; }
+.pz-stream-opt small { display: block; color: var(--fy-text-3); font-size: .82rem; }
+.pz-stream { display: grid; gap: .6rem; margin: .6rem 0; }
+.pz-stream video { width: 100%; max-height: 60vh; border-radius: var(--fy-radius-sm); background: #000; box-shadow: var(--fy-shadow); }
+.pz-stream audio { width: 100%; }
+.pz-stream-meta { font-size: .8rem; margin: 0; }
+.pz-stream-files { display: flex; flex-wrap: wrap; gap: .4rem; }
+.pz-stream-files button { padding: .35rem .7rem; border-radius: 999px; border: 1px solid var(--fy-border-strong); background: var(--fy-surface); color: var(--fy-text); cursor: pointer; font-size: .82rem; }
+.pz-stream-files button.on { background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #fff; border-color: transparent; }
+.pz-stream-play { margin-bottom: .5rem; }

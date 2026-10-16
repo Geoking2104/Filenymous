@@ -30,6 +30,7 @@ filenymous upload <fichier...> [--ttl 1h] [--max-downloads 1] [--password X] \
   [--webhook URL] [--webhook-no-link] [--allow-empty] [--json] [-q]
 ```
 - Le lien est écrit sur la **sortie standard**, la progression sur stderr. Avec `--json`, la sortie standard reçoit un événement JSON par ligne.
+- `--stream` : le destinataire web peut lire la vidéo ou l'audio pendant le transfert (« Partage streamé »).
 - `--password` : un mot de passe est demandé au destinataire. Il n'est jamais envoyé : c'est une preuve HMAC, et une dérivation PBKDF2 est mêlée à la clé AES. Préférez la variable d'environnement `FILENYMOUS_PASSWORD`, qui n'apparaît pas dans l'historique du shell ni dans les logs de CI.
 - Codes de sortie :
   - `0` : au moins un téléchargement terminé (ou `--allow-empty`)
@@ -74,6 +75,7 @@ filenymous upload <file...> [--ttl 1h] [--max-downloads 1] [--password X] \
   [--webhook URL] [--webhook-no-link] [--allow-empty] [--json] [-q]
 ```
 - The link goes to **stdout** and progress to stderr. With `--json`, stdout carries JSON lines events.
+- `--stream`: web recipients can play audio/video while it downloads ("Streamed sharing").
 - Prefer `FILENYMOUS_PASSWORD` over `--password`, so the password stays out of shell history and CI logs.
 - Exit codes:
   - `0`: at least one completed download (or `--allow-empty`)

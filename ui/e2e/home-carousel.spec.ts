@@ -11,7 +11,7 @@ test.describe("home services carousel", () => {
     await page.getByTestId("carousel-next").click();
     await expect(dots.nth(1)).toHaveAttribute("aria-current", "true");
     await dots.nth(6).click();
-    await expect(page.getByTestId("soon-stream")).toBeInViewport();
+    await expect(page.locator("article.pz-service--stream")).toBeInViewport();
     const track = carousel.locator(".pz-carousel-track");
     await track.focus();
     await page.keyboard.press("Home");

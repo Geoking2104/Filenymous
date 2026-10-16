@@ -22,6 +22,7 @@ upload options:
   --password <pw>         require a password (prefer env FILENYMOUS_PASSWORD)
   --webhook <url>         POST JSON events (share.created, download.completed, share.expired)
   --webhook-no-link       omit link and code from webhook payloads
+  --stream                let web recipients play audio/video while it downloads
   --allow-empty           exit 0 even if the TTL expires with zero downloads (default exit 2)
   --json                  machine-readable JSON lines on stdout
   --app-url <url>         web app base for links (default ${DEFAULT_APP_URL})
@@ -47,6 +48,7 @@ const { values: o, positionals } = parseArgs({
     webhook: { type: "string" },
     "webhook-no-link": { type: "boolean" },
     "allow-empty": { type: "boolean" },
+    stream: { type: "boolean" },
     json: { type: "boolean" },
     "app-url": { type: "string" },
     signal: { type: "string" },
@@ -115,7 +117,7 @@ async function upload(paths: string[]): Promise<number> {
       lastProgress = 0;
       err(`… transfer interrupted (${s.error}); still waiting for a recipient`);
     }
-  }, { password });
+  }, { password, stream: !!o.stream });
   const link = buildShareLink(o["app-url"] ?? process.env.FILENYMOUS_APP_URL ?? DEFAULT_APP_URL, sender.code, sender.secret);
 
   async function event(name: ShareEvent, error?: string) {

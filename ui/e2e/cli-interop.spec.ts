@@ -96,3 +96,31 @@ test("web sender → CLI receive", async ({ browser }) => {
   await expect(page.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "complete", { timeout: 15_000 });
   await expect(page.getByTestId("device-to")).toContainText("Filenymous CLI");
 });
+
+test("CLI --stream → web player; web streaming sender → CLI receive (sequential, compatible)", async ({ browser }) => {
+  const video = readFileSync(resolve(here, "fixtures/stream-sample.webm"));
+  writeFileSync(join(work, "clip.webm"), video);
+  const up = cli(["upload", join(work, "clip.webm"), "--ttl", "2m", "--json", "--stream"]);
+  const created = JSON.parse(await up.line(/"share.created"/));
+  const page = await (await browser.newContext()).newPage();
+  await prepare(page);
+  await page.goto(created.link.replace(APP, "/"));
+  await page.getByTestId("p2p-stream-play").click({ timeout: 45_000 });
+  const player = page.getByTestId("p2p-player");
+  await player.evaluate((el: HTMLMediaElement) => { el.muted = true; void el.play().catch(() => undefined); });
+  await expect.poll(() => player.evaluate((el: HTMLMediaElement) => el.currentTime), { timeout: 30_000 }).toBeGreaterThan(0.3);
+  up.proc.kill("SIGINT");
+  await up.done;
+
+  const sender = await (await browser.newContext()).newPage();
+  await prepare(sender);
+  await sender.goto("/");
+  await sender.locator('input[type="file"]').first().setInputFiles([{ name: "clip.webm", mimeType: "video/webm", buffer: video }]);
+  await sender.getByTestId("send-stream").check();
+  await sender.getByTestId("start-send").click();
+  await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "waiting", { timeout: 15_000 });
+  const out = join(work, "recv-stream");
+  const res = await cli(["receive", await sender.getByTestId("p2p-link").inputValue(), "-o", out]).done;
+  expect(res.code, res.err).toBe(0);
+  expect(sha(readFileSync(join(out, "clip.webm")))).toBe(sha(video));
+});
