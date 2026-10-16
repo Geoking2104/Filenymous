@@ -31,6 +31,7 @@ filenymous upload <fichier...> [--ttl 1h] [--max-downloads 1] [--password X] \
 ```
 - Le lien est écrit sur la **sortie standard**, la progression sur stderr. Avec `--json`, la sortie standard reçoit un événement JSON par ligne.
 - `--stream` : le destinataire web peut lire la vidéo ou l'audio pendant le transfert (« Partage streamé »).
+- `--expires <date ISO>` : le lien expire à cette date (liée à la clé et au lien) ; l'expéditeur cesse alors de servir. Nécessite un destinataire récent (web à jour ou CLI ≥ 0.3).
 - `--password` : un mot de passe est demandé au destinataire. Il n'est jamais envoyé : c'est une preuve HMAC, et une dérivation PBKDF2 est mêlée à la clé AES. Préférez la variable d'environnement `FILENYMOUS_PASSWORD`, qui n'apparaît pas dans l'historique du shell ni dans les logs de CI.
 - Codes de sortie :
   - `0` : au moins un téléchargement terminé (ou `--allow-empty`)
@@ -76,6 +77,7 @@ filenymous upload <file...> [--ttl 1h] [--max-downloads 1] [--password X] \
 ```
 - The link goes to **stdout** and progress to stderr. With `--json`, stdout carries JSON lines events.
 - `--stream`: web recipients can play audio/video while it downloads ("Streamed sharing").
+- `--expires <ISO date>`: the link expires at that date (bound into the key and the link); the sender stops serving afterwards. Requires an up-to-date receiver (current web app or CLI ≥ 0.3).
 - Prefer `FILENYMOUS_PASSWORD` over `--password`, so the password stays out of shell history and CI logs.
 - Exit codes:
   - `0`: at least one completed download (or `--allow-empty`)

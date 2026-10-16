@@ -8,6 +8,7 @@ import { formatBytes } from "../ux-v3/types";
 import { describeDevice } from "./device";
 import PigeonFlight from "../home/PigeonFlight";
 import StreamPlayer from "./StreamPlayer";
+import ExpiryCountdown from "./ExpiryCountdown";
 import { canPlayInBrowser, mediaKind } from "./media";
 import { streamingAvailable, type StreamReader } from "./stream";
 
@@ -27,7 +28,7 @@ export default function P2PReceivePanel({ hash }: Props) {
   useEffect(() => {
     if (!parsed || !p2pSupported()) return;
     let alive = true;
-    const r = new P2PReceiver(parsed.code, parsed.secret, (st) => alive && setState(st));
+    const r = new P2PReceiver(parsed.code, parsed.secret, (st) => alive && setState(st), undefined, undefined, parsed.expires);
     receiverRef.current = r;
     void r.start();
     return () => {
@@ -35,7 +36,7 @@ export default function P2PReceivePanel({ hash }: Props) {
       r.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parsed?.code, parsed?.secret]);
+  }, [parsed?.code, parsed?.secret, parsed?.expires]);
 
   useEffect(() => {
     if (state.status !== "receiving") return;
@@ -98,6 +99,7 @@ export default function P2PReceivePanel({ hash }: Props) {
         if (state.error === "sender-disconnected") return t("p2p.senderGone");
         if (state.error === "sender-stopped") return t("p2p.senderStopped");
         if (state.error === "stalled") return t("p2p.stalled");
+        if (state.error === "expired") return t("expiry.linkExpired");
         if (state.error === "too-many-attempts") return t("pw.tooMany");
         if (state.error === "unsupported-protocol") return t("pw.unsupportedProtocol");
         if (state.error === "decrypt-error" || state.error === "integrity-error") return t("p2p.integrityError");
@@ -122,6 +124,7 @@ export default function P2PReceivePanel({ hash }: Props) {
           ))}
         </ul>
       )}
+      {state.expires && state.status !== "error" && state.status !== "complete" && <ExpiryCountdown expires={state.expires} />}
       <div className="v3-status" data-testid="p2p-recv-status" data-status={state.status} style={{ margin: ".6rem 0" }}>
         <span className="v3-pulse" />
         {statusText}
@@ -157,7 +160,7 @@ export default function P2PReceivePanel({ hash }: Props) {
           </button>
         </form>
       )}
-      {state.status === "error" && (
+      {state.status === "error" && state.error !== "expired" && (
         <button type="button" className="v3-btn-ghost" onClick={() => location.reload()}>
           {t("p2p.retry")}
         </button>

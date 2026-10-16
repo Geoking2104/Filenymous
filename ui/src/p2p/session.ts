@@ -3,6 +3,7 @@ import { iceServers } from "./config";
 import {
   MAX_PASSWORD_ATTEMPTS,
   P2P_LOCKED_VERSION,
+  P2P_EXPIRING_VERSION,
   PASSWORD_ITERATIONS,
   derivePasswordKeys,
   passwordProof,
@@ -47,7 +48,9 @@ export type SenderStatus =
   | "error"
   | "stopped"
   /** Streaming share: serving byte ranges to a player. */
-  | "streaming";
+  | "streaming"
+  /** Expiry reached: the share is closed for good. */
+  | "expired";
 
 export type FileDeliveryState = "pending" | "sending" | "delivered" | "failed";
 
@@ -81,6 +84,8 @@ export interface SenderState {
   authFailures?: number;
   /** Browser · OS of the connected recipient (from its "hello"). */
   peerDevice?: string;
+  /** Expiry (Unix seconds), bound into the link and the file key. */
+  expires?: number;
   error?: string;
 }
 
@@ -111,6 +116,8 @@ export interface ReceiverState {
   peerDevice?: string;
   /** The sender offers streaming (range requests). */
   streamable?: boolean;
+  /** Expiry (Unix seconds) of an expiring share. */
+  expires?: number;
   error?: string;
 }
 
@@ -202,13 +209,16 @@ export class P2PSender {
   private connectTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly streamable: boolean;
   private fileKey?: Promise<CryptoKey>;
+  readonly expires?: number;
+  private expiryTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     private readonly files: File[],
     private readonly onState: (s: SenderState) => void,
-    opts: { code?: string; secret?: string; message?: string; signalUrl?: string; password?: string; stream?: boolean } = {},
+    opts: { code?: string; secret?: string; message?: string; signalUrl?: string; password?: string; stream?: boolean; expires?: number } = {},
   ) {
     this.streamable = !!opts.stream;
+    this.expires = opts.expires ? Math.floor(opts.expires) : undefined;
     if (opts.password) {
       this.pwSalt = randomB64(16);
       this.pwKeys = derivePasswordKeys(opts.password, this.pwSalt);
@@ -229,6 +239,7 @@ export class P2PSender {
       log: [],
       protected: !!opts.password,
       authFailures: 0,
+      ...(this.expires ? { expires: this.expires } : {}),
     };
     this.signal = new SignalClient(
       this.code,
@@ -264,7 +275,41 @@ export class P2PSender {
     return last ? (last.result === "complete" ? "complete" : "failed") : "waiting";
   }
 
+  private isExpired(): boolean {
+    return !!this.expires && Date.now() >= this.expires * 1000;
+  }
+
+  /** Expiry: stop serving, drop the current recipient, leave the signaling room. */
+  private expire() {
+    if (this.stopped && this.state.status === "expired") return;
+    clearTimeout(this.expiryTimer);
+    clearTimeout(this.connectTimer);
+    const a = this.attempt;
+    if (a) {
+      try { sendJson(a.channel, { type: "cancel", reason: "expired" }); } catch { /* ignore */ }
+      if (a.started && !a.finished) this.record(a, "failed", "expired");
+      setTimeout(() => { try { a.pc.close(); } catch { /* ignore */ } }, 300);
+    }
+    this.attempt = null;
+    this.stopped = true;
+    this.signal.close();
+    this.update({ status: "expired", error: "expired" });
+  }
+
+  private armExpiry() {
+    if (!this.expires) return;
+    clearTimeout(this.expiryTimer);
+    const ms = this.expires * 1000 - Date.now();
+    if (ms <= 0) return this.expire();
+    this.expiryTimer = setTimeout(() => this.armExpiry(), Math.min(ms, 2 ** 31 - 1));
+  }
+
   async start(): Promise<void> {
+    if (this.isExpired()) {
+      this.expire();
+      throw new Error("expired");
+    }
+    this.armExpiry();
     this.update({ status: "starting" });
     await this.signal.connect();
     this.update({ status: "waiting" });
@@ -388,6 +433,7 @@ export class P2PSender {
 
   private async serve(a: Attempt) {
     const { channel } = a;
+    if (this.isExpired()) return this.expire();
     channel.onmessage = (ev) => {
       if (typeof ev.data !== "string" || this.attempt !== a) return;
       const msg = parseControl(ev.data);
@@ -496,7 +542,8 @@ export class P2PSender {
     const { channel } = a;
     sendJson(channel, {
       type: "manifest",
-      v: P2P_PROTOCOL_VERSION,
+      v: this.expires ? P2P_EXPIRING_VERSION : P2P_PROTOCOL_VERSION,
+      ...(this.expires ? { expires: this.expires } : {}),
       chunkSize: P2P_CHUNK_SIZE,
       files: this.files.map((f) => ({ name: f.name, size: f.size, mime: f.type || "application/octet-stream" })),
       wrappedSecret: await wrapSecret(this.code, this.secret),
@@ -509,7 +556,7 @@ export class P2PSender {
   }
 
   private key(): Promise<CryptoKey> {
-    this.fileKey ??= (async () => deriveFileKey(this.secret, this.pwKeys ? (await this.pwKeys).mix : undefined))();
+    this.fileKey ??= (async () => deriveFileKey(this.secret, this.pwKeys ? (await this.pwKeys).mix : undefined, this.expires))();
     return this.fileKey;
   }
 
@@ -538,6 +585,7 @@ export class P2PSender {
         if (sent.has(k)) continue;
         sent.add(k);
         if (sent.size > 4096) sent.clear();
+        if (this.isExpired()) return this.expire();
         if (this.attempt !== a || a.channel.readyState !== "open") throw new Error("connection-lost");
         const slice = new Uint8Array(await this.files[index]!.slice(c * P2P_CHUNK_SIZE, (c + 1) * P2P_CHUNK_SIZE).arrayBuffer());
         await waitForDrain(a.channel);
@@ -565,7 +613,7 @@ export class P2PSender {
       error: undefined,
     });
     try {
-      const key = await deriveFileKey(this.secret, this.pwKeys ? (await this.pwKeys).mix : undefined);
+      const key = await this.key();
       let sent = 0;
       let lastUi = 0;
       for (let i = 0; i < this.files.length; i++) {
@@ -575,6 +623,7 @@ export class P2PSender {
         this.update({ fileStates: fs });
         const n = chunkCount(file.size);
         for (let c = 0; c < n; c++) {
+          if (this.isExpired()) return this.expire();
           if (this.attempt !== a || channel.readyState !== "open") throw new Error("connection-lost");
           const slice = new Uint8Array(await file.slice(c * P2P_CHUNK_SIZE, (c + 1) * P2P_CHUNK_SIZE).arrayBuffer());
           await waitForDrain(channel);
@@ -596,6 +645,7 @@ export class P2PSender {
 
   stop() {
     this.stopped = true;
+    clearTimeout(this.expiryTimer);
     const a = this.attempt;
     if (a?.started && !a.finished) this.record(a, "failed", "sender-stopped");
     clearTimeout(this.connectTimer);
@@ -637,6 +687,8 @@ export class P2PReceiver {
     private readonly onState: (s: ReceiverState) => void,
     signalUrl?: string,
     private readonly stallTimeoutMs = STALL_TIMEOUT_MS,
+    /** Expiry from the link (Unix seconds): bound into the file key. */
+    private readonly linkExpires?: number,
   ) {
     this.signal = new SignalClient(
       code,
@@ -672,7 +724,30 @@ export class P2PReceiver {
     this.update({ status: "error", error });
   }
 
+  private expiryTimer: ReturnType<typeof setTimeout> | undefined;
+
+  private armExpiry(expires: number) {
+    clearTimeout(this.expiryTimer);
+    const ms = expires * 1000 - Date.now();
+    if (ms <= 0) return this.expireNow();
+    this.expiryTimer = setTimeout(() => this.armExpiry(expires), Math.min(ms, 2 ** 31 - 1));
+  }
+
+  /** Expiry reached on this side: stop the player/download and disconnect. */
+  private expireNow() {
+    this.fail("expired");
+    if (this.state.status !== "complete") this.close();
+  }
+
   async start(): Promise<void> {
+    if (this.linkExpires) {
+      this.update({ expires: this.linkExpires });
+      if (Date.now() >= this.linkExpires * 1000) {
+        this.update({ status: "error", error: "expired" });
+        return;
+      }
+      this.armExpiry(this.linkExpires);
+    }
     // Someone else may be downloading right now (one receiver at a time per
     // code): keep retrying quietly ("waiting" state).
     for (let attempt = 0; !this.closed; attempt++) {
@@ -779,9 +854,18 @@ export class P2PReceiver {
       } else if (msg.type === "manifest") {
         clearTimeout(this.connectTimer);
         if (msg.protected && !this.pwMix) throw new Error("auth-required");
-        if (msg.v !== P2P_PROTOCOL_VERSION || msg.chunkSize !== P2P_CHUNK_SIZE) throw new Error("unsupported-protocol");
+        const expiring = msg.v === P2P_EXPIRING_VERSION;
+        if ((msg.v !== P2P_PROTOCOL_VERSION && !expiring) || msg.chunkSize !== P2P_CHUNK_SIZE) throw new Error("unsupported-protocol");
+        if (expiring && !msg.expires) throw new Error("unsupported-protocol");
+        // The expiry in the link must be the one the sender set (and vice versa).
+        if (this.linkExpires && this.linkExpires !== msg.expires) throw new Error("integrity-error");
+        if (!this.linkExpires && this.secret && expiring) throw new Error("integrity-error");
+        if (expiring) {
+          if (Date.now() >= msg.expires! * 1000) throw new Error("expired");
+          this.armExpiry(msg.expires!);
+        }
         const secret = this.secret ?? (await unwrapSecret(this.code, msg.wrappedSecret));
-        this.key = await deriveFileKey(secret, msg.protected ? this.pwMix! : undefined);
+        this.key = await deriveFileKey(secret, msg.protected ? this.pwMix! : undefined, expiring ? msg.expires : undefined);
         this.update({
           status: "ready",
           authChecking: false,
@@ -790,6 +874,7 @@ export class P2PReceiver {
           message: msg.message,
           peerDevice: msg.device,
           streamable: msg.streamable === true,
+          ...(expiring ? { expires: msg.expires } : {}),
           totalBytes: msg.files.reduce((n, f) => n + f.size, 0),
         });
         this.channel?.send(JSON.stringify({ type: "hello", device: describeDevice() }));
@@ -813,7 +898,7 @@ export class P2PReceiver {
         // Let the ack flush (TURN can be slow) before tearing anything down.
         setTimeout(() => this.close(), 5000);
       } else if (msg.type === "cancel") {
-        this.fail(msg.reason === "sender-stopped" ? "sender-stopped" : msg.reason || "cancelled");
+        this.fail(msg.reason === "sender-stopped" || msg.reason === "expired" ? msg.reason : msg.reason || "cancelled");
       }
       return;
     }
@@ -892,6 +977,7 @@ export class P2PReceiver {
 
   close() {
     this.closed = true;
+    clearTimeout(this.expiryTimer);
     clearTimeout(this.connectTimer);
     clearInterval(this.stallTimer);
     this.signal.close();

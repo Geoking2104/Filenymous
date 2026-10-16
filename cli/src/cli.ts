@@ -22,6 +22,8 @@ upload options:
   --password <pw>         require a password (prefer env FILENYMOUS_PASSWORD)
   --webhook <url>         POST JSON events (share.created, download.completed, share.expired)
   --webhook-no-link       omit link and code from webhook payloads
+  --expires <iso-date>    bind an expiry into the link (e.g. 2026-10-20T18:00:00Z);
+                          recipients see a countdown, nobody can connect after it
   --stream                let web recipients play audio/video while it downloads
   --allow-empty           exit 0 even if the TTL expires with zero downloads (default exit 2)
   --json                  machine-readable JSON lines on stdout
@@ -49,6 +51,7 @@ const { values: o, positionals } = parseArgs({
     "webhook-no-link": { type: "boolean" },
     "allow-empty": { type: "boolean" },
     stream: { type: "boolean" },
+    expires: { type: "string" },
     json: { type: "boolean" },
     "app-url": { type: "string" },
     signal: { type: "string" },
@@ -88,7 +91,14 @@ async function postWebhook(url: string, payload: WebhookPayload) {
 
 async function upload(paths: string[]): Promise<number> {
   if (!paths.length) throw new Error("upload: missing file (try: filenymous upload app.zip --ttl 1h)");
-  const ttlMs = parseDuration(o.ttl ?? "1h");
+  let expires: number | undefined;
+  if (o.expires) {
+    const at = Date.parse(o.expires);
+    if (!Number.isFinite(at) || at <= Date.now() + 2000) throw new Error("--expires must be an ISO date in the future");
+    expires = Math.floor(at / 1000);
+  }
+  // --expires also ends the process at that time (unless --ttl is shorter).
+  const ttlMs = expires && !o.ttl ? expires * 1000 - Date.now() : Math.min(parseDuration(o.ttl ?? "1h"), expires ? expires * 1000 - Date.now() : Infinity);
   const maxDownloads = Number(o["max-downloads"] ?? 1);
   if (!Number.isInteger(maxDownloads) || maxDownloads < 1) throw new Error("--max-downloads must be a positive integer");
   const password = o.password ?? process.env.FILENYMOUS_PASSWORD ?? undefined;
@@ -96,7 +106,7 @@ async function upload(paths: string[]): Promise<number> {
   for (const p of paths) files.push(await openFileSource(resolve(p)));
   const total = files.reduce((n, f) => n + f.size, 0);
   const fileLabel = files.length === 1 ? files[0]!.name : files.map((f) => f.name).join(", ");
-  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  const expiresAt = new Date(expires ? expires * 1000 : Date.now() + ttlMs).toISOString();
 
   let downloads = 0;
   let finish: (code: number) => void = () => undefined;
@@ -117,8 +127,8 @@ async function upload(paths: string[]): Promise<number> {
       lastProgress = 0;
       err(`… transfer interrupted (${s.error}); still waiting for a recipient`);
     }
-  }, { password, stream: !!o.stream });
-  const link = buildShareLink(o["app-url"] ?? process.env.FILENYMOUS_APP_URL ?? DEFAULT_APP_URL, sender.code, sender.secret);
+  }, { password, stream: !!o.stream, expires });
+  const link = buildShareLink(o["app-url"] ?? process.env.FILENYMOUS_APP_URL ?? DEFAULT_APP_URL, sender.code, sender.secret, expires);
 
   async function event(name: ShareEvent, error?: string) {
     const payload: WebhookPayload = { event: name, link, code: sender.code, file: fileLabel, size: total, expiresAt, downloads, maxDownloads, protected: !!password, ...(error ? { error } : {}) };
@@ -203,12 +213,12 @@ async function receive(input: string | undefined): Promise<number> {
         break;
       case "error":
         endProgress();
-        err(`✗ ${s.error ?? "error"}`);
+        err(s.error === "expired" ? "✗ this link has expired" : `✗ ${s.error ?? "error"}`);
         emit({ event: "error", error: s.error });
         finish(1);
         break;
     }
-  });
+  }, undefined, undefined, parsed.expires);
   const timer = setTimeout(() => { err("✗ timeout"); finish(1); }, timeoutMs);
   process.once("SIGINT", () => finish(130));
   void receiver.start();

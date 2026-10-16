@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { QRCodeSVG } from "qrcode.react";
 import { P2PSender, type SenderState } from "./session";
 import { buildShareLink } from "./protocol";
+import ExpiryCountdown from "./ExpiryCountdown";
 import { formatBytes } from "../ux-v3/types";
 import { describeDevice } from "./device";
 import PigeonFlight from "../home/PigeonFlight";
@@ -14,6 +15,8 @@ interface Props {
   password?: string;
   /** Offer streaming (range requests) to the recipient. */
   stream?: boolean;
+  /** Expiry (Unix seconds). */
+  expires?: number;
   onStop: () => void;
 }
 
@@ -22,7 +25,7 @@ function shareBaseUrl(): string {
 }
 
 /** Sender view for a live, direct transfer. */
-export default function P2PSendPanel({ files, message, password, stream, onStop }: Props) {
+export default function P2PSendPanel({ files, message, password, stream, expires, onStop }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<SenderState | null>(null);
   const [error, setError] = useState("");
@@ -32,7 +35,7 @@ export default function P2PSendPanel({ files, message, password, stream, onStop 
   useEffect(() => {
     let alive = true;
     setError("");
-    const sender = new P2PSender(files, (st) => alive && setState(st), { message, password: password || undefined, stream: !!stream });
+    const sender = new P2PSender(files, (st) => alive && setState(st), { message, password: password || undefined, stream: !!stream, expires });
     senderRef.current = sender;
     sender.start().catch((e) => {
       if (alive) setError(String((e as Error).message || e));
@@ -47,9 +50,9 @@ export default function P2PSendPanel({ files, message, password, stream, onStop 
       window.removeEventListener("beforeunload", onUnload);
       sender.stop();
     };
-  }, [files, message, password, stream]);
+  }, [files, message, password, stream, expires]);
 
-  const link = useMemo(() => (state ? buildShareLink(shareBaseUrl(), state.code, state.secret) : ""), [state?.code, state?.secret]);
+  const link = useMemo(() => (state ? buildShareLink(shareBaseUrl(), state.code, state.secret, state.expires) : ""), [state?.code, state?.secret, state?.expires]);
   const pct = state && state.totalBytes ? Math.min(100, Math.round((state.confirmedBytes / state.totalBytes) * 100)) : 0;
   const reasonText = (reason?: string) => {
     switch (reason) {
@@ -94,6 +97,7 @@ export default function P2PSendPanel({ files, message, password, stream, onStop 
   };
 
   const statusText = (() => {
+    if (error === "expired") return t("expiry.senderExpired");
     if (error) return t("p2p.errorSignal", { message: error });
     if (!state) return t("p2p.starting");
     if ((state.error === "ice-failed" || state.error === "ice-timeout") && state.status === "waiting") return t("p2p.iceFailed");
@@ -108,6 +112,8 @@ export default function P2PSendPanel({ files, message, password, stream, onStop 
         return state.protected ? t("pw.senderWaitingPassword") : t("p2p.recipientChoosing");
       case "transferring":
         return t("p2p.sending", { pct });
+      case "expired":
+        return t("expiry.senderExpired");
       case "streaming":
         return t("stream.senderStreaming", { size: formatBytes(state.sentBytes) });
       case "complete":
@@ -170,6 +176,14 @@ export default function P2PSendPanel({ files, message, password, stream, onStop 
           );
         })}
       </ul>
+      {state?.expires && state.status !== "expired" && <ExpiryCountdown expires={state.expires} testId="send-expiry" />}
+      {(state?.protected || state?.expires) && (
+        <p className="pz-protect-summary" data-testid="send-protect-summary">
+          {state.protected ? `🔒 ${t("protect.passwordOn")}` : ""}
+          {state.protected && state.expires ? " · " : ""}
+          {state.expires ? `⏳ ${t("protect.expiryOn")}` : ""}
+        </p>
+      )}
       <div className="v3-status" data-testid="p2p-send-status" data-status={state?.status ?? "starting"} style={{ margin: ".6rem 0" }}>
         <span className="v3-pulse" />
         {statusText}
