@@ -91,6 +91,13 @@ The React UI (what filenymous.eu serves) now has its own direct-transfer path (`
 4. **Check:** `curl https://www.opendpe.net/filenymous-signal/health` should return `{"ok":true,...}`, and `curl -H 'Origin: https://filenymous.eu' https://www.opendpe.net/filenymous-signal/ice` should list a `turn:` entry.
 5. **UI:** `cd ui && npm ci && npm run build`, then deploy `ui/dist` to `/app/` with `scripts/deploy-ovh-sftp.mjs` as usual. Smoke test: send from desktop with *Direct (P2P)*, scan the QR code with a phone on 4G, download.
 
+## State as of 2026-10-14
+
+- `https://filenymous.eu/app/` serves the single page (PRs #11 and #12): review step, optional password, pigeon progress, peer device, FR/EN legal footer. The previous multi-panel UI is still at `/app/#legacy`.
+- UI deploys go through `scripts/deploy-ovh-sftp.mjs --dist ui/dist --remote /home/filenyb/www/app --merge` after `npm run build -- --base=/app/`. The `.ps1` / `.sh` OVH scripts are older alternatives.
+- The signaling relay and coturn (TURN REST credentials via `/ice`) run on the VPS behind `www.opendpe.net/filenymous-signal/`. Setup is in `p2p-signal/README.md`.
+- Archived: `docs/archive/` holds the deprecated v1 bridge, the Holochain-era design plans (`superpowers/`), the steward-node notes and the old standalone deploy script.
+
 ## Dropzone (100 % P2P) — relay settings
 
 The Dropzone reuses `p2p-signal` (new message types `drop-join`, `drop-signal`, `drop-leave`); no file byte goes through the VPS. Optional environment variables:

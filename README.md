@@ -1,117 +1,187 @@
 # Filenymous
 
-P2P web app for sending and receiving encrypted files without an account, without a native installer, and without requiring a local Holochain conductor.
+**[English](#english) · [Français](#français)**
 
-- OVH site: https://filenymous.eu/ (landing) - app at https://filenymous.eu/app/
-- GitHub Pages mirror: https://geoking2104.github.io/Filenymous/ (landing) - app at https://geoking2104.github.io/Filenymous/app/
-- Releases: https://github.com/Geoking2104/Filenymous/releases/latest
+<p align="center">
+  <img src="docs/screenshots/home.png" width="45%" alt="Home" />
+  <img src="docs/screenshots/review-step.png" width="45%" alt="Review step" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/transfer-sender.png" width="45%" alt="Sender: pigeon at 100 %" />
+  <img src="docs/screenshots/receiver-password.png" width="45%" alt="Receiver password prompt" />
+</p>
 
-## Positioning
+---
 
-Filenymous remains a web application. The Windows, macOS, and Linux files published in releases are portable web archives that contain `Filenymous.html`; they open in a modern browser.
+## English
 
-The project no longer publishes `.exe`, `.dmg`, or `.AppImage` files while the native architecture is not necessary and stable again.
+### What it is
 
-## How It Works
+Filenymous is a **direct, browser-to-browser file transfer** web app. Drop a file, share a link, a code or a QR code, and the recipient downloads it straight from your browser over WebRTC. No account and no cloud storage. The file is encrypted end to end, and it only exists in the two browsers.
 
-1. The sender selects a file in the browser.
-2. The file is encrypted locally with WebCrypto.
-3. Filenymous creates a one-time code, a self-contained encrypted link (optionally password-protected with Argon2id), a WebRTC P2P session, or a temporary Room invite.
-4. The recipient opens the link or enters the code.
-5. Decryption stays local in the recipient's browser.
+- **App:** https://filenymous.eu/app/
+- **Landing page:** https://filenymous.eu/
+- **Signaling relay (health):** https://www.opendpe.net/filenymous-signal/health
 
-For small files, the self-contained link remains the simplest path. For larger files, the direct P2P flow keeps both browsers open during the transfer.
+### Features
 
-## Direct transfer
+- **Single page flow:**
+  1. Drop or pick files.
+  2. Review them: list with MIME type and size, remove or add files, optional password.
+  3. Click **Start** to get the link, the short code (`123-456-ABC`) and the QR code.
+  4. The recipient opens the link, scans the QR code or types the code, then clicks **Download**.
+- **End-to-end encryption:** every 64 KiB chunk is sealed with AES-256-GCM, on top of WebRTC DTLS. The key is derived with HKDF from a 128-bit secret that only lives in the URL fragment (`#p2p:CODE/SECRET`), which servers never see. A chunk that is reordered, swapped or tampered with fails to decrypt.
+- **Optional password:**
+  - The recipient must prove the password with an HMAC challenge-response over a PBKDF2-SHA256 key (310 000 iterations) before any file name or byte is sent.
+  - The password never crosses the network, and it is never in the link or the QR code.
+  - Half of the derived key is mixed into the AES file key, so the link alone cannot decrypt.
+  - After 5 wrong attempts the share is locked.
+- **Live progress on both sides:** an animated carrier pigeon flies from sender to receiver according to the bytes the recipient confirmed, and lands at 100 %. The sender also sees per-file delivery, speed, and the success or failure of each download in the session.
+- **Peer device:** each side shows the other's browser and OS (e.g. `Chrome 129 · Windows ↔ Safari 17 · iPhone`). The user agent is parsed locally and exchanged only over the DataChannel.
+- **Bilingual FR/EN** with a language switch.
+- **Large files:** files are read with `File.slice()` and are never loaded whole into memory. Chromium writes them to disk as they arrive (File System Access API). Other browsers fall back to Blob downloads.
+- **The sender keeps the tab open.** The share lasts as long as the tab, and several recipients can download one after the other.
 
-The **⚡ Direct (P2P)** path in *Send* streams files straight from the sender's browser to the recipient's, with nothing stored anywhere:
+The previous multi-panel UI (self-contained `#sl=` links, rooms, contacts…) is still reachable at `/app/#legacy`. It is no longer linked anywhere.
 
-1. Pick one or more files (any size) and choose **Direct (P2P)**. Browser-only mode switches to it automatically when files are too large or too many for a self-contained link.
-2. Filenymous shows a short code (`123-456-ABC`), a share link `…/app/#p2p:123-456-ABC/<secret>` and its **QR code** (plus copy and the native share sheet).
-3. The recipient opens the link or scans the QR code. The page connects on its own, lists the files and offers **Download**. They can also type the code or use **📷 Scan a QR code** in *Receive*, which reuses the optical-transfer camera scanner.
-4. **The sender keeps the tab open.** It serves the files to one recipient at a time, as many times as needed, until the sender clicks *Stop sharing* or closes the tab.
+### Architecture
 
-How it works:
+```
+ sender browser ──WebRTC DataChannel (DTLS + AES-256-GCM chunks)──► receiver browser
+        │                         ▲ (fallback: TURN relay, sees ciphertext only)
+        └──── WebSocket signaling (SDP / ICE only) ──── p2p-signal ────┘
+```
 
-- **Signaling:** `p2p-signal/` (WebSocket) only relays SDP offers, answers and ICE candidates for the one-time code room. It reconnects automatically and keeps the room alive while the sender stays connected.
-- **Transport:** an ordered `RTCDataChannel` carries 64 KiB chunks with backpressure (`bufferedAmountLowThreshold`). Files are read with `File.slice()`, so they are never loaded whole into memory.
-- **End-to-end encryption:** on top of DTLS, each chunk is sealed with AES-256-GCM. The key is derived (HKDF) from a 128-bit secret that only exists in the URL fragment. Each chunk gets a unique IV, and its position goes into the AAD, so a reordered or swapped chunk fails to decrypt. A recipient who typed only the code gets the secret over the DataChannel, wrapped with a PBKDF2 key derived from the code.
-- **Saving:** in Chromium the browser streams to disk with the File System Access API (`showSaveFilePicker`, or `showDirectoryPicker` for several files). Elsewhere it falls back to Blob downloads and warns before very large files.
-- **NAT traversal:** STUN by default. Strict NATs or corporate firewalls need a **TURN** relay: the web app gets short-lived TURN credentials from `GET <signal>/ice` (see `p2p-signal/README.md`). Without TURN, those networks show "Direct connection failed".
+| Part | Where | What |
+|---|---|---|
+| UI | `ui/` (React 18 + Vite + TypeScript, i18next) | `src/pizza/` single-page shell, `src/p2p/` protocol, session, signaling client, sinks and UA parsing. |
+| Signaling | `p2p-signal/server.js` (Node + `ws`, port 8789) | On a VPS behind nginx at `wss://www.opendpe.net/filenymous-signal/`. Relays only offers, answers and ICE candidates for a one-time code room. `GET /ice` returns STUN plus short-lived TURN credentials. Stores nothing. |
+| TURN | coturn with `use-auth-secret` (TURN REST API) | Used only when a direct connection is impossible (strict NAT, corporate firewall). Credentials are per-request and valid for 1 h. The relay forwards encrypted bytes only. |
+| Hosting | OVH shared hosting | Static build served at `https://filenymous.eu/app/`. |
 
-Code: `ui/src/p2p/` (protocol, signaling client, sender and receiver sessions, sinks, UI panels). Tests: `ui/src/p2p/protocol.test.ts` and `ui/e2e/p2p-direct.spec.ts`. The e2e test runs a real two-browser transfer through a local relay.
+Holochain-era parts (`dnas/`, `happ.yaml`, `web-happ.yaml`, `network/`, `push-server/`, `src-tauri/`, `filenymous-app.html`) are still built by CI and kept for reference. The direct P2P flow does not use them. Obsolete design notes are in `docs/archive/`.
 
-## Public Product Modes
-
-- **Send**: pick files, then either start a live **Direct (P2P)** transfer (link + QR code, keep the tab open) or create a Magic Link to share by email, copy-paste, or QR code.
-- **Receive**: paste a Filenymous link, enter the one-time code, or scan a QR code with the camera. The browser explains where the downloaded file is saved.
-- **Rooms**: create a temporary private room for group sharing. The current web UI generates an invite link, lists participants, queues room files locally, and provides a lightweight room chat surface.
-- **History**: local browser history for transfers the user explicitly created or received.
-- **Advanced**: network, identity, privacy, wallet, Holochain, and Iroh details. The public path does not require users to understand this section.
-
-## Target Architecture
-
-- **WebCrypto**: local AES-256-GCM encryption.
-- **WebRTC DataChannel**: browser-to-browser transfer when peers can reach each other.
-- **Web signaling**: minimal rendezvous exchange, without storing the plaintext file.
-- **Mode ROOM**: E2E-room-ready model for multiple participants, file queues, room messages, expiration, and future revocation.
-- **Iroh / iroh-blobs**: path for verifiable large files and encrypted relays.
-- **Holochain / Holo Web Conductor**: advanced option for identity, contacts, DHT, and coordination without forcing the general public to run a local conductor.
-
-## Downloads
-
-GitHub releases publish web packages only:
-
-- `filenymous-public-web.zip`
-- `filenymous-windows-web.zip`
-- `filenymous-macos-web.zip`
-- `filenymous-linux-web.zip`
-- `ui.zip`
-
-The platform-specific archives contain the same web application with a short README adapted to the platform.
-
-## Development
+### Development
 
 ```bash
 cd ui
-npm install
-npm run dev
+npm ci
+npm run dev                 # http://localhost:5173
+# local signaling relay (optional, otherwise the production relay is used)
+cd ../p2p-signal && npm ci && npm start   # ws://127.0.0.1:8789
 ```
 
-Direct transfers in dev need a local relay (the UI uses `ws://127.0.0.1:8789` on localhost):
+To point the dev UI at a local relay, set `window.__FILENYMOUS_SIGNAL_URL__ = "ws://127.0.0.1:8789"` before the app loads, as the e2e tests do.
 
-```bash
-cd p2p-signal && npm install && npm start
-```
-
-Override at build time with `VITE_P2P_SIGNAL_URL` (WebSocket URL) and optionally `VITE_P2P_ICE_SERVERS` (JSON `RTCIceServer[]`, which skips `/ice`).
-
-Tests:
-
-```bash
-cd ui && npm test && npx playwright test        # unit + e2e (incl. two-browser P2P)
-cd tests && npm test                            # repo-level suite (Tryorama tests need a Holochain conductor)
-```
-
-To build the Vite UI:
+### Build
 
 ```bash
 cd ui
-npm run build
+npm run build -- --base=/app/      # → ui/dist (served under /app/)
 ```
 
-Holochain artifacts remain in the repository for advanced modules and Rust validation, but they are no longer the public installation mode.
+### Deployment
 
-## Security
+**UI (OVH, SFTP):** this merges into the remote folder and backs up each overwritten file to `<remote>.bak-<timestamp>/`. The password comes from the `OVH_SFTP_PASS` environment variable, so never commit it.
 
-- Local encryption before transfer.
-- Optional password protection on links (Argon2id-derived key wrapping, zero-knowledge).
-- No account required.
-- One-time code for receive sessions.
-- History and keys stored locally in the browser.
-- No server-side storage of the plaintext file.
-- Local BTC/ETH wallet locked by default.
+```bash
+cd scripts && npm ci && cd ..
+OVH_SFTP_PASS=… node scripts/deploy-ovh-sftp.mjs --dist ui/dist --remote /home/filenyb/www/app --merge
+```
 
-## License
+**Signal server (VPS):** see [`p2p-signal/README.md`](p2p-signal/README.md). In short:
+1. Copy `server.js` and the package files to `/opt/filenymous-signal/app`, then run `npm ci --omit=dev`.
+2. Install `filenymous-signal.service`, and keep `TURN_URLS`, `TURN_SECRET` and `ALLOWED_ORIGIN` in `/etc/filenymous-signal.env`. Set `TRUST_PROXY=1` behind nginx.
+3. Use the nginx location from `p2p-signal/nginx-opendpe-location.conf`.
+4. Check with `curl …/filenymous-signal/health` and `/ice`.
 
-MIT.
+More history and checklists are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+### Tests
+
+```bash
+cd ui
+npx tsc --noEmit
+npm test                         # vitest unit tests (protocol, password gate, UA parser, …)
+npx playwright test              # e2e: two browser contexts + a local p2p-signal relay
+cd ../tests && npm ci && npx vitest run src/p2p_signal_*.test.ts   # relay tests (run in CI)
+```
+
+The e2e suite covers transfers with no password, with a wrong then correct password, and the lockout after 5 attempts. It also covers a typed code, signaling reconnects, a recipient leaving mid-transfer, and the legacy `#legacy` link flow.
+
+### Privacy & legal summary
+
+- Files go **directly from browser to browser**, encrypted, and are never stored on a server. There is no file database.
+- The **signaling server** temporarily sees the transfer code and network connection data (IP addresses, WebRTC parameters). Nothing is persisted.
+- The **TURN relay**, when used, forwards bytes that are already encrypted. It cannot read them and stores nothing.
+- The browser and OS name is exchanged only between the two peers.
+- **No cookies, no analytics, no ads.** Closing the sender's tab ends the share. The decryption key exists only in the shared link, plus the password when one is set.
+
+The full notice ("Mentions légales & RGPD") is in the app footer.
+
+License: see [LICENSE](LICENSE).
+
+---
+
+## Français
+
+### Qu'est-ce que c'est
+
+Filenymous est une application web de **transfert de fichiers direct, de navigateur à navigateur**, On dépose un fichier, on partage un lien, un code ou un QR code, et le destinataire le télécharge directement depuis votre navigateur via WebRTC. Pas de compte, pas de stockage dans le cloud. Le fichier est chiffré de bout en bout et n'existe que dans les deux navigateurs.
+
+- **Application :** https://filenymous.eu/app/
+- **Page d'accueil :** https://filenymous.eu/
+- **Relais de signalisation (santé) :** https://www.opendpe.net/filenymous-signal/health
+
+### Fonctionnalités
+
+- **Page unique :**
+  1. Déposer ou choisir des fichiers.
+  2. Vérifier : liste avec type MIME et taille, retrait ou ajout de fichiers, mot de passe facultatif.
+  3. Cliquer sur **Démarrer** pour obtenir le lien, le code court (`123-456-ABC`) et le QR code.
+  4. Le destinataire ouvre le lien, scanne le QR code ou saisit le code, puis clique sur **Télécharger**.
+- **Chiffrement de bout en bout :** chaque bloc de 64 Ko est chiffré en AES-256-GCM, en plus du DTLS de WebRTC. La clé est dérivée par HKDF d'un secret de 128 bits qui ne vit que dans le fragment de l'URL (`#p2p:CODE/SECRET`), jamais vu par les serveurs. Un bloc réordonné, échangé ou modifié ne se déchiffre pas.
+- **Mot de passe facultatif :**
+  - Le destinataire doit le prouver par un défi-réponse HMAC sur une clé PBKDF2-SHA256 (310 000 itérations), avant tout envoi de nom ou d'octet de fichier.
+  - Le mot de passe ne circule jamais sur le réseau, et il n'est jamais dans le lien ni dans le QR code.
+  - Une moitié de la clé dérivée entre dans la clé AES des fichiers : le lien seul ne suffit pas à déchiffrer.
+  - Après 5 essais erronés, le partage est verrouillé.
+- **Progression des deux côtés :** un pigeon voyageur animé vole de l'expéditeur au destinataire selon les octets confirmés, et se pose à 100 %. L'expéditeur voit aussi la livraison de chaque fichier, le débit, et le succès ou l'échec de chaque téléchargement de la session.
+- **Appareil du correspondant :** chaque côté voit le navigateur et le système de l'autre (ex. `Chrome 129 · Windows ↔ Safari 17 · iPhone`). L'analyse se fait localement et l'information n'est échangée que par le canal de données.
+- **Bilingue FR/EN** avec sélecteur de langue.
+- **Gros fichiers :** lecture par `File.slice()`, sans charger le fichier entier en mémoire. Chromium écrit directement sur le disque (File System Access API), les autres navigateurs passent par un Blob.
+- **L'expéditeur garde l'onglet ouvert :** le partage dure tant que l'onglet est ouvert, et plusieurs destinataires peuvent télécharger l'un après l'autre.
+
+L'ancienne interface multi-panneaux (liens autonomes `#sl=`, salons, contacts…) reste accessible via `/app/#legacy`, mais elle n'est plus mise en avant.
+
+### Architecture
+
+| Élément | Où | Rôle |
+|---|---|---|
+| Interface | `ui/` (React 18 + Vite + TypeScript, i18next) | `src/pizza/` pour la page unique, `src/p2p/` pour le protocole, la session, le client de signalisation, l'écriture des fichiers et l'analyse du user agent. |
+| Signalisation | `p2p-signal/server.js` (Node + `ws`, port 8789) | VPS derrière nginx, `wss://www.opendpe.net/filenymous-signal/`. Ne relaie que les offres, réponses et candidats ICE d'un salon à code unique. `GET /ice` fournit le STUN et des identifiants TURN éphémères. Ne stocke rien. |
+| TURN | coturn en `use-auth-secret` (API REST TURN) | Utilisé seulement si la connexion directe est impossible. Identifiants par requête, valables 1 h. Le relais ne transmet que des octets chiffrés. |
+| Hébergement | Hébergement mutualisé OVH | Build statique servi sur `https://filenymous.eu/app/`. |
+
+Les éléments de l'ère Holochain (`dnas/`, `happ.yaml`, `web-happ.yaml`, `network/`, `push-server/`, `src-tauri/`, `filenymous-app.html`) sont toujours compilés par la CI et conservés pour référence. Le transfert P2P direct ne les utilise pas. Les notes de conception obsolètes sont dans `docs/archive/`.
+
+### Développement, build, déploiement, tests
+
+Les commandes sont les mêmes que dans la section anglaise :
+
+- **Développement :** `cd ui && npm ci && npm run dev`.
+- **Relais local (facultatif) :** `cd p2p-signal && npm ci && npm start`.
+- **Build :** `npm run build -- --base=/app/`.
+- **Déploiement de l'interface :** `node scripts/deploy-ovh-sftp.mjs --dist ui/dist --remote /home/filenyb/www/app --merge`. Le mot de passe est lu dans `OVH_SFTP_PASS` et ne doit jamais être commité.
+- **Serveur de signalisation :** voir `p2p-signal/README.md`.
+- **Tests :** `npx tsc --noEmit`, `npm test`, `npx playwright test`. Les tests e2e couvrent le transfert sans mot de passe, avec un mauvais puis le bon mot de passe, et le verrouillage après 5 essais.
+
+### Confidentialité et mentions légales (résumé)
+
+- Les fichiers vont **directement d'un navigateur à l'autre**, chiffrés, et ne sont jamais stockés sur un serveur.
+- Le **serveur de signalisation** voit temporairement le code de transfert et les données de connexion réseau (adresses IP, paramètres WebRTC). Rien n'est conservé.
+- Le **relais TURN**, s'il est utilisé, ne transmet que des octets déjà chiffrés. Il ne peut pas les lire et ne stocke rien.
+- Le nom du navigateur et du système n'est échangé qu'entre les deux pairs.
+- **Aucun cookie, aucune analytics, aucune publicité.** Fermer l'onglet de l'expéditeur met fin au partage.
+
+Le texte complet (« Mentions légales & RGPD ») se trouve dans le pied de page de l'application.

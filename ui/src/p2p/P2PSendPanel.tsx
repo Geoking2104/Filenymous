@@ -4,10 +4,14 @@ import { QRCodeSVG } from "qrcode.react";
 import { P2PSender, type SenderState } from "./session";
 import { buildShareLink } from "./protocol";
 import { formatBytes } from "../ux-v3/types";
+import { describeDevice } from "./device";
+import PigeonFlight from "../pizza/PigeonFlight";
 
 interface Props {
   files: File[];
   message?: string;
+  /** Optional password: never put in the link or QR code. */
+  password?: string;
   onStop: () => void;
 }
 
@@ -16,7 +20,7 @@ function shareBaseUrl(): string {
 }
 
 /** Sender view for a live, direct transfer. */
-export default function P2PSendPanel({ files, message, onStop }: Props) {
+export default function P2PSendPanel({ files, message, password, onStop }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<SenderState | null>(null);
   const [error, setError] = useState("");
@@ -24,22 +28,50 @@ export default function P2PSendPanel({ files, message, onStop }: Props) {
   const senderRef = useRef<P2PSender | null>(null);
 
   useEffect(() => {
-    const sender = new P2PSender(files, setState, { message });
+    let alive = true;
+    setError("");
+    const sender = new P2PSender(files, (st) => alive && setState(st), { message, password: password || undefined });
     senderRef.current = sender;
-    sender.start().catch((e) => setError(String((e as Error).message || e)));
+    sender.start().catch((e) => {
+      if (alive) setError(String((e as Error).message || e));
+    });
     const onUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "";
     };
     window.addEventListener("beforeunload", onUnload);
     return () => {
+      alive = false;
       window.removeEventListener("beforeunload", onUnload);
       sender.stop();
     };
-  }, [files, message]);
+  }, [files, message, password]);
 
   const link = useMemo(() => (state ? buildShareLink(shareBaseUrl(), state.code, state.secret) : ""), [state?.code, state?.secret]);
-  const pct = state && state.totalBytes ? Math.min(100, Math.round((state.sentBytes / state.totalBytes) * 100)) : 0;
+  const pct = state && state.totalBytes ? Math.min(100, Math.round((state.confirmedBytes / state.totalBytes) * 100)) : 0;
+  const reasonText = (reason?: string) => {
+    switch (reason) {
+      case "connection-lost":
+        return t("p2p.reasonConnectionLost");
+      case "recipient-left":
+        return t("p2p.reasonRecipientLeft");
+      case "stalled":
+        return t("p2p.reasonStalled");
+      case "sender-stopped":
+        return t("p2p.reasonSenderStopped");
+      case "too-many-attempts":
+        return t("pw.reasonTooMany");
+      case "decrypt-error":
+      case "integrity-error":
+        return t("p2p.integrityError");
+      case "ice-failed":
+      case "ice-timeout":
+        return t("p2p.iceFailed");
+      default:
+        return reason || t("p2p.reasonUnknown");
+    }
+  };
+  const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
   const copy = async () => {
     try {
@@ -62,7 +94,7 @@ export default function P2PSendPanel({ files, message, onStop }: Props) {
   const statusText = (() => {
     if (error) return t("p2p.errorSignal", { message: error });
     if (!state) return t("p2p.starting");
-    if (state.error === "ice-failed" || state.error === "ice-timeout") return t("p2p.iceFailed");
+    if ((state.error === "ice-failed" || state.error === "ice-timeout") && state.status === "waiting") return t("p2p.iceFailed");
     switch (state.status) {
       case "starting":
         return t("p2p.starting");
@@ -70,10 +102,16 @@ export default function P2PSendPanel({ files, message, onStop }: Props) {
         return t("p2p.waitingReceiver");
       case "connecting":
         return t("p2p.peerConnecting");
+      case "connected":
+        return state.protected ? t("pw.senderWaitingPassword") : t("p2p.recipientChoosing");
       case "transferring":
         return t("p2p.sending", { pct });
       case "complete":
-        return t("p2p.sentComplete", { count: state.downloads });
+        return t("p2p.deliveredByRecipient");
+      case "failed":
+        return t("p2p.transferFailed", {
+          reason: reasonText(state.protected && (state.authFailures ?? 0) >= 5 ? "too-many-attempts" : state.error),
+        });
       case "reconnecting":
         return t("p2p.reconnecting");
       case "error":
@@ -111,19 +149,61 @@ export default function P2PSendPanel({ files, message, onStop }: Props) {
           )}
         </>
       )}
-      <ul className="v3-muted" style={{ fontSize: ".8rem", textAlign: "left", paddingLeft: "1.1rem" }}>
-        {files.map((f, i) => (
-          <li key={`${f.name}-${i}`}>
-            {f.name} · {formatBytes(f.size)}
-          </li>
-        ))}
+      {state?.protected && (
+        <p className="pz-peer" data-testid="p2p-send-protected">
+          🔒 {t("pw.senderProtected")}
+          {state.authFailures ? ` · ${t("pw.senderFailures", { count: state.authFailures, max: 5 })}` : ""}
+        </p>
+      )}
+      <ul className="v3-muted" style={{ fontSize: ".8rem", textAlign: "left", paddingLeft: "1.1rem" }} data-testid="p2p-send-files">
+        {files.map((f, i) => {
+          const fsState = state?.fileStates[i] ?? "pending";
+          const icon = fsState === "delivered" ? "✅" : fsState === "failed" ? "⚠" : fsState === "sending" ? "⏳" : "•";
+          return (
+            <li key={`${f.name}-${i}`} data-file-state={fsState}>
+              {icon} {f.name} · {formatBytes(f.size)}
+            </li>
+          );
+        })}
       </ul>
       <div className="v3-status" data-testid="p2p-send-status" data-status={state?.status ?? "starting"} style={{ margin: ".6rem 0" }}>
         <span className="v3-pulse" />
         {statusText}
       </div>
-      {state?.status === "transferring" && (
-        <progress max={100} value={pct} style={{ width: "100%" }} aria-label={t("p2p.progress")} />
+      {state?.peerDevice && (state.status === "connected" || state.status === "transferring" || state.status === "complete") && (
+        <p className="pz-peer" data-testid="p2p-peer-device">{t("pz.peerDevice", { device: state.peerDevice })}</p>
+      )}
+      {(state?.status === "transferring" || state?.status === "complete") && (
+        <>
+          <PigeonFlight pct={state.status === "complete" ? 100 : pct} self="from" from={describeDevice()} to={state.peerDevice} done={state.status === "complete"} />
+          {state.status === "transferring" && (
+            <p className="v3-muted" data-testid="p2p-send-bytes" style={{ fontSize: ".8rem", margin: ".3rem 0" }}>
+              {t("p2p.confirmedBytes", {
+                done: formatBytes(state.confirmedBytes),
+                total: formatBytes(state.totalBytes),
+                pct,
+              })}
+              {state.speed > 0 ? ` · ${formatBytes(state.speed)}/s` : ""}
+            </p>
+          )}
+        </>
+      )}
+      {state && state.log.length > 0 && (
+        <div style={{ textAlign: "left", margin: ".6rem 0" }} data-testid="p2p-send-log">
+          <div className="v3-step" style={{ marginBottom: ".25rem" }}>
+            {t("p2p.logTitle", { count: state.downloads })}
+          </div>
+          <ul className="v3-muted" style={{ fontSize: ".78rem", paddingLeft: "1.1rem", margin: 0 }}>
+            {state.log.map((e) => (
+              <li key={e.id} data-result={e.result}>
+                {fmtTime(e.endedAt)} ·{" "}
+                {e.result === "complete"
+                  ? `✅ ${t("p2p.deliveredByRecipient")} (${formatBytes(e.totalBytes)}, ${Math.max(1, Math.round((e.endedAt - e.startedAt) / 1000))} s)`
+                  : `⚠ ${t("p2p.transferFailed", { reason: reasonText(e.reason) })} — ${formatBytes(e.bytes)} / ${formatBytes(e.totalBytes)}`}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       <p className="v3-footnote">{t("p2p.securityNote")}</p>
       <button type="button" className="v3-btn-ghost" onClick={onStop}>
