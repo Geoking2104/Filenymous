@@ -1,7 +1,8 @@
 import { createServer } from "node:http";
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
-import { createVault } from "./vault.js";
+import { createVault, SECURITY_HEADERS } from "./vault.js";
+import { createReports } from "./reports.js";
 
 const port = Number(process.env.PORT || 8789);
 const allowedOrigins = (process.env.ALLOWED_ORIGIN || "")
@@ -305,6 +306,8 @@ function iceServers() {
 }
 
 const vault = createVault({ clientIp });
+// Reports reuse the KV only through their own module; IPs are never stored (see reports.js).
+const reports = createReports({ clientIp, securityHeaders: SECURITY_HEADERS });
 
 function httpHandler(req, res) {
   const path = (req.url || "/").split("?")[0].replace(/^\/filenymous-signal/, "") || "/";
@@ -314,12 +317,12 @@ function httpHandler(req, res) {
     headers["access-control-allow-origin"] = origin;
     headers["access-control-allow-methods"] = "GET, OPTIONS";
   }
-  if (path.startsWith("/api/v1/secrets")) {
+  if (path.startsWith("/api/v1/secrets") || path.startsWith("/api/v1/reports")) {
     if (origin && !originAllowed(origin)) {
       res.writeHead(403, headers);
       return res.end(JSON.stringify({ error: "origin-not-allowed" }));
     }
-    vault.handle(req, res, path, headers);
+    (path.startsWith("/api/v1/reports") ? reports : vault).handle(req, res, path, headers);
     return;
   }
   if (req.method === "OPTIONS") {

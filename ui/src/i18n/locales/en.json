@@ -595,14 +595,16 @@
     "teaserClose": "Hide",
     "whistle": {
       "title": "Whistleblowing channel",
-      "lead": "Anonymous encrypted drop for whistleblowers, journalists and internal audits.",
-      "b1": "No IP kept, Tor-friendly",
-      "b1d": "No address logs, no cookies or trackers; works over Tor.",
-      "b2": "Metadata stripped",
-      "b2d": "EXIF and PDF properties removed in the browser before upload.",
-      "b3": "Follow-up key, no email",
-      "b3d": "One-way follow-up with no account or email address.",
-      "teaser": "Designed with GDPR and the EU Whistleblower Directive requirements in mind. In design."
+      "lead": "An encrypted drop box for whistleblowers, journalists and internal audits: reporters don't need you to be online.",
+      "b1": "No IP recorded",
+      "b1d": "No address logs or cookies on Filenymous' side. To hide your IP from the network, use Tor Browser.",
+      "b2": "Metadata removed",
+      "b2d": "EXIF/GPS and PDF properties removed in the browser, with a warning when a file couldn't be cleaned.",
+      "b3": "Follow-up key, no e-mail",
+      "b3d": "Status, replies and follow-ups with a key shown only once, no account.",
+      "teaser": "Designed with the EU Whistleblower Directive and France's Sapin II law in mind (design intent only).",
+      "cta": "Create a channel",
+      "follow": "I have a follow-up key"
     },
     "cli": {
       "title": "CLI & API for CI/CD",
@@ -665,5 +667,120 @@
     "badDate": "Pick a date between now (+1 min) and 30 days.",
     "passwordOn": "Password-protected",
     "expiryOn": "Time-limited link"
+  },
+  "report": {
+    "copy": "Copy",
+    "working": "One moment…",
+    "fingerprint": "Key fingerprint:",
+    "intent": "Designed with the EU Whistleblower Directive and France's Sapin II law in mind. This is design intent, not a label or legal advice: your reporting procedure remains your responsibility.",
+    "create": {
+      "title": "Create a whistleblowing channel",
+      "intro": "Your browser generates a key pair. Only the public key is sent to the server; the private key stays with you, encrypted with your passphrase.",
+      "p1": "Reports are encrypted in the reporter's browser, then stored encrypted for 90 days.",
+      "p2": "Reporters get a follow-up key to read your replies: no e-mail, no account.",
+      "p3": "Without your key file and its passphrase, nobody (not even us) can read the reports.",
+      "passphrase": "Passphrase (at least {{n}} characters)",
+      "passphrase2": "Confirm the passphrase",
+      "mismatch": "The passphrases don't match.",
+      "submit": "Generate keys and create the channel",
+      "doneTitle": "Channel created",
+      "linkHelp": "Publish this link (intranet, website, ethics policy). The public key is in the link: the server can't swap it.",
+      "keyTitle": "Download your key file",
+      "keyHelp": "It holds the private key encrypted with your passphrase. Keep it offline, with a backup: if it's lost, reports can never be read.",
+      "download": "Download the key file",
+      "openInbox": "Open the inbox"
+    },
+    "guide": {
+      "title": "Before you write",
+      "device": "Use a personal device and a network that isn't your employer's.",
+      "tor": "To hide your IP address from the network, use Tor Browser: Filenymous doesn't record IPs, but your ISP and the network can see them.",
+      "identity": "Don't give your identity or details that could identify you, unless you want to.",
+      "files": "Photo and PDF metadata is removed before sending; check the warnings for other files."
+    },
+    "submit": {
+      "title": "Make a report",
+      "message": "Your message",
+      "placeholder": "Describe the facts: what, where, when, who is involved…",
+      "files": "Attachments (optional, 8 MB total)",
+      "rename": "Rename files (piece-1.jpg…) so their original names aren't revealed",
+      "send": "Encrypt and send",
+      "tooBig": "Attachments exceed 8 MB.",
+      "footnote": "Encrypted in your browser with the organisation's public key. The server only keeps encrypted content, with no IP address.",
+      "gone": "This whistleblowing channel doesn't exist or is no longer active.",
+      "mismatch": "The key returned by the server doesn't match the one in the link. Don't send anything; contact the organisation another way.",
+      "sentTitle": "Report sent",
+      "sentHelp": "Here is your follow-up key. It will never be shown again: write it down or copy it somewhere safe.",
+      "keyWarn": "With this key you can check the status, read replies and add information (\"I have a follow-up key\"). Without it, there's no way to get back in touch.",
+      "noted": "I've saved my follow-up key",
+      "follow": "Follow my report"
+    },
+    "follow": {
+      "title": "Follow a report",
+      "intro": "Enter the follow-up key you got when sending.",
+      "key": "Follow-up key",
+      "open": "Open",
+      "badFormat": "Invalid key format (52 characters, groups of 4).",
+      "viewTitle": "Your report",
+      "dates": "Sent {{created}} · kept until {{expires}}",
+      "noReply": "No reply from the organisation yet.",
+      "fromOrg": "Organisation",
+      "fromYou": "You",
+      "sealedMine": "Your follow-up (encrypted for the organisation only).",
+      "undecryptable": "Unreadable message.",
+      "reply": "Add information",
+      "send": "Encrypt and send",
+      "close": "Close"
+    },
+    "inbox": {
+      "title": "Report inbox",
+      "intro": "Open your key file with its passphrase. Decryption happens in this browser.",
+      "stored": "Key saved in this browser",
+      "keyfile": "Or key file",
+      "passphrase": "Passphrase",
+      "unlock": "Unlock",
+      "badPassphrase": "Wrong passphrase.",
+      "badFile": "This isn't a Filenymous key file.",
+      "localNote": "The private key is never sent to the server.",
+      "refresh": "Refresh",
+      "empty": "No reports yet.",
+      "messages_one": "{{count}} message",
+      "messages_other": "{{count}} messages",
+      "back": "All reports",
+      "setStatus": "Status",
+      "you": "You",
+      "reporter": "Reporter",
+      "reply": "Reply to the reporter",
+      "send": "Encrypt and reply",
+      "lock": "Lock"
+    },
+    "status": {
+      "recu": "Received",
+      "en-cours": "In progress",
+      "clos": "Closed"
+    },
+    "meta": {
+      "cleaned": "metadata removed",
+      "nothing-found": "no metadata found",
+      "partial": "partly cleaned",
+      "unsupported": "⚠ metadata NOT removed (unsupported type)",
+      "removed": "removed: {{list}}",
+      "remaining": "not handled: {{list}}",
+      "left": {
+        "xmp-compressed": "compressed XMP",
+        "objstm": "compressed object streams (may contain the author)",
+        "annots": "annotations (comment author names)",
+        "content": "visible content and embedded images",
+        "all": "all metadata in this file — convert it to PDF or an image, or check it before sending"
+      }
+    },
+    "error": {
+      "gone": "Not found or expired.",
+      "denied": "Wrong key or report not found.",
+      "rate-limited": "Too many attempts, try again in a minute.",
+      "too-large": "Too large.",
+      "invalid": "Invalid request.",
+      "full": "Capacity reached.",
+      "network": "Service unreachable, try again."
+    }
   }
 }

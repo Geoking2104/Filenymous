@@ -149,6 +149,45 @@ Every response carries `Content-Security-Policy: default-src 'none'; frame-ances
 
 Optional tuning (env): `VAULT_MAX_TTL_S` (7 days), `VAULT_DEFAULT_TTL_S` (24 h), `VAULT_MAX_CT_CHARS` (90 000 ≈ 64 KiB plaintext), `VAULT_MAX_BODY_BYTES` (100 000), `VAULT_CREATE_PER_MIN` (20 per IP), `VAULT_READ_PER_MIN` (60 per IP), `VAULT_MAX_MEMORY_SECRETS` (in-memory fallback cap). Per-IP limits need `TRUST_PROXY=1` behind nginx (already set in the unit file).
 
+## Canal de signalement (whistleblowing) — VPS deployment
+
+Served by the same `p2p-signal` process (`reports.js`) under `https://www.opendpe.net/filenymous-signal/api/v1/reports`, with the same Redis (`REDIS_URL`) as the Vault. **A relay redeploy is required** (new module). Browsers seal reports to the organisation's ECDH P-256 public key; the server only stores ciphertext, `sha256` of the admin and follow-up tokens, a status and hour-rounded timestamps.
+
+| Method | Path | Body → response |
+|---|---|---|
+| `POST` | `/api/v1/reports/mailboxes` | `{ v:1, pub, admin }` (raw P-256 key b64url, sha256 hex of the admin token) → `201 { id }` |
+| `GET` | `/api/v1/reports/mailboxes/:id` | `{ pub }` (the reporter page checks it equals the key in the link) |
+| `POST` | `/api/v1/reports/mailboxes/:id/reports` | `{ v:1, id, auth, sealed:{epk,iv,ct} }` → `201`; `409` if the id exists |
+| `POST` | `/api/v1/reports/mailboxes/:id/{list,open,reply,status}` | `{ token, id?, msg?, status? }` (admin token in the body, never in the URL); `403` wrong token |
+| `POST` | `/api/v1/reports/r/:id/{thread,followup}` | `{ token, sealed? }` (follow-up token); `403` for unknown id **and** wrong token |
+
+Redis keys: `rmbox:<id>` (365 days, refreshed when the org opens its inbox), `rmbox:<id>:reports`, `rrep:<id>` and `rrep:<id>:thread` (`REPORT_TTL_S`, 90 days).
+
+Tuning (env): `REPORT_TTL_S` (7 776 000), `REPORT_MAILBOX_TTL_S`, `REPORT_MAX_BODY_BYTES` (12 MiB; attachments are capped at 8 MiB in the browser), `REPORT_MAX_MSG_BYTES` (200 000), `REPORT_MAX_PER_MAILBOX` (500), `REPORT_MAX_THREAD` (200), `REPORT_CREATE_PER_MIN` (10), `REPORT_SUBMIT_PER_MIN` (6), `REPORT_READ_PER_MIN` (60), `REPORT_SUBMIT_PER_MAILBOX_HOUR` (60), `REPORT_RATE_KEY_ROTATE_MS` (10 min).
+
+**No IP logging.** The application never stores or logs IPs, User-Agents or Referers for these endpoints: rate-limit buckets are `HMAC(in-memory key rotated every 10 min, ip)` kept one minute in RAM, and error lines carry no request data. nginx must not log them either. Add this block **inside the server, before** the generic `/filenymous-signal/` location (see `p2p-signal/nginx-opendpe-location.conf`):
+
+```nginx
+location /filenymous-signal/api/v1/reports/ {
+    access_log off;
+    error_log /var/log/nginx/filenymous-reports-error.log crit;  # crit only: no per-request client lines
+    client_max_body_size 13m;
+    proxy_pass http://127.0.0.1:8789;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;   # used only for the in-memory HMAC rate limit
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+    proxy_request_buffering on;
+}
+```
+
+Then `nginx -t && systemctl reload nginx`, and check that a request to `/filenymous-signal/api/v1/reports/mailboxes/xxx` adds no line to `/var/log/nginx/access.log`. Also make sure no upstream proxy/CDN in front of the VPS logs that path. Redis persistence (RDB/AOF) only contains ciphertext and token hashes.
+
+Smoke test: `curl -si https://www.opendpe.net/filenymous-signal/api/v1/reports/mailboxes/AAAAAAAAAAAAAAAAAAAAAA` → `404 {"error":"gone"}` with the security headers.
+
+Tests: `cd p2p-signal && npm test` (includes `reports.test.mjs`: API, limits, TTL, no IP stored or logged).
+
 ### Static site (OVH)
 
 The reveal page adds a restrictive `<meta>` CSP at runtime (`object-src 'none'; base-uri 'none'; form-action 'none'; connect-src 'self' <vault API>`) and `referrer=no-referrer`. `frame-ancestors` cannot be set from a meta tag: to forbid framing, add to the OVH `.htaccess` (merge with any existing rules, do not overwrite):
