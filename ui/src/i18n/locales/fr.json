@@ -534,7 +534,7 @@
   },
   "home": {
     "title": "Partagez en toute confiance, sans compte ni nuage.",
-    "subtitle": "Trois outils chiffrés de bout en bout, directement dans votre navigateur. Choisissez, c’est prêt en deux clics.",
+    "subtitle": "Des outils chiffrés de bout en bout, directement dans votre navigateur. Choisissez, c’est prêt en deux clics.",
     "back": "Accueil",
     "leaveConfirm": "Un transfert est en cours. Quitter maintenant l’interrompra. Continuer ?",
     "codeLabel": "Vous avez reçu un code ?",
@@ -570,6 +570,62 @@
       "b3d": "Une protection de plus, si le lien circule.",
       "cta": "Créer un lien secret"
     },
-    "codePlaceholder": "123-456-ABC ou lien"
+    "codePlaceholder": "123-456-ABC ou lien",
+    "carousel": {
+      "label": "Services Filenymous",
+      "hint": "Services — flèches gauche/droite pour naviguer",
+      "prev": "Service précédent",
+      "next": "Service suivant",
+      "dots": "Choisir un service",
+      "slide": "Service {{n}} sur {{total}}"
+    },
+    "soon": "Bientôt",
+    "pro": {
+      "title": "Espace Client-Prestataire",
+      "lead": "Collectez les documents confidentiels de vos clients, sans infrastructure.",
+      "cta": "Créer un espace projet",
+      "b1": "Un lien par projet",
+      "b1d": "Pour avocats, comptables et freelances.",
+      "b2": "Chiffré de bout en bout",
+      "b2d": "Les pièces arrivent directement chez vous.",
+      "b3": "Zéro infrastructure",
+      "b3d": "Ni serveur, ni compte client à gérer."
+    },
+    "teaser": "En savoir plus",
+    "teaserClose": "Masquer",
+    "whistle": {
+      "title": "Canal de signalement",
+      "lead": "Dépôt chiffré et anonyme pour lanceurs d'alerte, journalistes et audits internes.",
+      "b1": "Aucune IP conservée",
+      "b1d": "Pas de journal d'adresses, pas de cookies ni de traceurs ; compatible Tor.",
+      "b2": "Métadonnées supprimées",
+      "b2d": "EXIF et propriétés PDF retirés dans le navigateur avant envoi.",
+      "b3": "Clé de suivi sans e-mail",
+      "b3d": "Un échange à sens unique, sans compte ni adresse e-mail.",
+      "teaser": "Pensé pour les exigences RGPD et de la directive lanceurs d'alerte. En cours de conception."
+    },
+    "cli": {
+      "title": "CLI & API CI/CD",
+      "lead": "Partagez builds, logs et sauvegardes depuis vos pipelines.",
+      "b1": "Une commande",
+      "b1d": "filenymous upload app.zip --ttl 1h",
+      "b2": "Liens éphémères",
+      "b2d": "Expiration automatique pour artefacts, logs et backups.",
+      "b3": "Aucun bucket S3",
+      "b3d": "Rien à configurer, donc rien à mal configurer.",
+      "teaser": "CLI et API REST en préparation pour GitHub Actions, GitLab CI et scripts."
+    },
+    "stream": {
+      "title": "Partage streamé",
+      "lead": "Lisez une vidéo ou un son volumineux pendant son téléchargement.",
+      "b1": "Lecture immédiate",
+      "b1d": "La lecture démarre sans attendre la fin du transfert.",
+      "b2": "Disque épargné",
+      "b2d": "Revue rapide de rushes sans tout stocker.",
+      "b3": "Toujours pair-à-pair",
+      "b3d": "Même chiffrement que le transfert direct.",
+      "teaser": "Lecture progressive via Media Source Extensions, en cours de prototypage."
+    },
+    "badgePro": "Pro"
   }
 }

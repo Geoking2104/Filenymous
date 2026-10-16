@@ -3,6 +3,7 @@
  * Dropzone, Secrets Vault), each with three benefits; every flow then renders
  * in the same shell (header, card, legal footer).
  */
+import { Carousel } from "./Carousel";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import P2PSendPanel from "../p2p/P2PSendPanel";
@@ -71,6 +72,26 @@ function Benefits({ prefix }: { prefix: string }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function SoonCard({ id, emoji }: { id: string; emoji: string }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  return (
+    <article className={`pz-service pz-service--${id} is-soon`} aria-labelledby={`svc-${id}`} data-testid={`soon-${id}`}>
+      <span className="pz-badge">{t("home.soon")}</span>
+      <div className="pz-service-head">
+        <span className="pz-service-icon" aria-hidden="true">{emoji}</span>
+        <h2 id={`svc-${id}`}>{t(`home.${id}.title`)}</h2>
+      </div>
+      <p className="pz-service-lead">{t(`home.${id}.lead`)}</p>
+      <Benefits prefix={`home.${id}`} />
+      {open && <p className="pz-teaser" id={`teaser-${id}`}>{t(`home.${id}.teaser`)}</p>}
+      <button type="button" className="pz-btn-ghost pz-btn-block" aria-expanded={open} aria-controls={`teaser-${id}`} onClick={() => setOpen((o) => !o)}>
+        {open ? t("home.teaserClose") : t("home.teaser")}
+      </button>
+    </article>
   );
 }
 
@@ -207,7 +228,7 @@ export default function HomeApp({ hash }: { hash: string }) {
           <h1>{t("home.title")}</h1>
           <p>{t("home.subtitle")}</p>
         </section>
-        <div className="pz-services">
+        <Carousel label={t("home.carousel.label")}>
           <article className="pz-service pz-service--send" aria-labelledby="svc-send">
             <div className="pz-service-head">
               <span className="pz-service-icon"><Icon name="send" /></span>
@@ -254,7 +275,20 @@ export default function HomeApp({ hash }: { hash: string }) {
             <Benefits prefix="home.secret" />
             <a className="pz-btn pz-btn-block" href="#secret-new" data-testid="vault-entry">{t("home.secret.cta")}</a>
           </article>
-        </div>
+          <SoonCard id="whistle" emoji="🛡️" />
+          <SoonCard id="cli" emoji="🤖" />
+          <article className="pz-service pz-service--pro" aria-labelledby="svc-pro">
+            <span className="pz-badge pz-badge--pro">{t("home.badgePro")}</span>
+            <div className="pz-service-head">
+              <span className="pz-service-icon" aria-hidden="true">💼</span>
+              <h2 id="svc-pro">{t("home.pro.title")}</h2>
+            </div>
+            <p className="pz-service-lead">{t("home.pro.lead")}</p>
+            <Benefits prefix="home.pro" />
+            <a className="pz-btn pz-btn-block" href="#drop-new" data-testid="pro-entry">{t("home.pro.cta")}</a>
+          </article>
+          <SoonCard id="stream" emoji="🎥" />
+        </Carousel>
         <form
           className="pz-code v3-receive-row"
           onSubmit={(e) => {
