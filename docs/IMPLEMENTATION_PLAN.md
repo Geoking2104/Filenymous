@@ -40,6 +40,8 @@ Contrainte OVH : le site statique ne peut ni exécuter de code ni stocker de don
 
 ## Phase 1 : Module A, Dropzone 100 % P2P (5 à 7 jours)
 
+> **État** : implémentée (code dans `ui/src/p2p/dropzone/`, relais `p2p-signal/server.js`). Écarts par rapport au plan ci-dessous : nom de projet dans le fragment (`#drop:<dropId>/<secret>/<expiry>/<p|n>/<nom>`) plutôt que dans le chemin `/drop/<slug>` (pas de réécriture OVH nécessaire) ; `dropId` = sha256(secret propriétaire), et un lien propriétaire privé `#drop-owner:` permet de rouvrir la Dropzone après rechargement ; l'empreinte sha256 par fichier dans le reçu est remplacée par le contrôle du nombre d'octets et des tags AES-GCM de chaque bloc.
+
 ### A.1 Modèle
 
 L'onglet du **propriétaire** joue le rôle de récepteur permanent. Chaque **contributeur** est un émetteur. C'est l'inverse du transfert direct actuel, où l'émetteur attend et le destinataire se connecte. Aucun fichier ne transite ni ne reste sur un serveur ; le relais ne voit que du SDP/ICE.

@@ -62,13 +62,13 @@ export interface PasswordKeys {
   mix: Uint8Array;
 }
 
-function b64urlEncode(bytes: Uint8Array): string {
+export function b64urlEncode(bytes: Uint8Array): string {
   let s = "";
   for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-function b64urlDecode(text: string): Uint8Array {
+export function b64urlDecode(text: string): Uint8Array {
   const b64 = text.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(text.length / 4) * 4, "=");
   const bin = atob(b64);
   const out = new Uint8Array(bin.length);

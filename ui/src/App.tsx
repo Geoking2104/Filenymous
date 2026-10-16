@@ -16,6 +16,9 @@ import ReceivePanel from "./components/ReceivePanel";
 import AppUxV3 from "./ux-v3/AppUxV3";
 import PizzaApp from "./pizza/PizzaApp";
 import { isP2PHash } from "./p2p/protocol";
+import DropOwnerPanel from "./p2p/dropzone/DropOwnerPanel";
+import DropContributorPanel from "./p2p/dropzone/DropContributorPanel";
+import { isDropHash, isDropOwnerHash } from "./p2p/dropzone/link";
 import "./styles.css";
 import "./styles-notify.css";
 
@@ -66,6 +69,19 @@ export default function App() {
       unlisten();
     };
   }, [setNet, setTab]);
+
+  if (isDropOwnerHash(hash) || isDropHash(hash)) {
+    return (
+      <div className="app">
+        <Header minimal />
+        <main className="main panel-enter">
+          {isDropHash(hash) ? <DropContributorPanel hash={hash} /> : <DropOwnerPanel hash={hash} />}
+        </main>
+        <Footer />
+        <ToastStack />
+      </div>
+    );
+  }
 
   if (isMagicHash(hash)) {
     return (

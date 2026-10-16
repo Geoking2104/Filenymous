@@ -97,3 +97,14 @@ The React UI (what filenymous.eu serves) now has its own direct-transfer path (`
 - UI deploys go through `scripts/deploy-ovh-sftp.mjs --dist ui/dist --remote /home/filenyb/www/app --merge` after `npm run build -- --base=/app/`. The `.ps1` / `.sh` OVH scripts are older alternatives.
 - The signaling relay and coturn (TURN REST credentials via `/ice`) run on the VPS behind `www.opendpe.net/filenymous-signal/`. Setup is in `p2p-signal/README.md`.
 - Archived: `docs/archive/` holds the deprecated v1 bridge, the Holochain-era design plans (`superpowers/`), the steward-node notes and the old standalone deploy script.
+
+## Dropzone (100 % P2P) — relay settings
+
+The Dropzone reuses `p2p-signal` (new message types `drop-join`, `drop-signal`, `drop-leave`); no file byte goes through the VPS. Optional environment variables:
+
+- `DROP_MAX_TTL_MS` (default 30 days): upper bound for the expiry an owner can request.
+- `DROP_DEFAULT_TTL_MS` (default 7 days): room TTL when the owner chose no expiry.
+- `MAX_DROP_CONTRIBUTORS` (default 8): simultaneous contributors per Dropzone.
+- `DROP_SWEEP_MS` (default 30 s): expiry sweep interval.
+
+Relay tests: `cd p2p-signal && npm ci && npm test`. Restart `filenymous-signal.service` after deploying the new `server.js`.
