@@ -8,6 +8,10 @@ npx filenymous upload app.zip --ttl 1h
 # → https://filenymous.eu/app/#p2p:123-456-ABC/xxxxxxxxxxxxxxxxxxxxxx
 ```
 
+[![npm](https://img.shields.io/npm/v/filenymous)](https://www.npmjs.com/package/filenymous)
+
+**Installation** : `npx filenymous …` (sans installation) ou `npm i -g filenymous` — Node ≥ 18.17.
+
 [Français](#français) · [English](#english) · [GitHub Actions](#github-actions)
 
 ---

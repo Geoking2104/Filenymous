@@ -4,11 +4,29 @@
   "description": "Ultra-light end-to-end encrypted P2P file sharing from the terminal (WebRTC, no server storage). Compatible with https://filenymous.eu/app/",
   "license": "MIT",
   "type": "module",
-  "bin": { "filenymous": "dist/filenymous.js" },
-  "files": ["dist", "README.md"],
-  "engines": { "node": ">=18.17" },
-  "keywords": ["p2p", "webrtc", "file-transfer", "e2ee", "ci", "cli"],
-  "repository": { "type": "git", "url": "https://github.com/Geoking2104/Filenymous.git", "directory": "cli" },
+  "bin": {
+    "filenymous": "dist/filenymous.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "keywords": [
+    "p2p",
+    "webrtc",
+    "file-transfer",
+    "e2ee",
+    "ci",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Geoking2104/Filenymous.git",
+    "directory": "cli"
+  },
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
@@ -23,5 +41,9 @@
     "@types/ws": "^8.5.12",
     "esbuild": "^0.24.0",
     "typescript": "^5.6.3"
+  },
+  "homepage": "https://github.com/Geoking2104/Filenymous/tree/main/cli#readme",
+  "bugs": {
+    "url": "https://github.com/Geoking2104/Filenymous/issues"
   }
 }
