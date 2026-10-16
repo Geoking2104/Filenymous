@@ -1,0 +1,39 @@
+name: Deploy UI → OVH (filenymous.eu/app)
+
+# Manual only. Builds ui/ with base /app/ and uploads it over SFTP with a
+# per-file backup (<remote>.bak-<timestamp>/) via scripts/deploy-ovh-sftp.mjs.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy"
+        default: "main"
+        required: true
+
+concurrency:
+  group: deploy-ovh-ui
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build UI (base /app/)
+        working-directory: ui
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build -- --base=/app/
+          ls -la dist dist/assets | head -30
+      - name: Install deploy dependencies
+        working-directory: scripts
+        run: npm ci --no-audit --no-fund
+      - name: Upload to OVH over SFTP (--merge backup)
+        env:
+          OVH_SFTP_PASS: ${{ secrets.OVH_SFTP_PASS }}
+        run: node scripts/deploy-ovh-sftp.mjs --dist ui/dist --remote /home/filenyb/www/app --merge
