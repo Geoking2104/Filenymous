@@ -595,14 +595,16 @@
     "teaserClose": "Masquer",
     "whistle": {
       "title": "Canal de signalement",
-      "lead": "Dépôt chiffré et anonyme pour lanceurs d'alerte, journalistes et audits internes.",
-      "b1": "Aucune IP conservée",
-      "b1d": "Pas de journal d'adresses, pas de cookies ni de traceurs ; compatible Tor.",
-      "b2": "Métadonnées supprimées",
-      "b2d": "EXIF et propriétés PDF retirés dans le navigateur avant envoi.",
+      "lead": "Boîte de dépôt chiffrée pour lanceurs d'alerte, journalistes et audits internes : le signalant n'a pas besoin que vous soyez en ligne.",
+      "b1": "Aucune IP enregistrée",
+      "b1d": "Ni journal d'adresses ni cookies côté Filenymous. Pour cacher votre IP au réseau, utilisez Tor Browser.",
+      "b2": "Métadonnées retirées",
+      "b2d": "EXIF/GPS et propriétés PDF retirés dans le navigateur, avec un avertissement si un fichier n'a pas pu être nettoyé.",
       "b3": "Clé de suivi sans e-mail",
-      "b3d": "Un échange à sens unique, sans compte ni adresse e-mail.",
-      "teaser": "Pensé pour les exigences RGPD et de la directive lanceurs d'alerte. En cours de conception."
+      "b3d": "Statut, réponses et compléments avec une clé affichée une seule fois, sans compte.",
+      "teaser": "Pensé pour la directive européenne sur les lanceurs d'alerte et la loi Sapin II (intention de conception uniquement).",
+      "cta": "Créer un canal",
+      "follow": "J'ai une clé de suivi"
     },
     "cli": {
       "title": "CLI & API CI/CD",
@@ -665,5 +667,120 @@
     "badDate": "Choisissez une date entre maintenant (+1 min) et 30 jours.",
     "passwordOn": "Protégé par mot de passe",
     "expiryOn": "Lien à durée limitée"
+  },
+  "report": {
+    "copy": "Copier",
+    "working": "Un instant…",
+    "fingerprint": "Empreinte de la clé :",
+    "intent": "Pensé pour la directive européenne sur les lanceurs d'alerte et la loi Sapin II. Il s'agit d'une intention de conception, pas d'un label ni d'un avis juridique : votre dispositif de signalement reste sous votre responsabilité.",
+    "create": {
+      "title": "Créer un canal de signalement",
+      "intro": "Votre navigateur génère une paire de clés. Seule la clé publique est envoyée au serveur ; la clé privée reste chez vous, chiffrée par votre phrase de passe.",
+      "p1": "Les signalements sont chiffrés dans le navigateur du signalant, puis stockés chiffrés 90 jours.",
+      "p2": "Le signalant reçoit une clé de suivi pour lire vos réponses : aucun e-mail, aucun compte.",
+      "p3": "Sans votre fichier de clé et sa phrase de passe, personne (ni nous) ne peut lire les signalements.",
+      "passphrase": "Phrase de passe ({{n}} caractères minimum)",
+      "passphrase2": "Confirmez la phrase de passe",
+      "mismatch": "Les deux phrases de passe diffèrent.",
+      "submit": "Générer les clés et créer le canal",
+      "doneTitle": "Canal créé",
+      "linkHelp": "Publiez ce lien (intranet, site, charte éthique). La clé publique est dans le lien : le serveur ne peut pas la remplacer.",
+      "keyTitle": "Téléchargez votre fichier de clé",
+      "keyHelp": "Il contient la clé privée chiffrée par votre phrase de passe. Conservez-le hors ligne et en double : s'il est perdu, les signalements sont définitivement illisibles.",
+      "download": "Télécharger le fichier de clé",
+      "openInbox": "Ouvrir la boîte de réception"
+    },
+    "guide": {
+      "title": "Avant d'écrire",
+      "device": "Utilisez un appareil personnel et un réseau qui n'est pas celui de votre employeur.",
+      "tor": "Pour cacher votre adresse IP au réseau, utilisez Tor Browser : Filenymous n'enregistre pas les IP, mais votre fournisseur d'accès et le réseau peuvent les voir.",
+      "identity": "N'indiquez pas votre identité ni de détails qui permettraient de vous reconnaître, sauf si vous le souhaitez.",
+      "files": "Les métadonnées des photos et PDF sont retirées avant l'envoi ; vérifiez les avertissements pour les autres fichiers."
+    },
+    "submit": {
+      "title": "Faire un signalement",
+      "message": "Votre message",
+      "placeholder": "Décrivez les faits : quoi, où, quand, qui est concerné…",
+      "files": "Pièces jointes (facultatif, 8 Mo au total)",
+      "rename": "Renommer les fichiers (piece-1.jpg…) pour ne pas révéler leur nom d'origine",
+      "send": "Chiffrer et envoyer",
+      "tooBig": "Les pièces jointes dépassent 8 Mo.",
+      "footnote": "Chiffré dans votre navigateur avec la clé publique de l'organisation. Le serveur ne conserve que du contenu chiffré, sans adresse IP.",
+      "gone": "Ce canal de signalement n'existe pas ou n'est plus actif.",
+      "mismatch": "La clé fournie par le serveur ne correspond pas à celle du lien. N'envoyez rien et contactez l'organisation par un autre moyen.",
+      "sentTitle": "Signalement envoyé",
+      "sentHelp": "Voici votre clé de suivi. Elle ne sera plus jamais affichée : notez-la ou copiez-la dans un endroit sûr.",
+      "keyWarn": "Avec cette clé, vous pourrez consulter le statut, lire les réponses et compléter votre signalement (onglet « J'ai une clé de suivi »). Sans elle, impossible de reprendre contact.",
+      "noted": "J'ai noté ma clé de suivi",
+      "follow": "Suivre mon signalement"
+    },
+    "follow": {
+      "title": "Suivre un signalement",
+      "intro": "Saisissez la clé de suivi reçue lors de l'envoi.",
+      "key": "Clé de suivi",
+      "open": "Ouvrir",
+      "badFormat": "Format de clé invalide (52 caractères, groupes de 4).",
+      "viewTitle": "Votre signalement",
+      "dates": "Envoyé le {{created}} · conservé jusqu'au {{expires}}",
+      "noReply": "Pas encore de réponse de l'organisation.",
+      "fromOrg": "Organisation",
+      "fromYou": "Vous",
+      "sealedMine": "Votre complément (chiffré pour l'organisation uniquement).",
+      "undecryptable": "Message illisible.",
+      "reply": "Ajouter un complément",
+      "send": "Chiffrer et envoyer",
+      "close": "Fermer"
+    },
+    "inbox": {
+      "title": "Boîte de réception des signalements",
+      "intro": "Ouvrez votre fichier de clé avec sa phrase de passe. Le déchiffrement se fait dans ce navigateur.",
+      "stored": "Clé enregistrée dans ce navigateur",
+      "keyfile": "Ou fichier de clé",
+      "passphrase": "Phrase de passe",
+      "unlock": "Déverrouiller",
+      "badPassphrase": "Phrase de passe incorrecte.",
+      "badFile": "Ce fichier n'est pas un fichier de clé Filenymous.",
+      "localNote": "La clé privée n'est jamais envoyée au serveur.",
+      "refresh": "Actualiser",
+      "empty": "Aucun signalement pour l'instant.",
+      "messages_one": "{{count}} message",
+      "messages_other": "{{count}} messages",
+      "back": "Tous les signalements",
+      "setStatus": "Statut",
+      "you": "Vous",
+      "reporter": "Signalant",
+      "reply": "Répondre au signalant",
+      "send": "Chiffrer et répondre",
+      "lock": "Verrouiller"
+    },
+    "status": {
+      "recu": "Reçu",
+      "en-cours": "En cours",
+      "clos": "Clos"
+    },
+    "meta": {
+      "cleaned": "métadonnées retirées",
+      "nothing-found": "aucune métadonnée trouvée",
+      "partial": "nettoyage partiel",
+      "unsupported": "⚠ métadonnées NON retirées (type non pris en charge)",
+      "removed": "retiré : {{list}}",
+      "remaining": "non traité : {{list}}",
+      "left": {
+        "xmp-compressed": "XMP compressé",
+        "objstm": "flux d'objets compressés (peuvent contenir l'auteur)",
+        "annots": "annotations (nom de l'auteur des commentaires)",
+        "content": "contenu visible et images intégrées",
+        "all": "toutes les métadonnées de ce fichier — convertissez-le en PDF ou en image, ou vérifiez-le avant l'envoi"
+      }
+    },
+    "error": {
+      "gone": "Introuvable ou expiré.",
+      "denied": "Clé incorrecte ou signalement introuvable.",
+      "rate-limited": "Trop de tentatives, réessayez dans une minute.",
+      "too-large": "Trop volumineux.",
+      "invalid": "Requête invalide.",
+      "full": "Capacité atteinte.",
+      "network": "Service injoignable, réessayez."
+    }
   }
 }

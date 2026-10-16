@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("home services carousel", () => {
-  test("arrows, dots, keyboard and coming-soon teaser", async ({ page }) => {
+  test("arrows, dots, keyboard and whistleblowing card", async ({ page }) => {
     await page.goto("/");
     const carousel = page.getByTestId("services-carousel");
     await expect(carousel.locator("article.pz-service")).toHaveCount(7);
@@ -18,10 +18,11 @@ test.describe("home services carousel", () => {
     await expect(dots.nth(0)).toHaveAttribute("aria-current", "true");
     await expect(page.getByTestId("dropzone")).toBeInViewport();
     await dots.nth(3).click();
-    const teaserBtn = page.getByTestId("soon-whistle").getByRole("button");
-    await teaserBtn.click();
-    await expect(teaserBtn).toHaveAttribute("aria-expanded", "true");
-    await expect(page.getByTestId("soon-whistle").locator(".pz-teaser")).toBeVisible();
+    const whistle = page.getByTestId("whistle-card");
+    await expect(whistle).toContainText("Nouveau");
+    await expect(whistle.locator(".pz-teaser")).toContainText("Sapin II");
+    await expect(page.getByTestId("report-entry")).toHaveAttribute("href", "#report-new");
+    await expect(page.locator(".is-soon")).toHaveCount(0);
     await expect(page.getByTestId("pro-entry")).toHaveAttribute("href", "#drop-new");
     await expect(page.getByTestId("cli-docs")).toHaveAttribute("href", /\/cli#readme$/);
     await expect(page.getByTestId("soon-cli")).toHaveCount(0);

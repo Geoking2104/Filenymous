@@ -31,6 +31,11 @@ describe("service routes", () => {
     expect(serviceRoute("#drop-new")).toBe("drop-owner");
     expect(serviceRoute(`#drop:drop-${"a".repeat(24)}/${"s".repeat(22)}/0/n`)).toBe("drop-contrib");
     expect(serviceRoute("#p2p:123-456-ABC")).toBe("home");
+    expect(serviceRoute("#report-new")).toBe("report-new");
+    expect(serviceRoute("#report-inbox")).toBe("report-inbox");
+    expect(serviceRoute("#report-follow")).toBe("report-follow");
+    expect(serviceRoute(`#report:${"A".repeat(22)}/${"B".repeat(87)}`)).toBe("report-submit");
+    expect(serviceRoute("#report:short/key")).toBe("home");
   });
 });
 

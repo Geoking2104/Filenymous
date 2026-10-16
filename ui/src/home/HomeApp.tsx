@@ -22,6 +22,11 @@ import DropContributorPanel from "../p2p/dropzone/DropContributorPanel";
 import VaultCreatePanel from "../vault/VaultCreatePanel";
 import VaultRevealPanel from "../vault/VaultRevealPanel";
 import { serviceRoute } from "./routes";
+import ReportCreatePanel from "../report/ReportCreatePanel";
+import ReportSubmitPanel from "../report/ReportSubmitPanel";
+import ReportInboxPanel from "../report/ReportInboxPanel";
+import ReportFollowPanel from "../report/ReportFollowPanel";
+import "../report/report.css";
 import { unloadGuardActive } from "../p2p/unloadGuard";
 import "./home.css";
 
@@ -78,26 +83,6 @@ function Benefits({ prefix }: { prefix: string }) {
 }
 
 const CLI_DOCS_URL = "https://github.com/Geoking2104/Filenymous/tree/main/cli#readme";
-
-function SoonCard({ id, emoji }: { id: string; emoji: string }) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  return (
-    <article className={`pz-service pz-service--${id} is-soon`} aria-labelledby={`svc-${id}`} data-testid={`soon-${id}`}>
-      <span className="pz-badge">{t("home.soon")}</span>
-      <div className="pz-service-head">
-        <span className="pz-service-icon" aria-hidden="true">{emoji}</span>
-        <h2 id={`svc-${id}`}>{t(`home.${id}.title`)}</h2>
-      </div>
-      <p className="pz-service-lead">{t(`home.${id}.lead`)}</p>
-      <Benefits prefix={`home.${id}`} />
-      {open && <p className="pz-teaser" id={`teaser-${id}`}>{t(`home.${id}.teaser`)}</p>}
-      <button type="button" className="pz-btn-ghost pz-btn-block" aria-expanded={open} aria-controls={`teaser-${id}`} onClick={() => setOpen((o) => !o)}>
-        {open ? t("home.teaserClose") : t("home.teaser")}
-      </button>
-    </article>
-  );
-}
 
 function LangSwitch() {
   const { t, i18n } = useTranslation();
@@ -181,6 +166,14 @@ export default function HomeApp({ hash }: { hash: string }) {
     body = <VaultRevealPanel hash={hash} />;
   } else if (route === "secret-new") {
     body = <VaultCreatePanel />;
+  } else if (route === "report-new") {
+    body = <ReportCreatePanel />;
+  } else if (route === "report-submit") {
+    body = <ReportSubmitPanel hash={hash} />;
+  } else if (route === "report-inbox") {
+    body = <ReportInboxPanel />;
+  } else if (route === "report-follow") {
+    body = <ReportFollowPanel />;
   } else if (receiving) {
     body = <P2PReceivePanel hash={hash} />;
   } else if (sending) {
@@ -330,7 +323,18 @@ export default function HomeApp({ hash }: { hash: string }) {
             <Benefits prefix="home.secret" />
             <a className="pz-btn pz-btn-block" href="#secret-new" data-testid="vault-entry">{t("home.secret.cta")}</a>
           </article>
-          <SoonCard id="whistle" emoji="🛡️" />
+          <article className="pz-service pz-service--whistle" aria-labelledby="svc-whistle" data-testid="whistle-card">
+            <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
+            <div className="pz-service-head">
+              <span className="pz-service-icon" aria-hidden="true">🛡️</span>
+              <h2 id="svc-whistle">{t("home.whistle.title")}</h2>
+            </div>
+            <p className="pz-service-lead">{t("home.whistle.lead")}</p>
+            <Benefits prefix="home.whistle" />
+            <p className="pz-teaser">{t("home.whistle.teaser")}</p>
+            <a className="pz-btn pz-btn-block" href="#report-new" data-testid="report-entry">{t("home.whistle.cta")}</a>
+            <a className="pz-link pz-service-sub" href="#report-follow" data-testid="report-follow-entry">{t("home.whistle.follow")}</a>
+          </article>
           <article className="pz-service pz-service--cli" aria-labelledby="svc-cli">
             <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
             <div className="pz-service-head">
