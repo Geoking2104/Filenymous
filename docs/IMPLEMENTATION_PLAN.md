@@ -165,6 +165,8 @@ Comme la lecture est en `POST` après un clic explicite, les aperçus Slack ou T
 
 ## Phase 5 : extension Chrome (Manifest V3) (4 à 5 jours)
 
+> **Réalisé (PR extension)** : voir `extension/README.md`. Écarts par rapport au plan : Chrome **et** Firefox ; le transfert P2P est porté par un document offscreen (Chrome) ou la page d'arrière-plan persistante (Firefox) au lieu d'un onglet ; le code de `ui/src` est bundlé directement (comme la CLI), sans paquet `packages/core` ; aucune permission d'hôte obligatoire (accès à un site demandé au cas par cas).
+
 - Dossier `extension/` : `manifest.json` (permissions `contextMenus`, `clipboardWrite`, `storage`, `activeTab` ; `host_permissions` limités au VPS).
 - Popup avec deux onglets :
   - **Fichier** : envoi direct P2P. Une popup se ferme dès qu'on clique ailleurs, donc la sélection ouvre un onglet `filenymous.eu/#p2p...` qui porte le transfert et sa garde anti-fermeture.

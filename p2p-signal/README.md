@@ -13,7 +13,7 @@ npm start          # ws://127.0.0.1:8789, http://127.0.0.1:8789/health
 
 | Path | Purpose |
 |---|---|
-| `ws(s)://…/` | Signaling (`join`, `signal`, `leave`, `room-*`). A browser Origin must match `ALLOWED_ORIGIN`; clients without an Origin header (the Filenymous CLI) are accepted. |
+| `ws(s)://…/` | Signaling (`join`, `signal`, `leave`, `room-*`). A browser Origin must match `ALLOWED_ORIGIN`; clients without an Origin header (the Filenymous CLI) are accepted, and browser-extension origins when listed (see below). |
 | `GET /health` | `{ ok, rooms, roomSessions, turn }`, for monitoring. |
 | `GET /ice` | `{ iceServers }` for `RTCPeerConnection`: STUN plus short-lived TURN credentials. CORS is limited to `ALLOWED_ORIGIN`. |
 
@@ -23,6 +23,7 @@ The `/filenymous-signal` prefix is stripped, so `https://www.opendpe.net/filenym
 
 - `PORT` (8789)
 - `ALLOWED_ORIGIN`: comma-separated exact origins, e.g. `https://filenymous.eu,https://www.filenymous.eu,https://geoking2104.github.io`. Empty means any origin, for dev only.
+  Browser extension (`extension/`): add `chrome-extension://<id>` for an exact Chrome extension id, or the scheme wildcards `chrome-extension://*` / `moz-extension://*` (Firefox uses a random UUID per install). Only these two extension schemes accept `*`; web pages cannot send such origins, so other web sites stay refused. Applies to the WebSocket, `/ice` and the Vault/Reports CORS.
 - `TRUST_PROXY=1`: rate-limit per client using `X-Real-IP` / `X-Forwarded-For`. **Required behind nginx**, otherwise every user shares the 127.0.0.1 bucket (60 msgs/10 s).
 - `STUN_URLS`: comma-separated, default `stun:stun.l.google.com:19302`. Set it to an empty string to disable.
 - `TURN_URLS`: comma-separated `turn:`/`turns:` URLs, e.g. `turn:turn.filenymous.eu:3478?transport=udp,turn:turn.filenymous.eu:3478?transport=tcp,turns:turn.filenymous.eu:5349?transport=tcp`.

@@ -70,7 +70,7 @@ Verified facts (2026-07-14) — how the public site is actually hosted and updat
   `/opt/filenymous-signal/app`) + nginx snippet
   `/etc/nginx/snippets/filenymous-signal-location.conf` included in the 443 blocks of
   `/etc/nginx/sites-enabled/opendpe.net`.
-- `ALLOWED_ORIGIN=https://filenymous.eu,https://geoking2104.github.io` (exact origins).
+- `ALLOWED_ORIGIN=https://filenymous.eu,https://geoking2104.github.io` (exact origins). For the browser extension, append `,chrome-extension://*,moz-extension://*` (or `chrome-extension://<store id>` once published); see `extension/README.md`.
 - **Known failure mode (happened 2026-07-07):** replacing/regenerating the opendpe.net
   vhost drops the `include snippets/filenymous-signal-location.conf;` lines → the relay
   returns 404 and every cross-device QR/code fails with "Unable to reach the P2P
