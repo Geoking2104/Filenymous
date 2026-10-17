@@ -1,0 +1,66 @@
+openapi: 3.1.0
+info:
+  title: Filenymous Secrets Vault API
+  version: "1"
+  summary: Burn-after-reading, zero-knowledge secret storage.
+  description: |
+    The server only ever receives ciphertext. Clients MUST encrypt locally:
+      K       = 32 random bytes (only in the link fragment `#s:<id>/<K>`, base64url)
+      ikm     = K ‖ PBKDF2-SHA256(password, salt, 310000)   (password optional)
+      encKey  = HKDF-SHA256(ikm, salt "filenymous-vault-v1", info "enc")  → AES-256-GCM, random 96-bit IV
+      token   = HKDF-SHA256(ikm, salt "filenymous-vault-v1", info "auth") → 32 bytes
+      auth    = hex(sha256(token))  (sent at creation; token sent to reveal)
+    Link: https://filenymous.eu/app/#s:<id>/<K>
+    WARNING: if an AI assistant performs these calls for a user, the assistant
+    and its provider see the plaintext. Real secrets should be created by the
+    user in their own browser.
+  license: { name: MIT, url: https://opensource.org/licenses/MIT }
+servers:
+  - url: https://www.opendpe.net/filenymous-signal
+paths:
+  /api/v1/secrets:
+    post:
+      summary: Store an encrypted secret
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [v, ct, iv, pw, auth]
+              properties:
+                v: { const: 1 }
+                ct: { type: string, pattern: "^[A-Za-z0-9_-]+$", maxLength: 90000, description: AES-256-GCM ciphertext, base64url }
+                iv: { type: string, pattern: "^[A-Za-z0-9_-]{16}$", description: 96-bit IV, base64url }
+                pw: { type: boolean, description: true when a password is mixed into the key }
+                salt: { type: string, pattern: "^[A-Za-z0-9_-]{22}$", description: PBKDF2 salt (required iff pw) }
+                auth: { type: string, pattern: "^[a-f0-9]{64}$", description: hex sha256(token) }
+                ttl: { type: integer, minimum: 60, maximum: 604800, default: 86400 }
+                reads: { type: integer, enum: [0, 1], default: 1, description: 1 = burn after reading, 0 = until expiry }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { type: object, properties: { id: { type: string, pattern: "^[A-Za-z0-9_-]{22}$" }, expiresAt: { type: integer } } } } } }
+        "400": { description: invalid-secret / invalid-json }
+        "413": { description: too-large }
+        "415": { description: json-required }
+        "429": { description: rate-limited (20 creations/min/IP) }
+        "507": { description: vault-full }
+  /api/v1/secrets/{id}/meta:
+    get:
+      summary: Non-consuming metadata (link previews never burn the secret)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, pattern: "^[A-Za-z0-9_-]{22}$" } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { pw: { type: boolean }, salt: { type: string }, reads: { type: integer }, expiresAt: { type: integer } } } } } }
+        "404": { description: gone }
+  /api/v1/secrets/{id}/reveal:
+    post:
+      summary: Reveal (and burn when reads = 1)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string, pattern: "^[A-Za-z0-9_-]{43}$" } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { ct: { type: string }, iv: { type: string }, salt: { type: string }, pw: { type: boolean }, burned: { type: boolean } } } } } }
+        "403": { description: denied (wrong token/password — the secret is NOT burned) }
+        "404": { description: gone }
+        "429": { description: rate-limited (60 reads/min/IP) }
