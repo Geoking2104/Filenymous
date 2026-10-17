@@ -372,14 +372,13 @@
     "docTitle": "Filenymous — peer-to-peer file transfer",
     "tagline": "Peer-to-peer, encrypted file transfers in your browser.",
     "language": "Language",
-    "dropTitle": "Drop a file to get started",
-    "dropSub": "or click to choose — no size limit, nothing is stored",
+    "dropTitle": "Drag and drop one or more files here",
+    "dropSub": "or click to choose them — no size limit, nothing is stored",
     "codePlaceholder": "Got a code? 123-456-ABC",
     "codeLabel": "Transfer code",
     "codeOpen": "Receive",
     "badCode": "Invalid code or link.",
     "readyTitle": "You are about to share",
-    "totalSize": "{{count}} files · {{size}}",
     "you": "You",
     "peer": "Peer",
     "unknownDevice": "waiting…",
@@ -398,7 +397,12 @@
       "hosting": "The site is hosted by OVHcloud (France). The signaling and TURN relay servers run on an OVHcloud VPS in Europe; they never see file contents.",
       "termsTitle": "Terms of use",
       "terms": "Files are shared directly between browsers, with no server storage. Only send files you have the right to share, only share links with recipients you know, and do not use Filenymous for illegal or harmful content. By sending a file, you confirm that you understand and accept these terms."
-    }
+    },
+    "dropCue": "Add one or more files",
+    "dropMore": "You can also drag more files onto this card.",
+    "dropMoreActive": "Release to add these files",
+    "filesSummary_one": "{{count}} file · {{size}} in total",
+    "filesSummary_other": "{{count}} files · {{size}} in total"
   },
   "pw": {
     "reviewTitle_one": "You are about to send {{count}} file.",
