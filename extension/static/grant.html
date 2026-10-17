@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Autoriser l'accès à ce site · Filenymous</title><link rel="stylesheet" href="popup.css"></head>
+<body class="grant">
+  <header class="top"><img src="icons/icon-48.png" alt="" width="28" height="28"><h1>Autoriser l'accès à ce site</h1></header>
+  <p>Pour envoyer ce fichier, Filenymous doit le récupérer sur <strong id="site"></strong>.</p>
+  <p class="note">L'autorisation ne concerne que ce site. Vous pouvez la retirer à tout moment dans les réglages de l'extension.</p>
+  <button type="button" id="allow" class="primary">Autoriser et partager</button>
+  <button type="button" id="cancel" class="link" style="margin-top:10px">Annuler</button>
+  <div id="message" class="message error" role="alert" hidden></div>
+  <script type="module" src="grant.js"></script>
+</body>
+</html>

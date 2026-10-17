@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Filenymous</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="top">
+    <img src="icons/icon-48.png" alt="" width="28" height="28">
+    <h1>Filenymous</h1>
+    <a id="open-app" target="_blank" rel="noopener">Ouvrir le site</a>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button type="button" role="tab" id="tab-btn-files" aria-selected="true" data-tab="files">Fichiers</button>
+    <button type="button" role="tab" id="tab-btn-secret" aria-selected="false" data-tab="secret">Secret</button>
+  </nav>
+
+  <section id="tab-files" role="tabpanel" aria-labelledby="tab-btn-files">
+    <div id="drop" class="drop" data-testid="drop">
+      <p><strong>Glissez vos fichiers ici</strong></p>
+      <button type="button" id="pick" class="ghost">Choisir des fichiers</button>
+      <input id="file-input" data-testid="file-input" type="file" multiple hidden>
+    </div>
+    <ul id="picked" class="picked"></ul>
+    <details class="options">
+      <summary>Options</summary>
+      <label>Mot de passe (optionnel)
+        <input type="password" id="file-password" data-testid="file-password" autocomplete="new-password">
+      </label>
+      <label>Lien valable
+        <select id="file-ttl" data-testid="file-ttl">
+          <option value="15">15 minutes</option>
+          <option value="60" selected>1 heure</option>
+          <option value="1440">24 heures</option>
+        </select>
+      </label>
+      <label>Téléchargements
+        <select id="file-max" data-testid="file-max">
+          <option value="1" selected>Un seul</option>
+          <option value="1000">Illimités pendant la durée du lien</option>
+        </select>
+      </label>
+    </details>
+    <button type="button" id="send" class="primary" data-testid="send" disabled>Créer le lien et le copier</button>
+    <p class="note">Transfert direct, chiffré de bout en bout. Rien n'est stocké sur un serveur.</p>
+  </section>
+
+  <section id="tab-secret" role="tabpanel" aria-labelledby="tab-btn-secret" hidden>
+    <textarea id="secret-text" data-testid="secret-text" rows="5" spellcheck="false" autocomplete="off" placeholder="Mot de passe, clé d'API, code d'accès…"></textarea>
+    <label>Durée
+      <select id="secret-mode" data-testid="secret-mode">
+        <option value="once" selected>Lecture unique (s'autodétruit à la lecture)</option>
+        <option value="24">Lisible pendant 24 heures</option>
+        <option value="168">Lisible pendant 7 jours</option>
+      </select>
+    </label>
+    <label>Mot de passe (optionnel)
+      <input type="password" id="secret-password" data-testid="secret-password" autocomplete="new-password">
+    </label>
+    <button type="button" id="secret-send" class="primary" data-testid="secret-send" disabled>Générer le lien secret et le copier</button>
+    <p class="note">Chiffré dans votre navigateur : la clé reste dans le lien, le serveur ne voit que du chiffré.</p>
+  </section>
+
+  <div id="message" class="message" role="status" data-testid="message" hidden></div>
+
+  <section class="shares">
+    <div id="keep-open" class="warn" data-testid="keep-open" hidden>
+      <strong>Gardez le navigateur ouvert</strong> jusqu'à ce que le destinataire ait téléchargé, ou jusqu'à l'expiration du lien.
+      Les fichiers partent directement de votre ordinateur : si vous fermez le navigateur, le lien cesse de fonctionner.
+    </div>
+    <ul id="share-list" data-testid="share-list"></ul>
+    <button type="button" id="clear" class="link" hidden>Effacer l'historique</button>
+  </section>
+
+  <footer>Astuce : clic droit sur une image, un lien ou un texte sélectionné, puis « Filenymous », pour partager sans ouvrir le site.</footer>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

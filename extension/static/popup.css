@@ -1,0 +1,37 @@
+:root { color-scheme: light dark; --accent: #2563eb; --ok: #16a34a; --warn-bg: #fff7ed; --warn-fg: #9a3412; --line: #d4d4d8; --muted: #52525b; }
+@media (prefers-color-scheme: dark) { :root { --warn-bg: #431407; --warn-fg: #fed7aa; --line: #3f3f46; --muted: #a1a1aa; } }
+* { box-sizing: border-box; }
+body { width: 380px; margin: 0; padding: 12px 14px; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body.tab { width: auto; max-width: 560px; margin: 24px auto; }
+.top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.top h1 { font-size: 17px; margin: 0; flex: 1; }
+.top a { font-size: 12px; color: var(--accent); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.tabs button { flex: 1; border: 0; background: none; padding: 7px; font: inherit; cursor: pointer; color: inherit; border-bottom: 2px solid transparent; }
+.tabs button[aria-selected="true"] { border-color: var(--accent); font-weight: 600; }
+.drop { border: 2px dashed var(--line); border-radius: 10px; padding: 14px; text-align: center; }
+.drop p { margin: 0 0 8px; }
+.drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.picked { list-style: none; padding: 0; margin: 8px 0; font-size: 13px; color: var(--muted); }
+label { display: block; margin: 8px 0; font-size: 13px; }
+label input, label select, textarea { display: block; width: 100%; margin-top: 3px; padding: 6px 8px; font: inherit; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; }
+textarea { font-family: ui-monospace, monospace; resize: vertical; }
+.options summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+button.primary { width: 100%; margin-top: 10px; padding: 9px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+button.primary:disabled { opacity: .5; cursor: default; }
+button.ghost { padding: 6px 12px; border: 1px solid var(--accent); color: var(--accent); background: none; border-radius: 6px; font: inherit; cursor: pointer; }
+button.link { border: 0; background: none; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 12px; padding: 0; }
+.note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+.message { margin: 10px 0; padding: 8px 10px; border-radius: 8px; font-size: 13px; background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.message.error { background: color-mix(in srgb, #dc2626 14%, transparent); }
+.warn { margin: 10px 0; padding: 8px 10px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); font-size: 13px; }
+.shares ul { list-style: none; padding: 0; margin: 8px 0 0; }
+.share { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+.share .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.share .meta, .share .status { font-size: 12px; color: var(--muted); }
+.share progress { width: 100%; height: 6px; }
+.share .row { display: flex; gap: 6px; margin-top: 6px; }
+.share .row input { flex: 1; min-width: 0; font-size: 12px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; }
+.share .row button { font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); background: none; color: inherit; cursor: pointer; }
+.share.ended { opacity: .75; }
+footer { margin-top: 10px; font-size: 12px; color: var(--muted); }

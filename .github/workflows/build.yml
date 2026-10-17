@@ -118,6 +118,36 @@ jobs:
         run: npm test
         working-directory: cli
 
+  extension-tests:
+    name: Browser extension (Chrome / Firefox)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - name: Install relay dependencies
+        run: npm ci
+        working-directory: p2p-signal
+      - name: Install extension dependencies
+        run: npm ci
+        working-directory: extension
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: extension
+      - name: Unit tests (crypto/link compatibility with the web app) + build
+        run: npm test
+        working-directory: extension
+      - name: Firefox lint (web-ext)
+        run: npx -y web-ext@8 lint -s dist/firefox
+        working-directory: extension
+      - uses: actions/upload-artifact@v4
+        with:
+          name: filenymous-extension-zips
+          path: extension/dist/*.zip
+
   # ── UI single-file HTML → ui.zip ─────────────────────────────────────────────
   # L'UI est filenymous-app.html (standalone, pas de build step Vite).
   # Holochain Launcher + Holo Host attendent index.html à la racine du zip.

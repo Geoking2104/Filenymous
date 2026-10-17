@@ -282,9 +282,23 @@ function leave(ws) {
   leaveDrop(ws);
 }
 
+// Browser extensions (Filenymous for Chrome/Firefox) connect with their own
+// origin. Firefox gives every install a random moz-extension://<uuid>, so an
+// ALLOWED_ORIGIN entry "moz-extension://*" (or "chrome-extension://*") accepts
+// any id of that extension scheme. Web pages cannot send these origins, so this
+// does not open the relay to other web sites; http(s) wildcards are not supported.
+const EXTENSION_ORIGIN_RE = /^(chrome-extension|moz-extension):\/\/[A-Za-z0-9-]{1,64}$/;
+
+function originAllowedBy(list, origin) {
+  if (!list.length) return true;
+  if (typeof origin !== "string") return false;
+  if (list.includes(origin)) return true;
+  const m = origin.match(EXTENSION_ORIGIN_RE);
+  return !!m && list.includes(`${m[1]}://*`);
+}
+
 function originAllowed(origin) {
-  if (!allowedOrigins.length) return true;
-  return typeof origin === "string" && allowedOrigins.includes(origin);
+  return originAllowedBy(allowedOrigins, origin);
 }
 
 function iceServers() {
