@@ -1,8 +1,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import filenymousSeo from "./seo/vite-plugin.mjs";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), filenymousSeo()],
   // libsodium-wrappers importe ./libsodium.mjs en relatif — Vite ne peut pas
   // le résoudre via son système de modules. On exclut du pre-bundling et on
   // force le resolve vers la version CJS qui n'a pas ce problème.
