@@ -36,7 +36,7 @@ async function prepare(page: Page, noPicker = false) {
   await page.addInitScript(
     ([url, strip]) => {
       (window as unknown as { __FILENYMOUS_SIGNAL_URL__: string }).__FILENYMOUS_SIGNAL_URL__ = url as string;
-      try { localStorage.setItem("i18nextLng", "fr"); } catch { /* ignore */ }
+      try { localStorage.setItem("filenymous.lng", "fr"); } catch { /* ignore */ }
       if (strip) {
         delete (window as unknown as { showSaveFilePicker?: unknown }).showSaveFilePicker;
         delete (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker;
