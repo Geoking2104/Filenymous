@@ -115,7 +115,7 @@ The e2e suite covers transfers with no password, with a wrong then correct passw
 - The **signaling server** temporarily sees the transfer code and network connection data (IP addresses, WebRTC parameters). Nothing is persisted.
 - The **TURN relay**, when used, forwards bytes that are already encrypted. It cannot read them and stores nothing.
 - The browser and OS name is exchanged only between the two peers.
-- **No cookies, no analytics, no ads.** Closing the sender's tab ends the share. The decryption key exists only in the shared link, plus the password when one is set.
+- **No cookies, no ads.** Audience is measured with a self-hosted, cookieless Umami (www.opendpe.net/umami) that never receives the URL fragment or query string, and is off on secret/report pages and under Do Not Track / GPC. Closing the sender's tab ends the share. The decryption key exists only in the shared link, plus the password when one is set.
 
 The full notice ("Mentions légales & RGPD") is in the app footer.
 
@@ -182,6 +182,6 @@ Les commandes sont les mêmes que dans la section anglaise :
 - Le **serveur de signalisation** voit temporairement le code de transfert et les données de connexion réseau (adresses IP, paramètres WebRTC). Rien n'est conservé.
 - Le **relais TURN**, s'il est utilisé, ne transmet que des octets déjà chiffrés. Il ne peut pas les lire et ne stocke rien.
 - Le nom du navigateur et du système n'est échangé qu'entre les deux pairs.
-- **Aucun cookie, aucune analytics, aucune publicité.** Fermer l'onglet de l'expéditeur met fin au partage.
+- **Aucun cookie, aucune publicité.** L'audience est mesurée par un Umami auto-hébergé (www.opendpe.net/umami), sans cookie, qui ne reçoit jamais le fragment (#…) ni la query string, et qui est coupé sur les pages secret/signalement et en cas de Do Not Track / GPC. Fermer l'onglet de l'expéditeur met fin au partage.
 
 Le texte complet (« Mentions légales & RGPD ») se trouve dans le pied de page de l'application.
