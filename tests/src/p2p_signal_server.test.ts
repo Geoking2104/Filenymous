@@ -35,7 +35,8 @@ describe("P2P signaling server", () => {
 
     expect(server).toContain("allowedOrigins");
     expect(server).toContain(".split(\",\")");
-    expect(server).toContain("allowedOrigins.includes(origin)");
+    expect(server).toContain("originAllowedBy(allowedOrigins, origin)");
+    expect(server).toContain("list.includes(origin)");
     expect(server).toContain("originAllowed(info.origin)");
   });
 
