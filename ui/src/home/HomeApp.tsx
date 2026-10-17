@@ -29,6 +29,7 @@ import ReportFollowPanel from "../report/ReportFollowPanel";
 import "../report/report.css";
 import { unloadGuardActive } from "../p2p/unloadGuard";
 import "./home.css";
+import { dragHasFiles, mergeFiles, removeFileAt, totalBytes } from "./files";
 
 function Logo() {
   return (
@@ -103,6 +104,7 @@ export default function HomeApp({ hash }: { hash: string }) {
   const [picked, setPicked] = useState<File[]>([]);
   const [sending, setSending] = useState<File[] | null>(null);
   const [drag, setDrag] = useState(false);
+  const [reviewDrag, setReviewDrag] = useState(false);
   const [code, setCode] = useState("");
   const [err, setErr] = useState("");
   const input = useRef<HTMLInputElement>(null);
@@ -120,13 +122,15 @@ export default function HomeApp({ hash }: { hash: string }) {
 
   const add = useCallback((list: FileList | null) => {
     if (!list || list.length === 0) return;
-    setPicked(Array.from(list));
+    setPicked(mergeFiles([], list));
     setErr("");
   }, []);
 
   const addMore = (list: FileList | null) => {
     if (!list || list.length === 0) return;
-    setPicked((prev) => [...prev, ...Array.from(list)]);
+    // Copy now: the input's live FileList is emptied right after (value = "").
+    const incoming = Array.from(list);
+    setPicked((prev) => mergeFiles(prev, incoming));
   };
 
   const reset = () => {
@@ -155,7 +159,7 @@ export default function HomeApp({ hash }: { hash: string }) {
 
   const receiving = isP2PHash(hash);
   const route = serviceRoute(hash);
-  const total = picked.reduce((n, f) => n + f.size, 0);
+  const total = totalBytes(picked);
 
   let body: JSX.Element;
   if (route === "drop-contrib") {
@@ -180,29 +184,49 @@ export default function HomeApp({ hash }: { hash: string }) {
     body = <P2PSendPanel files={sending} password={password} stream={stream} expires={expires} onStop={reset} />;
   } else if (picked.length > 0) {
     body = (
-      <div className="pz-card" data-testid="review-step">
-        <h2 className="pz-h2">
-          {t("pw.reviewTitle", { count: picked.length })}{" "}
-          <button type="button" className="pz-link" data-testid="add-files" onClick={() => more.current?.click()}>
-            {t("pw.addFiles")}
+      <div
+        className={`pz-card pz-review${reviewDrag ? " is-drag" : ""}`}
+        data-testid="review-step"
+        onDragOver={(e) => {
+          if (!dragHasFiles(e.dataTransfer)) return;
+          e.preventDefault();
+          setReviewDrag(true);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setReviewDrag(false);
+        }}
+        onDrop={(e) => {
+          if (!dragHasFiles(e.dataTransfer)) return;
+          e.preventDefault();
+          setReviewDrag(false);
+          addMore(e.dataTransfer.files);
+        }}
+      >
+        <div className="pz-review-head">
+          <h2 className="pz-h2">{t("pw.reviewTitle", { count: picked.length })}</h2>
+          <button type="button" className="pz-btn-ghost pz-add-files" data-testid="add-files" onClick={() => more.current?.click()}>
+            <span aria-hidden="true">＋</span> {t("pw.addFiles")}
           </button>
-        </h2>
+        </div>
+        <p className="pz-files-summary" data-testid="files-summary" aria-live="polite">
+          {t("pz.filesSummary", { count: picked.length, size: formatBytes(total) })}
+        </p>
         <input ref={more} type="file" multiple hidden data-testid="add-files-input" onChange={(e) => { addMore(e.currentTarget.files); e.currentTarget.value = ""; }} />
         <ul className="pz-files" data-testid="review-files">
           {picked.map((f, i) => (
-            <li key={`${f.name}-${i}`}>
+            <li key={`${f.name}-${f.size}-${f.lastModified}`}>
               <span className="pz-fmeta">
                 <span className="pz-fname">{f.name}</span>
                 <span className="pz-fmime">{f.type || t("pw.unknownType")}</span>
               </span>
               <span className="pz-fsize">{formatBytes(f.size)}</span>
-              <button type="button" className="pz-remove" aria-label={t("pw.remove", { name: f.name })} title={t("pw.remove", { name: f.name })} onClick={() => setPicked(picked.filter((_, k) => k !== i))}>
+              <button type="button" className="pz-remove" aria-label={t("pw.remove", { name: f.name })} title={t("pw.remove", { name: f.name })} onClick={() => setPicked(removeFileAt(picked, i))}>
                 ✕
               </button>
             </li>
           ))}
         </ul>
-        {picked.length > 1 && <p className="pz-muted">{t("pz.totalSize", { count: picked.length, size: formatBytes(total) })}</p>}
+        <p className="pz-review-drop-hint" aria-hidden="true">{reviewDrag ? t("pz.dropMoreActive") : t("pz.dropMore")}</p>
         {picked.some((f) => mediaKind(f.name, f.type)) && (
           <label className="pz-stream-opt">
             <input type="checkbox" data-testid="send-stream" checked={stream} onChange={(e) => setStream(e.target.checked)} />
@@ -284,6 +308,12 @@ export default function HomeApp({ hash }: { hash: string }) {
             </div>
             <p className="pz-service-lead">{t("home.send.lead")}</p>
             <Benefits prefix="home.send" />
+            <p className="pz-drop-cue" data-testid="drop-cue">
+              <span>{t("pz.dropCue")}</span>
+              <svg className="pz-drop-arrow" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+                <path d="M12 4v14m0 0-5.5-5.5M12 18l5.5-5.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </p>
             <label
               className={`pz-drop${drag ? " is-drag" : ""}`}
               data-testid="dropzone"
@@ -293,7 +323,9 @@ export default function HomeApp({ hash }: { hash: string }) {
                 e.preventDefault();
                 setDrag(true);
               }}
-              onDragLeave={() => setDrag(false)}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDrag(false);
+              }}
               onDrop={(e) => {
                 e.preventDefault();
                 setDrag(false);
@@ -302,6 +334,7 @@ export default function HomeApp({ hash }: { hash: string }) {
             >
               <input ref={input} type="file" multiple hidden onChange={(e) => add(e.currentTarget.files)} />
               <span className="pz-drop-title">{t("pz.dropTitle")}</span>
+              <span className="pz-drop-btn" aria-hidden="true">＋ {t("pw.addFiles")}</span>
               <span className="pz-drop-sub">{t("pz.dropSub")}</span>
             </label>
           </article>

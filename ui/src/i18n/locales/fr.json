@@ -372,14 +372,13 @@
     "docTitle": "Filenymous — transfert de fichiers pair-à-pair",
     "tagline": "Transfert de fichiers pair-à-pair, chiffré, dans votre navigateur.",
     "language": "Langue",
-    "dropTitle": "Déposez un fichier pour commencer",
-    "dropSub": "ou cliquez pour choisir — aucune limite de taille, rien n’est stocké",
+    "dropTitle": "Glissez-déposez un ou plusieurs fichiers ici",
+    "dropSub": "ou cliquez pour les choisir — aucune limite de taille, rien n’est stocké",
     "codePlaceholder": "Vous avez reçu un code ? 123-456-ABC",
     "codeLabel": "Code de transfert",
     "codeOpen": "Recevoir",
     "badCode": "Code ou lien invalide.",
     "readyTitle": "Vous allez partager",
-    "totalSize": "{{count}} fichiers · {{size}}",
     "you": "Vous",
     "peer": "Correspondant",
     "unknownDevice": "en attente…",
@@ -398,7 +397,12 @@
       "hosting": "Le site est hébergé par OVHcloud (France). Les serveurs de signalisation et de relais TURN sont hébergés sur un VPS OVHcloud en Europe ; ils ne voient jamais le contenu des fichiers.",
       "termsTitle": "Conditions d’utilisation",
       "terms": "Les fichiers sont partagés directement entre navigateurs, sans stockage sur un serveur. N’envoyez que des fichiers que vous avez le droit de partager, partagez les liens uniquement avec des destinataires connus, et n’utilisez pas Filenymous pour du contenu illégal ou nuisible. En envoyant un fichier, vous confirmez avoir compris et accepté ces conditions."
-    }
+    },
+    "dropCue": "Ajoutez un ou plusieurs fichiers",
+    "dropMore": "Vous pouvez aussi glisser d’autres fichiers dans cette zone.",
+    "dropMoreActive": "Relâchez pour ajouter ces fichiers",
+    "filesSummary_one": "{{count}} fichier · {{size}} au total",
+    "filesSummary_other": "{{count}} fichiers · {{size}} au total"
   },
   "pw": {
     "reviewTitle_one": "Vous allez envoyer {{count}} fichier.",
