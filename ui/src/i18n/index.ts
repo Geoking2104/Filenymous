@@ -17,16 +17,24 @@ void i18n
     },
     fallbackLng: "fr",
     supportedLngs: [...supportedLngs],
+    // "en-US", "en-GB"… → "en" (without this every regional English browser fell back to French).
+    nonExplicitSupportedLngs: true,
+    load: "languageOnly",
     interpolation: { escapeValue: false },
     detection: {
-      order: ["localStorage", "navigator", "htmlTag"],
+      // ?lang=en|fr first: shareable/hreflang URLs (the query string is never sent to analytics).
+      order: ["querystring", "localStorage", "navigator", "htmlTag"],
+      lookupQuerystring: "lang",
       caches: ["localStorage"],
       lookupLocalStorage: "filenymous.lng",
+      convertDetectedLanguage: (lng: string) => lng.split("-")[0].toLowerCase(),
     },
   });
 
 i18n.on("languageChanged", (lng) => {
   document.documentElement.lang = lng;
 });
+// The first detection happens during init(), before the listener above exists.
+if (typeof document !== "undefined" && i18n.resolvedLanguage) document.documentElement.lang = i18n.resolvedLanguage;
 
 export default i18n;
