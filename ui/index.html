@@ -26,6 +26,47 @@
     <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 
     <title>Filenymous</title>
+
+    <!--
+      Mesure d'audience Umami auto-hébergée (www.opendpe.net/umami, VPS OVHcloud) :
+      sans cookie, sans stockage local, respecte Do Not Track / Global Privacy Control.
+      Les liens Filenymous portent leurs clés dans le fragment (#…) : le traceur
+      n'envoie JAMAIS le fragment ni la query string (data-exclude-hash/-search),
+      et le garde ci-dessous réécrit chaque envoi en « chemin seul » et coupe
+      tout envoi sur les pages secret (#s:) et lanceur d'alerte (#report…).
+    -->
+    <script>
+      window.__fnUmamiBeforeSend = function (type, payload) {
+        try {
+          var n = navigator, h = location.hash || "";
+          if (n.doNotTrack === "1" || window.doNotTrack === "1" || n.globalPrivacyControl === true) return false;
+          if (/^#(s:|report)/.test(h)) return false;
+          if (type !== "event" || !payload || payload.name) return false;
+          var clean = function (u) {
+            try { var x = new URL(u, location.origin); return x.origin === location.origin ? x.pathname : x.origin + x.pathname; } catch (e) { return ""; }
+          };
+          payload.url = location.pathname;
+          payload.referrer = payload.referrer ? clean(payload.referrer) : "";
+          payload.title = "Filenymous";
+          delete payload.data;
+          return payload;
+        } catch (e) {
+          return false;
+        }
+      };
+    </script>
+    <script
+      defer
+      src="https://www.opendpe.net/umami/script.js"
+      data-website-id="676ef6d9-47f7-4210-bf64-127d9265acdc"
+      data-host-url="https://www.opendpe.net/umami"
+      data-domains="filenymous.eu,www.filenymous.eu"
+      data-exclude-search="true"
+      data-exclude-hash="true"
+      data-do-not-track="true"
+      data-auto-track="true"
+      data-before-send="__fnUmamiBeforeSend"
+    ></script>
   </head>
   <body>
     <div id="root"></div>

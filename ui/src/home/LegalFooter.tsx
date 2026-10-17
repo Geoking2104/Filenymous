@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import TermsModal, { OPEN_TERMS_EVENT } from "./TermsModal";
 
-const SECTIONS = ["controller", "data", "terms", "erasure", "hosting"] as const;
+const SECTIONS = ["controller", "data", "audience", "terms", "erasure", "hosting"] as const;
 
 /** Footer: the collapsible legal notice and the terms of use. */
 export default function LegalFooter() {

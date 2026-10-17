@@ -32,7 +32,7 @@ export default function PrivacyPanel() {
           { title:"Filenymous ⟁", items:[
             ["✓","Aucun fichier sur un serveur tiers"],
             ["✓","Chiffrement E2E AES-256 dans le navigateur"],
-            ["✓","Pas de compte, pas de pub, pas de traçage"],
+            ["✓","Pas de compte, pas de pub, pas de cookie"],
             ["✓","Réseau P2P — pas de Cloud Act applicable"],
             ["✓","Expiration & révocation cryptographiques"],
           ], highlight:true },
@@ -75,7 +75,7 @@ export default function PrivacyPanel() {
       <div style={{ background:"var(--bg)",border:"1px solid var(--border)",borderRadius:"10px",padding:"1rem 1.2rem",fontSize:".8rem",color:"var(--muted)",lineHeight:1.65 }}>
         {[
           ["Responsable de traitement","Filenymous est un protocole décentralisé open-source. En l'absence de base de données centrale, il n'existe pas de responsable de traitement au sens classique du RGPD pour les fichiers transférés. Chaque utilisateur est responsable des données qu'il publie sur le DHT."],
-          ["Données collectées","Le bridge de notification reçoit temporairement l'adresse de destination et le lien de transfert. Ces données ne sont pas persistées au-delà de l'envoi (TTL : 0). Aucun cookie de traçage, aucune analytics, aucune publicité."],
+          ["Données collectées","Le bridge de notification reçoit temporairement l'adresse de destination et le lien de transfert. Ces données ne sont pas persistées au-delà de l'envoi (TTL : 0). Aucun cookie de traçage, aucune publicité ; mesure d'audience anonyme et auto-hébergée (Umami), sans fragment d'URL ni paramètres."],
           ["Droit à l'effacement","L'expéditeur peut révoquer un transfert depuis l'onglet Historique. La révocation publie une suppression cryptographique sur le DHT. Les chunks sont effacés dans un délai de 24h maximum."],
           ["Hébergement","Les chunks chiffrés sont distribués sur les nœuds actifs du réseau. Aucun chunk n'est localisé sur un serveur géré par l'éditeur. La localisation géographique des nœuds est inconnue par conception."],
         ].map(([h, p]) => (
