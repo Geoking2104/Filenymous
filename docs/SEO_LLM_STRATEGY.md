@@ -18,7 +18,7 @@ Objectif : que Claude, ChatGPT, Gemini, Grok, Perplexity, Mistral (Le Chat), Cop
 | Routes | Tout se passe dans une SPA à routes par fragment (`#p2p:`, `#s:`, `#drop:`, `#report…`, `#secret-new`…) | Les fragments ne sont ni crawlés ni indexés, c'est voulu. Mais il n'existe **aucune page publique par fonctionnalité**. |
 | Méta | Pas de canonical, hreflang, Open Graph, Twitter Card ni JSON-LD | Aperçus de partage pauvres ; aucune donnée structurée. |
 | Langue | Un navigateur `en-US` / `en-GB` voyait l'interface **en français** (bug i18n) | Corrigé dans la PR #29, qui ajoute aussi `?lang=en|fr`. |
-| Titre d'accueil | « Partagez en toute confiance, sans compte ni nuage. » / « Share with confidence, no account, no cloud. » déjà en place (`home.title`) | OK. Il est maintenant aussi présent dans le HTML statique. |
+| Titre d'accueil | « Partage instantané et confidentiel, sans compte ni cloud. » / « Instant share with confidence, no account, no cloud. » déjà en place (`home.title`) | OK. Il est maintenant aussi présent dans le HTML statique. |
 | Hébergement | OVH mutualisé (Apache), fichiers statiques. `/app/` est déployé par `deploy-ovh-ui.yml` (SFTP, sauvegarde par fichier). La racine contient un `.htaccess` (403 en lecture) qui fait la redirection | On peut déposer des fichiers statiques à la racine, sans toucher au `.htaccess`. |
 | Mesure | Umami auto-hébergé (www.opendpe.net/umami), chemin seul, sans fragment ni query string | Permet de mesurer les visites venant des assistants IA (référents), voir §5. |
 | GitHub | Description « peer to peer file transfer », pas de site web, aucun *topic*, 0 étoile | Faible signal d'autorité ; page souvent lue par les LLM. |

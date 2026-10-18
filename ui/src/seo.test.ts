@@ -74,8 +74,8 @@ describe("SEO / agent discoverability output", () => {
     expect(h).toContain('<link rel="canonical" href="https://filenymous.eu/app/" />');
     expect(h).toContain('property="og:image" content="https://filenymous.eu/app/og/filenymous-og.png"');
     for (const m of h.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)) expect(JSON.parse(m[1])["@context"]).toBe("https://schema.org");
-    expect(seo.homeBody("fr", { isApp: true })).toContain("<h1>Partagez en toute confiance, sans compte ni nuage.</h1>");
-    expect(seo.homeBody("en", { isApp: false })).toContain("<h1>Share with confidence, no account, no cloud.</h1>");
+    expect(seo.homeBody("fr", { isApp: true })).toContain("<h1>Partage instantané et confidentiel, sans compte ni cloud.</h1>");
+    expect(seo.homeBody("en", { isApp: false })).toContain("<h1>Instant share with confidence, no account, no cloud.</h1>");
   });
 });
 

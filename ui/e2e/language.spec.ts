@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-const FR = "Partagez en toute confiance, sans compte ni nuage.";
-const EN = "Share with confidence, no account, no cloud.";
+const FR = "Partage instantané et confidentiel, sans compte ni cloud.";
+const EN = "Instant share with confidence, no account, no cloud.";
 
 for (const [locale, title, lang] of [["en-US", EN, "en"], ["en-GB", EN, "en"], ["fr-FR", FR, "fr"], ["fr-CA", FR, "fr"], ["de-DE", FR, "fr"]] as const) {
   test(`hero follows a ${locale} browser`, async ({ browser }) => {
