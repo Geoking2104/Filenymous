@@ -67,7 +67,8 @@ jobs:
       - name: Verify redirects (curl from the runner, incl. http/80)
         if: inputs.mode != 'inspect'
         run: |
-          sleep 5
+          # OVH takes up to ~1 min to serve a freshly uploaded .htaccess.
+          if [ "${{ inputs.mode }}" != verify ]; then sleep 90; fi
           fail=0
           check() { # url expected_code expected_location
             got=$(curl -s -o /dev/null -m 20 -w '%{http_code} %header{location}' "$1")
