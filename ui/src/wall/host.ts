@@ -1,7 +1,7 @@
 import { iceServers } from "../p2p/config";
 import { CONNECT_TIMEOUT_MS, LOW_WATER, addRemoteCandidate, waitForDrain } from "../p2p/session";
 import { iceCandidateInit, type SignalPayload } from "../p2p/signal";
-import { holdUnloadGuard, releaseUnloadGuard } from "../p2p/unloadGuard";
+import { holdUnloadGuard, releaseUnloadGuard } from "../p2p/unloadGuardCore";
 import { SealedPipe, WALL_PROTOCOL_VERSION, checkProof, deriveWallKeys, parseHandshake, sealProof, wallBaseMaterial } from "./crypto";
 import {
   LIMITS,
