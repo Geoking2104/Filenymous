@@ -135,6 +135,8 @@ Also `note` (masked: no text until `get`), `poll`, `poll.update`, `removed`, `pi
 host only: {"cmd":"pin","id":"…"}  {"cmd":"kick","label":"peer:3"}  {"cmd":"allow-agents","on":false}
 ```
 
+Notices: `rate-limited` (the host's per-participant limit, with `retryMs`), `relay-rate-limited` (the signaling relay's per-IP limit: the connection retries by itself), `live-limit`. `FILENYMOUS_DEBUG=1` prints connection status transitions on stderr (never content or keys).
+
 `file` reads only under `--files-root` (default: the current directory). `get` is always explicit: text up to 64 KiB comes back inline, other files are saved to `-o`; on a self-destruct wall it consumes the item. Exit code 3 = disconnected by the host (kick or agents turned off).
 
 ### Local HTTP/SSE bridge

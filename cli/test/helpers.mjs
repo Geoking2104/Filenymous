@@ -19,7 +19,7 @@ export async function importSrc(name) {
 
 export async function startRelay() {
   const port = 19000 + Math.floor(Math.random() * 3000);
-  const proc = spawn(process.execPath, [RELAY], { env: { ...process.env, PORT: String(port), STUN_URLS: "" }, stdio: "pipe" });
+  const proc = spawn(process.execPath, [RELAY], { env: { RATE_LIMIT_MAX_MESSAGES: "5000", ...process.env, PORT: String(port), STUN_URLS: "" }, stdio: "pipe" });
   await new Promise((ok, ko) => {
     const t = setTimeout(() => ko(new Error("relay did not start")), 10_000);
     proc.stdout.on("data", (d) => String(d).includes("listening") && (clearTimeout(t), ok()));

@@ -227,6 +227,7 @@ export class WallAgent {
       params,
       (st) => {
         debug("host", st.status, st.members.length);
+        this.relayError(st.error);
         if (st.status === "online" && !this.ready_) this.markReady();
         if (st.status === "destroyed" || st.status === "expired") this.end(st.status);
         if (st.status === "error") this.readyReject(new Error(st.error ?? "error"));
@@ -252,6 +253,7 @@ export class WallAgent {
       params,
       (st) => {
         debug("peer", st.status);
+        this.relayError(st.error);
         if (st.status === "online" && !this.ready_) this.markReady();
         else if (st.status === "bad-password") this.fail("bad-password");
         else if (st.status === "full") this.fail("wall-full");
@@ -264,6 +266,16 @@ export class WallAgent {
     peer.on(this.onEvent);
     void peer.start(this.opts.password);
     return this.ready;
+  }
+
+  private lastRelayError?: string;
+  /** Relay-side problems (e.g. its per-IP rate limit) as notices, once each. */
+  private relayError(error?: string) {
+    if (error === this.lastRelayError) return;
+    this.lastRelayError = error;
+    if (!error) return;
+    debug("relay error", error);
+    this.emit({ event: "notice", code: error === "rate-limited" ? "relay-rate-limited" : `relay-${error}` });
   }
 
   private ready_ = false;
