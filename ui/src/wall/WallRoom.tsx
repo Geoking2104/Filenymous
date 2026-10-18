@@ -329,7 +329,6 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, test
           ☰ <span className="sw2-count">{s.members.length}</span>
         </button>
         <div className="sw2-title">
-          <strong>🧱 {t("wall.title")}</strong>
           <span className="v3-status sw2-status" data-testid={statusTestId} data-status={s.status}>
             <span className="v3-pulse" />
             {s.statusText}
