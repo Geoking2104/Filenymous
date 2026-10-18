@@ -152,7 +152,7 @@ test("local HTTP/SSE bridge: loopback only, bearer token, send + events", { time
 });
 
 test("wall password: wrong password fails, right one joins", { timeout: 60_000 }, async () => {
-  const host = wallCli(["create", "--allow-agents", "--burn", ...common()], { env: { FILENYMOUS_PASSWORD: "s3cret-wall" } });
+  const host = wallCli(["create", "--allow-agents", "--burn", ...common()], { env: { FILENYMOUS_PASSWORD: "s3cret-wall", FILENYMOUS_DEBUG: "1" } });
   const ready = await host.wait((l) => l.event === "ready");
   assert.match(ready.link, /\/p1h$/);
   assert.ok(!JSON.stringify(host.lines).includes("s3cret-wall"));
@@ -160,8 +160,11 @@ test("wall password: wrong password fails, right one joins", { timeout: 60_000 }
   const e = await wrong.wait((l) => l.event === "error");
   assert.equal(e.error, "bad-password");
   assert.equal(await wrong.exited, 1);
-  const ok = wallCli(["join", ready.link, ...common()], { env: { FILENYMOUS_PASSWORD: "s3cret-wall" } });
-  assert.equal((await ok.wait((l) => l.event === "ready")).burn, true);
+  const ok = wallCli(["join", ready.link, ...common()], { env: { FILENYMOUS_PASSWORD: "s3cret-wall", FILENYMOUS_DEBUG: "1" } });
+  const okReady = await ok.wait((l) => l.event === "ready", 30_000).catch((e) => {
+    throw new Error(`${e.message}\nhost stderr: ${host.stderr.slice(-1500)}`);
+  });
+  assert.equal(okReady.burn, true);
   // Burn: the first get by someone else consumes the item.
   host.send({ cmd: "file", name: "once.txt", content: "une seule fois" });
   const f = await ok.wait((l) => l.event === "file");

@@ -226,6 +226,7 @@ export class WallAgent {
     const host = new WallHost(
       params,
       (st) => {
+        debug("host", st.status, st.members.length);
         if (st.status === "online" && !this.ready_) this.markReady();
         if (st.status === "destroyed" || st.status === "expired") this.end(st.status);
         if (st.status === "error") this.readyReject(new Error(st.error ?? "error"));
@@ -250,6 +251,7 @@ export class WallAgent {
     const peer = new WallPeer(
       params,
       (st) => {
+        debug("peer", st.status);
         if (st.status === "online" && !this.ready_) this.markReady();
         else if (st.status === "bad-password") this.fail("bad-password");
         else if (st.status === "full") this.fail("wall-full");
@@ -427,6 +429,16 @@ export class WallAgent {
     if (this.host) await this.host.destroy("destroyed").catch(() => this.host?.stop());
     else await this.peer?.leave();
   }
+}
+
+/** Status transitions on stderr when FILENYMOUS_DEBUG is set (no content, no keys). */
+let lastDebug = "";
+function debug(...parts: unknown[]) {
+  if (!process.env.FILENYMOUS_DEBUG) return;
+  const line = parts.join(" ");
+  if (line === lastDebug) return;
+  lastDebug = line;
+  process.stderr.write(`[debug ${new Date().toISOString().slice(11, 23)}] ${line}\n`);
 }
 
 function uniquePath(dir: string, name: string): string {
