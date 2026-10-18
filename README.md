@@ -1,5 +1,22 @@
 # Filenymous
 
+> **Partage chiffré de bout en bout, pair-à-pair, dans le navigateur : fichiers, secrets à usage unique, canal de signalement. Sans compte, sans stockage.**
+> End-to-end encrypted, peer-to-peer sharing in the browser: files, one-time secrets, whistleblowing channel. No account, no storage.
+
+Filenymous is free, open-source (MIT) software. Files go directly from one browser to the other over WebRTC, encrypted with AES-256-GCM; the key lives only in the link fragment (`#…`), which servers never receive. File transfers are never uploaded to a server; only one-time secrets (max 64 KiB, deleted after reading or expiry) and whistleblowing reports are kept server-side, encrypted, without the key.
+
+**App:** https://filenymous.eu/app/ · **FAQ:** [FR](https://filenymous.eu/app/faq/) / [EN](https://filenymous.eu/app/en/faq/) · **CLI:** [`npx filenymous`](https://www.npmjs.com/package/filenymous) · **For AI assistants:** [llms.txt](https://filenymous.eu/llms.txt)
+
+| Feature | Français | English |
+|---|---|---|
+| Direct file transfer (P2P) | [Transfert direct](https://filenymous.eu/app/fonctionnalites/transfert-direct/) | [Direct transfer](https://filenymous.eu/app/en/features/direct-transfer/) |
+| Receive files (Dropzone) | [Dropzone](https://filenymous.eu/app/fonctionnalites/dropzone/) | [Dropzone](https://filenymous.eu/app/en/features/dropzone/) |
+| One-time secret | [Secret à usage unique](https://filenymous.eu/app/fonctionnalites/secret-usage-unique/) | [One-time secret](https://filenymous.eu/app/en/features/one-time-secret/) |
+| Streamed sharing | [Partage streamé](https://filenymous.eu/app/fonctionnalites/partage-streame/) | [Streaming](https://filenymous.eu/app/en/features/streaming/) |
+| Whistleblowing channel | [Canal de signalement](https://filenymous.eu/app/fonctionnalites/canal-de-signalement/) | [Whistleblowing channel](https://filenymous.eu/app/en/features/whistleblowing-channel/) |
+| Terminal / CI | [CLI npm](https://filenymous.eu/app/fonctionnalites/cli-npm/) | [CLI npm](https://filenymous.eu/app/en/features/cli-npm/) |
+| Browser extension | [Extension](https://filenymous.eu/app/fonctionnalites/extension-navigateur/) | [Extension](https://filenymous.eu/app/en/features/browser-extension/) |
+
 **[English](#english) · [Français](#français)**
 
 <p align="center">

@@ -2,7 +2,7 @@
   "name": "filenymous-extension",
   "version": "0.1.0",
   "private": true,
-  "description": "Extension navigateur Filenymous (Chrome / Firefox) : partage en 2 clics, lien copié automatiquement.",
+  "description": "Extension navigateur Filenymous (Chrome / Firefox) : partage chiffré de bout en bout en un clic droit : fichiers en pair-à-pair, textes en lien secret à usage unique. Sans compte.",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -19,5 +19,6 @@
     "fflate": "^0.8.3",
     "typescript": "^5.6.3",
     "vitest": "^1.6.1"
-  }
+  },
+  "homepage": "https://filenymous.eu/app/fonctionnalites/extension-navigateur/"
 }

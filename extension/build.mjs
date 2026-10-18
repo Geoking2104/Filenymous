@@ -23,7 +23,7 @@ const outRoot = join(here, e2e ? "dist-e2e" : "dist");
 const targets = e2e ? ["chrome"] : ["chrome", "firefox"];
 
 const NAME = "Filenymous : partage chiffré en 2 clics";
-const DESCRIPTION = "Clic droit sur un fichier, une image ou un texte : lien chiffré de bout en bout copié aussitôt. Fichiers en direct (P2P), textes en lien secret à lecture unique.";
+const DESCRIPTION = "Partage chiffré de bout en bout en un clic droit : fichiers en pair-à-pair, textes en lien secret à usage unique. Sans compte.";
 const icons = { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" };
 
 function manifest(target) {
@@ -34,7 +34,7 @@ function manifest(target) {
       short_name: "Filenymous",
       version: pkg.version,
       description: DESCRIPTION,
-      homepage_url: "https://filenymous.eu/",
+      homepage_url: "https://filenymous.eu/app/fonctionnalites/extension-navigateur/",
       icons,
       action: { default_popup: "popup.html", default_title: "Filenymous", default_icon: icons },
       background: { service_worker: "background.js", type: "module" },
@@ -49,7 +49,7 @@ function manifest(target) {
     short_name: "Filenymous",
     version: pkg.version,
     description: DESCRIPTION,
-    homepage_url: "https://filenymous.eu/",
+    homepage_url: "https://filenymous.eu/app/fonctionnalites/extension-navigateur/",
     icons,
     browser_action: { default_popup: "popup.html", default_title: "Filenymous", default_icon: icons },
     background: { page: "background.html", persistent: true },
