@@ -638,7 +638,7 @@
     "badgeNew": "New",
     "wall": {
       "title": "Sharewall",
-      "lead": "An ephemeral wall where everyone drops files, notes and secrets that the group sees live, then everything is gone.",
+      "lead": "An ephemeral live wall: messages, emoji, reactions, polls, files and screen sharing for the group, plus AI agents if you allow them, then everything is gone.",
       "b1": "End-to-end encrypted",
       "b1d": "The key stays in the link: the relay never sees the content.",
       "b2": "Nothing on a server",

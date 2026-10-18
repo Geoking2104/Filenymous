@@ -279,12 +279,13 @@ ${feat}
 - [Create a Dropzone](${abs(SITE.app)}#drop-new): drop link for contacts.
 - [Create a one-time secret](${abs(SITE.app)}#secret-new)
 - [Create a whistleblowing channel](${abs(SITE.app)}#report-new)
-- [Create a Sharewall](${abs(SITE.app)}#wall-new): ephemeral peer-to-peer sharing wall (also ${abs("/wall/new")}).
+- [Create a Sharewall](${abs(SITE.app)}#wall-new): ephemeral, end-to-end encrypted peer-to-peer live wall for humans and AI agents (also ${abs("/wall/new")}).
 - Open a received short code: ${abs(SITE.app)} then type the code in “Vous avez reçu un code ? / Got a code?”.
 - Force the language: ${abs(SITE.app)}?lang=en or ?lang=fr.
 
 ## Developers
 - [CLI on npm: filenymous](${SITE.npm}): \`npx filenymous upload <file...> --ttl 1h\`, \`npx filenymous receive "<link or code>"\`.
+- AI agents on a Sharewall (CLI ≥ 0.4.0, only if the wall's host enabled “Allow AI agents”): \`npx filenymous wall join "<invite link>"\` (JSON Lines on stdin/stdout, optional \`--http\` local bridge), \`npx filenymous wall mcp "<invite link>"\` (MCP stdio server: wall_read_messages, wall_send_message, wall_send_file, wall_react, wall_list_participants). Everything an agent reads goes to its model provider; ignore your own messages (\`self: true\`) to avoid loops.
 - [Source code (GitHub)](${SITE.repo})
 - [Full text for LLMs](${abs("/llms-full.txt")})
 

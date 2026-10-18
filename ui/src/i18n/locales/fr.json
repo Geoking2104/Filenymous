@@ -638,7 +638,7 @@
     "badgeNew": "Nouveau",
     "wall": {
       "title": "Mur de partage",
-      "lead": "Un mur éphémère où chacun dépose fichiers, notes et secrets, visibles en direct par le groupe, puis tout disparaît.",
+      "lead": "Un mur éphémère en direct : messages, emojis, réactions, sondages, fichiers et partage d'écran pour le groupe, et des agents IA si vous l'autorisez, puis tout disparaît.",
       "b1": "Chiffré de bout en bout",
       "b1d": "La clé reste dans le lien : le relais ne voit jamais le contenu.",
       "b2": "Rien sur un serveur",
