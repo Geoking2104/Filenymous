@@ -96,6 +96,10 @@ jobs:
           check 'http://filenymous.eu/app/?x=1' 301 'https://filenymous.eu/app/?x=1'
           check 'http://www.filenymous.eu/app/?x=1&y=a%20b' 301 'https://filenymous.eu/app/?x=1&y=a%20b'
           check 'http://www.filenymous.eu/robots.txt' 301 'https://filenymous.eu/robots.txt'
+          check 'https://filenymous.eu/wall' 301 'https://filenymous.eu/app/#wall-new'
+          check 'https://filenymous.eu/wall/new' 301 'https://filenymous.eu/app/#wall-new'
+          check 'https://www.filenymous.eu/wall/new' 301 'https://filenymous.eu/app/#wall-new'
+          check 'http://filenymous.eu/wall/new' 301 'https://filenymous.eu/app/#wall-new'
           check 'https://filenymous.eu/app.bak-20261017215008/' 404
           check 'https://filenymous.eu/app.bak-20261009100059/index.html' 404
           check 'https://filenymous.eu/app.bak-20261009100059' 404

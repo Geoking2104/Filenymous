@@ -44,7 +44,7 @@ describe("SEO / agent discoverability output", () => {
       for (const m of html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)) expect(() => JSON.parse(m[1])).not.toThrow();
       for (const u of urlsIn(html)) {
         const hash = u.split("#")[1]?.replace(/[.,;:]+$/, "");
-        if (hash !== undefined) expect(["drop-new", "secret-new", "report-new"]).toContain(hash);
+        if (hash !== undefined) expect(["drop-new", "secret-new", "report-new", "wall-new"]).toContain(hash);
       }
       expect(html).not.toMatch(/file\.?pizza/i);
     }
@@ -88,7 +88,7 @@ describe("static pages analytics", () => {
     expect(snip).toContain('data-exclude-hash="true"');
     expect(snip).toContain('data-exclude-search="true"');
     expect(snip).toContain('data-do-not-track="true"');
-    expect(snip).toContain("/^#(s:|report)/");
+    expect(snip).toContain("/^#(s:|report|wall)/");
     const pages = seo.staticPages({ analytics: snip }) as Record<string, string>;
     for (const html of Object.values(pages)) expect(html).toContain(snip);
   });

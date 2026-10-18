@@ -109,6 +109,35 @@ The Dropzone reuses `p2p-signal` (new message types `drop-join`, `drop-signal`, 
 
 Relay tests: `cd p2p-signal && npm ci && npm test`. Restart `filenymous-signal.service` after deploying the new `server.js`.
 
+## Sharewall (live sharing wall) — relay and nginx
+
+Sharewall reuses `p2p-signal` on a dedicated WebSocket path, `wss://www.opendpe.net/filenymous-signal/wall` (new message types `wall-join`, `wall-signal`, `wall-close`, `wall-leave`). No content goes through the VPS: the relay only introduces each participant to the host's tab, never participants to each other, and never receives the key (it lives in the link fragment). **A relay redeploy is required.** Full design: [SHAREWALL.md](SHAREWALL.md).
+
+Optional environment variables: `WALL_MAX_TTL_MS` (24 h + 60 s; walls always expire), `MAX_WALL_PEERS` (8), `WALL_HOST_GRACE_MS` (5000: delay before closing a "destroy on host leave" wall whose host disconnected), `WALL_SWEEP_MS` (15000). `/health` reports a `walls` count.
+
+**No access log for walls.** The relay writes no per-connection line. Add to the opendpe.net `server` block (see `p2p-signal/nginx-opendpe-location.conf`):
+
+```nginx
+location = /filenymous-signal/wall {
+    access_log off;
+    error_log /var/log/nginx/filenymous-wall-error.log crit;
+    proxy_pass http://127.0.0.1:8789;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;   # in-memory rate limit only, never logged
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+    proxy_buffering off;
+}
+```
+
+Order: (1) deploy `p2p-signal/server.js` with the openDPE relay workflow and restart `filenymous-signal`; (2) add the nginx block, `nginx -t && systemctl reload nginx`, open a wall and check `grep -c 'filenymous-signal/wall' /var/log/nginx/access.log` stays `0`; (3) only then deploy the UI (`deploy-ovh-ui.yml`), which also uploads the `.htaccess` with `/wall` and `/wall/new` → `https://filenymous.eu/app/#wall-new`, and run `ovh-htaccess.yml` in `verify` mode. The UI says the relay keeps no access log for walls: that is only true after step 2.
+
+Tests: `cd p2p-signal && npm test` (includes `wall.test.mjs`).
+
 ## Secrets Vault (burn-after-reading) — VPS deployment
 
 The Vault API is served by the same `p2p-signal` process (`vault.js`), under the existing nginx location: `https://www.opendpe.net/filenymous-signal/api/v1/secrets`. The static site on OVH calls it directly (CORS limited to `ALLOWED_ORIGIN`). Browsers encrypt with AES-256-GCM before upload; the key only lives in the link fragment (`#s:<id>/<key>`). The server stores ciphertext + `sha256(auth token)` only.

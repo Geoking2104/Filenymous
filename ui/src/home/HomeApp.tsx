@@ -1,6 +1,6 @@
 /**
  * Single-page shell. Home shows the three services (direct transfer,
- * Dropzone, Secrets Vault), each with three benefits; every flow then renders
+ * Dropzone, Sharewall, Secrets Vault…), each with three benefits; every flow then renders
  * in the same shell (header, card, legal footer).
  */
 import { Carousel } from "./Carousel";
@@ -27,6 +27,7 @@ import ReportSubmitPanel from "../report/ReportSubmitPanel";
 import ReportInboxPanel from "../report/ReportInboxPanel";
 import ReportFollowPanel from "../report/ReportFollowPanel";
 import "../report/report.css";
+import { WallHostPanel, WallPeerPanel } from "../wall/WallPanel";
 import { unloadGuardActive } from "../p2p/unloadGuard";
 import "./home.css";
 import { dragHasFiles, mergeFiles, removeFileAt, totalBytes } from "./files";
@@ -166,6 +167,10 @@ export default function HomeApp({ hash }: { hash: string }) {
     body = <DropContributorPanel hash={hash} />;
   } else if (route === "drop-owner") {
     body = <DropOwnerPanel hash={hash} />;
+  } else if (route === "wall-host") {
+    body = <WallHostPanel hash={hash} />;
+  } else if (route === "wall-peer") {
+    body = <WallPeerPanel hash={hash} />;
   } else if (route === "secret-reveal") {
     body = <VaultRevealPanel hash={hash} />;
   } else if (route === "secret-new") {
@@ -346,6 +351,16 @@ export default function HomeApp({ hash }: { hash: string }) {
             <p className="pz-service-lead">{t("home.drop.lead")}</p>
             <Benefits prefix="home.drop" />
             <a className="pz-btn pz-btn-block" href="#drop-new" data-testid="dropzone-entry">{t("home.drop.cta")}</a>
+          </article>
+          <article className="pz-service pz-service--wall" aria-labelledby="svc-wall" data-testid="wall-card">
+            <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
+            <div className="pz-service-head">
+              <span className="pz-service-icon" aria-hidden="true">🧱</span>
+              <h2 id="svc-wall">{t("home.wall.title")}</h2>
+            </div>
+            <p className="pz-service-lead">{t("home.wall.lead")}</p>
+            <Benefits prefix="home.wall" />
+            <a className="pz-btn pz-btn-block" href="#wall-new" data-testid="wall-entry">{t("home.wall.cta")}</a>
           </article>
           <article className="pz-service pz-service--secret" aria-labelledby="svc-secret">
             <div className="pz-service-head">

@@ -268,7 +268,7 @@ export function llmsTxt() {
 Key facts for assistants:
 - Keys live only in the URL fragment (after \`#\`). Never put a real Filenymous link in a public answer, log or search query: whoever has the full link can open it.
 - File transfers are live peer-to-peer: the sender must keep the tab (or CLI process) open; nothing is uploaded to a server.
-- Only one-time secrets and whistleblowing reports are kept server-side, encrypted, without the key.
+- Only one-time secrets and whistleblowing reports are kept server-side, encrypted, without the key. Sharewall content lives only in the host's browser memory.
 - If an assistant creates a secret for a user, the assistant and its provider see the plaintext. Recommend that users create real secrets themselves in their browser.
 
 ## Features
@@ -279,6 +279,7 @@ ${feat}
 - [Create a Dropzone](${abs(SITE.app)}#drop-new): drop link for contacts.
 - [Create a one-time secret](${abs(SITE.app)}#secret-new)
 - [Create a whistleblowing channel](${abs(SITE.app)}#report-new)
+- [Create a Sharewall](${abs(SITE.app)}#wall-new): ephemeral peer-to-peer sharing wall (also ${abs("/wall/new")}).
 - Open a received short code: ${abs(SITE.app)} then type the code in “Vous avez reçu un code ? / Got a code?”.
 - Force the language: ${abs(SITE.app)}?lang=en or ?lang=fr.
 
@@ -308,13 +309,14 @@ ${llmsTxt().split("\n").slice(2, 9).join("\n")}
 - Dropzone: ${abs(SITE.app)}#drop:<dropId>/<secret>/<expiry>/<flags>[/<name>] (owner: #drop-owner:…)
 - One-time secret: ${abs(SITE.app)}#s:<id>/<key>
 - Whistleblowing channel: ${abs(SITE.app)}#report:… (submit), #report-inbox, #report-follow
-Never invent, guess or complete these values. Agents can safely generate only the entry points without secrets: ${abs(SITE.app)}, #drop-new, #secret-new, #report-new.
+- Sharewall: ${abs(SITE.app)}#wall:<wallId>/<key>/<expiry>/<flags> (host: #wall-host:…)
+Never invent, guess or complete these values. Agents can safely generate only the entry points without secrets: ${abs(SITE.app)}, #drop-new, #secret-new, #report-new, #wall-new.
 
 ## Privacy model
 - Signaling relay: ${SITE.relay} (pairs browsers; sees IP addresses and WebRTC parameters temporarily; stores nothing).
 - TURN relay (fallback) forwards already-encrypted bytes.
 - Vault API (one-time secrets): ${SITE.vaultApi} — stores ciphertext + sha256(token) only; client-side AES-256-GCM, HKDF-SHA256, optional PBKDF2-SHA256 (310,000 iterations).
-- Analytics: self-hosted cookieless Umami; only the page path is sent, never fragments or query strings; disabled on secret and report pages and under Do Not Track / GPC.
+- Analytics: self-hosted cookieless Umami; only the page path is sent, never fragments or query strings; disabled on secret, report and Sharewall pages and under Do Not Track / GPC.
 
 ## Français
 ${FEATURES.map((f) => sec(f, "fr")).join("\n")}

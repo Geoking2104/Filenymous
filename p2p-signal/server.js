@@ -44,6 +44,19 @@ const DROP_DEFAULT_TTL_MS = Number(process.env.DROP_DEFAULT_TTL_MS || 7 * 24 * 3
 const MAX_DROP_CONTRIBUTORS = Number(process.env.MAX_DROP_CONTRIBUTORS || 8);
 const DROP_SWEEP_MS = Number(process.env.DROP_SWEEP_MS || 30_000);
 const drops = new Map();
+// Sharewall (live multi-peer wall, star around the host's tab): the relay only
+// routes SDP/ICE between the host and each peer, like Dropzones. It never sees
+// the wall key (URL fragment) nor any content; it only knows an opaque wallId
+// = "wall-" + sha256(hostSecret)[:24], random peer ids and the expiry.
+// Walls connect on the /wall path so nginx can skip access logs for them.
+const WALL_MAX_TTL_MS = Number(process.env.WALL_MAX_TTL_MS || 24 * 3600 * 1000 + 60_000);
+const MAX_WALL_PEERS = Number(process.env.MAX_WALL_PEERS || 8);
+const WALL_HOST_GRACE_MS = Number(process.env.WALL_HOST_GRACE_MS || 5_000);
+const WALL_SWEEP_MS = Number(process.env.WALL_SWEEP_MS || 15_000);
+const walls = new Map();
+// Destroyed/expired wall ids, kept until their expiry so a closed wall can't
+// be revived with the host link. Opaque ids only, in memory.
+const closedWalls = new Map();
 
 function now() {
   return Date.now();
@@ -64,6 +77,15 @@ function validateDropId(dropId) {
 function dropIdForOwnerSecret(ownerSecret) {
   if (typeof ownerSecret !== "string" || !/^[A-Za-z0-9_-]{22,64}$/.test(ownerSecret)) return null;
   return `drop-${createHash("sha256").update(ownerSecret, "utf8").digest("hex").slice(0, 24)}`;
+}
+
+function validateWallId(wallId) {
+  return typeof wallId === "string" && /^wall-[a-f0-9]{24}$/.test(wallId);
+}
+
+function wallIdForHostSecret(hostSecret) {
+  if (typeof hostSecret !== "string" || !/^[A-Za-z0-9_-]{22,64}$/.test(hostSecret)) return null;
+  return `wall-${createHash("sha256").update(hostSecret, "utf8").digest("hex").slice(0, 24)}`;
 }
 
 function validateRoomPeerId(peerId) {
@@ -266,6 +288,53 @@ function leaveDrop(ws) {
   ws.dropPeerId = undefined;
 }
 
+function wallPeerIds(wall) {
+  return Array.from(wall.peers.keys());
+}
+
+function closeWall(wallId, reason) {
+  const wall = walls.get(wallId);
+  closedWalls.set(wallId, Math.max(wall?.expiresAt || 0, now() + 60_000));
+  if (!wall) return;
+  clearTimeout(wall.graceTimer);
+  for (const ws of [wall.host, ...wall.peers.values()]) {
+    if (!ws) continue;
+    send(ws, { type: "wall-closed", wallId, reason });
+    ws.wallId = undefined;
+    ws.wallRole = undefined;
+    ws.wallPeerId = undefined;
+  }
+  walls.delete(wallId);
+}
+
+function leaveWall(ws) {
+  const wallId = ws.wallId;
+  if (!wallId) return;
+  const wall = walls.get(wallId);
+  ws.wallId = undefined;
+  if (wall) {
+    if (ws.wallRole === "host" && wall.host === ws) {
+      wall.host = null;
+      for (const p of wall.peers.values()) send(p, { type: "wall-host-offline", wallId });
+      if (wall.destroyOnHostLeave) {
+        // Short grace so a host reconnecting after a network blip keeps the wall.
+        clearTimeout(wall.graceTimer);
+        wall.graceTimer = setTimeout(() => {
+          const w = walls.get(wallId);
+          if (w && !isOpen(w.host)) closeWall(wallId, "host-left");
+        }, WALL_HOST_GRACE_MS);
+        wall.graceTimer.unref?.();
+      }
+    } else if (ws.wallRole === "peer" && wall.peers.get(ws.wallPeerId) === ws) {
+      wall.peers.delete(ws.wallPeerId);
+      send(wall.host, { type: "wall-peer-left", wallId, peerId: ws.wallPeerId });
+    }
+    if (!wall.host && wall.peers.size === 0 && !wall.graceTimer) walls.delete(wallId);
+  }
+  ws.wallRole = undefined;
+  ws.wallPeerId = undefined;
+}
+
 function leave(ws) {
   for (const [code, room] of rooms) {
     for (const role of ["sender", "receiver"]) {
@@ -280,6 +349,7 @@ function leave(ws) {
   ws.roomRole = undefined;
   leaveRoomPeer(ws);
   leaveDrop(ws);
+  leaveWall(ws);
 }
 
 // Browser extensions (Filenymous for Chrome/Firefox) connect with their own
@@ -345,7 +415,7 @@ function httpHandler(req, res) {
   }
   if (req.method === "GET" && (path === "/health" || path === "/healthz")) {
     res.writeHead(200, headers);
-    return res.end(JSON.stringify({ ok: true, rooms: rooms.size, roomSessions: roomSessions.size, drops: drops.size, turn: TURN_URLS.length > 0 }));
+    return res.end(JSON.stringify({ ok: true, rooms: rooms.size, roomSessions: roomSessions.size, drops: drops.size, walls: walls.size, turn: TURN_URLS.length > 0 }));
   }
   if (req.method === "GET" && path === "/ice") {
     if (origin && !originAllowed(origin)) {
@@ -380,6 +450,15 @@ const pingTimer = setInterval(() => {
   }
 }, PING_INTERVAL_MS);
 pingTimer.unref?.();
+
+const wallSweepTimer = setInterval(() => {
+  const t = now();
+  for (const [wallId, wall] of walls) {
+    if (wall.expiresAt && wall.expiresAt <= t) closeWall(wallId, "expired");
+  }
+  for (const [wallId, until] of closedWalls) if (until <= t) closedWalls.delete(wallId);
+}, WALL_SWEEP_MS);
+wallSweepTimer.unref?.();
 
 const dropSweepTimer = setInterval(() => {
   const t = now();
@@ -606,6 +685,137 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
+    if (msg.type === "wall-join") {
+      const { wallId, role } = msg;
+      // Strict shape: the relay accepts no extra field (never a key or a name).
+      const allowed = role === "host" ? ["type", "wallId", "role", "hostSecret", "expiresAt", "destroyOnHostLeave"] : ["type", "wallId", "role", "peerId"];
+      if (!validateWallId(wallId) || !["host", "peer"].includes(role) || !hasOnlyKeys(msg, allowed)) {
+        send(ws, { type: "error", error: "invalid-wall" });
+        return;
+      }
+      if (closedWalls.has(wallId)) {
+        send(ws, { type: "error", error: "wall-closed" });
+        return;
+      }
+      const existing = walls.get(wallId);
+      if (existing?.expiresAt && existing.expiresAt <= now()) {
+        closeWall(wallId, "expired");
+        send(ws, { type: "error", error: "wall-closed" });
+        return;
+      }
+      if (role === "host") {
+        if (wallIdForHostSecret(msg.hostSecret) !== wallId) {
+          send(ws, { type: "error", error: "wall-host-denied" });
+          return;
+        }
+        const requested = Number(msg.expiresAt);
+        if (!Number.isSafeInteger(requested) || requested <= now()) {
+          send(ws, { type: "error", error: "wall-closed" });
+          return;
+        }
+        leave(ws);
+        let wall = walls.get(wallId);
+        if (!wall) {
+          wall = { host: null, peers: new Map(), expiresAt: 0, destroyOnHostLeave: false, graceTimer: undefined };
+          walls.set(wallId, wall);
+        }
+        if (wall.host && wall.host !== ws) {
+          const previous = wall.host;
+          previous.wallId = undefined;
+          previous.wallRole = undefined;
+          send(previous, { type: "error", error: "wall-host-replaced" });
+        }
+        clearTimeout(wall.graceTimer);
+        wall.graceTimer = undefined;
+        // First host join fixes the expiry (capped); a reconnecting host can't extend it.
+        const capped = Math.min(requested, now() + WALL_MAX_TTL_MS);
+        wall.expiresAt = wall.expiresAt ? Math.min(wall.expiresAt, capped) : capped;
+        wall.destroyOnHostLeave = msg.destroyOnHostLeave === true;
+        wall.host = ws;
+        ws.wallId = wallId;
+        ws.wallRole = "host";
+        send(ws, { type: "wall-joined", wallId, role, expiresAt: wall.expiresAt, peers: wallPeerIds(wall) });
+        for (const p of wall.peers.values()) send(p, { type: "wall-host-online", wallId });
+        return;
+      }
+      const { peerId } = msg;
+      if (!validateRoomPeerId(peerId)) {
+        send(ws, { type: "error", error: "invalid-wall" });
+        return;
+      }
+      leave(ws);
+      let wall = walls.get(wallId);
+      if (!wall) {
+        wall = { host: null, peers: new Map(), expiresAt: 0, destroyOnHostLeave: false, graceTimer: undefined };
+        walls.set(wallId, wall);
+      }
+      const current = wall.peers.get(peerId);
+      if (current && isOpen(current) && current !== ws) {
+        send(ws, { type: "error", error: "wall-peer-taken" });
+        return;
+      }
+      if (!current && wall.peers.size >= MAX_WALL_PEERS) {
+        send(ws, { type: "error", error: "wall-full" });
+        if (!wall.host && wall.peers.size === 0) walls.delete(wallId);
+        return;
+      }
+      wall.peers.set(peerId, ws);
+      ws.wallId = wallId;
+      ws.wallRole = "peer";
+      ws.wallPeerId = peerId;
+      const hostOnline = !!isOpen(wall.host);
+      // Peers never learn about each other from the relay: only the host is told.
+      send(ws, { type: "wall-joined", wallId, role, hostOnline });
+      if (hostOnline) send(wall.host, { type: "wall-peer-joined", wallId, peerId });
+      return;
+    }
+
+    if (msg.type === "wall-signal") {
+      const { payload } = msg;
+      if (!validateSignalPayload(payload) || !hasOnlyKeys(msg, ["type", "payload", "to"])) {
+        send(ws, { type: "error", error: "unsupported-signal-payload" });
+        return;
+      }
+      const wall = ws.wallId ? walls.get(ws.wallId) : null;
+      if (!wall) {
+        send(ws, { type: "error", error: "not-in-wall" });
+        return;
+      }
+      if (ws.wallRole === "host") {
+        const target = wall.peers.get(msg.to);
+        if (!isOpen(target)) {
+          send(ws, { type: "wall-peer-left", wallId: ws.wallId, peerId: msg.to });
+          return;
+        }
+        send(target, { type: "wall-signal", payload });
+        return;
+      }
+      if (!isOpen(wall.host)) {
+        send(ws, { type: "wall-host-offline", wallId: ws.wallId });
+        return;
+      }
+      send(wall.host, { type: "wall-signal", from: ws.wallPeerId, payload });
+      return;
+    }
+
+    if (msg.type === "wall-close") {
+      // Kill switch: only the current host socket can close its wall.
+      const wallId = ws.wallId;
+      const wall = wallId ? walls.get(wallId) : null;
+      if (!wall || ws.wallRole !== "host" || wall.host !== ws) {
+        send(ws, { type: "error", error: "not-wall-host" });
+        return;
+      }
+      closeWall(wallId, "destroyed");
+      return;
+    }
+
+    if (msg.type === "wall-leave") {
+      leaveWall(ws);
+      send(ws, { type: "wall-left" });
+      return;
+    }
+
     if (msg.type === "signal") {
       const { code, payload } = msg;
       if (!validateSignalPayload(payload)) {
@@ -643,4 +853,4 @@ httpServer.listen(port, () => {
   console.log(`Filenymous p2p-signal listening on :${port}`);
 });
 
-export { dropIdForOwnerSecret, validateDropId, validateOneTimeCode, validateRoomEvent, validateRoomId, validateSignalPayload };
+export { dropIdForOwnerSecret, validateDropId, validateWallId, wallIdForHostSecret, validateOneTimeCode, validateRoomEvent, validateRoomId, validateSignalPayload };

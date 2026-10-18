@@ -8,7 +8,7 @@ import { carouselKeyTarget, nearestSlide } from "./Carousel";
 describe("home service cards copy", () => {
   it("each service has a title, a lead and exactly 3 benefits in FR and EN", () => {
     for (const loc of [fr, en] as Array<{ home: Record<string, Record<string, string> | string> }>) {
-      for (const svc of ["send", "drop", "secret", "whistle", "cli", "pro", "stream"]) {
+      for (const svc of ["send", "drop", "wall", "secret", "whistle", "cli", "pro", "stream"]) {
         const c = loc.home[svc] as Record<string, string>;
         expect(c.title?.trim()).toBeTruthy();
         expect(c.lead?.trim()).toBeTruthy();
