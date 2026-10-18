@@ -1,7 +1,7 @@
 {
   "name": "filenymous",
-  "version": "0.3.0",
-  "description": "Ultra-light end-to-end encrypted P2P file sharing from the terminal (WebRTC, no server storage). Compatible with https://filenymous.eu/app/",
+  "version": "0.3.1",
+  "description": "End-to-end encrypted peer-to-peer file sharing from the terminal or CI (WebRTC, AES-256-GCM, no account, no server storage). Interoperates with https://filenymous.eu/app/",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -20,11 +20,17 @@
     "file-transfer",
     "e2ee",
     "ci",
-    "cli"
+    "cli",
+    "file-sharing",
+    "encryption",
+    "privacy",
+    "wetransfer-alternative",
+    "send-files",
+    "nodejs"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Geoking2104/Filenymous.git",
+    "url": "git+https://github.com/Geoking2104/Filenymous.git",
     "directory": "cli"
   },
   "scripts": {
@@ -42,7 +48,7 @@
     "esbuild": "^0.24.0",
     "typescript": "^5.6.3"
   },
-  "homepage": "https://github.com/Geoking2104/Filenymous/tree/main/cli#readme",
+  "homepage": "https://filenymous.eu/app/fonctionnalites/cli-npm/",
   "bugs": {
     "url": "https://github.com/Geoking2104/Filenymous/issues"
   }
