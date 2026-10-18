@@ -11,6 +11,13 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Deploy backups are never public: 404 for app.bak-<ts>/, www.bak-<ts>/ and
+  # any other "<name>.bak-<digits>" that a future deploy might create at the
+  # web root (deploy-ovh-sftp.mjs names them <remote>.bak-<yyyymmddhhmmss>).
+  # Checked first, on any scheme/host, so nothing redirects to them either.
+  # (.htaccess.bak-* stay 403 through the host's default .ht* protection.)
+  RewriteRule ^[^/]+\.bak-[0-9]+(/|$) - [R=404,L]
+
   # Existing rules (were RedirectMatch): / and /index.html -> /app/, from any
   # scheme or host, in one hop (query string kept).
   RewriteRule ^(index\.html)?$ https://filenymous.eu/app/ [R=301,L]
@@ -33,4 +40,12 @@
 <IfModule !mod_rewrite.c>
   RedirectMatch 301 ^/$ https://filenymous.eu/app/
   RedirectMatch 301 ^/index\.html$ https://filenymous.eu/app/
+</IfModule>
+
+# HSTS on HTTPS responses only (https reaches Apache with SERVER_PORT 443 on
+# this hosting; plain http with 80 and is redirected above). One year, no
+# includeSubDomains: ftp.filenymous.eu (OVH default CNAME) has no valid
+# certificate. No preload (owner decision, hard to undo).
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000" "expr=%{SERVER_PORT} == '443'"
 </IfModule>

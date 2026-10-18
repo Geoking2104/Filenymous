@@ -96,6 +96,20 @@ jobs:
           check 'http://filenymous.eu/app/?x=1' 301 'https://filenymous.eu/app/?x=1'
           check 'http://www.filenymous.eu/app/?x=1&y=a%20b' 301 'https://filenymous.eu/app/?x=1&y=a%20b'
           check 'http://www.filenymous.eu/robots.txt' 301 'https://filenymous.eu/robots.txt'
+          check 'https://filenymous.eu/app.bak-20261017215008/' 404
+          check 'https://filenymous.eu/app.bak-20261009100059/index.html' 404
+          check 'https://filenymous.eu/app.bak-20261009100059' 404
+          check 'https://www.filenymous.eu/app.bak-20261017210126/' 404
+          check 'http://filenymous.eu/app.bak-20261017215008/' 404
+          check 'https://filenymous.eu/www.bak-20261017215117/' 404
+          check 'https://filenymous.eu/.htaccess' 403
+          check 'https://filenymous.eu/.htaccess.bak-20261018120957' 403
+          echo "== HSTS (expected on https only)"
+          for u in https://filenymous.eu/app/ https://filenymous.eu/ https://www.filenymous.eu/app/ http://filenymous.eu/app/ http://www.filenymous.eu/; do
+            h=$(curl -s -o /dev/null -m 20 -D - "$u" | tr -d '\r' | grep -i '^strict-transport-security:' | cut -d' ' -f2-)
+            printf '%-40s HSTS=%s\n' "$u" "${h:-none}"
+            case "$u" in https://*) [ -n "$h" ] || { echo "  ^ expected HSTS"; fail=1; } ;; http://*) [ -z "$h" ] || { echo "  ^ unexpected HSTS on http"; fail=1; } ;; esac
+          done
           echo "== full chain (http://www -> final)"
           curl -sIL -m 30 -o /dev/null -w '%{num_redirects} redirects, final %{http_code} %{url_effective}\n' 'http://www.filenymous.eu/app/?x=1'
           if [ "$fail" != 0 ]; then
