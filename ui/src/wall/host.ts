@@ -330,8 +330,18 @@ export class WallHost {
   private serve(peerId: string, peer: Peer, channel: RTCDataChannel) {
     peer.channel = channel;
     let queue = Promise.resolve();
+    // After a reject, let the message reach the peer before closing: closing
+    // too early can overtake it on slow links, and the peer would then retry
+    // forever instead of reporting "bad password". The peer closes itself
+    // when it reads the reject; this is only the fallback.
     const later = (): void => {
-      setTimeout(() => this.peers.get(peerId) === peer && this.dropPeer(peerId), 300);
+      const t0 = Date.now();
+      const tick = () => {
+        if (this.peers.get(peerId) !== peer) return;
+        if (channel.readyState === "open" && channel.bufferedAmount > 0 && Date.now() - t0 < 3000) return void setTimeout(tick, 100);
+        setTimeout(() => this.peers.get(peerId) === peer && this.dropPeer(peerId), 1500);
+      };
+      setTimeout(tick, 100);
     };
     const plain = (msg: object) => channel.readyState === "open" && channel.send(JSON.stringify(msg));
 

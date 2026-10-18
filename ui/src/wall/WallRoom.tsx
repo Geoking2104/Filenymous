@@ -1057,20 +1057,27 @@ function Composer(c: ComposerProps) {
   const lastTyping = useRef(0);
   const disabled = !s.online;
 
+  // Caret to restore right after the next render (synchronously, so typing
+  // that follows can never be overtaken by a late animation frame).
+  const pendingCaret = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const pos = pendingCaret.current;
+    const el = area.current;
+    if (pos === null || !el) return;
+    pendingCaret.current = null;
+    el.focus();
+    el.selectionStart = el.selectionEnd = pos;
+    setCaret(pos);
+  }, [text]);
+  const textRef = useRef(text);
+  textRef.current = text;
   const insert = useCallback((str: string) => {
     const el = area.current;
-    setText((cur) => {
-      const at = el ? el.selectionStart : cur.length;
-      const end = el ? el.selectionEnd : cur.length;
-      const next = cur.slice(0, at) + str + cur.slice(end);
-      requestAnimationFrame(() => {
-        if (!el) return;
-        el.focus();
-        el.selectionStart = el.selectionEnd = at + str.length;
-        setCaret(at + str.length);
-      });
-      return next;
-    });
+    const cur = textRef.current;
+    const at = el ? el.selectionStart : cur.length;
+    const end = el ? el.selectionEnd : cur.length;
+    pendingCaret.current = at + str.length;
+    setText(cur.slice(0, at) + str + cur.slice(end));
   }, []);
   const { registerInsert } = c;
   useEffect(() => {
@@ -1084,15 +1091,8 @@ function Composer(c: ComposerProps) {
     if (!mq) return;
     const start = caret - mq[1]!.length - 1;
     const next = `${text.slice(0, start)}@${m.name} ${text.slice(caret)}`;
+    pendingCaret.current = start + m.name.length + 2;
     setText(next);
-    const pos = start + m.name.length + 2;
-    requestAnimationFrame(() => {
-      const el = area.current;
-      if (!el) return;
-      el.focus();
-      el.selectionStart = el.selectionEnd = pos;
-      setCaret(pos);
-    });
   };
 
   const send = () => {
