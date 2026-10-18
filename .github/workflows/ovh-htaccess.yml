@@ -1,0 +1,76 @@
+name: OVH root .htaccess (inspect / apply / rollback)
+
+# Manual only. inspect: downloads the root and /app .htaccess read-only and
+# uploads them as an artifact ENCRYPTED to the X.509 certificate given as input
+# (the repo is public, so plaintext never reaches logs or artifacts).
+# apply: backs up the root .htaccess to .htaccess.bak-<ts>, uploads
+# deploy/ovh-root/.htaccess, then checks redirects with curl (incl. port 80).
+# rollback: restores a given backup. verify: curl checks only.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "inspect | apply | rollback | verify"
+        required: true
+        default: inspect
+      cert_b64:
+        description: "inspect: base64 PEM certificate to encrypt the artifact to"
+        required: false
+      backup:
+        description: "rollback: /home/filenyb/www/.htaccess.bak-<ts>"
+        required: false
+
+concurrency:
+  group: deploy-ovh-ui
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deploy dependencies
+        working-directory: scripts
+        run: npm ci --no-audit --no-fund
+      - name: Inspect (encrypted artifact)
+        if: inputs.mode == 'inspect'
+        env:
+          OVH_SFTP_PASS: ${{ secrets.OVH_SFTP_PASS }}
+          CERT_B64: ${{ inputs.cert_b64 }}
+        run: |
+          test -n "$CERT_B64"
+          node scripts/ovh-htaccess.mjs inspect --out "$RUNNER_TEMP/inspect"
+          echo "$CERT_B64" | base64 -d > "$RUNNER_TEMP/rcpt.pem"
+          tar -C "$RUNNER_TEMP/inspect" -cf "$RUNNER_TEMP/inspect.tar" .
+          openssl cms -encrypt -binary -aes256 -in "$RUNNER_TEMP/inspect.tar" -outform DER -out inspect.tar.cms "$RUNNER_TEMP/rcpt.pem"
+          rm -rf "$RUNNER_TEMP/inspect" "$RUNNER_TEMP/inspect.tar"
+      - uses: actions/upload-artifact@v4
+        if: inputs.mode == 'inspect'
+        with:
+          name: htaccess-inspect-encrypted
+          path: inspect.tar.cms
+          retention-days: 1
+      - name: Apply deploy/ovh-root/.htaccess (with backup)
+        if: inputs.mode == 'apply'
+        env:
+          OVH_SFTP_PASS: ${{ secrets.OVH_SFTP_PASS }}
+        run: node scripts/ovh-htaccess.mjs apply --file deploy/ovh-root/.htaccess
+      - name: Rollback
+        if: inputs.mode == 'rollback'
+        env:
+          OVH_SFTP_PASS: ${{ secrets.OVH_SFTP_PASS }}
+          BACKUP: ${{ inputs.backup }}
+        run: node scripts/ovh-htaccess.mjs rollback --backup "$BACKUP"
+      - name: Verify redirects (curl from the runner, incl. http/80)
+        if: inputs.mode != 'inspect'
+        run: |
+          sleep 5
+          for u in http://filenymous.eu/ http://filenymous.eu/app/?x=1 http://www.filenymous.eu/app/?x=1 \
+                   https://www.filenymous.eu/app/?x=1 https://www.filenymous.eu/ https://filenymous.eu/ \
+                   https://filenymous.eu/app https://filenymous.eu/index.html https://filenymous.eu/app/ \
+                   https://filenymous.eu/robots.txt https://filenymous.eu/app/faq/ http://www.filenymous.eu/robots.txt; do
+            printf '%-40s %s\n' "$u" "$(curl -s -o /dev/null -m 20 -w '%{http_code} -> %{redirect_url}' "$u")"
+          done
