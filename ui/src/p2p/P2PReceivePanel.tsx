@@ -14,10 +14,12 @@ import { streamingAvailable, type StreamReader } from "./stream";
 
 interface Props {
   hash: string;
+  /** Sender chose streaming mode (manifest): the shell then shows the streaming icon. */
+  onStreamable?: (streamable: boolean) => void;
 }
 
 /** Recipient landing for `#p2p:CODE/SECRET`: connects automatically. */
-export default function P2PReceivePanel({ hash }: Props) {
+export default function P2PReceivePanel({ hash, onStreamable }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<ReceiverState>({ status: "connecting", files: [], receivedBytes: 0, totalBytes: 0, speed: 0 });
   const receiverRef = useRef<P2PReceiver | null>(null);
@@ -37,6 +39,10 @@ export default function P2PReceivePanel({ hash }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsed?.code, parsed?.secret, parsed?.expires]);
+
+  useEffect(() => {
+    onStreamable?.(!!state.streamable);
+  }, [state.streamable, onStreamable]);
 
   useEffect(() => {
     if (state.status !== "receiving") return;

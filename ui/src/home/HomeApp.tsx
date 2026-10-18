@@ -22,6 +22,7 @@ import DropContributorPanel from "../p2p/dropzone/DropContributorPanel";
 import VaultCreatePanel from "../vault/VaultCreatePanel";
 import VaultRevealPanel from "../vault/VaultRevealPanel";
 import { serviceRoute } from "./routes";
+import { LineIconSvg, SERVICES, ServiceIcon, serviceForScreen, type ServiceId } from "./services";
 import ReportCreatePanel from "../report/ReportCreatePanel";
 import ReportSubmitPanel from "../report/ReportSubmitPanel";
 import ReportInboxPanel from "../report/ReportInboxPanel";
@@ -52,28 +53,13 @@ function Logo() {
   );
 }
 
-type IconName = "send" | "inbox" | "key" | "check";
-function Icon({ name }: { name: IconName }) {
-  const paths: Record<IconName, JSX.Element> = {
-    send: <path d="M12 16V4m0 0L7 9m5-5 5 5M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />,
-    inbox: <path d="M12 4v11m0 0-4-4m4 4 4-4M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />,
-    key: <path d="M14.5 9.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Zm-1 2.5L20 18.5M17 15.5l2-2M15 13.5l2-2" />,
-    check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
-  };
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {paths[name]}
-    </svg>
-  );
-}
-
 function Benefits({ prefix }: { prefix: string }) {
   const { t } = useTranslation();
   return (
     <ul className="pz-benefits">
       {[1, 2, 3].map((n) => (
         <li key={n}>
-          <span className="pz-check"><Icon name="check" /></span>
+          <span className="pz-check"><LineIconSvg name="check" /></span>
           <span>
             <strong>{t(`${prefix}.b${n}`)}</strong>
             <small>{t(`${prefix}.b${n}d`)}</small>
@@ -116,6 +102,9 @@ export default function HomeApp({ hash }: { hash: string }) {
   const [expiryCustom, setExpiryCustom] = useState(() => localInputValue(Date.now() + 2 * 86_400_000));
   const [expires, setExpires] = useState<number | undefined>(undefined);
   const mediaInput = useRef<HTMLInputElement>(null);
+  /** Card that opened the current screen, when several cards share a screen (Pro → Dropzone). */
+  const [via, setVia] = useState<ServiceId | null>(null);
+  const [rxStream, setRxStream] = useState(false);
 
   useEffect(() => {
     document.title = t("pz.docTitle");
@@ -143,6 +132,7 @@ export default function HomeApp({ hash }: { hash: string }) {
     setStream(false);
     setExpiryChoice("none");
     setExpires(undefined);
+    setVia(null);
     if (location.hash) {
       history.replaceState(null, "", location.pathname + location.search);
       window.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -184,7 +174,7 @@ export default function HomeApp({ hash }: { hash: string }) {
   } else if (route === "report-follow") {
     body = <ReportFollowPanel />;
   } else if (receiving) {
-    body = <P2PReceivePanel hash={hash} />;
+    body = <P2PReceivePanel hash={hash} onStreamable={setRxStream} />;
   } else if (sending) {
     body = <P2PSendPanel files={sending} password={password} stream={stream} expires={expires} onStop={reset} />;
   } else if (picked.length > 0) {
@@ -306,9 +296,9 @@ export default function HomeApp({ hash }: { hash: string }) {
           <p>{t("home.subtitle")}</p>
         </section>
         <Carousel label={t("home.carousel.label")}>
-          <article className="pz-service pz-service--send" aria-labelledby="svc-send">
+          <article className="pz-service pz-service--send" data-service="send" aria-labelledby="svc-send">
             <div className="pz-service-head">
-              <span className="pz-service-icon"><Icon name="send" /></span>
+              <ServiceIcon service="send" />
               <h2 id="svc-send">{t("home.send.title")}</h2>
             </div>
             <p className="pz-service-lead">{t("home.send.lead")}</p>
@@ -343,38 +333,38 @@ export default function HomeApp({ hash }: { hash: string }) {
               <span className="pz-drop-sub">{t("pz.dropSub")}</span>
             </label>
           </article>
-          <article className="pz-service pz-service--drop" aria-labelledby="svc-drop">
+          <article className="pz-service pz-service--drop" data-service="drop" aria-labelledby="svc-drop">
             <div className="pz-service-head">
-              <span className="pz-service-icon"><Icon name="inbox" /></span>
+              <ServiceIcon service="drop" />
               <h2 id="svc-drop">{t("home.drop.title")}</h2>
             </div>
             <p className="pz-service-lead">{t("home.drop.lead")}</p>
             <Benefits prefix="home.drop" />
-            <a className="pz-btn pz-btn-block" href="#drop-new" data-testid="dropzone-entry">{t("home.drop.cta")}</a>
+            <a className="pz-btn pz-btn-block" href="#drop-new" data-testid="dropzone-entry" onClick={() => setVia(null)}>{t("home.drop.cta")}</a>
           </article>
-          <article className="pz-service pz-service--wall" aria-labelledby="svc-wall" data-testid="wall-card">
+          <article className="pz-service pz-service--wall" data-service="wall" aria-labelledby="svc-wall" data-testid="wall-card">
             <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
             <div className="pz-service-head">
-              <span className="pz-service-icon" aria-hidden="true">🧱</span>
+              <ServiceIcon service="wall" />
               <h2 id="svc-wall">{t("home.wall.title")}</h2>
             </div>
             <p className="pz-service-lead">{t("home.wall.lead")}</p>
             <Benefits prefix="home.wall" />
             <a className="pz-btn pz-btn-block" href="#wall-new" data-testid="wall-entry">{t("home.wall.cta")}</a>
           </article>
-          <article className="pz-service pz-service--secret" aria-labelledby="svc-secret">
+          <article className="pz-service pz-service--secret" data-service="secret" aria-labelledby="svc-secret">
             <div className="pz-service-head">
-              <span className="pz-service-icon"><Icon name="key" /></span>
+              <ServiceIcon service="secret" />
               <h2 id="svc-secret">{t("home.secret.title")}</h2>
             </div>
             <p className="pz-service-lead">{t("home.secret.lead")}</p>
             <Benefits prefix="home.secret" />
             <a className="pz-btn pz-btn-block" href="#secret-new" data-testid="vault-entry">{t("home.secret.cta")}</a>
           </article>
-          <article className="pz-service pz-service--whistle" aria-labelledby="svc-whistle" data-testid="whistle-card">
+          <article className="pz-service pz-service--whistle" data-service="report" aria-labelledby="svc-whistle" data-testid="whistle-card">
             <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
             <div className="pz-service-head">
-              <span className="pz-service-icon" aria-hidden="true">🛡️</span>
+              <ServiceIcon service="report" />
               <h2 id="svc-whistle">{t("home.whistle.title")}</h2>
             </div>
             <p className="pz-service-lead">{t("home.whistle.lead")}</p>
@@ -383,30 +373,30 @@ export default function HomeApp({ hash }: { hash: string }) {
             <a className="pz-btn pz-btn-block" href="#report-new" data-testid="report-entry">{t("home.whistle.cta")}</a>
             <a className="pz-link pz-service-sub" href="#report-follow" data-testid="report-follow-entry">{t("home.whistle.follow")}</a>
           </article>
-          <article className="pz-service pz-service--cli" aria-labelledby="svc-cli">
+          <article className="pz-service pz-service--cli" data-service="cli" aria-labelledby="svc-cli">
             <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
             <div className="pz-service-head">
-              <span className="pz-service-icon" aria-hidden="true">🤖</span>
+              <ServiceIcon service="cli" />
               <h2 id="svc-cli">{t("home.cli.title")}</h2>
             </div>
             <p className="pz-service-lead">{t("home.cli.lead")}</p>
             <Benefits prefix="home.cli" />
             <a className="pz-btn pz-btn-block" href={CLI_DOCS_URL} target="_blank" rel="noopener noreferrer" data-testid="cli-docs">{t("home.cli.cta")}</a>
           </article>
-          <article className="pz-service pz-service--pro" aria-labelledby="svc-pro">
+          <article className="pz-service pz-service--pro" data-service="pro" aria-labelledby="svc-pro">
             <span className="pz-badge pz-badge--pro">{t("home.badgePro")}</span>
             <div className="pz-service-head">
-              <span className="pz-service-icon" aria-hidden="true">💼</span>
+              <ServiceIcon service="pro" />
               <h2 id="svc-pro">{t("home.pro.title")}</h2>
             </div>
             <p className="pz-service-lead">{t("home.pro.lead")}</p>
             <Benefits prefix="home.pro" />
-            <a className="pz-btn pz-btn-block" href="#drop-new" data-testid="pro-entry">{t("home.pro.cta")}</a>
+            <a className="pz-btn pz-btn-block" href="#drop-new" data-testid="pro-entry" onClick={() => setVia("pro")}>{t("home.pro.cta")}</a>
           </article>
-          <article className="pz-service pz-service--stream" aria-labelledby="svc-stream">
+          <article className="pz-service pz-service--stream" data-service="stream" aria-labelledby="svc-stream">
             <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
             <div className="pz-service-head">
-              <span className="pz-service-icon" aria-hidden="true">🎥</span>
+              <ServiceIcon service="stream" />
               <h2 id="svc-stream">{t("home.stream.title")}</h2>
             </div>
             <p className="pz-service-lead">{t("home.stream.lead")}</p>
@@ -432,6 +422,13 @@ export default function HomeApp({ hash }: { hash: string }) {
   }
 
   const isHome = route === "home" && !receiving && !sending && picked.length === 0;
+  const screenService = serviceForScreen(route, { receiving, stream: receiving ? rxStream : stream, via: route === "drop-owner" ? via : null });
+  const screenKey = isHome ? "home" : `${route}:${receiving}:${!!sending}:${picked.length > 0}`;
+  // A new screen starts at the top, so its header (icon + title) is visible
+  // even when the card's button was tapped far down the home page (mobile).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [screenKey]);
 
   return (
     <div className="pz-app">
@@ -458,6 +455,12 @@ export default function HomeApp({ hash }: { hash: string }) {
           <a className="pz-back" href={location.pathname} onClick={(e) => { e.preventDefault(); reset(); }} data-testid="back-home">
             ← {t("home.back")}
           </a>
+        )}
+        {!isHome && (
+          <div className="pz-screen-head" data-testid="service-head" data-service={screenService}>
+            <ServiceIcon service={screenService} />
+            <h1>{t(receiving && route === "home" && screenService === "send" ? "receive.title" : SERVICES[screenService].titleKey)}</h1>
+          </div>
         )}
         {body}
       </main>

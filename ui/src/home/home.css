@@ -112,9 +112,9 @@
 .pz-service-head { display: flex; align-items: center; gap: .75rem; }
 .pz-service h2 { margin: 0; font-size: 1.2rem; letter-spacing: -.02em; }
 .pz-service-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; color: #fff; flex: none; box-shadow: 0 8px 18px -8px currentColor; }
-.pz-service--send .pz-service-icon { background: linear-gradient(135deg, #6366f1, #0ea5e9); }
-.pz-service--drop .pz-service-icon { background: linear-gradient(135deg, #10b981, #0ea5e9); }
-.pz-service--secret .pz-service-icon { background: linear-gradient(135deg, #f43f5e, #a855f7); }
+.pz-service-icon[data-service-icon="send"] { background: linear-gradient(135deg, #6366f1, #0ea5e9); }
+.pz-service-icon[data-service-icon="drop"] { background: linear-gradient(135deg, #10b981, #0ea5e9); }
+.pz-service-icon[data-service-icon="secret"] { background: linear-gradient(135deg, #f43f5e, #a855f7); }
 .pz-service-lead { margin: 0; color: var(--fy-text-2); font-size: .95rem; }
 .pz-benefits { list-style: none; margin: 0; padding: 0; display: grid; gap: .65rem; }
 .pz-benefits li { display: flex; gap: .65rem; align-items: flex-start; }
@@ -302,11 +302,11 @@
 .pz-badge { position: absolute; top: 1rem; right: 1rem; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: .25rem .6rem; border-radius: 999px; background: var(--fy-surface-2); border: 1px solid var(--fy-border-strong); color: var(--fy-text-2); }
 .pz-badge--pro { background: linear-gradient(135deg, #f59e0b, #ef4444); color: #fff; border-color: transparent; }
 .pz-service-icon { font-size: 1.35rem; }
-.pz-service--whistle .pz-service-icon { background: linear-gradient(135deg, #334155, #6366f1); }
-.pz-service--cli .pz-service-icon { background: linear-gradient(135deg, #0f172a, #22c55e); }
-.pz-service--pro .pz-service-icon { background: linear-gradient(135deg, #f59e0b, #ef4444); }
-.pz-service--stream .pz-service-icon { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
-.pz-service--wall .pz-service-icon { background: linear-gradient(135deg, #0ea5e9, #f97316); }
+.pz-service-icon[data-service-icon="report"] { background: linear-gradient(135deg, #334155, #6366f1); }
+.pz-service-icon[data-service-icon="cli"] { background: linear-gradient(135deg, #0f172a, #22c55e); }
+.pz-service-icon[data-service-icon="pro"] { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+.pz-service-icon[data-service-icon="stream"] { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
+.pz-service-icon[data-service-icon="wall"] { background: linear-gradient(135deg, #0ea5e9, #f97316); }
 .pz-service.is-soon .pz-service-head, .pz-service.is-soon .pz-benefits { opacity: .88; }
 .pz-service.is-soon .pz-btn-ghost { margin-top: auto; }
 .pz-teaser { margin: 0; font-size: .85rem; color: var(--fy-text-2); padding: .6rem .8rem; border-radius: var(--fy-radius-sm); background: var(--fy-surface-2); border: 1px solid var(--fy-border); }
@@ -341,3 +341,8 @@
 .pz-expiry.is-soon { color: #d97706; }
 .pz-expiry-date { font-weight: 400; color: var(--fy-text-3); }
 .pz-protect-summary { margin: .2rem 0; font-size: .85rem; color: var(--fy-text-2); }
+
+/* Service screens: the card's icon next to the service title (same component as the cards). */
+.pz-screen-head { display: flex; align-items: center; justify-content: center; gap: .75rem; margin: 0; }
+.pz-screen-head h1 { margin: 0; font-size: 1.45rem; letter-spacing: -.02em; line-height: 1.2; text-align: left; }
+@media (max-width: 520px) { .pz-screen-head { gap: .6rem; } .pz-screen-head h1 { font-size: 1.2rem; } }
