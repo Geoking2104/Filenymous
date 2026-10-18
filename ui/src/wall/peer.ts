@@ -93,6 +93,8 @@ export class WallPeer {
   private uid = 0;
   private rid = 0;
   private attempt = 0;
+  /** Password of the start in progress or done (React effects can call start() twice on mount). */
+  private started: string | null = null;
   private gets = new Map<number, Pending>();
   private puts = new Map<number, (ok: { id?: string; reason?: string }) => void>();
   private out: Promise<void> = Promise.resolve();
@@ -164,6 +166,11 @@ export class WallPeer {
   }
 
   async start(password?: string): Promise<void> {
+    // A duplicate call would open a second WebRTC attempt before "joined": the host
+    // answers both offers in order and the newest connection takes the stale answer.
+    const pw = password ?? "";
+    if (this.started === pw && this.state.status !== "bad-password") return;
+    this.started = pw;
     if (isExpired(this.params)) return this.wipe("expired");
     const base = await wallBaseMaterial(this.params, password);
     if (this.ended) return;
