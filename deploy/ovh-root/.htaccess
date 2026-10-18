@@ -22,6 +22,11 @@
   # scheme or host, in one hop (query string kept).
   RewriteRule ^(index\.html)?$ https://filenymous.eu/app/ [R=301,L]
 
+  # Sharewall shortcut: /wall and /wall/new open the "create a wall" screen
+  # (#wall-new carries no secret; NE keeps the "#" unescaped). Any scheme or
+  # host, one hop.
+  RewriteRule ^wall(/new)?/?$ https://filenymous.eu/app/#wall-new [R=301,NE,L]
+
   # http -> https and www -> apex, in a single hop, path + query kept.
   # On this hosting, https requests reach Apache with SERVER_PORT 443 and
   # plain http with 80 (%{HTTPS} is not reliable behind OVH's front end).

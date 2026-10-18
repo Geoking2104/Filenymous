@@ -7,6 +7,7 @@ import { FsSink } from "./fsSink";
 import { DEFAULT_APP_URL, DEFAULT_SIGNAL_URL, formatBytes, parseDuration, webhookPayload, type ShareEvent, type WebhookPayload } from "./options";
 import { buildShareLink, parseShareInput } from "../../ui/src/p2p/protocol";
 import { P2PReceiver, P2PSender, type ReceiverState, type SenderState } from "../../ui/src/p2p/session";
+import { WallAgent, runJsonl, runMcp, startHttpBridge } from "./wall";
 
 declare const __VERSION__: string;
 
@@ -15,6 +16,9 @@ const HELP = `filenymous ${__VERSION__} — end-to-end encrypted P2P file sharin
 Usage:
   filenymous upload <file...> [options]     share files; stays online until done
   filenymous receive <link|code> [options]  download a share into a directory
+  filenymous wall join <link> [options]     join a Sharewall as an AI agent (JSON Lines)
+  filenymous wall create [options]          host a new Sharewall from this process
+  filenymous wall mcp <link> | --create     MCP server (stdio) for AI agents
 
 upload options:
   --ttl <dur>             how long the share stays online (default 1h; e.g. 90s, 15m, 2d)
@@ -34,6 +38,21 @@ receive options:
   --password <pw>         password for protected shares (or env FILENYMOUS_PASSWORD)
   --timeout <dur>         give up if nothing completes in time (default 30m)
   --json                  machine-readable JSON lines on stdout
+
+wall options (agents show an "AI" badge; it is self-declared):
+  --name <name>           display name (default "Agent <pseudonym>")
+  --password <pw>         wall password (prefer env FILENYMOUS_PASSWORD)
+  --http                  also serve a local HTTP/SSE bridge on 127.0.0.1
+                          (random bearer token, printed once in the "http" event)
+  --http-port <n>         port for --http (default: random)
+  --files-root <dir>      directory files may be sent from (default .)
+  -o, --output <dir>      where explicit "get" saves files (default .)
+  create: --ttl 15m|1h|24h (default 1h), --burn, --keep-on-leave, --allow-agents
+  JSON Lines: events on stdout (ready, message, file, note, poll, reaction, join,
+  leave, removed, pin, notice, ended); commands on stdin, e.g.
+  {"cmd":"send","text":"hello"} {"cmd":"react","id":"…","emoji":"👍"}
+  {"cmd":"file","path":"report.pdf"} {"cmd":"get","id":"…"} {"cmd":"leave"}
+  Everything an agent reads is sent to its model provider.
 
 common:
   --signal <wss-url>      signaling relay (default ${DEFAULT_SIGNAL_URL})
@@ -58,6 +77,14 @@ const { values: o, positionals } = parseArgs({
     output: { type: "string", short: "o" },
     timeout: { type: "string" },
     quiet: { type: "boolean", short: "q" },
+    name: { type: "string" },
+    burn: { type: "boolean" },
+    "keep-on-leave": { type: "boolean" },
+    "allow-agents": { type: "boolean" },
+    http: { type: "boolean" },
+    "http-port": { type: "string" },
+    "files-root": { type: "string" },
+    create: { type: "boolean" },
     help: { type: "boolean", short: "h" },
     version: { type: "boolean", short: "v" },
   },
@@ -228,6 +255,50 @@ async function receive(input: string | undefined): Promise<number> {
   return code;
 }
 
+async function wall(rest: string[]): Promise<number> {
+  const [sub, link] = rest;
+  const out = (obj: Record<string, unknown>) => process.stdout.write(`${JSON.stringify(obj)}\n`);
+  const agent = new WallAgent({
+    name: o.name,
+    password: o.password ?? process.env.FILENYMOUS_PASSWORD ?? undefined,
+    appUrl: o["app-url"] ?? process.env.FILENYMOUS_APP_URL ?? DEFAULT_APP_URL,
+    ttl: o.ttl,
+    burn: !!o.burn,
+    keepOnLeave: !!o["keep-on-leave"],
+    allowAgents: !!o["allow-agents"],
+    filesRoot: o["files-root"],
+    output: o.output,
+    quiet: o.quiet,
+  });
+  const quit = () => void agent.close().finally(() => process.exit(0));
+  process.once("SIGINT", quit);
+  process.once("SIGTERM", quit);
+
+  if (sub === "mcp") {
+    if (!o.create && !link) throw new Error("wall mcp: give an invite link, or --create to host a new wall");
+    return runMcp(agent, () => (o.create ? agent.create() : agent.join(link!)));
+  }
+  if (sub !== "join" && sub !== "create") throw new Error("wall: use `wall join <link>`, `wall create` or `wall mcp <link>`");
+  if (sub === "join" && !link) throw new Error("wall join: missing invite link");
+  let info: Record<string, unknown>;
+  try {
+    info = sub === "create" ? await agent.create() : await agent.join(link!);
+  } catch (e) {
+    out({ event: "error", error: String((e as Error).message || e) });
+    return 1;
+  }
+  out({ event: "ready", ...info });
+  if (!o.quiet) {
+    if (sub === "create") err(`Sharewall hosted by this process — invite link in the "ready" event. Code: ${agent.code}. Closing the process destroys it${o["keep-on-leave"] ? " (unless --keep-on-leave)" : ""}.`);
+    else err(`Joined the wall as ${String(info.label)} (code ${agent.code}). Everything this agent reads is sent to its model provider.`);
+  }
+  if (o.http) {
+    const http = await startHttpBridge(agent, Number(o["http-port"] ?? 0) || 0);
+    out({ event: "http", url: http.url, token: http.token, endpoints: ["GET /events (SSE)", "GET /messages?since=", "GET /participants", "GET /info", "POST /send", "POST /react", "POST /file", "POST /note", "POST /vote", "POST /poll", "POST /get"] });
+  }
+  return runJsonl(agent, out, o.quiet);
+}
+
 async function main(): Promise<number> {
   if (o.version) { process.stdout.write(`${__VERSION__}\n`); return 0; }
   const [cmd, ...rest] = positionals;
@@ -235,6 +306,7 @@ async function main(): Promise<number> {
   installBrowserShims(o.signal ?? process.env.FILENYMOUS_SIGNAL_URL ?? DEFAULT_SIGNAL_URL);
   if (cmd === "upload" || cmd === "send") return upload(rest);
   if (cmd === "receive" || cmd === "get") return receive(rest[0]);
+  if (cmd === "wall") return wall(rest);
   err(`unknown command: ${cmd}\n`);
   process.stdout.write(HELP);
   return 1;

@@ -4,6 +4,7 @@
  */
 import { RTCPeerConnection as NdcPeerConnection, RTCSessionDescription, RTCIceCandidate, RTCDataChannel } from "node-datachannel/polyfill";
 import WebSocketImpl from "ws";
+import { webcrypto } from "node:crypto";
 
 type IceHandler = ((ev: { candidate: RTCIceCandidateInit | null }) => void) | null;
 
@@ -81,6 +82,8 @@ export class CliPeerConnection extends NdcPeerConnection {
 
 export function installBrowserShims(signalUrl: string): void {
   const g = globalThis as Record<string, unknown>;
+  // Node 18 only exposes WebCrypto on node:crypto.
+  if (!(g.crypto as Crypto | undefined)?.subtle) Object.defineProperty(g, "crypto", { value: webcrypto, configurable: true });
   g.RTCPeerConnection = CliPeerConnection;
   g.RTCSessionDescription ??= RTCSessionDescription;
   g.RTCIceCandidate ??= RTCIceCandidate;

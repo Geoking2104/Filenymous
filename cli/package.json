@@ -1,6 +1,6 @@
 {
   "name": "filenymous",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "End-to-end encrypted peer-to-peer file sharing from the terminal or CI (WebRTC, AES-256-GCM, no account, no server storage). Interoperates with https://filenymous.eu/app/",
   "license": "MIT",
   "type": "module",
@@ -43,6 +43,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@types/node": "^20.14.0",
     "@types/ws": "^8.5.12",
     "esbuild": "^0.24.0",

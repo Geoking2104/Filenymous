@@ -4,7 +4,7 @@ test("without JavaScript (crawlers, AI fetchers) the home page has real content"
   const page = await (await browser.newContext({ javaScriptEnabled: false })).newPage();
   await page.goto("/");
   await expect(page.locator("h1")).toHaveText("Partagez en toute confiance, sans compte ni nuage.");
-  await expect(page.locator('[data-prerender="home"] li')).toHaveCount(7);
+  await expect(page.locator('[data-prerender="home"] li')).toHaveCount(8);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://filenymous.eu/app/");
   await expect(page.locator('link[hreflang="en"]')).toHaveAttribute("href", "https://filenymous.eu/app/en/");
   const ld = await page.locator('script[type="application/ld+json"]').allTextContents();

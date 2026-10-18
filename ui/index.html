@@ -33,14 +33,14 @@
       Les liens Filenymous portent leurs clés dans le fragment (#…) : le traceur
       n'envoie JAMAIS le fragment ni la query string (data-exclude-hash/-search),
       et le garde ci-dessous réécrit chaque envoi en « chemin seul » et coupe
-      tout envoi sur les pages secret (#s:) et lanceur d'alerte (#report…).
+      tout envoi sur les pages secret (#s:), lanceur d'alerte (#report…) et Sharewall (#wall…).
     -->
     <script>
       window.__fnUmamiBeforeSend = function (type, payload) {
         try {
           var n = navigator, h = location.hash || "";
           if (n.doNotTrack === "1" || window.doNotTrack === "1" || n.globalPrivacyControl === true) return false;
-          if (/^#(s:|report)/.test(h)) return false;
+          if (/^#(s:|report|wall)/.test(h)) return false;
           if (type !== "event" || !payload || payload.name) return false;
           var clean = function (u) {
             try { var x = new URL(u, location.origin); return x.origin === location.origin ? x.pathname : x.origin + x.pathname; } catch (e) { return ""; }

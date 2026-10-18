@@ -182,6 +182,38 @@ Comme la lecture est en `POST` après un clic explicite, les aperçus Slack ou T
 - **Chrome Web Store** : publication de l'extension, page de confidentialité.
 - Observabilité : uniquement des compteurs agrégés (nombre de salles, de secrets créés), sans contenu ni identifiants.
 
+## Phase 7 : Sharewall, mur de partage instantané (5 à 7 jours)
+
+Détail complet : [SHAREWALL.md](SHAREWALL.md).
+
+### S.1 Cas d'usage visés
+
+- Journalisme / sources : échange de pièces pendant un rendez-vous, mur détruit à la fin (le canal de signalement reste l'outil des sources qui ont besoin de Tor).
+- Développeurs : secrets (`.env`, clés d'API) en notes masquées, autodestruction après une lecture.
+- Due diligence : data room éclair de 24 h avec mot de passe, détruite d'un clic.
+- Documents personnels : pièces d'identité, justificatifs, photos entre appareils ou avec un proche, sans cloud.
+
+### S.2 Décisions
+
+- Transport : WebRTC + relais `p2p-signal` existant (pas de Holochain), aucun stockage serveur.
+- Topologie en **étoile autour de l'onglet hôte** : un seul point à détruire, autodestruction appliquée à un seul endroit, chaque participant ne voit que l'IP de l'hôte, N connexions au lieu de N(N-1)/2, réutilise le modèle de la Dropzone.
+- Liens `#wall:<wallId>/<clé>/<exp>/<options>` (participant) et `#wall-host:<secretHôte>/…` (hôte) ; `#wall-new` et `/wall/new` (redirection statique) pour créer. La clé ne quitte jamais le fragment.
+- Rejoindre par lien ou QR code ; le « code du mur » `XXXX-XXXX` sert uniquement à la vérification orale (un code court tapé à la main ne peut pas porter la clé sans la révéler au relais).
+- Clés HKDF distinctes par sens et par session, preuve mutuelle HMAC, tout le contrôle scellé (noms et textes compris).
+- Contenu en RAM uniquement (Blob), pas d'IndexedDB / localStorage ; aperçus sans exécution de script ; **pas d'aperçu PDF**.
+- Relais : nouveaux messages `wall-*`, chemin WebSocket dédié `/wall` pour pouvoir désactiver les journaux nginx sur ce seul chemin.
+- **v2 (retours utilisateurs)** : interface de salon (panneau des participants, fil, emojis embarqués, réactions, réponses, mentions, mise en forme sans HTML), sondages, main levée, applaudissements, épinglage ; l'hôte est l'unique écrivain du fil et applique une limite de débit par participant. Médias en direct : une `RTCPeerConnection` par publication, émetteur → hôte → spectateurs, négociée dans le canal scellé (aucun SDP média au relais), 2 flux max. Agents IA : option hôte désactivée par défaut (ce qu'un agent lit part chez le fournisseur du modèle), badge « IA » auto-déclaré, déconnexion par agent ; CLI `wall create|join|mcp` (JSON Lines, pont HTTP local, MCP). Relais inchangé.
+
+### S.3 Fichiers
+
+`ui/src/wall/*`, `ui/src/home/{routes.ts,HomeApp.tsx,home.css}`, `ui/src/i18n/locales/*`, `ui/seo/{content.mjs,render.mjs}`, `ui/index.html` (pas d'Umami sur `#wall…`), `deploy/ovh-root/.htaccess`, `.github/workflows/ovh-htaccess.yml`, `p2p-signal/{server.js,wall.test.mjs,nginx-opendpe-location.conf}`, `ui/e2e/{sharewall,sharewall-live,sharewall-agents}.spec.ts`, `cli/src/wall.ts`, `cli/test/{wall,mcp}.test.mjs`.
+
+### S.4 Reste à faire
+
+- Publication npm de la CLI 0.4.0 (après fusion), entrée dans l'extension (feuille de route).
+- Aperçu PDF isolé (pdf.js dans un worker, sans script du document) si le besoin se confirme.
+- Déploiement : relais puis bloc nginx, puis site (ordre impératif, voir SHAREWALL.md).
+
 ## Synthèse des fichiers touchés
 
 | Zone | Fichiers |
@@ -191,11 +223,13 @@ Comme la lecture est en `POST` après un clic explicite, les aperçus Slack ou T
 | Vault | `ui/src/vault/*`, `vault-api/*` (ou `p2p-signal/server.js`), `ui/e2e/vault.spec.ts` |
 | API/CLI | `docs/api/openapi.yaml`, `docs/API.md`, `cli/*` |
 | Extension | `extension/*`, `packages/core/*` |
+| Sharewall | `ui/src/wall/*`, `p2p-signal/server.js`, `p2p-signal/wall.test.mjs`, `ui/e2e/sharewall*.spec.ts`, `cli/src/wall.ts`, `docs/SHAREWALL.md` |
 | Déploiement | `ui/public/.htaccess`, `p2p-signal/*.service`, nginx, `docs/DEPLOYMENT.md` |
 
 ## Risques et points ouverts
 
 - **Dropzone hors ligne** : c'est la conséquence assumée du 100 % P2P. Si le besoin d'asynchronisme devient fort, une option « relais chiffré temporaire » pourra être ajoutée plus tard, sur activation explicite.
 - **Mobile** : un onglet en arrière-plan est suspendu par l'OS, d'où un avertissement spécifique côté owner mobile.
+- **Sharewall, hôte unique** : l'onglet hôte détient le contenu et partage sa bande passante montante ; s'il se ferme, le mur se vide (ou est détruit si l'option est active). 8 participants au plus, 256 Mio par élément, 1 Gio par mur ; en direct, 2 flux car l'hôte retransmet chaque flux à chaque spectateur.
 - **NAT stricts** : il faut un TURN (déjà prévu via `TURN_SECRET` dans `p2p-signal`), avec un coût de bande passante sur le VPS.
 - **Gros volumes chez l'owner** : sans File System Access API (Firefox, Safari), les fichiers passent en mémoire. Il faut donc un avertissement au-delà d'environ 1 Go.

@@ -306,6 +306,7 @@
 .pz-service--cli .pz-service-icon { background: linear-gradient(135deg, #0f172a, #22c55e); }
 .pz-service--pro .pz-service-icon { background: linear-gradient(135deg, #f59e0b, #ef4444); }
 .pz-service--stream .pz-service-icon { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
+.pz-service--wall .pz-service-icon { background: linear-gradient(135deg, #0ea5e9, #f97316); }
 .pz-service.is-soon .pz-service-head, .pz-service.is-soon .pz-benefits { opacity: .88; }
 .pz-service.is-soon .pz-btn-ghost { margin-top: auto; }
 .pz-teaser { margin: 0; font-size: .85rem; color: var(--fy-text-2); padding: .6rem .8rem; border-radius: var(--fy-radius-sm); background: var(--fy-surface-2); border: 1px solid var(--fy-border); }
