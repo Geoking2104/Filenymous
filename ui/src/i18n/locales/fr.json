@@ -803,7 +803,7 @@
   "wall": {
     "title": "Mur de partage",
     "createTitle": "Créer un mur de partage",
-    "createIntro": "Un espace éphémère : les participants déposent fichiers, notes et secrets, chiffrés de bout en bout. Le contenu reste dans la mémoire de votre onglet et disparaît à l'expiration ou quand vous détruisez le mur.",
+    "createIntro": "Un mur en direct, éphémère : messages, réactions, sondages, fichiers, notes masquées et partage d'écran ou de caméra, chiffrés de bout en bout. Tout reste dans la mémoire de votre onglet et disparaît à l'expiration ou quand vous détruisez le mur. Des agents IA peuvent participer si vous l'autorisez.",
     "ttl": "Durée de vie",
     "ttlChoice": {
       "m15": "15 min",
@@ -851,7 +851,7 @@
     "textPlaceholder": "Collez une note, un mot de passe, une clé d'API… (affiché masqué)",
     "textSubmit": "Partager",
     "snippet": "Note",
-    "empty": "Le mur est vide pour l'instant. Déposez un fichier ou une note.",
+    "empty": "Le mur est vide pour l'instant. Écrivez un message, déposez un fichier ou lancez un sondage.",
     "masked": "Contenu masqué",
     "reveal": "Révéler",
     "hide": "Masquer",
@@ -875,7 +875,8 @@
       "gone": "cet élément n'est plus sur le mur",
       "offline": "hôte injoignable",
       "connection-lost": "connexion perdue",
-      "other": "échec"
+      "other": "échec",
+      "rate-limited": "trop d'actions d'affilée, réessayez dans un instant"
     },
     "privacy": {
       "title": "Confidentialité : ce qui est protégé, et ce qui ne l'est pas",
@@ -886,7 +887,9 @@
       "tor": "Pour masquer votre adresse IP, utilisez un VPN de confiance ; Tor Browser désactive WebRTC et ne permet pas d'utiliser le mur.",
       "whistle": "Pour un signalement sensible (source, lanceur d'alerte), préférez le canal de signalement, utilisable avec Tor Browser :",
       "whistleLink": "créer un canal de signalement",
-      "screens": "Détruire le mur efface les copies en mémoire, pas ce qu'un participant a déjà téléchargé, copié ou photographié."
+      "screens": "Détruire le mur efface les copies en mémoire, pas ce qu'un participant a déjà téléchargé, copié ou photographié.",
+      "live": "Directs (écran, caméra, micro) : uniquement après votre accord, relayés par l'onglet de l'hôte via des connexions WebRTC chiffrées (DTLS-SRTP) négociées dans le canal chiffré ; l'hôte voit le flux, le relais jamais.",
+      "agents": "Agents IA : désactivés par défaut. Quand l'hôte les autorise, tout ce qu'un agent lit est envoyé au fournisseur de son modèle d'IA, en dehors du chiffrement de bout en bout. Le badge « IA » est auto-déclaré."
     },
     "ended": {
       "destroyed": "Le mur a été détruit",
@@ -895,7 +898,114 @@
       "left": "Vous avez quitté le mur",
       "wiped": "Tout ce que cet onglet avait reçu a été effacé de sa mémoire.",
       "wipedHost": "Le contenu a été effacé de la mémoire de cet onglet et les participants ont reçu l'ordre d'effacer le leur.",
-      "newWall": "Créer un nouveau mur"
+      "newWall": "Créer un nouveau mur",
+      "kicked": "L'hôte vous a déconnecté du mur",
+      "agents-off": "Ce mur n'accepte pas (ou plus) les agents IA"
+    },
+    "flagAgents": "Agents IA autorisés",
+    "invite": "Inviter des participants",
+    "members": "Participants",
+    "membersCount_one": "{{count}} participant en ligne",
+    "membersCount_other": "{{count}} participants en ligne",
+    "online": "En ligne",
+    "you": "vous",
+    "yourName": "Votre nom affiché",
+    "rename": "Modifier mon nom",
+    "badgeHost": "Hôte",
+    "badgeAi": "IA",
+    "kick": "Déconnecter ce participant",
+    "kickConfirm": "Déconnecter « {{name}} » ? Il pourra revenir avec le lien (sauf agent IA si vous désactivez les agents). Pour exclure définitivement, détruisez le mur.",
+    "handRaised": "Main levée",
+    "handRaise": "Lever la main",
+    "handLower": "Baisser la main",
+    "typingShort": "écrit…",
+    "typing_one": "{{names}} est en train d'écrire…",
+    "typing_other": "{{names}} sont en train d'écrire…",
+    "pin": "Épingler",
+    "unpin": "Désépingler",
+    "feed": "Fil du mur",
+    "actions": "Actions du message",
+    "reactWith": "Réagir avec {{emoji}}",
+    "reply": "Répondre",
+    "replyingTo": "Réponse à {{name}}",
+    "reactedBy": "Réactions : {{names}}",
+    "loadingMedia": "Chargement du média…",
+    "viewOnce": "Voir une fois",
+    "viewOnceHint": "Autodestruction : l'ouvrir le retire du mur pour les autres.",
+    "viewOnceButton": "Ouvrir",
+    "attach": "Joindre des fichiers (ou glisser-déposer, ou coller)",
+    "msgPlaceholder": "Écrire un message… (Entrée pour envoyer, Maj+Entrée pour aller à la ligne, @ pour mentionner)",
+    "msgLabel": "Message",
+    "send": "Envoyer",
+    "noteButton": "Note masquée",
+    "emoji": {
+      "title": "Emojis",
+      "search": "Rechercher un emoji",
+      "none": "Aucun emoji trouvé",
+      "react": "Ajouter une réaction",
+      "group": {
+        "smileys": "Visages",
+        "gestures": "Gestes",
+        "hearts": "Cœurs et symboles",
+        "objects": "Objets",
+        "symbols": "Signes"
+      }
+    },
+    "poll": {
+      "votes_one": "{{count}} vote",
+      "votes_other": "{{count}} votes",
+      "closed": "Sondage clos",
+      "close": "Clore le sondage",
+      "button": "Sondage",
+      "new": "Nouveau sondage",
+      "question": "Question",
+      "option": "Option {{n}}",
+      "addOption": "Ajouter une option",
+      "create": "Publier le sondage"
+    },
+    "live": {
+      "badge": "EN DIRECT",
+      "connecting": "Connexion au direct…",
+      "unmute": "Activer le son",
+      "mute": "Couper le son",
+      "stop": "Arrêter",
+      "consentScreen": "Partager votre écran en direct avec tous les participants du mur ? Ils verront ce que vous choisirez de partager tant que vous n'arrêtez pas.",
+      "consentCamera": "Partager votre caméra en direct avec tous les participants du mur ? Vous pourrez arrêter à tout moment.",
+      "denied": "Partage refusé ou indisponible dans ce navigateur.",
+      "fail": {
+        "unsupported": "L'hôte de ce mur ne peut pas relayer de direct (par exemple un agent en ligne de commande).",
+        "already-live": "Vous êtes déjà en direct.",
+        "live-limit": "{{max}} directs au plus en même temps : attendez qu'un direct se termine.",
+        "offline": "Hôte injoignable.",
+        "stopped": "Direct arrêté.",
+        "other": "Impossible de lancer le direct."
+      },
+      "unavailable": "Direct indisponible (navigateur ou hôte sans prise en charge).",
+      "button": "Direct",
+      "title": "Partager en direct",
+      "explain": "Écran ou caméra, relayé par l'onglet de l'hôte vers chaque participant ({{max}} directs simultanés au plus). Chiffré par WebRTC à chaque étape ; l'hôte, comme pour les fichiers, voit le flux.",
+      "mic": "Inclure le micro",
+      "screen": "Partager l'écran",
+      "camera": "Caméra"
+    },
+    "burst": {
+      "applause": "Applaudir",
+      "party": "Faire la fête",
+      "heart": "Envoyer de l'amour"
+    },
+    "agents": {
+      "allow": "Autoriser les agents IA",
+      "createHint": "Désactivé par défaut. Un agent IA (via la ligne de commande ou MCP) transmet tout ce qu'il lit au fournisseur de son modèle d'IA, hors du chiffrement de bout en bout.",
+      "hintOff": "Les agents IA sont refusés à l'entrée.",
+      "hintOn": "Des agents IA peuvent rejoindre le mur. Tout ce qu'ils lisent est envoyé au fournisseur de leur modèle d'IA.",
+      "enableConfirm": "Autoriser les agents IA ? Tout ce qu'un agent lit sur ce mur (messages, notes qu'il révèle, fichiers qu'il télécharge) sera transmis au fournisseur de son modèle d'IA, en dehors du chiffrement de bout en bout. Le badge « IA » est déclaré par le participant : un agent pourrait ne pas s'annoncer.",
+      "present_one": "Un agent IA participe ({{names}}) : tout ce qu'il lit est transmis au fournisseur de son modèle d'IA, en dehors du chiffrement de bout en bout. Le badge « IA » est auto-déclaré et ne peut pas être vérifié.",
+      "present_other": "{{count}} agents IA participent ({{names}}) : tout ce qu'ils lisent est transmis au fournisseur de leur modèle d'IA, en dehors du chiffrement de bout en bout. Le badge « IA » est auto-déclaré et ne peut pas être vérifié.",
+      "badgeHint": "Agent IA (auto-déclaré) : ce qu'il lit part chez le fournisseur de son modèle."
+    },
+    "notice": {
+      "rate-limited": "Doucement ! Trop d'actions d'affilée : réessayez dans {{s}} s.",
+      "bad-poll": "Sondage invalide : une question et 2 à 6 options différentes."
     }
   }
 }

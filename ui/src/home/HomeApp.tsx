@@ -453,7 +453,7 @@ export default function HomeApp({ hash }: { hash: string }) {
         </a>
         <LangSwitch />
       </header>
-      <main className={`pz-main${isHome ? " is-wide" : ""}`} key={isHome ? "home" : route}>
+      <main className={`pz-main${isHome || route === "wall-host" || route === "wall-peer" ? " is-wide" : ""}`} key={isHome ? "home" : route}>
         {!isHome && !sending && (
           <a className="pz-back" href={location.pathname} onClick={(e) => { e.preventDefault(); reset(); }} data-testid="back-home">
             ← {t("home.back")}

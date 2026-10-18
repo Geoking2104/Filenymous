@@ -19,7 +19,7 @@ import { checkProof, sealProof } from "../p2p/dropzone/crypto";
 import { flagsOf, type WallParams } from "./link";
 
 export { checkProof, sealProof };
-export const WALL_PROTOCOL_VERSION = 1;
+export const WALL_PROTOCOL_VERSION = 2;
 const PBKDF2_ITERATIONS = 200_000;
 const enc = new TextEncoder();
 const buf = (b: Uint8Array) => b.slice().buffer as ArrayBuffer;

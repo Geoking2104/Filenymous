@@ -15,13 +15,13 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 }
 
 export function holdUnloadGuard(reason: string): void {
-  if (reasons.size === 0) window.addEventListener("beforeunload", onBeforeUnload);
+  if (reasons.size === 0 && typeof window !== "undefined") window.addEventListener("beforeunload", onBeforeUnload);
   reasons.add(reason);
 }
 
 export function releaseUnloadGuard(reason: string): void {
   if (!reasons.delete(reason)) return;
-  if (reasons.size === 0) window.removeEventListener("beforeunload", onBeforeUnload);
+  if (reasons.size === 0 && typeof window !== "undefined") window.removeEventListener("beforeunload", onBeforeUnload);
 }
 
 export function unloadGuardActive(): boolean {

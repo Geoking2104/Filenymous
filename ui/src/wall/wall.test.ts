@@ -174,8 +174,8 @@ describe("Sharewall crypto", () => {
   });
 
   it("parses only well-formed plain handshake messages", () => {
-    expect(parseHandshake(JSON.stringify({ type: "wall-hello", v: 1, sid: "x", proof: "y" }))).toBeTruthy();
-    expect(parseHandshake(JSON.stringify({ type: "wall-hello", v: 2, sid: "x", proof: "y" }))).toBeNull();
+    expect(parseHandshake(JSON.stringify({ type: "wall-hello", v: 2, sid: "x", proof: "y" }))).toBeTruthy();
+    expect(parseHandshake(JSON.stringify({ type: "wall-hello", v: 1, sid: "x", proof: "y" }))).toBeNull();
     expect(parseHandshake(JSON.stringify({ type: "wall-reject", reason: "bad-password" }))).toBeTruthy();
     expect(parseHandshake(JSON.stringify({ type: "wall-reject", reason: "boom" }))).toBeNull();
     expect(parseHandshake("not json")).toBeNull();
@@ -237,9 +237,11 @@ describe("Sharewall store, burn and destroy", () => {
     expect(parseWallMessage({ t: "destroy", reason: "whatever" })).toBeNull();
     expect(parseWallMessage({ t: "get", rid: 0, id: "x" })).toBeNull();
     expect(parseWallMessage({ t: "put", uid: 1, kind: "exe", name: "a", size: 1, mime: "" })).toBeNull();
-    expect(parseWallMessage({ t: "state", peers: 1, items: [{ id: "BAD ID", kind: "file", name: "a", size: 1, mime: "", by: "host", at: 1 }] })).toBeNull();
-    const st = parseWallMessage({ t: "state", peers: 2, items: [{ id: "i1-abc", kind: "file", name: "a\u0000/b.txt", size: 1, mime: "text/plain", by: "peer:2", at: 1 }] });
-    expect(st && st.t === "state" && st.items[0]!.name).not.toMatch(/[\u0000/]/);
+    const bad = { id: "BAD ID", kind: "file", name: "a", size: 1, mime: "", by: "host", at: 1 };
+    expect(parseWallMessage({ t: "post", post: { id: "BAD ID", kind: "file", by: "host", at: 1, item: bad, reactions: {} } })).toBeNull();
+    const item = { id: "i1-abc", kind: "file", name: "a\u0000/b.txt", size: 1, mime: "text/plain", by: "peer:2", at: 1 };
+    const st = parseWallMessage({ t: "post", post: { id: "i1-abc", kind: "file", by: "peer:2", at: 1, item, reactions: {} } });
+    expect(st && st.t === "post" && st.post.item!.name).not.toMatch(/[\u0000/]/);
     expect(parseWallMessage({ t: "nope" })).toBeNull();
     expect(parseWallMessage(null)).toBeNull();
   });
