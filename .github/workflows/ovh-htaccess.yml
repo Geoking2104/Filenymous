@@ -68,9 +68,35 @@ jobs:
         if: inputs.mode != 'inspect'
         run: |
           sleep 5
-          for u in http://filenymous.eu/ http://filenymous.eu/app/?x=1 http://www.filenymous.eu/app/?x=1 \
-                   https://www.filenymous.eu/app/?x=1 https://www.filenymous.eu/ https://filenymous.eu/ \
-                   https://filenymous.eu/app https://filenymous.eu/index.html https://filenymous.eu/app/ \
-                   https://filenymous.eu/robots.txt https://filenymous.eu/app/faq/ http://www.filenymous.eu/robots.txt; do
-            printf '%-40s %s\n' "$u" "$(curl -s -o /dev/null -m 20 -w '%{http_code} -> %{redirect_url}' "$u")"
-          done
+          fail=0
+          check() { # url expected_code expected_location
+            got=$(curl -s -o /dev/null -m 20 -w '%{http_code} %header{location}' "$1")
+            printf '%-52s %s\n' "$1" "$got"
+            [ "$got" = "$2 $3" ] || [ "$got" = "$2 " -a -z "$3" ] || { echo "  ^ expected: $2 $3"; fail=1; }
+          }
+          check 'https://filenymous.eu/app/' 200
+          check 'https://filenymous.eu/app/?x=1' 200
+          check 'https://filenymous.eu/app/faq/' 200
+          check 'https://filenymous.eu/app/en/features/one-time-secret/' 200
+          check 'https://filenymous.eu/robots.txt' 200
+          check 'https://filenymous.eu/sitemap.xml' 200
+          check 'https://filenymous.eu/llms.txt' 200
+          check 'https://filenymous.eu/' 301 'https://filenymous.eu/app/'
+          check 'https://filenymous.eu/?x=1' 301 'https://filenymous.eu/app/?x=1'
+          check 'https://filenymous.eu/index.html' 301 'https://filenymous.eu/app/'
+          check 'https://filenymous.eu/app' 301 'https://filenymous.eu/app/'
+          check 'https://filenymous.eu/app?x=1' 301 'https://filenymous.eu/app/?x=1'
+          check 'https://filenymous.eu/app/faq' 301 'https://filenymous.eu/app/faq/'
+          check 'https://www.filenymous.eu/app/?x=1' 301 'https://filenymous.eu/app/?x=1'
+          check 'https://www.filenymous.eu/' 301 'https://filenymous.eu/app/'
+          check 'https://www.filenymous.eu/app/faq/' 301 'https://filenymous.eu/app/faq/'
+          check 'https://www.filenymous.eu/robots.txt' 301 'https://filenymous.eu/robots.txt'
+          check 'http://filenymous.eu/' 301 'https://filenymous.eu/app/'
+          check 'http://filenymous.eu/app/?x=1' 301 'https://filenymous.eu/app/?x=1'
+          check 'http://www.filenymous.eu/app/?x=1&y=a%20b' 301 'https://filenymous.eu/app/?x=1&y=a%20b'
+          check 'http://www.filenymous.eu/robots.txt' 301 'https://filenymous.eu/robots.txt'
+          echo "== full chain (http://www -> final)"
+          curl -sIL -m 30 -o /dev/null -w '%{num_redirects} redirects, final %{http_code} %{url_effective}\n' 'http://www.filenymous.eu/app/?x=1'
+          if [ "$fail" != 0 ]; then
+            if [ "${{ inputs.mode }}" = verify ]; then echo "::warning::some checks differ from the canonical target"; else echo "::error::redirect checks failed"; exit 1; fi
+          fi
