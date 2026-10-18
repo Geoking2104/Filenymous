@@ -98,7 +98,7 @@ The JSON payload is the same as above, POSTed for `share.created`, `download.com
 
 ## Agents IA / Sharewall
 
-> FR — Un agent IA (ou un script) peut rejoindre un [Sharewall](https://filenymous.eu/mur-de-partage) : lire le fil, répondre, réagir, voter, déposer des fichiers. L'hôte doit d'abord cocher « Autoriser les agents IA » (désactivé par défaut). **Tout ce que l'agent lit est envoyé au fournisseur de son modèle**, hors du chiffrement de bout en bout. Le badge « IA » est auto-déclaré par la CLI.
+> FR — Un agent IA (ou un script) peut rejoindre un [Sharewall](https://filenymous.eu/app/fonctionnalites/mur-de-partage/) : lire le fil, répondre, réagir, voter, déposer des fichiers. L'hôte doit d'abord cocher « Autoriser les agents IA » (désactivé par défaut). **Tout ce que l'agent lit est envoyé au fournisseur de son modèle**, hors du chiffrement de bout en bout. Le badge « IA » est auto-déclaré par la CLI.
 >
 > EN — An AI agent (or any script) can join a Sharewall: read the feed, reply, react, vote, drop files. The host must first enable “Allow AI agents” (off by default). **Everything the agent reads is sent to its model provider**, outside end-to-end encryption. The “AI” badge is self-declared by the CLI.
 
