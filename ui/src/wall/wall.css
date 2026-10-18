@@ -93,7 +93,7 @@
  * Sharewall v2 — Discord-like live wall
  * ------------------------------------------------------------------------- */
 .sw[data-testid="wall-create"], .sw-ended, .pz-main.is-wide > .v3-warn { max-width: 640px; margin-inline: auto; }
-.sw2 { padding: 0 !important; overflow: hidden; display: flex; flex-direction: column; height: min(84vh, 900px); min-height: 560px; position: relative; }
+.pz-main .v3-result.sw2, .sw2 { text-align: left; padding: 0 !important; overflow: hidden; display: flex; flex-direction: column; height: min(84vh, 900px); min-height: 560px; position: relative; }
 .sw2-top { display: flex; align-items: center; gap: .7rem; padding: .6rem .9rem; border-bottom: 1px solid var(--fy-border); background: var(--fy-surface-2); }
 .sw2-title { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .8rem; }
 .sw2-title strong { font-size: 1rem; }
@@ -224,7 +224,10 @@ audio.sw2-inline { background: none; padding: .4rem; box-sizing: border-box; cur
 .sw2-replying .sw2-muted { color: var(--fy-text-3); overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .sw2-compose-row { display: flex; align-items: flex-end; gap: .35rem; padding: .3rem .4rem; border-radius: 10px; border: 1px solid var(--fy-border-strong); background: var(--fy-surface-2); }
 .sw2-compose-row textarea { flex: 1; min-width: 0; resize: none; border: 0; outline: 0; background: transparent; color: var(--fy-text); font: .92rem/1.4 inherit; font-family: inherit; padding: .35rem .2rem; max-height: 9rem; field-sizing: content; }
-.sw2-send { padding: .4rem .9rem !important; }
+.pz-main .sw2-send, .sw2-send { flex: none; width: auto !important; min-width: 0 !important; padding: .4rem .9rem !important; }
+.sw2-compose-row > .sw2-iconbtn { flex: none; }
+.sw2-compose-row textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sw2-send-icon { display: none; }
 .sw2-tools { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; align-items: center; }
 .sw2-tools button { font: inherit; font-size: .76rem; font-weight: 600; padding: .25rem .55rem; border-radius: 999px; border: 1px solid var(--fy-border); background: var(--fy-surface-2); color: var(--fy-text); cursor: pointer; }
 .sw2-tools button:hover:not(:disabled) { border-color: var(--fy-accent); }
@@ -266,12 +269,21 @@ audio.sw2-inline { background: none; padding: .4rem; box-sizing: border-box; cur
   .sw2 { height: calc(100dvh - 7.5rem); min-height: 480px; border-radius: 12px; }
   .sw2-drawer-btn { display: inline-flex !important; gap: .25rem; align-items: center; }
   .sw2-body { grid-template-columns: 1fr; position: relative; }
-  .sw2-side { position: absolute; inset: 0 auto 0 0; width: min(300px, 86%); z-index: 8; transform: translateX(-105%); transition: transform .2s ease; box-shadow: 8px 0 24px rgba(0, 0, 0, .2); }
-  .sw2.is-drawer .sw2-side { transform: none; }
+  .sw2-side { position: absolute; inset: 0 auto 0 0; width: min(300px, 86%); z-index: 8; transform: translateX(-110%); visibility: hidden; transition: transform .2s ease, visibility 0s .2s; }
+  .sw2.is-drawer .sw2-side { background: linear-gradient(var(--fy-surface-2), var(--fy-surface-2)), var(--fy-bg); transform: none; visibility: visible; transition: transform .2s ease; box-shadow: 8px 0 24px rgba(0, 0, 0, .25); }
   .sw2-scrim { display: block; position: absolute; inset: 0; z-index: 7; background: rgba(15, 23, 42, .4); }
   .sw2-post { grid-template-columns: 44px 1fr; padding-right: .5rem; }
   .sw2-post-tools { right: .4rem; }
-  .sw2-stage.n2 { grid-template-columns: 1fr; }
+  .sw2-stage.n2 { grid-template-columns: 1fr 1fr; }
+  .sw2-stage video { max-height: 26vh; }
+  .sw2-top { padding: .45rem .6rem; gap: .45rem; }
+  .sw2-title { gap: 0 .5rem; }
+  .sw2-title strong { font-size: .92rem; white-space: nowrap; }
+  .sw2-status { font-size: .72rem; }
+  .pz-main.is-wide { padding-inline: .5rem; }
+  .sw2-send-label { display: none; }
+  .sw2-send-icon { display: inline; }
+  .pz-main .sw2-send, .sw2-send { padding: .4rem .65rem !important; }
   .sw2-tools button { padding: .22rem .45rem; }
   .sw2-picker { bottom: 7.4rem; }
 }

@@ -1213,8 +1213,9 @@ function Composer(c: ComposerProps) {
         <button type="button" className="sw2-iconbtn" data-testid="wall-emoji-toggle" data-emoji-trigger disabled={disabled} aria-label={t("wall.emoji.title")} title={t("wall.emoji.title")} onClick={c.onEmoji}>
           😀
         </button>
-        <button type="button" className="pz-btn sw2-send" data-testid="wall-msg-send" disabled={disabled || !text.trim()} onClick={send}>
-          {t("wall.send")}
+        <button type="button" className="pz-btn sw2-send" data-testid="wall-msg-send" aria-label={t("wall.send")} disabled={disabled || !text.trim()} onClick={send}>
+          <span className="sw2-send-label">{t("wall.send")}</span>
+          <span className="sw2-send-icon" aria-hidden="true">➤</span>
         </button>
       </div>
       <div className="sw2-tools">

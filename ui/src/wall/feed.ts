@@ -106,7 +106,10 @@ export function avatarHue(label: string): number {
 }
 
 export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  // Words that start with a letter or digit (ignore "(hôte)", "-", emoji…).
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const alnum = words.filter((w) => /^[\p{L}\p{N}]/u.test(w));
+  const parts = alnum.length ? alnum : words;
   const chars = parts.length > 1 ? [parts[0]!, parts[1]!].map((p) => Array.from(p)[0]) : Array.from(parts[0] ?? "?").slice(0, 2);
   return chars.join("").toUpperCase() || "?";
 }

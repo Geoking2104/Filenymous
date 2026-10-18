@@ -43,6 +43,8 @@ describe("Sharewall feed model", () => {
     expect(pseudonym("fr", () => 0)).toBe("Loutre Azur");
     expect(pseudonym("en-GB", () => 0)).toBe("Azure Otter");
     expect(initials("Loutre Jade")).toBe("LJ");
+    expect(initials("Camille (hôte)")).toBe("CA");
+    expect(initials("🚀")).toBe("🚀");
     expect(initials("solo")).toBe("SO");
   });
 
