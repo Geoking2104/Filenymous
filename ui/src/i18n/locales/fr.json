@@ -1001,7 +1001,34 @@
     "nameHint": "Affiché pour tous les participants (80 caractères max). Il voyage chiffré, jamais en clair par le serveur. Vide : « Mur sans nom ».",
     "untitled": "Mur sans nom",
     "lifecycle": "Pas de durée limite : le mur reste ouvert tant que vous gardez cet onglet, et il est détruit dès que vous le quittez.",
-    "ackLeave": "J'ai compris qu'en quittant, le mur et toutes ses informations seront détruits."
+    "ackLeave": "J'ai compris qu'en quittant, le mur et toutes ses informations seront détruits.",
+    "search": {
+      "open": "Rechercher dans le mur",
+      "placeholder": "Rechercher…",
+      "label": "Rechercher dans les messages, fichiers et sondages",
+      "clear": "Effacer la recherche",
+      "count_one": "{{count}} résultat",
+      "count_other": "{{count}} résultats"
+    },
+    "system": {
+      "exported": "L'hôte a exporté le mur"
+    },
+    "export": {
+      "button": "Exporter le mur",
+      "title": "Exporter le mur ?",
+      "warning": "L'export crée une copie permanente, sur votre appareil, d'un contenu conçu pour disparaître. Les participants ne sont pas consultés, mais ils verront dans le fil que vous avez exporté le mur. À manipuler avec soin.",
+      "warningEn": "Exporting creates a permanent copy on your device of content meant to disappear. Participants are not asked (they will see a notice in the feed). Handle with care.",
+      "format": "Format",
+      "json": "JSON complet (messages, sondages et fichiers ≤ 50 Mo)",
+      "md": "Transcription Markdown (texte seul)",
+      "confirm": "Exporter",
+      "cancel": "Annuler",
+      "blockedBurn": "Export désactivé : ce mur est en mode autodestruction (un seul téléchargement par fichier).",
+      "done": "Mur exporté.",
+      "skipped_one": "{{count}} fichier non inclus (trop volumineux ou indisponible) : {{names}}",
+      "skipped_other": "{{count}} fichiers non inclus (trop volumineux ou indisponibles) : {{names}}",
+      "error": "L'export a échoué."
+    }
   },
   "leave": {
     "title": "Fermer la fenêtre ?",
