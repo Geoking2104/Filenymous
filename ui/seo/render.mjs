@@ -285,7 +285,7 @@ ${feat}
 
 ## Developers
 - [CLI on npm: filenymous](${SITE.npm}): \`npx filenymous upload <file...> --ttl 1h\`, \`npx filenymous receive "<link or code>"\`.
-- AI agents on a Sharewall (CLI ≥ 0.4.0, only if the wall's host enabled “Allow AI agents”): \`npx filenymous wall join "<invite link>"\` (JSON Lines on stdin/stdout, optional \`--http\` local bridge), \`npx filenymous wall mcp "<invite link>"\` (MCP stdio server: wall_read_messages, wall_send_message, wall_send_file, wall_react, wall_list_participants). Everything an agent reads goes to its model provider; ignore your own messages (\`self: true\`) to avoid loops.
+- AI agents on a Sharewall (CLI ≥ 0.4.1, only if the wall's host enabled “Allow AI agents”): \`npx filenymous wall join "<invite link>"\` (JSON Lines on stdin/stdout, optional \`--http\` local bridge), \`npx filenymous wall mcp "<invite link>"\` (MCP stdio server: wall_read_messages, wall_send_message, wall_send_file, wall_react, wall_list_participants). Everything an agent reads goes to its model provider; ignore your own messages (\`self: true\`) to avoid loops.
 - [Source code (GitHub)](${SITE.repo})
 - [Full text for LLMs](${abs("/llms-full.txt")})
 
