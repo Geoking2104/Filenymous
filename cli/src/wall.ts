@@ -22,6 +22,7 @@ import { ENDED, WallPeer } from "../../ui/src/wall/peer";
 import { buildWallLink, createWall, parseWallLink, wallCode, type HostWallParams, type WallParams, type WallTtl } from "../../ui/src/wall/link";
 import { cleanName, pseudonym, type Member, type Post, type WallEvent } from "../../ui/src/wall/feed";
 import { safeFileName } from "../../ui/src/p2p/protocol";
+import { NOTE_MAX_BYTES, cleanNoteText, cleanNoteTitle, isNoteId, utf8Bytes, type SharedNote } from "../../ui/src/wall/notes";
 
 declare const __VERSION__: string;
 
@@ -207,6 +208,14 @@ export class WallAgent {
         this.liveCount = ev.streams.length;
         this.emit({ event: "live", streams: ev.streams.map((s) => ({ ...s, name: this.nameOf(s.by) })), note: "live audio/video is not available to CLI agents" });
         return;
+      case "note":
+        this.emit({ event: "note", ...this.noteOut(ev.note, false), ...(ev.overwrote ? { overwrote: ev.overwrote, overwroteMe: ev.overwrote === this.self } : {}) });
+        for (const w of this.waiters) w();
+        return;
+      case "note-gone":
+        this.emit({ event: "note.removed", id: ev.id });
+        for (const w of this.waiters) w();
+        return;
       case "notice":
         this.emit({ event: "notice", code: ev.code, ...(ev.retryMs !== undefined ? { retryMs: ev.retryMs } : {}) });
         return;
@@ -371,6 +380,86 @@ export class WallAgent {
     return { ok: true };
   }
 
+  private noteList(): SharedNote[] {
+    return (this.host ? this.host.state.notes : this.peer?.state.notes) ?? [];
+  }
+
+  private noteOut(n: SharedNote, withText = true): Out {
+    return {
+      id: n.id,
+      title: n.title,
+      ...(withText ? { text: n.text } : { size: utf8Bytes(n.text) }),
+      version: n.v,
+      by: n.by,
+      name: this.nameOf(n.by),
+      editedBy: n.editedBy,
+      editedByName: this.nameOf(n.editedBy),
+      editedAt: new Date(n.editedAt).toISOString(),
+      pinned: n.pinned,
+      self: n.editedBy === this.self,
+    };
+  }
+
+  /** Shared notes, pinned first (full text). */
+  notes(id?: string): Out {
+    const all = this.noteList();
+    if (id !== undefined) {
+      const n = all.find((x) => x.id === id);
+      if (!n) throw new Error(`unknown note id: ${id}`);
+      return { ok: true, note: this.noteOut(n) };
+    }
+    return { ok: true, notes: all.map((n) => this.noteOut(n)) };
+  }
+
+  private async untilNote(pred: (n: SharedNote[]) => SharedNote | undefined, ms = 8000): Promise<SharedNote | undefined> {
+    const t0 = Date.now();
+    for (;;) {
+      const hit = pred(this.noteList());
+      if (hit || Date.now() - t0 > ms || this.endedReason) return hit;
+      await new Promise((ok) => setTimeout(ok, 50));
+    }
+  }
+
+  /**
+   * Creates a shared note (no id) or replaces one (last writer wins, host
+   * ordering). Resolves once the host has applied it.
+   */
+  async writeNote(o: { id?: string; title?: string; text?: string }): Promise<Out> {
+    this.alive();
+    const text = o.text === undefined ? undefined : cleanNoteText(o.text);
+    const title = o.title === undefined ? undefined : cleanNoteTitle(o.title);
+    if (text === null) throw new Error(`note text too long (max ${NOTE_MAX_BYTES} bytes)`);
+    if (title === null) throw new Error("note title too long");
+    if (!o.id) {
+      const before = new Set(this.noteList().map((n) => n.id));
+      if (this.host) this.host.createNote(title ?? "", text ?? "");
+      else await this.peer!.createNote(title ?? "", text ?? "");
+      const n = await this.untilNote((l) => l.find((x) => !before.has(x.id) && x.by === this.self));
+      if (!n) throw new Error("the host did not accept the note (limit reached or rate-limited)");
+      return { ok: true, note: this.noteOut(n) };
+    }
+    if (!isNoteId(o.id)) throw new Error(`invalid note id: ${o.id}`);
+    const cur = this.noteList().find((x) => x.id === o.id);
+    if (!cur) throw new Error(`unknown note id: ${o.id}`);
+    if (text === undefined && title === undefined) throw new Error("text or title is required");
+    const patch = { ...(title !== undefined ? { title } : {}), ...(text !== undefined ? { text } : {}) };
+    if (this.host) this.host.editNote(cur.id, cur.v, patch);
+    else await this.peer!.editNote(cur.id, cur.v, patch);
+    const n = await this.untilNote((l) => l.find((x) => x.id === cur.id && x.v > cur.v && x.editedBy === this.self));
+    if (!n) throw new Error("the host did not apply the edit (rate-limited?)");
+    return { ok: true, note: this.noteOut(n) };
+  }
+
+  async deleteNote(id: string): Promise<Out> {
+    this.alive();
+    if (!this.noteList().some((x) => x.id === id)) throw new Error(`unknown note id: ${id}`);
+    if (this.host) this.host.deleteNote(id);
+    else await this.peer!.deleteNote(id);
+    const still = await this.untilNote((l) => (l.some((x) => x.id === id) ? undefined : ({} as SharedNote)), 5000);
+    if (!still) throw new Error("not deleted (only the note's author or the host can delete it)");
+    return { ok: true };
+  }
+
   async note(text: string): Promise<Out> {
     this.alive();
     const r = this.host ? this.host.addText(text) : this.peer!.addText(text);
@@ -506,6 +595,12 @@ export async function runCommand(agent: WallAgent, c: Record<string, unknown>): 
       return agent.file({ path: s("path"), name: s("name"), content: s("content"), base64: c.base64 === true, replyTo: s("replyTo") });
     case "get":
       return agent.get(s("id") ?? "", s("output"));
+    case "notes":
+      return agent.notes(s("id"));
+    case "write-note":
+      return agent.writeNote({ id: s("id"), title: s("title"), text: s("text") });
+    case "delete-note":
+      return agent.deleteNote(s("id") ?? "");
     case "read":
       return { ok: true, ...agent.read(Number(c.since ?? 0), Number(c.limit ?? 50)) };
     case "members":
@@ -520,7 +615,7 @@ export async function runCommand(agent: WallAgent, c: Record<string, unknown>): 
     case "allow-agents":
       return agent.allowAgents(c.on !== false);
     default:
-      throw new Error(`unknown cmd: ${String(c.cmd)} (send, file, note, react, vote, poll, get, read, members, info, leave)`);
+      throw new Error(`unknown cmd: ${String(c.cmd)} (send, file, note, react, vote, poll, get, read, notes, write-note, delete-note, members, info, leave)`);
   }
 }
 
@@ -667,6 +762,18 @@ export const MCP_TOOLS = [
     inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
   },
   {
+    name: "wall_read_notes",
+    description:
+      "Read the wall's shared notes (collaborative documents, markdown-lite text up to 64 KiB each), pinned first, with version, last editor and time. Pass `id` for a single note. Everything you read is sent to your model provider.",
+    inputSchema: { type: "object", properties: { id: { type: "string", description: "Note id (n-…); omit to list all." } } },
+  },
+  {
+    name: "wall_write_note",
+    description:
+      "Create a shared note (omit `id`) or replace the title and/or text of an existing one. Last writer wins: read the note first and send the full new text. Max 64 KiB of text, 80-character title. The host rate-limits edits.",
+    inputSchema: { type: "object", properties: { id: { type: "string" }, title: { type: "string" }, text: { type: "string" } } },
+  },
+  {
     name: "wall_info",
     description: "Wall settings and your role: expiry, burn, destroy-on-host-leave, verification code, and the invite link when you host it.",
     inputSchema: { type: "object", properties: {} },
@@ -701,6 +808,10 @@ export function runMcp(agent: WallAgent, start: () => Promise<Out>): Promise<num
         return agent.get(s("id") ?? "");
       case "wall_info":
         return agent.info();
+      case "wall_read_notes":
+        return agent.notes(s("id"));
+      case "wall_write_note":
+        return agent.writeNote({ id: s("id"), title: s("title"), text: s("text") });
       default:
         throw Object.assign(new Error(`unknown tool: ${name}`), { code: -32602 });
     }

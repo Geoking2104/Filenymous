@@ -316,3 +316,29 @@ mark.sw2-hl { background: rgba(250, 204, 21, .55); color: inherit; border-radius
 .sw-export-formats legend { font-weight: 600; margin-bottom: 0.3rem; }
 .sw-export-formats label { display: flex; gap: 0.5rem; align-items: center; cursor: pointer; }
 .sw-export-formats input[type="radio"] { appearance: auto; width: 1rem; height: 1rem; opacity: 1; position: static; }
+
+/* ---- shared notes ---- */
+.sw2-tabs { display: flex; gap: .25rem; padding: .2rem; border-radius: 10px; background: var(--fy-surface); border: 1px solid var(--fy-border); }
+.sw2-tab { flex: 1; font: inherit; font-size: .76rem; font-weight: 600; padding: .4rem .3rem; white-space: nowrap; border: 0; border-radius: 8px; background: none; color: var(--fy-text-2, var(--fy-text)); cursor: pointer; position: relative; }
+.sw2-tab[aria-selected="true"] { background: var(--fy-surface-solid); color: var(--fy-accent); box-shadow: 0 1px 3px rgba(2, 6, 23, .12); }
+.sw2-tab-dot { position: absolute; top: .35rem; right: .45rem; width: .45rem; height: .45rem; border-radius: 50%; background: #f59e0b; }
+.sw2-notes { display: grid; gap: .5rem; }
+.sw2-note-new { width: 100%; }
+.sw2-note-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
+.sw2-note-row { width: 100%; text-align: left; font: inherit; display: grid; gap: .1rem; padding: .5rem .6rem; border-radius: 10px; border: 1px solid var(--fy-border); background: var(--fy-surface-solid); color: var(--fy-text); cursor: pointer; }
+.sw2-note-row:hover, .sw2-note-row.is-open { border-color: var(--fy-accent); }
+.sw2-note-row-title { font-weight: 600; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sw2-note-writing { color: #b45309; font-size: .75rem; }
+.sw2-note-editor { margin: .5rem .75rem; padding: .75rem; border: 1px solid var(--fy-accent); border-radius: 12px; background: var(--fy-surface-solid); display: grid; gap: .45rem; }
+.sw2-note-editor-head { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.sw2-note-editor-head .v3-input { flex: 1 1 12rem; min-width: 0; font-weight: 600; }
+.sw2-note-tools { display: flex; gap: .3rem; align-items: center; flex-wrap: wrap; }
+.sw2-chip { font: inherit; font-size: .75rem; font-weight: 600; padding: .25rem .6rem; border-radius: 999px; border: 1px solid var(--fy-border); background: var(--fy-surface); color: var(--fy-text); cursor: pointer; }
+.sw2-chip:hover, .sw2-chip[aria-pressed="true"] { border-color: var(--fy-accent); color: var(--fy-accent); }
+.sw2-chip.is-danger:hover { border-color: #dc2626; color: #dc2626; }
+.sw2-note-text { width: 100%; box-sizing: border-box; min-height: 12rem; resize: vertical; font: inherit; font-size: .9rem; line-height: 1.5; }
+.sw2-note-preview { min-height: 6rem; max-height: 50vh; overflow: auto; padding: .5rem .6rem; border: 1px dashed var(--fy-border); border-radius: 8px; }
+.sw2-note-size.is-over { color: #dc2626; font-weight: 600; }
+.sw2-note-hits { margin: 0 .75rem .5rem; display: grid; gap: .3rem; }
+.sw2-note-hit { text-align: left; font: inherit; display: grid; gap: .1rem; padding: .45rem .6rem; border-radius: 10px; border: 1px solid var(--fy-border); background: var(--fy-surface-solid); color: var(--fy-text); cursor: pointer; }
+.sw2-note-hit:hover { border-color: var(--fy-accent); }

@@ -7,7 +7,7 @@
  *
  * JSON format v1:
  *   { format: "filenymous-wall-snapshot", v: 1, title, exportedAt, burn: false,
- *     members: [{ label, name, host?, agent? }], posts: Post[],
+ *     members: [{ label, name, host?, agent? }], posts: Post[], notes: SharedNote[],
  *     items: [{ id, meta, dataB64 }], skipped: [{ id, name, size, reason }] }
  *
  * Importing is deliberately NOT wired in the UI. parseSnapshot() only exists so
@@ -17,6 +17,7 @@
  */
 import { cleanMember, cleanName, cleanPost, MAX_POSTS, type Member, type Post } from "./feed";
 import { cleanMeta, type ItemMeta } from "./model";
+import { MAX_NOTES, cleanSharedNote, type SharedNote } from "./notes";
 
 export const SNAPSHOT_FORMAT = "filenymous-wall-snapshot";
 /** Files larger than this (raw bytes) are skipped, matching the wall's upload cap. */
@@ -40,6 +41,8 @@ export interface WallSnapshot {
   burn: false;
   members: SnapshotMember[];
   posts: Post[];
+  /** Shared notes (v1 files written before notes existed have none). */
+  notes: SharedNote[];
   items: SnapshotItem[];
   skipped: SnapshotSkipped[];
 }
@@ -49,6 +52,7 @@ export interface SnapshotSource {
   burn: boolean;
   members: Member[];
   posts: Post[];
+  notes?: SharedNote[];
   /** Non-consuming access to an item's bytes (host only). */
   getItem: (id: string) => { meta: ItemMeta; data: Blob } | null;
   now?: number;
@@ -112,6 +116,7 @@ export async function buildSnapshot(src: SnapshotSource): Promise<WallSnapshot> 
     burn: false,
     members: src.members.map((m) => ({ label: m.label, name: m.name, ...(m.host ? { host: true } : {}), ...(m.agent ? { agent: true } : {}) })),
     posts,
+    notes: (src.notes ?? []).slice(0, MAX_NOTES).map((n) => structuredCloneSafe(n)),
     items,
     skipped,
   };
@@ -122,7 +127,7 @@ function structuredCloneSafe<T>(v: T): T {
 }
 
 /** Plain-text Markdown transcript (no file contents). */
-export function buildTranscript(s: Pick<WallSnapshot, "title" | "exportedAt" | "members" | "posts">, lang: "fr" | "en" = "fr"): string {
+export function buildTranscript(s: Pick<WallSnapshot, "title" | "exportedAt" | "members" | "posts"> & { notes?: SharedNote[] }, lang: "fr" | "en" = "fr"): string {
   const names = new Map(s.members.map((m) => [m.label, m.name]));
   const who = (l: string) => names.get(l) ?? (l === "host" ? (lang === "fr" ? "Hôte" : "Host") : l);
   const iso = (t: number) => new Date(t).toISOString().replace("T", " ").slice(0, 16) + " UTC";
@@ -137,6 +142,13 @@ export function buildTranscript(s: Pick<WallSnapshot, "title" | "exportedAt" | "
     else if (p.kind === "poll" && p.poll) body = `${L.poll} : ${p.poll.question}\n${p.poll.options.map((o, i) => `- ${o} (${p.poll!.votes?.[i]?.length ?? 0})`).join("\n")}`;
     else if (p.item) body = `${p.kind === "note" ? L.note : L.file} : ${p.item.name}${p.kind === "note" ? "" : ` (${p.item.size} B)`}`;
     out.push(head, "", body.split("\n").map((l) => `    ${l}`).join("\n"), "");
+  }
+  if (s.notes?.length) {
+    out.push(`## ${lang === "fr" ? "Notes partagées" : "Shared notes"}`, "");
+    for (const n of s.notes) {
+      out.push(`### ${n.pinned ? "📌 " : ""}${n.title || (lang === "fr" ? "Sans titre" : "Untitled")}`, "", `_${lang === "fr" ? "Modifiée par" : "Edited by"} ${who(n.editedBy)} · ${iso(n.editedAt)}_`, "");
+      out.push(n.text.split("\n").map((l) => `    ${l}`).join("\n"), "");
+    }
   }
   return out.join("\n");
 }
@@ -194,6 +206,11 @@ export function parseSnapshot(raw: string): WallSnapshot | null {
   for (const p of s.posts) { const c = cleanPost(p, cleanMeta); if (!c) return null; posts.push(c); }
   const members: SnapshotMember[] = [];
   for (const m of s.members) { const c = cleanMember(m); if (!c) return null; members.push({ label: c.label, name: c.name, ...(c.host ? { host: true } : {}), ...(c.agent ? { agent: true } : {}) }); }
+  const notes: SharedNote[] = [];
+  if (s.notes !== undefined) {
+    if (!Array.isArray(s.notes) || s.notes.length > MAX_NOTES) return null;
+    for (const n of s.notes) { const c = cleanSharedNote(n); if (!c) return null; notes.push(c); }
+  }
   const ids = new Set(posts.map((p) => p.id));
   const items: SnapshotItem[] = [];
   let total = 0;
@@ -214,7 +231,7 @@ export function parseSnapshot(raw: string): WallSnapshot | null {
     if (typeof r.id !== "string" || typeof r.name !== "string" || typeof r.size !== "number" || !["too-large", "budget", "unavailable"].includes(r.reason as string)) return null;
     skipped.push({ id: r.id.slice(0, 64), name: r.name.slice(0, 255), size: r.size, reason: r.reason as SkipReason });
   }
-  return { format: SNAPSHOT_FORMAT, v: 1, title: cleanName(s.title ?? ""), exportedAt: s.exportedAt, burn: false, members, posts, items, skipped };
+  return { format: SNAPSHOT_FORMAT, v: 1, title: cleanName(s.title ?? ""), exportedAt: s.exportedAt, burn: false, members, posts, notes, items, skipped };
 }
 
 const SAFE_MIME = /^(image\/(png|jpeg|gif|webp|avif)|audio\/[a-z0-9.+-]+|video\/[a-z0-9.+-]+|text\/plain|application\/pdf)$/;

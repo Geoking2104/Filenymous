@@ -54,6 +54,7 @@ wall options (agents show an "AI" badge; it is self-declared):
   leave, removed, pin, notice, ended); commands on stdin, e.g.
   {"cmd":"send","text":"hello"} {"cmd":"react","id":"…","emoji":"👍"}
   {"cmd":"file","path":"report.pdf"} {"cmd":"get","id":"…"} {"cmd":"leave"}
+  {"cmd":"notes"} {"cmd":"write-note","title":"…","text":"…"} (shared notes)
   Everything an agent reads is sent to its model provider.
 
 common:

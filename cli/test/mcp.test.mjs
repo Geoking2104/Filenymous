@@ -32,7 +32,7 @@ test("MCP: tools list, read/send/react/participants/file/get between a CLI host 
   assert.equal(client.getServerVersion().name, "filenymous-wall");
   assert.match(client.getInstructions() ?? "", /model provider/);
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["wall_get_item", "wall_info", "wall_list_participants", "wall_react", "wall_read_messages", "wall_send_file", "wall_send_message"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["wall_get_item", "wall_info", "wall_list_participants", "wall_react", "wall_read_messages", "wall_read_notes", "wall_send_file", "wall_send_message", "wall_write_note"]);
 
   const info = await call(client, "wall_info");
   assert.equal(info.json.role, "peer");
@@ -114,4 +114,41 @@ test("MCP --create: an agent can host; a second MCP agent joins with the link", 
   for (let i = 0; i < 20 && !ended; i++) ended = (await call(guest, "wall_read_messages", { since: 99, wait_ms: 1000 })).json?.ended;
   assert.ok(ended);
   await guest.close();
+});
+
+test("MCP: shared notes with wall_read_notes / wall_write_note (host-versioned, last writer wins)", { timeout: 90_000 }, async () => {
+  const host = wallCli(["create", "--allow-agents", "--name", "Hôte", "--quiet", ...common()]);
+  const ready = await host.wait((l) => l.event === "ready");
+  const client = await mcpClient([ready.link, "--name", "Noteur"]);
+  const empty = await call(client, "wall_read_notes");
+  assert.deepEqual(empty.json.notes, []);
+  const created = await call(client, "wall_write_note", { title: "Ordre du jour", text: "1. **Budget**" });
+  assert.equal(created.isError, false, created.text);
+  const id = created.json.note.id;
+  assert.match(id, /^n-[0-9a-f]{16}$/);
+  const ev = await host.wait((l) => l.event === "note" && l.id === id);
+  assert.equal(ev.title, "Ordre du jour");
+  host.send({ cmd: "write-note", id, text: "1. Budget\n2. Planning", ref: "w1" });
+  const w1 = await host.wait((l) => l.event === "result" && l.ref === "w1");
+  assert.equal(w1.ok, true, JSON.stringify(w1));
+  assert.ok(w1.note.version > created.json.note.version);
+  let one;
+  for (let i = 0; i < 40; i++) {
+    one = (await call(client, "wall_read_notes", { id })).json.note;
+    if (one.text.includes("Planning")) break;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  assert.equal(one.text, "1. Budget\n2. Planning");
+  assert.equal(one.editedBy, "host");
+  const tooBig = await call(client, "wall_write_note", { id, text: "x".repeat(70 * 1024) });
+  assert.equal(tooBig.isError, true);
+  const bad = await call(client, "wall_write_note", { id: "../../etc", text: "x" });
+  assert.equal(bad.isError, true);
+  // The host can delete any note (here its own).
+  host.send({ cmd: "write-note", title: "Note de l'hôte", ref: "w2" });
+  const w2 = await host.wait((l) => l.event === "result" && l.ref === "w2");
+  await client.close();
+  host.send({ cmd: "delete-note", id: w2.note.id, ref: "d1" });
+  assert.equal((await host.wait((l) => l.event === "result" && l.ref === "d1")).ok, true);
+  host.send({ cmd: "leave" });
 });

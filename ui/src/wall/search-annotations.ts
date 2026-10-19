@@ -4,6 +4,7 @@
  */
 
 import type { Post } from "./feed";
+import type { SharedNote } from "./notes";
 
 /** Lower-case, accent-free form of one character ("É" → "e"), for matching. */
 function foldChar(c: string): string {
@@ -44,6 +45,30 @@ export function searchPosts(posts: Post[], query: string): Post[] {
   const q = normalizeQuery(query);
   if (!q) return posts;
   return posts.filter((p) => has(p.text, q) || has(p.item?.name, q) || has(p.poll?.question, q) || !!p.poll?.options.some((o) => has(o, q)));
+}
+
+const foldFast = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const noteFold = new WeakMap<SharedNote, string>();
+
+/** Shared notes whose title or text matches (folded text cached per note version). */
+export function searchNotes(notes: SharedNote[], query: string): SharedNote[] {
+  const q = normalizeQuery(query);
+  if (!q) return [];
+  return notes.filter((n) => {
+    let f = noteFold.get(n);
+    if (f === undefined) noteFold.set(n, (f = `${foldFast(n.title)}\n${foldFast(n.text)}`));
+    return f.includes(q);
+  });
+}
+
+/** A short excerpt of `text` around the first match (whole lines collapsed). */
+export function matchSnippet(text: string, query: string, around = 50): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  const r = highlightRanges(flat, query)[0];
+  if (!r) return flat.slice(0, around * 2);
+  const start = Math.max(0, r[0] - around);
+  const end = Math.min(flat.length, r[1] + around);
+  return `${start > 0 ? "…" : ""}${flat.slice(start, end)}${end < flat.length ? "…" : ""}`;
 }
 
 /** [start, end) ranges of `query` in `text` (same folding as searchPosts), for highlighting. */

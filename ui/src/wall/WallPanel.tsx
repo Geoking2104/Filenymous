@@ -184,6 +184,11 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
         pin: (id) => host.pin(id),
         kick: (l) => host.kick(l),
         setAgents: (b) => host.setAgentsAllowed(b),
+        createNote: (title, text) => host.createNote(title, text),
+        editNote: (id, base, patch) => host.editNote(id, base, patch),
+        deleteNote: (id) => host.deleteNote(id),
+        lockNote: (id, on) => host.lockNote(id, on),
+        pinNote: (id, on) => host.pinNote(id, on),
       },
     [host, t],
   );
@@ -197,7 +202,7 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
     const st = h.state;
     const lang = i18n.language.startsWith("en") ? "en" : "fr";
     try {
-      const snap = await buildSnapshot({ title: params.title, burn: params.burn, members: st.members, posts: st.posts, getItem: (id) => h.exportItem(id) });
+      const snap = await buildSnapshot({ title: params.title, burn: params.burn, members: st.members, posts: st.posts, notes: st.notes, getItem: (id) => h.exportItem(id) });
       if (format === "json") downloadBlob(snapshotBlob(snap), snapshotFilename(params.title, "json"));
       else downloadBlob(new Blob([buildTranscript(snap, lang)], { type: "text/markdown;charset=utf-8" }), snapshotFilename(params.title, "md"));
       h.announceExport();
@@ -245,6 +250,9 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
     hostMedia: mediaSupported(),
     notice: state.notice,
     mine: [],
+    notes: state.notes,
+    noteLocks: state.noteLocks,
+    noteOverwrite: state.noteOverwrite,
   };
   return (
     <>
@@ -371,6 +379,10 @@ function PeerView({ params }: { params: WallParams }) {
         startLive: (s, k) => peer.startLive(s, k),
         stopLive: () => peer.stopLive(),
         on: (fn) => peer.on(fn),
+        createNote: (title, text) => peer.createNote(title, text),
+        editNote: (id, base, patch) => peer.editNote(id, base, patch),
+        deleteNote: (id) => peer.deleteNote(id),
+        lockNote: (id, on) => peer.lockNote(id, on),
       },
     [peer],
   );
@@ -418,6 +430,9 @@ function PeerView({ params }: { params: WallParams }) {
     notice: s?.notice,
     uploads: s?.uploads,
     mine: s?.mine ?? [],
+    notes: s?.notes ?? [],
+    noteLocks: s?.noteLocks ?? {},
+    noteOverwrite: s?.noteOverwrite,
   };
   return (
     <WallRoom
