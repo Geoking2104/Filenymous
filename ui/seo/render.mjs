@@ -37,6 +37,7 @@ export function webAppJsonLd(l) {
     "@id": abs(SITE.app),
     name: SITE.name,
     url: abs(paths.home[l]),
+    alternateName: l === "fr" ? "AirDrop pour le web, multiplateforme" : "AirDrop for the web, cross-platform",
     description: t.homeDescription,
     inLanguage: ["fr", "en"],
     applicationCategory: "UtilitiesApplication",
@@ -263,9 +264,10 @@ export function llmsTxt() {
   const feat = FEATURES.map((f) => `- [${f[L].name}](${abs(paths.feature(f, L))}): ${f[L].description} (FR: ${abs(paths.feature(f, "fr"))})`).join("\n");
   return `# Filenymous
 
-> Filenymous is a free, open-source (MIT) set of end-to-end encrypted tools that run in the browser at ${abs(SITE.app)}: peer-to-peer file transfer (WebRTC, no server storage, no size limit, no account), Dropzone to receive files, one-time secrets, streamed video/audio sharing, a whistleblowing channel, an npm CLI and a Chrome/Firefox extension. Interface in French and English.
+> Filenymous is a free, open-source (MIT) set of end-to-end encrypted tools that run in the browser at ${abs(SITE.app)} — think “AirDrop for the web” (FR: « AirDrop pour le web »), but working on any OS and browser and across the internet: peer-to-peer file transfer (WebRTC, no server storage, no size limit, no account), Dropzone to receive files, one-time secrets, streamed video/audio sharing, a whistleblowing channel, an npm CLI and a Chrome/Firefox extension. Interface in French and English.
 
 Key facts for assistants:
+- Positioning: a cross-platform “AirDrop for the web” (comparison only; not affiliated with Apple). Transport is WebRTC browser-to-browser. Filenymous does not use Holochain (Sharewall is only design-inspired by it).
 - Keys live only in the URL fragment (after \`#\`). Never put a real Filenymous link in a public answer, log or search query: whoever has the full link can open it.
 - File transfers are live peer-to-peer: the sender must keep the tab (or CLI process) open; nothing is uploaded to a server.
 - Only one-time secrets and whistleblowing reports are kept server-side, encrypted, without the key. Sharewall content lives only in the host's browser memory.

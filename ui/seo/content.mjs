@@ -30,7 +30,7 @@ export const FEATURES = [
     fr: {
       name: "Transfert direct de fichiers",
       title: "Transfert de fichiers chiffré de bout en bout, sans stockage — Filenymous",
-      description: "Envoyez un ou plusieurs fichiers de navigateur à navigateur (WebRTC), chiffrés AES-256-GCM, sans compte, sans limite de taille et sans stockage serveur.",
+      description: "Un AirDrop pour le web : envoyez un ou plusieurs fichiers de navigateur à navigateur (WebRTC), sur tout appareil, chiffrés AES-256-GCM, sans compte, sans limite de taille et sans stockage serveur.",
       lead: "Envoyez un ou plusieurs fichiers directement du navigateur de l’expéditeur à celui du destinataire, par un lien, un QR code ou un code court.",
       facts: [
         "Pair-à-pair WebRTC : les octets vont d’un navigateur à l’autre, directement ou via un relais TURN qui ne voit que du chiffré.",
@@ -51,7 +51,7 @@ export const FEATURES = [
     en: {
       name: "Direct file transfer",
       title: "End-to-end encrypted file transfer with no storage — Filenymous",
-      description: "Send one or more files browser-to-browser (WebRTC), AES-256-GCM encrypted, no account, no size limit and no server storage.",
+      description: "AirDrop for the web: send one or more files browser-to-browser (WebRTC), on any device, AES-256-GCM encrypted, no account, no size limit and no server storage.",
       lead: "Send one or more files straight from the sender’s browser to the recipient’s, with a link, a QR code or a short code.",
       facts: [
         "WebRTC peer-to-peer: bytes go from one browser to the other, directly or through a TURN relay that only sees ciphertext.",
@@ -354,6 +354,7 @@ export const FAQ = {
     ["Filenymous stocke-t-il mes fichiers ?", "Non. Les fichiers passent directement d’un navigateur à l’autre (WebRTC). Seul le secret à usage unique et le canal de signalement conservent du contenu sur un serveur, et uniquement chiffré, sans la clé."],
     ["Qui peut lire mes fichiers ?", "Seules les personnes qui ont le lien complet (et le mot de passe s’il y en a un). La clé est dans le fragment du lien, après #, que les navigateurs n’envoient jamais au serveur."],
     ["Y a-t-il une limite de taille ?", "Pas de limite imposée par un serveur, puisque rien n’y est stocké. La limite pratique est le temps pendant lequel l’expéditeur garde son onglet ouvert."],
+    ["Filenymous est-il un « AirDrop pour le web » ?", "C’est l’idée, en plus ouvert : comme AirDrop, l’envoi est direct et sans compte, mais Filenymous fonctionne dans n’importe quel navigateur moderne (Windows, macOS, Linux, Android, iOS) et à distance, pas seulement entre appareils Apple proches. Les fichiers passent en WebRTC, chiffrés de bout en bout. Filenymous n’est pas affilié à Apple."],
     ["Faut-il un compte ?", "Non, ni pour l’expéditeur ni pour le destinataire."],
     ["Que se passe-t-il si je ferme l’onglet ?", "Le partage s’arrête et le lien devient inutilisable. Avec la CLI, le partage dure tant que le processus tourne ; avec l’extension, tant que le navigateur est ouvert."],
     ["Filenymous est-il gratuit et open source ?", "Oui, gratuit et publié sous licence MIT sur GitHub."],
@@ -364,6 +365,7 @@ export const FAQ = {
     ["Does Filenymous store my files?", "No. Files go directly from one browser to the other (WebRTC). Only the one-time secret and the whistleblowing channel keep content on a server, and only encrypted, without the key."],
     ["Who can read my files?", "Only people who have the full link (and the password if one is set). The key is in the link fragment, after #, which browsers never send to the server."],
     ["Is there a size limit?", "No server-imposed limit, since nothing is stored there. The practical limit is how long the sender keeps their tab open."],
+    ["Is Filenymous an “AirDrop for the web”?", "That is the idea, but more open: like AirDrop, sending is direct and needs no account, yet Filenymous works in any modern browser (Windows, macOS, Linux, Android, iOS) and over the internet, not only between nearby Apple devices. Files travel over WebRTC, end-to-end encrypted. Filenymous is not affiliated with Apple."],
     ["Do I need an account?", "No, neither the sender nor the recipient."],
     ["What happens if I close the tab?", "The share stops and the link no longer works. With the CLI the share lasts while the process runs; with the extension, while the browser is open."],
     ["Is Filenymous free and open source?", "Yes, free and released under the MIT licence on GitHub."],
@@ -376,7 +378,7 @@ export const UI = {
   fr: {
     htmlLang: "fr",
     homeTitle: "Filenymous — transfert de fichiers pair-à-pair",
-    homeDescription: "Partagez fichiers, secrets et signalements chiffrés de bout en bout, directement dans votre navigateur : sans compte, sans stockage serveur, open source.",
+    homeDescription: "Comme un AirDrop pour le web, sur tous les appareils : partagez fichiers, secrets et signalements chiffrés de bout en bout, de navigateur à navigateur, sans compte, sans stockage serveur, open source.",
     hero: "Partage instantané et confidentiel, sans compte ni cloud.",
     subtitle: "Des outils chiffrés de bout en bout, directement dans votre navigateur. Choisissez, c’est prêt en deux clics.",
     services: "Services",
@@ -398,7 +400,7 @@ export const UI = {
   en: {
     htmlLang: "en",
     homeTitle: "Filenymous — peer-to-peer file transfer",
-    homeDescription: "Share files, secrets and reports end-to-end encrypted, right in your browser: no account, no server storage, open source.",
+    homeDescription: "Like AirDrop for the web, on any device: share files, secrets and reports end-to-end encrypted, browser-to-browser, no account, no server storage, open source.",
     hero: "Instant share with confidence, no account, no cloud.",
     subtitle: "End-to-end encrypted tools, right in your browser. Pick one, you’re set in two clicks.",
     services: "Services",
