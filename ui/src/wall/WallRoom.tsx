@@ -47,6 +47,9 @@ export interface RoomState {
   statusText: string;
   online: boolean;
   self?: string;
+  /** Wall display name ("" = untitled). */
+  title: string;
+  /** 0 = no expiry (lives with the host). */
   expiresAt: number;
   burn: boolean;
   hostLeave: boolean;
@@ -329,14 +332,17 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, test
           ☰ <span className="sw2-count">{s.members.length}</span>
         </button>
         <div className="sw2-title">
+          <strong className="sw2-name" data-testid="wall-title" title={s.title || t("wall.untitled")}>{s.title || t("wall.untitled")}</strong>
           <span className="v3-status sw2-status" data-testid={statusTestId} data-status={s.status}>
             <span className="v3-pulse" />
             {s.statusText}
           </span>
         </div>
-        <span className={`sw-timer${left < 60_000 ? " is-low" : ""}`} data-testid="wall-countdown" title={t("wall.expiresAt", { date: new Date(s.expiresAt).toLocaleString() })}>
-          ⏳ {formatRemaining(left)}
-        </span>
+        {s.expiresAt > 0 && (
+          <span className={`sw-timer${left < 60_000 ? " is-low" : ""}`} data-testid="wall-countdown" title={t("wall.expiresAt", { date: new Date(s.expiresAt).toLocaleString() })}>
+            ⏳ {formatRemaining(left)}
+          </span>
+        )}
       </header>
 
       <div className="sw2-body">
@@ -518,6 +524,7 @@ function WallInfo({ s, code, invite }: { s: RoomState; code: string; invite?: { 
   };
   return (
     <section className="sw2-section sw2-info">
+      <h2 className="sw2-wallname" data-testid="wall-info-title">{s.title || t("wall.untitled")}</h2>
       <div className="sw-flags">
         <span className="sw-flag">🔐 {t("wall.flagE2ee")}</span>
         {s.burn && <span className="sw-flag" data-testid="wall-flag-burn">🔥 {t("wall.flagBurn")}</span>}

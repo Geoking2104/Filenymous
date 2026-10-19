@@ -5,7 +5,7 @@
 import { test, expect } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { createWall as create, fixture, guarded, item, items, join, local, msg, newPage as open, say, sendNote, sha, snippet, startRelay, type Relay } from "./wall-helpers";
+import { answerLeave, createWall as create, fixture, guarded, item, items, join, local, msg, newPage as open, say, sendNote, sha, snippet, startRelay, type Relay } from "./wall-helpers";
 import type { Browser, Page } from "@playwright/test";
 
 let relay: Relay;
@@ -22,20 +22,34 @@ const createWall = (p: Page, o: Parameters<typeof create>[1] = {}) => create(p, 
 test("3 contexts: live grid, snippets, previews, identical downloads, kill switch", async ({ browser }) => {
   test.setTimeout(120_000);
   const host = await newPage(browser);
-  const { link } = await createWall(host.page, { ttl: "h1", hostLeave: false });
-  expect(link).toMatch(/\/#wall:wall-[a-f0-9]{24}\/[A-Za-z0-9_-]{43}\/[0-9a-z]+\/n$/);
+  const { link } = await createWall(host.page, { name: "Atelier <b>lundi</b>" });
+  // New walls: no expiry ("0"), destroyed when the host leaves ("h").
+  expect(link).toMatch(/\/#wall:wall-[a-f0-9]{24}\/[A-Za-z0-9_-]{43}\/0\/nh$/);
+  // The name never appears in the peer link.
+  expect(link).not.toMatch(/Atelier|lundi/i);
   const key = link.split("/").slice(-3)[0]!;
   const hostSecret = host.page.url().split("#wall-host:")[1]!.split("/")[0]!;
   const code = await host.page.getByTestId("wall-code").locator("strong").textContent();
   expect(code).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
 
-  // Nobody connected yet: closing the host tab is not guarded.
-  expect(await guarded(host.page)).toBe(false);
+  // Closing the host tab destroys the wall, even before anyone joined: guarded.
+  expect(await guarded(host.page)).toBe(true);
+  // The name is shown in the header and the side panel, as plain text.
+  await expect(host.page.getByTestId("wall-title")).toHaveText("Atelier <b>lundi</b>");
+  await expect(host.page.getByTestId("wall-info-title")).toHaveText("Atelier <b>lundi</b>");
+  // No lifetime anywhere: no countdown.
+  await expect(host.page.getByTestId("wall-countdown")).toHaveCount(0);
 
   const [a, b] = await Promise.all([newPage(browser), newPage(browser)]);
   await join(a.page, link);
   await join(b.page, link);
   await expect(host.page.getByTestId("wall-host")).toHaveAttribute("data-peers", "2");
+  // Peers see the wall's name (sent inside the sealed channel, never in the link).
+  for (const p of [a.page, b.page]) {
+    await expect(p.getByTestId("wall-title")).toHaveText("Atelier <b>lundi</b>");
+    await expect(p.locator(".sw2-title b")).toHaveCount(0);
+    await expect(p.getByTestId("wall-countdown")).toHaveCount(0);
+  }
   // Same verification code everywhere.
   await expect(a.page.getByTestId("wall-code").locator("strong")).toHaveText(code!);
   await expect(b.page.getByTestId("wall-code").locator("strong")).toHaveText(code!);
@@ -141,14 +155,18 @@ test("3 contexts: live grid, snippets, previews, identical downloads, kill switc
 
   // A peer can leave: it wipes its copy, the others keep going.
   b.page.removeAllListeners("dialog");
-  b.page.once("dialog", (d) => void d.accept());
+  // "Quitter le mur" asks first; Cancel keeps the peer on the wall.
   await b.page.getByTestId("wall-leave").click();
+  await answerLeave(b.page, false);
+  await expect(b.page.getByTestId("wall-peer-status")).toHaveAttribute("data-status", "online");
+  await b.page.getByTestId("wall-leave").click();
+  await answerLeave(b.page, true);
   await expect(b.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "left");
   await expect(host.page.getByTestId("wall-host")).toHaveAttribute("data-peers", "1");
 
   // Kill switch: the host destroys the wall, peers wipe, the relay closes the room.
-  host.page.once("dialog", (d) => void d.accept());
   await host.page.getByTestId("wall-destroy").click();
+  await answerLeave(host.page, true);
   await expect(host.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed");
   await expect(a.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed", { timeout: 10_000 });
   await expect(a.page.getByTestId("wall-item")).toHaveCount(0);
@@ -203,15 +221,15 @@ test("password + burn after one download; the host sees the item disappear", asy
   await expect(item(b.page, "once.bin").locator(".sw-chip")).toBeVisible();
   await expect(item(a.page, "once.bin").locator(".sw-chip")).toBeVisible({ timeout: 10_000 });
 
-  host.page.once("dialog", (d) => void d.accept());
   await host.page.getByTestId("wall-destroy").click();
+  await answerLeave(host.page, true);
   await expect(b.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed", { timeout: 10_000 });
 });
 
-test("TTL expiry (fake clock) wipes host and peers", async ({ browser }) => {
+test("legacy link with an expiry (fake clock) still expires and wipes host and peers", async ({ browser }) => {
   test.setTimeout(90_000);
   const host = await newPage(browser, { fakeClock: true });
-  const { link } = await createWall(host.page, { ttl: "m15", hostLeave: false });
+  const { link } = await createWall(host.page, { legacy: { ttlMs: 15 * 60_000, hostLeave: false } });
   const a = await newPage(browser, { fakeClock: true });
   await join(a.page, link);
   await sendNote(a.page, "éphémère");
@@ -228,7 +246,7 @@ test("TTL expiry (fake clock) wipes host and peers", async ({ browser }) => {
 test("destroy-on-host-leave: closing the host tab wipes every peer", async ({ browser }) => {
   test.setTimeout(90_000);
   const host = await newPage(browser);
-  const { link } = await createWall(host.page, { ttl: "h1" }); // option on by default
+  const { link } = await createWall(host.page); // always on for new walls
   expect(link).toMatch(/\/nh$/);
   const [a, b] = await Promise.all([newPage(browser), newPage(browser)]);
   await join(a.page, link);
@@ -250,7 +268,7 @@ test("destroy-on-host-leave: closing the host tab wipes every peer", async ({ br
 test("3 contexts: live feed, emoji picker, reactions, replies, mentions, poll, raise hand, bursts, pin, typing, rate limit", async ({ browser }) => {
   test.setTimeout(120_000);
   const host = await newPage(browser);
-  const { link } = await createWall(host.page, { hostLeave: false });
+  const { link } = await createWall(host.page);
   const [a, b] = await Promise.all([newPage(browser), newPage(browser)]);
   await join(a.page, link);
   await join(b.page, link);
@@ -382,7 +400,48 @@ test("3 contexts: live feed, emoji picker, reactions, replies, mentions, poll, r
     const all = c.sent.join("\n");
     for (const s of ["tout le monde", "Alice", "On commande", "Pizza", "🚀"]) expect(all).not.toContain(s);
   }
-  host.page.once("dialog", (d) => void d.accept());
   await host.page.getByTestId("wall-destroy").click();
+  await answerLeave(host.page, true);
   await expect(a.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed", { timeout: 10_000 });
+});
+
+test("closing (← Accueil / logo) asks first: Cancel keeps the wall, Quitter destroys it for everyone", async ({ browser }) => {
+  test.setTimeout(90_000);
+  const host = await newPage(browser);
+  // The create form: a name, no lifetime choice, and "Créer" blocked until the acknowledgement.
+  await host.page.goto("/#wall-new");
+  await expect(host.page.locator('[data-testid^="wall-ttl-"]')).toHaveCount(0);
+  await expect(host.page.getByTestId("wall-host-leave")).toHaveCount(0);
+  await expect(host.page.getByTestId("wall-create-submit")).toBeDisabled();
+  await host.page.getByTestId("wall-ack-leave").check();
+  await expect(host.page.getByTestId("wall-create-submit")).toBeEnabled();
+  await host.page.getByTestId("wall-ack-leave").uncheck();
+  await expect(host.page.getByTestId("wall-create-submit")).toBeDisabled();
+  const { link } = await createWall(host.page, { name: "Réunion équipe" });
+  // The name survives a host reload (kept in the host link only).
+  expect(host.page.url()).toMatch(/#wall-host:[^/]+\/[^/]+\/0\/nh\/[A-Za-z0-9_-]+$/);
+  const a = await newPage(browser);
+  await join(a.page, link);
+  await expect(a.page.getByTestId("wall-title")).toHaveText("Réunion équipe");
+
+  // Peer: ← Accueil asks; Cancel keeps it on the wall.
+  await a.page.getByTestId("back-home").click();
+  await answerLeave(a.page, false);
+  await expect(a.page.getByTestId("wall-peer-status")).toHaveAttribute("data-status", "online");
+
+  // Host: ← Accueil asks (and says the wall will be destroyed); Cancel keeps everything.
+  await host.page.getByTestId("back-home").click();
+  await expect(host.page.getByTestId("leave-detail")).toContainText("détruit pour tous");
+  await answerLeave(host.page, false);
+  await expect(host.page.getByTestId("wall-host-status")).toHaveAttribute("data-status", "online");
+  await expect(host.page).toHaveURL(/#wall-host:/);
+  // Logo click too, then Quitter: back home, and the wall is gone for the peer.
+  await host.page.locator(".pz-brand").click();
+  await answerLeave(host.page, true);
+  await expect(host.page).not.toHaveURL(/#wall/);
+  await expect(a.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", /destroyed|host-left/, { timeout: 10_000 });
+  // Nothing left to lose: leaving the ended screen does not ask.
+  await a.page.getByTestId("back-home").click();
+  await expect(a.page.getByTestId("leave-dialog")).toHaveCount(0);
+  await expect(a.page).not.toHaveURL(/#wall/);
 });

@@ -31,6 +31,8 @@ export interface WallCliOptions {
   signalUrl?: string;
   appUrl: string;
   ttl?: string;
+  /** Wall display name (wall create), shown to every participant. */
+  title?: string;
   burn?: boolean;
   keepOnLeave?: boolean;
   allowAgents?: boolean;
@@ -43,8 +45,13 @@ const log = (quiet: boolean | undefined, s: string) => !quiet && process.stderr.
 const MAX_LOG = 2000;
 const TEXT_INLINE_MAX = 64 * 1024;
 
-export function wallTtl(raw: string | undefined): WallTtl {
-  const v = (raw ?? "1h").trim().toLowerCase();
+/**
+ * Walls have no lifetime by default (they live as long as their host). `--ttl`
+ * is still accepted for a wall that must also end at a fixed time.
+ */
+export function wallTtl(raw: string | undefined): WallTtl | undefined {
+  if (raw === undefined || raw.trim() === "") return undefined;
+  const v = raw.trim().toLowerCase();
   if (["15m", "m15", "15min"].includes(v)) return "m15";
   if (["1h", "h1", "60m"].includes(v)) return "h1";
   if (["24h", "h24", "1d"].includes(v)) return "h24";
@@ -219,7 +226,7 @@ export class WallAgent {
   /** Hosts a new wall (the agent's process holds it in memory). */
   async create(): Promise<Out> {
     const name = cleanName(this.opts.name) || `Agent ${pseudonym("en")}`;
-    const params: HostWallParams = await createWall({ ttl: wallTtl(this.opts.ttl), password: !!this.opts.password, burn: !!this.opts.burn, hostLeave: !this.opts.keepOnLeave });
+    const params: HostWallParams = await createWall({ ttl: wallTtl(this.opts.ttl), title: this.opts.title, password: !!this.opts.password, burn: !!this.opts.burn, hostLeave: !this.opts.keepOnLeave });
     this.params = params;
     this.link = buildWallLink(this.opts.appUrl, params);
     this.code = await wallCode(params);
@@ -295,7 +302,8 @@ export class WallAgent {
       role: this.role,
       label: this.self,
       code: this.code,
-      expiresAt: new Date(this.params.expiresAt).toISOString(),
+      expiresAt: this.params.expiresAt ? new Date(this.params.expiresAt).toISOString() : null,
+      title: (this.host ? (this.params as HostWallParams).title : this.peer?.state.title) || "",
       burn: this.params.burn,
       destroyOnHostLeave: this.params.hostLeave,
       password: this.params.password,

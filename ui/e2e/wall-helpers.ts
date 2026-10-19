@@ -1,7 +1,7 @@
 /** Shared helpers for the Sharewall e2e specs (local relay, contexts, wall setup). */
 import { expect, type Browser, type Page } from "@playwright/test";
 import { spawn, type ChildProcess } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -68,18 +68,54 @@ export async function guarded(page: Page): Promise<boolean> {
   });
 }
 
-export async function createWall(host: Page, opts: { ttl?: "m15" | "h1" | "h24"; burn?: boolean; hostLeave?: boolean; password?: string; agents?: boolean } = {}) {
-  await host.goto("/#wall-new");
-  await host.getByTestId(`wall-ttl-${opts.ttl ?? "h1"}`).click();
-  if (opts.burn) await host.getByTestId("wall-burn").check();
-  if (opts.hostLeave === false) await host.getByTestId("wall-host-leave").uncheck();
-  if (opts.agents) await host.getByTestId("wall-agents").check();
-  if (opts.password) await host.getByTestId("wall-password").fill(opts.password);
-  await host.getByTestId("wall-create-submit").click();
+export interface CreateWallOpts {
+  /** Wall display name typed in the create form. */
+  name?: string;
+  burn?: boolean;
+  password?: string;
+  agents?: boolean;
+  /**
+   * Legacy link (created before walls lost their expiry): opens a host link
+   * built here, with an expiry and/or without "destroy when the host leaves".
+   * The create form can no longer produce these, but such links stay valid.
+   */
+  legacy?: { ttlMs?: number; hostLeave?: boolean };
+}
+
+export async function createWall(host: Page, opts: CreateWallOpts = {}) {
+  if (opts.legacy) {
+    const b64 = (n: number) => randomBytes(n).toString("base64url");
+    const exp = opts.legacy.ttlMs ? Math.floor((Date.now() + opts.legacy.ttlMs) / 1000).toString(36) : "0";
+    const flags = `${opts.password ? "p" : "n"}${opts.burn ? "1" : ""}${opts.legacy.hostLeave ? "h" : ""}`;
+    await host.goto(`/#wall-host:${b64(24)}/${b64(32)}/${exp}/${flags}`);
+    if (opts.password) {
+      await host.getByTestId("drop-password-input").fill(opts.password);
+      await host.getByTestId("drop-password-submit").click();
+    }
+  } else {
+    await host.goto("/#wall-new");
+    if (opts.name) await host.getByTestId("wall-name").fill(opts.name);
+    if (opts.burn) await host.getByTestId("wall-burn").check();
+    if (opts.agents) await host.getByTestId("wall-agents").check();
+    if (opts.password) await host.getByTestId("wall-password").fill(opts.password);
+    // Creating requires the explicit "leaving destroys the wall" acknowledgement.
+    await expect(host.getByTestId("wall-create-submit")).toBeDisabled();
+    await host.getByTestId("wall-ack-leave").check();
+    await host.getByTestId("wall-create-submit").click();
+  }
   await expect(host.getByTestId("wall-keep-open")).toBeVisible();
   await expect(host.getByTestId("wall-host-status")).toHaveAttribute("data-status", "online", { timeout: 15_000 });
   const link = await host.getByTestId("wall-link").inputValue();
   return { link, hostUrl: host.url() };
+}
+
+/** Answers the shared in-app "close this window?" dialog. */
+export async function answerLeave(page: Page, confirm: boolean) {
+  const dialog = page.getByTestId("leave-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(page.getByTestId("leave-message")).toContainText(/fermer la fenêtre|close this window/);
+  await page.getByTestId(confirm ? "leave-confirm" : "leave-cancel").click();
+  await expect(dialog).toHaveCount(0);
 }
 
 export async function join(peer: Page, link: string, password?: string) {

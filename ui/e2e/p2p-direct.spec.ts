@@ -269,3 +269,60 @@ test.describe("password-protected transfers", () => {
     await expect(again.getByTestId("p2p-recv-status")).not.toHaveAttribute("data-status", /password|ready/);
   });
 });
+
+test("closing an active share asks first: Cancel keeps the link alive, Quitter ends it; finished → no prompt", async ({ browser }) => {
+  const data = Buffer.from("fermeture confirmée\n");
+  const sender = await (await browser.newContext()).newPage();
+  await prepare(sender);
+  await sender.goto("/");
+  await sender.locator('input[type="file"]').first().setInputFiles([{ name: "x.txt", mimeType: "text/plain", buffer: data }]);
+  await sender.getByRole("button", { name: /^(Démarrer|Start)$/ }).click();
+  await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "waiting", { timeout: 15_000 });
+  const link = await sender.getByTestId("p2p-link").inputValue();
+
+  const answer = async (confirm: boolean) => {
+    await expect(sender.getByTestId("leave-dialog")).toBeVisible();
+    await expect(sender.getByTestId("leave-message")).toHaveText(
+      "Vous êtes sur le point de fermer la fenêtre. Cela fera disparaître les informations de celle-ci. Confirmez-vous ?",
+    );
+    await sender.getByTestId(confirm ? "leave-confirm" : "leave-cancel").click();
+    await expect(sender.getByTestId("leave-dialog")).toHaveCount(0);
+  };
+
+  // ← Accueil, logo and "Arrêter le partage" all ask; Cancel keeps the share.
+  await sender.getByTestId("back-home").click();
+  await answer(false);
+  await sender.locator(".pz-brand").click();
+  await answer(false);
+  await sender.getByTestId("p2p-stop").click();
+  await answer(false);
+  await expect(sender.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "waiting");
+
+  // The receiver can still fetch it after the cancelled closes.
+  const receiver = await (await browser.newContext({ acceptDownloads: true })).newPage();
+  await prepare(receiver, { noPicker: true });
+  await receiver.goto(link.replace(/^https?:\/\/[^/]+/, ""));
+  await expect(receiver.getByTestId("p2p-recv-status")).toHaveAttribute("data-status", "ready", { timeout: 45_000 });
+
+  // Quitter: back home, the share is closed.
+  await sender.getByTestId("back-home").click();
+  await answer(true);
+  await expect(sender.getByTestId("p2p-link")).toHaveCount(0);
+
+  // A finished transfer has nothing left to lose: no prompt.
+  const s2 = await (await browser.newContext()).newPage();
+  await prepare(s2);
+  await s2.goto("/");
+  await s2.locator('input[type="file"]').first().setInputFiles([{ name: "y.txt", mimeType: "text/plain", buffer: data }]);
+  await s2.getByRole("button", { name: /^(Démarrer|Start)$/ }).click();
+  await expect(s2.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "waiting", { timeout: 15_000 });
+  const r2 = await (await browser.newContext({ acceptDownloads: true })).newPage();
+  await prepare(r2, { noPicker: true });
+  await r2.goto((await s2.getByTestId("p2p-link").inputValue()).replace(/^https?:\/\/[^/]+/, ""));
+  await expect(r2.getByTestId("p2p-recv-status")).toHaveAttribute("data-status", "ready", { timeout: 45_000 });
+  await r2.getByTestId("p2p-download").click();
+  await expect(s2.getByTestId("p2p-send-status")).toHaveAttribute("data-status", "complete", { timeout: 30_000 });
+  await s2.getByTestId("back-home").click();
+  await expect(s2.getByTestId("leave-dialog")).toHaveCount(0);
+  await expect(s2.getByTestId("p2p-link")).toHaveCount(0);
+});

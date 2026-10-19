@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLeaveGuard } from "../home/confirmLeave";
 import { P2PReceiver, type ReceiverState } from "./session";
 import { parseShareInput } from "./protocol";
 import { MEMORY_SINK_SOFT_LIMIT, canStreamToDisk, chooseSink } from "./sink";
@@ -44,15 +45,8 @@ export default function P2PReceivePanel({ hash, onStreamable }: Props) {
     onStreamable?.(!!state.streamable);
   }, [state.streamable, onStreamable]);
 
-  useEffect(() => {
-    if (state.status !== "receiving") return;
-    const onUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onUnload);
-    return () => window.removeEventListener("beforeunload", onUnload);
-  }, [state.status]);
+  // Leaving mid-download (or mid-stream) loses it: same guard as every service.
+  useLeaveGuard(state.status === "receiving" || state.status === "streaming");
 
   if (!parsed) return <div className="v3-warn">{t("p2p.invalidLink")}</div>;
   if (!p2pSupported()) return <div className="v3-warn">{t("p2p.unsupported")}</div>;

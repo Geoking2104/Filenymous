@@ -29,7 +29,7 @@ import ReportInboxPanel from "../report/ReportInboxPanel";
 import ReportFollowPanel from "../report/ReportFollowPanel";
 import "../report/report.css";
 import { WallHostPanel, WallPeerPanel } from "../wall/WallPanel";
-import { unloadGuardActive } from "../p2p/unloadGuard";
+import { ConfirmDialogHost, confirmLeave } from "./confirmLeave";
 import "./home.css";
 import { dragHasFiles, mergeFiles, removeFileAt, totalBytes } from "./files";
 
@@ -123,9 +123,10 @@ export default function HomeApp({ hash }: { hash: string }) {
     setPicked((prev) => mergeFiles(prev, incoming));
   };
 
-  const reset = () => {
-    // In-app navigation bypasses beforeunload: ask the same question ourselves.
-    if (unloadGuardActive() && !window.confirm(t("home.leaveConfirm"))) return;
+  const reset = async () => {
+    // In-app navigation bypasses beforeunload: ask the same question ourselves
+    // (only when something would be lost; the services hold the leave guard).
+    if (!(await confirmLeave())) return;
     setSending(null);
     setPicked([]);
     setPassword("");
@@ -176,7 +177,7 @@ export default function HomeApp({ hash }: { hash: string }) {
   } else if (receiving) {
     body = <P2PReceivePanel hash={hash} onStreamable={setRxStream} />;
   } else if (sending) {
-    body = <P2PSendPanel files={sending} password={password} stream={stream} expires={expires} onStop={reset} />;
+    body = <P2PSendPanel files={sending} password={password} stream={stream} expires={expires} onStop={() => void reset()} />;
   } else if (picked.length > 0) {
     body = (
       <div
@@ -437,9 +438,8 @@ export default function HomeApp({ hash }: { hash: string }) {
           className="pz-brand"
           href={location.pathname}
           onClick={(e) => {
-            if (sending) return; // let the beforeunload guard ask
             e.preventDefault();
-            reset();
+            void reset();
           }}
         >
           <Logo />
@@ -451,8 +451,8 @@ export default function HomeApp({ hash }: { hash: string }) {
         <LangSwitch />
       </header>
       <main className={`pz-main${isHome || route === "wall-host" || route === "wall-peer" ? " is-wide" : ""}`} key={isHome ? "home" : route}>
-        {!isHome && !sending && (
-          <a className="pz-back" href={location.pathname} onClick={(e) => { e.preventDefault(); reset(); }} data-testid="back-home">
+        {!isHome && (
+          <a className="pz-back" href={location.pathname} onClick={(e) => { e.preventDefault(); void reset(); }} data-testid="back-home">
             ← {t("home.back")}
           </a>
         )}
@@ -465,6 +465,7 @@ export default function HomeApp({ hash }: { hash: string }) {
         {body}
       </main>
       <LegalFooter />
+      <ConfirmDialogHost />
     </div>
   );
 }

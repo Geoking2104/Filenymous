@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { QRCodeSVG } from "qrcode.react";
-import { P2PSender, type SenderState } from "./session";
+import { P2PSender, type SenderState, type SenderStatus } from "./session";
+import { confirmLeave, useLeaveGuard } from "../home/confirmLeave";
 import { buildShareLink } from "./protocol";
 import ExpiryCountdown from "./ExpiryCountdown";
 import { formatBytes } from "../ux-v3/types";
@@ -25,6 +26,9 @@ function shareBaseUrl(): string {
 }
 
 /** Sender view for a live, direct transfer. */
+/** Statuses where the share is still usable (closing the tab would lose it). */
+const SHARE_LIVE: SenderStatus[] = ["waiting", "connecting", "connected", "transferring", "reconnecting", "failed", "streaming"];
+
 export default function P2PSendPanel({ files, message, password, stream, expires, onStop }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<SenderState | null>(null);
@@ -40,17 +44,17 @@ export default function P2PSendPanel({ files, message, password, stream, expires
     sender.start().catch((e) => {
       if (alive) setError(String((e as Error).message || e));
     });
-    const onUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onUnload);
     return () => {
       alive = false;
-      window.removeEventListener("beforeunload", onUnload);
       sender.stop();
     };
   }, [files, message, password, stream, expires]);
+
+  // Closing loses the live share link (and any transfer in progress): ask first.
+  useLeaveGuard(!!state && SHARE_LIVE.includes(state.status));
+  const stop = async () => {
+    if (await confirmLeave()) onStop();
+  };
 
   const link = useMemo(() => (state ? buildShareLink(shareBaseUrl(), state.code, state.secret, state.expires) : ""), [state?.code, state?.secret, state?.expires]);
   const pct = state && state.totalBytes ? Math.min(100, Math.round((state.confirmedBytes / state.totalBytes) * 100)) : 0;
@@ -224,7 +228,7 @@ export default function P2PSendPanel({ files, message, password, stream, expires
         </div>
       )}
       <p className="v3-footnote">{t("p2p.securityNote")}</p>
-      <button type="button" className="v3-btn-ghost" onClick={onStop}>
+      <button type="button" className="v3-btn-ghost" data-testid="p2p-stop" onClick={() => void stop()}>
         {t("p2p.stop")}
       </button>
     </div>

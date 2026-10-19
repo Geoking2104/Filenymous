@@ -3,6 +3,7 @@
  * RAM, never IndexedDB/localStorage/Cache), item metadata shown in the grid,
  * the control messages and their validation, plus the pure TTL/burn rules.
  */
+import { sanitizeWallTitle } from "./link";
 import { safeFileName } from "../p2p/protocol";
 import {
   MAX_LIVE,
@@ -64,7 +65,7 @@ export type WallMessage =
   // both directions: media signaling for live streams, inside the sealed channel
   | RtcMessage
   // host → peer
-  | { t: "welcome"; label: string; expiresAt: number; burn: boolean; hostLeave: boolean; agents: boolean; media: boolean }
+  | { t: "welcome"; label: string; expiresAt: number; burn: boolean; hostLeave: boolean; agents: boolean; media: boolean; title?: string }
   | { t: "members"; members: Member[] }
   | { t: "post"; post: Post }
   | { t: "unpost"; id: string }
@@ -188,7 +189,7 @@ export function parseWallMessage(m: unknown): WallMessage | null {
     }
     case "welcome":
       return isLabel(o.label) && int(o.expiresAt) && typeof o.burn === "boolean" && typeof o.hostLeave === "boolean" && typeof o.agents === "boolean" && typeof o.media === "boolean"
-        ? { t: "welcome", label: o.label, expiresAt: o.expiresAt as number, burn: o.burn, hostLeave: o.hostLeave, agents: o.agents, media: o.media }
+        ? { t: "welcome", label: o.label, expiresAt: o.expiresAt as number, burn: o.burn, hostLeave: o.hostLeave, agents: o.agents, media: o.media, title: typeof o.title === "string" && o.title.length <= 1024 ? sanitizeWallTitle(o.title) : "" }
         : null;
     case "members": {
       if (!Array.isArray(o.members) || o.members.length > 64) return null;
@@ -317,7 +318,9 @@ export class WallStore {
   }
 }
 
+/** Remaining time before expiry; Infinity when the wall has no expiry (0). */
 export function remainingMs(expiresAt: number, now = Date.now()): number {
+  if (!expiresAt) return Infinity;
   return Math.max(0, expiresAt - now);
 }
 

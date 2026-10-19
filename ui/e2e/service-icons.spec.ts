@@ -171,6 +171,7 @@ test("each card's icon is shown on every screen of its service (desktop, light)"
   await host.goto("/");
   await host.getByTestId("wall-entry").click();
   await expectIcon(host, "wall", "19-wall-create", /Mur de partage/);
+  await host.getByTestId("wall-ack-leave").check();
   await host.getByTestId("wall-create-submit").click();
   await expect(host.getByTestId("wall-host-status")).toHaveAttribute("data-status", "online", { timeout: 15_000 });
   const wallLink = await host.getByTestId("wall-link").inputValue();
@@ -180,6 +181,7 @@ test("each card's icon is shown on every screen of its service (desktop, light)"
   await expect(peer.getByTestId("wall-peer-status")).toHaveAttribute("data-status", "online", { timeout: 20_000 });
   await expectIcon(peer, "wall", "21-wall-peer");
   await host.getByTestId("wall-destroy").click();
+  await host.getByTestId("leave-confirm").click();
   await expect(peer.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed", { timeout: 10_000 });
   await expectIcon(peer, "wall", "22-wall-peer-destroyed");
   await expect(host.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed");

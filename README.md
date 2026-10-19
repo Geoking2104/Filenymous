@@ -60,7 +60,7 @@ Chaque carte de l'accueil ouvre un écran qui garde la même icône et le même 
   - Conservation : 90 jours par signalement, 1 an par boîte.
   - Conçu en pensant à la directive européenne sur les lanceurs d'alerte et à la loi Sapin II : c'est une intention de conception, pas une certification.
   - Pages : création, page du signalant, boîte de réception, suivi.
-- **Sharewall (v2), mur éphémère en direct.** Un salon façon Discord, partagé par lien ou QR code, ouvert 15 min, 1 h ou 24 h.
+- **Sharewall (v2), mur éphémère en direct.** Un salon façon Discord, partagé par lien ou QR code, sans durée limite : il reste ouvert tant que l'hôte garde son onglet, et il est détruit dès que l'hôte le quitte. Chaque mur peut porter un nom, visible par tous les participants.
   - **Fonctions :** panneau des participants, messages groupés avec réponses, mentions `@nom` et mise en forme légère sans HTML, sélecteur d'emojis embarqué, réactions, sondages, main levée, applaudissements, épinglage par l'hôte. Fichiers, notes et secrets masqués ; images, vidéos et sons dans le fil.
   - **Médias en direct :** écran, caméra ou micro après confirmation, avec badge « EN DIRECT » et bouton d'arrêt. L'hôte retransmet les flux, 2 à la fois au plus.
   - **Topologie en étoile :** chaque participant se connecte au seul navigateur de l'hôte, qui garde le contenu en mémoire vive. Rien n'est stocké côté serveur ni dans le stockage du navigateur.
@@ -90,7 +90,7 @@ npx filenymous upload build.zip --ttl 1h --max-downloads 1          # affiche le
 npx filenymous upload video.mp4 --stream --expires 2026-10-20T18:00:00Z
 FILENYMOUS_PASSWORD=… npx filenymous receive "<lien ou code>" -o ./dl
 npx filenymous wall join "https://filenymous.eu/app/#wall:…" --name "Mon agent"   # agent IA, JSON Lines
-npx filenymous wall create --ttl 1h --allow-agents                   # héberger un mur depuis le terminal
+npx filenymous wall create --title "Atelier" --allow-agents                # héberger un mur depuis le terminal
 npx filenymous wall mcp "https://filenymous.eu/app/#wall:…"          # serveur MCP (stdio)
 ```
 
@@ -117,7 +117,7 @@ Configuration MCP (Claude Desktop `claude_desktop_config.json`, Cursor `.cursor/
 }
 ```
 
-Le lien d'invitation est un secret : gardez ce fichier privé et retirez l'entrée quand le mur a expiré.
+Le lien d'invitation est un secret : gardez ce fichier privé et retirez l'entrée quand le mur est détruit.
 
 - **Tout ce qu'un agent lit est envoyé au fournisseur de son modèle**, hors du chiffrement de bout en bout. Une bannière le rappelle à tous tant qu'un agent est présent.
 - Le badge « IA » est déclaré par l'agent ; ce n'est pas une preuve.
@@ -216,7 +216,7 @@ Each home card opens a screen that keeps the same icon and title. Every service 
   - Retention: 90 days per report, 1 year per mailbox.
   - Designed with the EU Whistleblower Directive and the French Sapin II law in mind: that is a design intent, not a certification.
   - Pages: create, reporter page, inbox, follow-up.
-- **Sharewall (v2), an ephemeral live wall.** A Discord-like room shared by link or QR code, open for 15 min, 1 h or 24 h.
+- **Sharewall (v2), an ephemeral live wall.** A Discord-like room shared by link or QR code, with no time limit: it stays open as long as the host keeps the tab, and is destroyed as soon as the host leaves it. Each wall can have a name, shown to every participant.
   - **Features:** member panel, grouped messages with replies, `@name` mentions and light HTML-free formatting, built-in emoji picker, reactions, polls, raised hand, applause bursts, host pinning. Files, masked notes and secrets; images, video and audio inline.
   - **Live media:** screen, camera or microphone after confirmation, with a "LIVE" badge and a stop button. The host relays streams, 2 at a time at most.
   - **Star topology:** every participant connects to the host's browser only, which keeps the content in RAM. Nothing is stored on a server or in browser storage.
@@ -241,7 +241,7 @@ npx filenymous upload build.zip --ttl 1h --max-downloads 1          # prints the
 npx filenymous upload video.mp4 --stream --expires 2026-10-20T18:00:00Z
 FILENYMOUS_PASSWORD=… npx filenymous receive "<link or code>" -o ./dl
 npx filenymous wall join "https://filenymous.eu/app/#wall:…" --name "My agent"   # AI agent, JSON Lines
-npx filenymous wall create --ttl 1h --allow-agents                   # host a wall from the terminal
+npx filenymous wall create --title "Atelier" --allow-agents                # host a wall from the terminal
 npx filenymous wall mcp "https://filenymous.eu/app/#wall:…"          # MCP server (stdio)
 ```
 
@@ -254,7 +254,7 @@ When the host ticks "Allow AI agents", an agent (Claude, Cursor, a script…) ca
 - **Access:** JSON Lines on stdin/stdout, a **local HTTP/SSE bridge** (`--http`, on 127.0.0.1 with a token), or **MCP**.
 - **MCP tools:** `wall_read_messages`, `wall_send_message`, `wall_send_file`, `wall_react`, `wall_list_participants`, `wall_get_item`, `wall_info`.
 
-The MCP configuration is the JSON snippet in the [French section](#agents-ia) (same file for Claude Desktop and Cursor). The invite link is a secret: keep that file private and remove the entry once the wall has expired.
+The MCP configuration is the JSON snippet in the [French section](#agents-ia) (same file for Claude Desktop and Cursor). The invite link is a secret: keep that file private and remove the entry once the wall is destroyed.
 
 - **Everything an agent reads is sent to its model provider**, outside end-to-end encryption. A banner reminds everyone while an agent is present.
 - The "AI" badge is self-declared by the agent; it is not proof.

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { confirmLeave } from "../../home/confirmLeave";
 import { QRCodeSVG } from "qrcode.react";
 import { p2pSupported } from "../config";
 import { formatBytes } from "../../ux-v3/types";
@@ -142,6 +143,8 @@ function OwnerView({ params, password }: { params: OwnerDropParams; password?: s
 
   // Anti tab-close: DropOwner holds one guard per in-flight contribution, until
   // the contributor acknowledged the receipt (remote side fully completed).
+  // Received files are already saved, so an idle Dropzone closes without asking;
+  // mid-reception, "Arrêter", ← Accueil and the logo all go through confirmLeave().
 
   const copy = async () => {
     try {
@@ -213,7 +216,7 @@ function OwnerView({ params, password }: { params: OwnerDropParams; password?: s
       <p className="v3-footnote">{t("dropzone.ownerPrivateLink")}</p>
       <p className="v3-footnote">{t("dropzone.securityNote")}</p>
       {!isExpired(params) && state.status !== "stopped" && (
-        <button type="button" className="v3-btn-ghost" data-testid="drop-stop" onClick={() => ownerRef.current?.stop()}>
+        <button type="button" className="v3-btn-ghost" data-testid="drop-stop" onClick={() => void confirmLeave().then((ok) => ok && ownerRef.current?.stop())}>
           {t("dropzone.stop")}
         </button>
       )}

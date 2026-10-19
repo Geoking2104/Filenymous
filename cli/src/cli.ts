@@ -47,7 +47,9 @@ wall options (agents show an "AI" badge; it is self-declared):
   --http-port <n>         port for --http (default: random)
   --files-root <dir>      directory files may be sent from (default .)
   -o, --output <dir>      where explicit "get" saves files (default .)
-  create: --ttl 15m|1h|24h (default 1h), --burn, --keep-on-leave, --allow-agents
+  create: --title <wall name>, --burn, --keep-on-leave, --allow-agents
+          (no lifetime by default: the wall lives as long as this process;
+           optional --ttl 15m|1h|24h also ends it at a fixed time)
   JSON Lines: events on stdout (ready, message, file, note, poll, reaction, join,
   leave, removed, pin, notice, ended); commands on stdin, e.g.
   {"cmd":"send","text":"hello"} {"cmd":"react","id":"…","emoji":"👍"}
@@ -80,6 +82,7 @@ const { values: o, positionals } = parseArgs({
     name: { type: "string" },
     burn: { type: "boolean" },
     "keep-on-leave": { type: "boolean" },
+    title: { type: "string" },
     "allow-agents": { type: "boolean" },
     http: { type: "boolean" },
     "http-port": { type: "string" },
@@ -263,6 +266,7 @@ async function wall(rest: string[]): Promise<number> {
     password: o.password ?? process.env.FILENYMOUS_PASSWORD ?? undefined,
     appUrl: o["app-url"] ?? process.env.FILENYMOUS_APP_URL ?? DEFAULT_APP_URL,
     ttl: o.ttl,
+    title: o.title,
     burn: !!o.burn,
     keepOnLeave: !!o["keep-on-leave"],
     allowAgents: !!o["allow-agents"],

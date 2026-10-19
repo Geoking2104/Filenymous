@@ -37,7 +37,8 @@ export function wallSignalUrl(base = signalUrl()): string {
  */
 export function wallJoinMessage(j: WallJoin): Record<string, unknown> {
   if (j.role === "host") {
-    return { type: "wall-join", wallId: j.wallId, role: "host", hostSecret: j.hostSecret, expiresAt: j.expiresAt, destroyOnHostLeave: !!j.destroyOnHostLeave };
+    // No expiry (0) → the field is omitted: the wall lives with its host.
+    return { type: "wall-join", wallId: j.wallId, role: "host", hostSecret: j.hostSecret, ...(j.expiresAt ? { expiresAt: j.expiresAt } : {}), destroyOnHostLeave: !!j.destroyOnHostLeave };
   }
   return { type: "wall-join", wallId: j.wallId, role: "peer", peerId: j.peerId };
 }

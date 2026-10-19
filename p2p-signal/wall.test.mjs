@@ -11,7 +11,7 @@ let relay;
 
 before(async () => {
   relay = spawn(process.execPath, [new globalThis.URL("./server.js", import.meta.url).pathname], {
-    env: { ...process.env, PORT: String(PORT), WALL_SWEEP_MS: "100", WALL_HOST_GRACE_MS: "300", RATE_LIMIT_MAX_MESSAGES: "1000" },
+    env: { ...process.env, PORT: String(PORT), WALL_SWEEP_MS: "100", WALL_HOST_GRACE_MS: "300", WALL_ORPHAN_MS: "1500", RATE_LIMIT_MAX_MESSAGES: "1000" },
     stdio: "pipe",
   });
   await new Promise((ok, ko) => {
@@ -167,6 +167,33 @@ test("expiry is enforced by the relay, capped at 24 h, and can't be extended by 
   const h2b = await host(s2, { expiresAt: Date.now() + 25 * 24 * 3600 * 1000 });
   assert.ok(h2b.joined.expiresAt <= h2.joined.expiresAt);
   for (const x of [h, a, h2, h2b]) x.c.close();
+});
+
+test("no-expiry walls: expiresAt may be omitted; they live with the host and close when it leaves", async () => {
+  const s = hostSecret("n1");
+  const h = await host(s, { expiresAt: undefined, destroyOnHostLeave: true });
+  assert.equal(h.joined.type, "wall-joined");
+  assert.equal(h.joined.expiresAt, 0);
+  const a = await peer(wallIdOf(s), "p-nnn");
+  await assert.rejects(a.c.next(m => m.type === "wall-closed", 600));
+  h.c.close();
+  assert.equal((await a.c.next(m => m.type === "wall-closed", 3000)).reason, "host-left");
+  const again = await host(s, { expiresAt: undefined });
+  assert.equal(again.joined.type, "error");
+  assert.equal(again.joined.error, "wall-closed");
+  const bad = await host(hostSecret("n2"), { expiresAt: -5 });
+  assert.equal(bad.joined.error, "wall-closed");
+  for (const x of [a, again, bad]) x.c.close();
+});
+
+test("a no-expiry wall left without its host is closed after the orphan delay", async () => {
+  const s = hostSecret("n3");
+  const h = await host(s, { expiresAt: undefined, destroyOnHostLeave: false });
+  const a = await peer(wallIdOf(s), "p-ooo");
+  h.c.close();
+  await a.c.next(m => m.type === "wall-host-offline");
+  assert.equal((await a.c.next(m => m.type === "wall-closed", 4000)).reason, "host-left");
+  a.c.close();
 });
 
 test("peer capacity is bounded", async () => {
