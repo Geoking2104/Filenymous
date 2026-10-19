@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLeaveGuard } from "../home/confirmLeave";
 import { b64urlEncode } from "../p2p/protocol";
 import { deriveFollow, encodePayload, fingerprint, formatFollowKey, newFollowSecret, parseReportHash, seal, type ReportFile } from "./crypto";
 import { stripMetadata } from "./metadata";
@@ -24,6 +25,8 @@ export default function ReportSubmitPanel({ hash }: { hash: string }) {
   const [error, setError] = useState<string | null>(null);
   const [followKey, setFollowKey] = useState<string | null>(null);
   const [noted, setNoted] = useState(false);
+  // An unsent report, or a follow-up key shown only once, would be lost.
+  useLeaveGuard(followKey ? !noted : state === "ready" && (text.trim().length > 0 || files.length > 0));
 
   useEffect(() => {
     if (!target) return setState("gone");

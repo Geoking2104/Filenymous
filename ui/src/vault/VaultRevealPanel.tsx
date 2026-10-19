@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLeaveGuard } from "../home/confirmLeave";
 import { openSecret, parseSecretLink, revealToken } from "./crypto";
 import { VaultError, getSecretMeta, revealSecret, vaultBase, type SecretMeta } from "./api";
 
@@ -49,6 +50,8 @@ export default function VaultRevealPanel({ hash }: Props) {
   const [busy, setBusy] = useState(false);
   const [pwError, setPwError] = useState(false);
   const [copied, setCopied] = useState(false);
+  // A burned secret can never be shown again: ask before closing it.
+  useLeaveGuard(view.kind === "revealed" && view.burned);
 
   useEffect(() => {
     if (!parsed) {

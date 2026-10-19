@@ -25,3 +25,10 @@ export function releaseUnloadGuard(reason: string): void {
 export function unloadGuardActive(): boolean {
   return reasons.size > 0;
 }
+
+/** The user confirmed leaving (in-app dialog): drop every reason at once. */
+export function clearUnloadGuards(): void {
+  if (reasons.size === 0) return;
+  reasons.clear();
+  if (typeof window !== "undefined") window.removeEventListener("beforeunload", onBeforeUnload);
+}

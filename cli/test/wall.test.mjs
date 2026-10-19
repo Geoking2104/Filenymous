@@ -15,10 +15,13 @@ const common = () => ["--signal", relay.url, "--app-url", "http://localhost:5173
 test("agents host and join a wall: messages, mentions, reactions, files, notes, polls, explicit get, leave", { timeout: 90_000 }, async () => {
   const dir = mkdtempSync(join(tmpdir(), "fnwall-"));
   writeFileSync(join(dir, "report.txt"), "rapport de l'agent");
-  const host = wallCli(["create", "--allow-agents", "--name", "Hôte IA", ...common()], { cwd: dir });
+  const host = wallCli(["create", "--allow-agents", "--name", "Hôte IA", "--title", "Labo IA", ...common()], { cwd: dir });
   const ready = await host.wait((l) => l.event === "ready");
   assert.equal(ready.role, "host");
-  assert.match(ready.link, /^http:\/\/localhost:5173\/#wall:wall-[a-f0-9]{24}\/[A-Za-z0-9_-]{43}\/[0-9a-z]+\/nh$/);
+  // No lifetime by default ("0"), destroyed when the host leaves ("h"); the name is not in the link.
+  assert.match(ready.link, /^http:\/\/localhost:5173\/#wall:wall-[a-f0-9]{24}\/[A-Za-z0-9_-]{43}\/0\/nh$/);
+  assert.equal(ready.expiresAt, null);
+  assert.equal(ready.title, "Labo IA");
   assert.match(ready.code, /^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
   assert.ok(!JSON.stringify(ready).includes("wall-host:"), "the host secret is never printed");
 
@@ -27,6 +30,7 @@ test("agents host and join a wall: messages, mentions, reactions, files, notes, 
   const ra = await a.wait((l) => l.event === "ready");
   const rb = await b.wait((l) => l.event === "ready");
   assert.equal(ra.code, ready.code);
+  assert.equal(ra.title, "Labo IA"); // received inside the sealed welcome
   await host.wait((l) => l.event === "join" && l.name === "Agent B" && l.agent === true);
 
   a.send({ cmd: "send", text: "Bonjour @Agent B, **ça va** ?", ref: "m1" });
@@ -182,5 +186,7 @@ test("help mentions the wall commands and the provider caveat", async () => {
   assert.match(r.stdout, /wall join <link>/);
   assert.match(r.stdout, /wall mcp/);
   assert.match(r.stdout, /sent to its model provider/);
-  assert.match(readFileSync(new URL("../package.json", import.meta.url), "utf8"), /"version": "0\.4\.0"/);
+  assert.match(r.stdout, /--title <wall name>/);
+  assert.match(r.stdout, /no lifetime by default/);
+  assert.match(readFileSync(new URL("../package.json", import.meta.url), "utf8"), /"version": "0\.4\.1"/);
 });

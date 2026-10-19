@@ -346,3 +346,13 @@
 .pz-screen-head { display: flex; align-items: center; justify-content: center; gap: .75rem; margin: 0; }
 .pz-screen-head h1 { margin: 0; font-size: 1.45rem; letter-spacing: -.02em; line-height: 1.2; text-align: left; }
 @media (max-width: 520px) { .pz-screen-head { gap: .6rem; } .pz-screen-head h1 { font-size: 1.2rem; } }
+
+/* Shared "leave / close" confirmation */
+.pz-confirm { max-width: 440px; text-align: left; }
+.pz-confirm h2 { margin: 0 0 .6rem; font-size: 1.15rem; }
+.pz-confirm p { margin: 0 0 .8rem; line-height: 1.5; }
+.pz-confirm-detail { color: var(--fy-text-muted, inherit); font-size: .92rem; }
+.pz-confirm-actions { display: flex; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; margin-top: 1.2rem; }
+.pz-confirm-actions .pz-btn { min-width: 7.5rem; }
+.pz-btn.pz-btn-danger { background: #dc2626 !important; border-color: #dc2626 !important; color: #fff !important; }
+.pz-btn.pz-btn-danger:hover { background: #b91c1c !important; }

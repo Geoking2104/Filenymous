@@ -14,6 +14,7 @@ import {
   isWallHostHash,
   parseHostLink,
   parseWallLink,
+  sanitizeWallTitle,
   wallCode,
   wallIdFor,
 } from "./link";
@@ -300,5 +301,62 @@ describe("Sharewall privacy wording", () => {
         expect(c[`${k}d`]).toBeTruthy();
       }
     }
+  });
+});
+
+describe("Sharewall without a lifetime, with a name", () => {
+  it("new walls have no expiry: link segment 0, never expired, no countdown", async () => {
+    const p = await createWall({ hostLeave: true, now: NOW });
+    expect(p.expiresAt).toBe(0);
+    const peer = buildWallLink(BASE, p);
+    expect(peer).toMatch(/\/0\/nh$/);
+    expect(parseWallLink(peer)!.expiresAt).toBe(0);
+    expect(isExpired(p, NOW + 365 * 24 * 3600_000)).toBe(false);
+    expect(remainingMs(0, NOW)).toBe(Infinity);
+    // Legacy links with an expiry are still honoured.
+    const legacy = await createWall({ ttl: "m15", now: NOW });
+    expect(isExpired(legacy, NOW + 16 * 60_000)).toBe(true);
+  });
+
+  it("the relay join omits expiresAt for no-expiry walls", async () => {
+    const p = await createWall({ hostLeave: true });
+    const host = wallJoinMessage({ wallId: p.wallId, role: "host", hostSecret: p.hostSecret, expiresAt: 0, destroyOnHostLeave: true });
+    expect(Object.keys(host).sort()).toEqual(["destroyOnHostLeave", "hostSecret", "role", "type", "wallId"]);
+    expect(JSON.stringify(host)).not.toMatch(/title|name/);
+  });
+
+  it("sanitises the name and keeps it in the host link only", async () => {
+    expect(sanitizeWallTitle("  Réunion\n\u0000 équipe\u202e  ")).toBe("Réunion équipe");
+    expect(sanitizeWallTitle("x".repeat(200))).toHaveLength(80);
+    expect(sanitizeWallTitle("🧱".repeat(100))).toBe("🧱".repeat(80));
+    expect(sanitizeWallTitle(undefined)).toBe("");
+    const p = await createWall({ title: "Atelier <b>lundi</b> 🚀", hostLeave: true });
+    expect(p.title).toBe("Atelier <b>lundi</b> 🚀");
+    const host = buildHostLink(BASE, p);
+    const peer = buildWallLink(BASE, p);
+    expect(peer).not.toMatch(/Atelier|lundi/);
+    expect(host.split("/").length).toBe(buildHostLink(BASE, { ...p, title: "" }).split("/").length + 1);
+    expect((await parseHostLink(host))!.title).toBe("Atelier <b>lundi</b> 🚀");
+    expect((await parseHostLink(buildHostLink(BASE, { ...p, title: "" })))!.title).toBe("");
+    expect(await parseHostLink(`${host.split("/").slice(0, -1).join("/")}/%%%`)).toBeNull();
+  });
+
+  it("the sealed welcome carries an optional, sanitised title (older hosts: none)", () => {
+    const base = { t: "welcome", label: "peer:1", expiresAt: 0, burn: false, hostLeave: true, agents: false, media: false };
+    expect(parseWallMessage(base)).toMatchObject({ t: "welcome", expiresAt: 0, title: "" });
+    expect(parseWallMessage({ ...base, title: " Mon\u0007 mur " })).toMatchObject({ title: "Mon mur" });
+    expect(parseWallMessage({ ...base, title: "x".repeat(2000) })).toMatchObject({ title: "" });
+  });
+
+  it("FR/EN copy: no lifetime choice, acknowledgement and leave dialog texts", () => {
+    const w = fr.wall as Record<string, unknown>;
+    expect(w.ttl).toBeUndefined();
+    expect(w.ttlChoice).toBeUndefined();
+    expect(fr.wall.ackLeave).toBe("J'ai compris qu'en quittant, le mur et toutes ses informations seront détruits.");
+    expect(fr.leave.message).toBe("Vous êtes sur le point de fermer la fenêtre. Cela fera disparaître les informations de celle-ci. Confirmez-vous ?");
+    expect([fr.leave.cancel, fr.leave.confirm]).toEqual(["Annuler", "Quitter"]);
+    expect(fr.wall.untitled).toBe("Mur sans nom");
+    expect(en.wall.untitled).toBe("Untitled wall");
+    expect(en.leave.confirm).toBe("Leave");
   });
 });

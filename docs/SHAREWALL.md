@@ -10,14 +10,14 @@ Entrées : `https://filenymous.eu/app/#wall-new` (raccourci `https://filenymous.
 
 - **Journalisme et sources** : échange ponctuel de documents pendant un rendez-vous, mur détruit à la fin. Pour un signalement *sensible* (anonymat réseau nécessaire), le [canal de signalement](../ui/src/report) reste l'outil adapté : il fonctionne avec Tor Browser, alors que le mur (WebRTC) non.
 - **Développeurs** : passer une clé d'API, un `.env`, un certificat de test pendant un appel ; notes masquées, autodestruction après une lecture.
-- **Due diligence / data room éclair** : un mur de 24 h avec mot de passe, pour que plusieurs parties déposent et consultent des pièces le temps d'une réunion, puis bouton « Détruire le mur ».
+- **Due diligence / data room éclair** : un mur avec mot de passe, pour que plusieurs parties déposent et consultent des pièces le temps d'une réunion, puis bouton « Détruire le mur ».
 - **Documents personnels** : envoyer pièces d'identité, justificatifs, photos entre ses propres appareils ou à un proche, sans les laisser sur un cloud.
-- **Atelier, cours, démo** : un mur d'une heure pour une audience (≤ 8) : réactions, sondages, main levée, partage d'écran de l'hôte ou d'un participant.
+- **Atelier, cours, démo** : un mur le temps d'une séance pour une audience (≤ 8) : réactions, sondages, main levée, partage d'écran de l'hôte ou d'un participant.
 - **Humains + agents** : un agent IA (Claude, Cursor, un script…) rejoint le mur avec la CLI pour résumer, répondre, déposer un rapport ; plusieurs agents peuvent échanger entre eux, sous le contrôle de l'hôte.
 
 ## Expérience (v2)
 
-- **Panneau latéral** : infos du mur (code, QR, lien, durée restante), participants avec avatar (initiales colorées), présence, badge « Hôte », badge « IA », main levée, « écrit… » ; chacun peut modifier son nom ; l'hôte peut déconnecter un participant. Sur mobile (< 860 px), panneau repliable.
+- **Panneau latéral** : infos du mur (nom, code, QR, lien ; durée restante pour les anciens liens à échéance), participants avec avatar (initiales colorées), présence, badge « Hôte », badge « IA », main levée, « écrit… » ; chacun peut modifier son nom ; l'hôte peut déconnecter un participant. Sur mobile (< 860 px), panneau repliable.
 - **Fil** : messages regroupés par auteur et par minute, horodatage, réponses citées, mentions `@nom` (autocomplétion), mise en forme légère sûre (`**gras**`, `*italique*`, `` `code` ``, blocs ```` ``` ````, citations `>`, liens http(s) en `noopener noreferrer`) — **aucun HTML interprété** : le rendu ne crée que des nœuds texte et un jeu fixe de balises.
 - **Compositeur** : Entrée envoie (Maj+Entrée = ligne), sélecteur d'emojis embarqué (recherche, catégories, aucune ressource externe), réactions rapides, glisser-déposer et coller (fichiers, images), formulaires « Note / secret », « Sondage » et « En direct ».
 - Thème clair/sombre identique au site ; animations désactivées avec `prefers-reduced-motion`.
@@ -68,12 +68,13 @@ Contreparties assumées : l'onglet de l'hôte doit rester ouvert (il détient le
 | Lien | Forme | Qui l'a |
 |---|---|---|
 | Participant | `/app/#wall:<wallId>/<clé>/<expiration>/<options>` | toutes les personnes invitées (lien, QR code) |
-| Hôte | `/app/#wall-host:<secretHôte>/<clé>/<expiration>/<options>` | uniquement l'onglet de l'hôte (permet de reprendre après rechargement) |
+| Hôte | `/app/#wall-host:<secretHôte>/<clé>/<expiration>/<options>[/<nom>]` | uniquement l'onglet de l'hôte (permet de reprendre après rechargement) |
 | Création | `/app/#wall-new`, `/wall`, `/wall/new` | public, sans secret |
 
 - `clé` : 32 octets aléatoires (base64url, 43 caractères), générés dans le navigateur de l'hôte. Elle n'existe que dans le **fragment** (après `#`), que les navigateurs n'envoient jamais au serveur web ni au relais.
 - `wallId` = `wall-` + 24 premiers caractères hex de `SHA-256(secretHôte)` : le relais vérifie cette égalité, donc seul le détenteur du lien hôte peut prendre le rôle d'hôte. Le lien participant ne contient pas `secretHôte`.
-- `expiration` : secondes Unix en base 36 (obligatoire, ≤ 24 h).
+- `expiration` : `0` pour les nouveaux murs (**pas de durée limite** : le mur vit tant que l'hôte le garde ouvert et il est détruit quand l'hôte le quitte). Les anciens liens portent des secondes Unix en base 36 (≤ 24 h) et restent honorés jusqu'à leur échéance.
+- `nom` (lien hôte seulement, optionnel) : nom du mur en UTF-8 base64url, pour qu'un hôte qui recharge le garde. Les participants le reçoivent dans le message `welcome` scellé, jamais dans leur lien ; le relais ne le voit pas. Nettoyé (caractères de contrôle retirés, espaces fusionnés, 80 caractères max) et affiché comme du texte.
 - `options` : `p` | `n` (mot de passe ou non), puis `1` (autodestruction après un téléchargement) et/ou `h` (détruire si l'hôte se déconnecte). Ex. `n`, `p1h`, `nh`.
 - L'expiration et les options entrent dans la dérivation de clés : les modifier dans le lien fait échouer la poignée de main.
 - **Code du mur** `XXXX-XXXX` : dérivé de `SHA-256("filenymous-wall-code|wallId|clé")`, affiché chez tous. Il sert à **vérifier** à voix haute qu'on est sur le même mur ; il ne permet **pas** de rejoindre : un code court tapé à la main suffirait au relais pour retrouver la salle, et un code assez long pour porter la clé ne serait plus « court ». On rejoint donc par lien ou QR code uniquement.
@@ -91,7 +92,7 @@ Relais (WebSocket `wss://www.opendpe.net/filenymous-signal/wall`) :
 
 | Message | Champs (liste stricte, tout autre champ est refusé) |
 |---|---|
-| `wall-join` hôte | `wallId`, `role:"host"`, `hostSecret`, `expiresAt`, `destroyOnHostLeave` |
+| `wall-join` hôte | `wallId`, `role:"host"`, `hostSecret`, `expiresAt` (optionnel : absent = pas d'expiration), `destroyOnHostLeave` |
 | `wall-join` participant | `wallId`, `role:"peer"`, `peerId` (aléatoire) |
 | `wall-signal` | `payload` (offre/réponse/ICE), `to` (hôte uniquement) |
 | `wall-close` | hôte uniquement : ferme la salle pour tous (pierre tombale : la salle ne peut pas renaître) |
@@ -104,19 +105,20 @@ DataChannel (tout scellé après la poignée de main) :
 Version de protocole 2 (`v: 2` dans `wall-hello`).
 
 - participant → hôte : d'abord `profile {name, agent, media}` ; puis `say {text, replyTo?}`, `put {uid, kind, name, size, mime, replyTo?}` + trames (flux `uid`) + `put-end`, `get {rid, id}`, `react {id, emoji}`, `poll {question, options}`, `vote`, `poll-close`, `remove`, `typing`, `burst {kind}`, `hand {up}`, `rename {name}`, `live-start {kind, tracks}`, `live-stop`, `rtc {link, kind: offer|answer|ice, …}`, `bye`.
-- hôte → participant : `welcome {label, expiresAt, burn, hostLeave, agents, media}`, puis les `post` existants, `pin`, `live` ; ensuite `members`, `post` (création ou mise à jour : réactions, votes), `unpost`, `pin`, `typing-by`, `burst-by`, `settings {agents}`, `live`, `live-ok/live-fail`, `rtc`, `notice {code, retryMs?}`, `kick {reason: kicked|agents-off}`, `put-ok/put-fail`, `get-begin` + trames + `get-end/get-fail`, `destroy {reason}`.
+- hôte → participant : `welcome {label, expiresAt, burn, hostLeave, agents, media, title?}` (`expiresAt: 0` = pas d'expiration), puis les `post` existants, `pin`, `live` ; ensuite `members`, `post` (création ou mise à jour : réactions, votes), `unpost`, `pin`, `typing-by`, `burst-by`, `settings {agents}`, `live`, `live-ok/live-fail`, `rtc`, `notice {code, retryMs?}`, `kick {reason: kicked|agents-off}`, `put-ok/put-fail`, `get-begin` + trames + `get-end/get-fail`, `destroy {reason}`.
 - Chaque message est validé strictement (`parseWallMessage`) : champs, types et longueurs ; tout message invalide coupe la connexion.
 
-Code : `ui/src/wall/` (`link.ts`, `crypto.ts`, `model.ts`, `feed.ts`, `markup.ts`, `emoji.ts`, `live.ts`, `signal.ts`, `host.ts`, `peer.ts`, `WallRoom.tsx`, `WallPanel.tsx`, `Markup.tsx`, `EmojiPicker.tsx`), CLI `cli/src/wall.ts`, relais `p2p-signal/server.js` (inchangé en v2).
+Code : `ui/src/wall/` (`link.ts`, `crypto.ts`, `model.ts`, `feed.ts`, `markup.ts`, `emoji.ts`, `live.ts`, `signal.ts`, `host.ts`, `peer.ts`, `WallRoom.tsx`, `WallPanel.tsx`, `Markup.tsx`, `EmojiPicker.tsx`), CLI `cli/src/wall.ts`, relais `p2p-signal/server.js` (v2 inchangé ; octobre 2026 : `expiresAt` optionnel pour les murs sans expiration).
 
 ## Règles de vie
 
-- **Expiration** : contrôlée chaque seconde chez l'hôte et chez chaque participant (effacement local), et par le relais (fermeture de la salle).
+- **Pas de durée limite** (depuis octobre 2026) : à la création, l'hôte donne un nom au mur et doit cocher « J'ai compris qu'en quittant, le mur et toutes ses informations seront détruits » (le bouton « Créer » reste désactivé sinon). Un mur sans hôte depuis 1 h est fermé par le relais.
+- **Expiration (anciens liens)** : contrôlée chaque seconde chez l'hôte et chez chaque participant (effacement local), et par le relais (fermeture de la salle).
 - **Autodestruction après 1 téléchargement** : le premier « Télécharger », « Aperçu » ou « Révéler » par quelqu'un d'autre que l'auteur (hôte compris) retire l'élément du mur ; une confirmation est demandée avant. Celui qui l'a obtenu garde sa copie en mémoire (marquée « Copie locale ») jusqu'à la destruction du mur.
 - **Détruire le mur** : l'hôte envoie `destroy` scellé à chaque participant (effacement + révocation des Blob URL), ferme les connexions, puis `wall-close` au relais.
-- **Hôte déconnecté** (option) : fermeture du DataChannel → les participants effacent tout immédiatement ; le relais ferme la salle après la période de grâce.
+- **Hôte déconnecté** (toujours activé pour les nouveaux murs) : fermeture du DataChannel → les participants effacent tout immédiatement ; le relais ferme la salle après la période de grâce.
 - **Quitter** : un participant peut partir à tout moment ; sa copie est effacée.
-- **Garde anti-fermeture** : tant qu'au moins un participant est connecté, fermer l'onglet hôte demande confirmation (`beforeunload`).
+- **Confirmation de fermeture** : fermer l'onglet (`beforeunload`), « ← Accueil », le logo, « Quitter le mur » ou « Détruire le mur » affichent la même confirmation partagée par tous les services (« Vous êtes sur le point de fermer la fenêtre… », Annuler / Quitter) tant que le mur est ouvert ; chez l'hôte, « Quitter » détruit le mur pour tous.
 
 ## Limites
 
@@ -129,7 +131,7 @@ Code : `ui/src/wall/` (`link.ts`, `crypto.ts`, `model.ts`, `feed.ts`, `markup.ts
 | Message | 4000 caractères ; fil : 1000 messages/sondages |
 | Flux en direct | 2 par mur, 1 par participant, 2 pistes par flux |
 | Médias en ligne automatiques | ≤ 32 Mio, murs sans autodestruction |
-| Durée de vie | 15 min, 1 h ou 24 h |
+| Durée de vie | aucune : tant que l'hôte garde le mur ouvert (relais : mur sans hôte fermé après 1 h) |
 
 Le contenu est gardé en RAM (`Blob`) : la mémoire de l'onglet hôte borne en pratique le volume.
 
@@ -142,19 +144,19 @@ Le contenu est gardé en RAM (`Blob`) : la mémoire de l'onglet hôte borne en p
 ## Confidentialité : ce qui est protégé, ce qui ne l'est pas
 
 - Protégé : le contenu, les noms de fichiers, les notes, le mot de passe et la clé, vis-à-vis du relais, de l'hébergeur et de tout intermédiaire réseau (TURN compris).
-- Le relais voit : un identifiant de mur opaque, l'expiration, l'option « détruire si l'hôte part », le `hostSecret` de l'hôte (dont il ne vérifie que le hash), les paramètres WebRTC (SDP, candidats ICE, donc les adresses IP) et l'adresse IP de connexion, gardée **en mémoire** pour la limitation de débit. Il n'écrit aucune ligne par requête ; nginx a `access_log off` pour `/filenymous-signal/wall` (après déploiement, voir plus bas).
+- Le relais voit : un identifiant de mur opaque, l'expiration éventuelle (anciens liens), l'option « détruire si l'hôte part », le `hostSecret` de l'hôte (dont il ne vérifie que le hash), les paramètres WebRTC (SDP, candidats ICE, donc les adresses IP) et l'adresse IP de connexion, gardée **en mémoire** pour la limitation de débit. Il n'écrit aucune ligne par requête ; nginx a `access_log off` pour `/filenymous-signal/wall` (après déploiement, voir plus bas).
 - **Ce n'est pas de l'anonymat** : en WebRTC l'hôte voit l'IP de chaque participant et chaque participant voit celle de l'hôte (sauf relais TURN). Tor Browser désactive WebRTC : pour masquer son IP, utiliser un VPN de confiance. Pour une source ou un lanceur d'alerte, le canal de signalement (asynchrone, utilisable via Tor) est le bon outil.
 - **Agents IA** : ce qu'un agent lit sort du chiffrement de bout en bout vers le fournisseur de son modèle (désactivé par défaut, avertissement à l'activation et tant qu'un agent est là ; badge auto-déclaré).
 - **En direct** : l'hôte reçoit et retransmet les flux ; les participants voient l'IP de l'hôte, pas celles des autres.
 - Les participants peuvent enregistrer, copier ou photographier ce qu'ils ont vu : la destruction efface les copies en mémoire, pas ce qui a déjà été sauvegardé.
 - Pas de mesure d'audience sur les pages `#wall…` (le garde Umami coupe l'envoi).
-- Le lien hôte (avec `hostSecret`) est dans la barre d'adresse et l'historique de l'onglet hôte, comme pour la Dropzone ; le lien participant reste dans l'historique des participants jusqu'à expiration (il devient alors inutilisable).
+- Le lien hôte (avec `hostSecret`) est dans la barre d'adresse et l'historique de l'onglet hôte, comme pour la Dropzone ; le lien participant reste dans l'historique des participants jusqu'à la destruction du mur (il devient alors inutilisable).
 - Le texte de l'interface est protégé par un test (`ui/src/wall/wall.test.ts`) qui interdit « anonymat absolu », « aucune IP », « zéro log », « certifié », etc. et exige les mentions IP/VPN/Tor/canal de signalement.
 
-## CLI et agents IA (`filenymous` ≥ 0.4.0)
+## CLI et agents IA (`filenymous` ≥ 0.4.1 pour les murs sans expiration)
 
 ```
-npx filenymous wall create [--ttl 15m|1h|24h] [--burn] [--keep-on-leave] [--allow-agents] [--name <nom>]
+npx filenymous wall create [--title <nom du mur>] [--ttl 15m|1h|24h] [--burn] [--keep-on-leave] [--allow-agents] [--name <nom>]
 npx filenymous wall join "<lien>" [--name <nom>] [--http] [--files-root <dir>] [-o <dir>]
 npx filenymous wall mcp "<lien>" | --create [...]
 ```

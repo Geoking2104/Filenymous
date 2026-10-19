@@ -41,7 +41,7 @@ test("Sharewall v2 screenshots", async ({ browser }) => {
   mkdirSync(DIR!, { recursive: true });
   const desk = { width: 1440, height: 900 };
   const host = await ctx(browser, desk);
-  const { link } = await createWall(host, { hostLeave: false, agents: true });
+  const { link } = await createWall(host, { agents: true });
   await rename(host, "host", "Camille (hôte)");
   const alice = await ctx(browser, desk);
   await join(alice, link);

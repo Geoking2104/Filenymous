@@ -422,6 +422,7 @@ export class WallHost {
       hostLeave: this.params.hostLeave,
       agents: this.state.agents,
       media: !!this.opts.media,
+      ...(this.params.title ? { title: this.params.title } : {}),
     });
     // Posts go one by one so no single message hits the DataChannel size limit.
     for (const post of this.state.posts) void this.sendControl(peer, { t: "post", post });
@@ -888,6 +889,16 @@ export class WallHost {
   /** Leaving the page / unmount: peers see the host go away (and wipe if the option is on). */
   stop() {
     if (this.done) return;
+    this.finish("destroyed");
+  }
+
+  /**
+   * Immediate kill switch (the host confirmed closing the window): the relay
+   * closes the wall and tells every peer right away, then this tab wipes.
+   */
+  destroyNow(): void {
+    if (this.done) return;
+    this.signal?.closeWall();
     this.finish("destroyed");
   }
 }

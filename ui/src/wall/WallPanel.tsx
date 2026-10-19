@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { p2pSupported } from "../p2p/config";
 import { PasswordPrompt } from "../p2p/dropzone/DropOwnerPanel";
 import { pseudonym } from "./feed";
-import { WALL_TTLS, buildHostLink, buildWallLink, createWall, isExpired, parseHostLink, parseWallLink, wallCode, type HostWallParams, type WallParams, type WallTtl } from "./link";
+import { WALL_TITLE_MAX, buildHostLink, buildWallLink, createWall, isExpired, parseHostLink, parseWallLink, sanitizeWallTitle, wallCode, type HostWallParams, type WallParams } from "./link";
+import { confirmDialog, confirmLeave, useLeaveGuard } from "../home/confirmLeave";
 import { WallHost, type HostState } from "./host";
 import { mediaSupported } from "./live";
 import { ENDED, WallPeer, type PeerState } from "./peer";
@@ -66,17 +67,20 @@ export function WallHostPanel({ hash }: { hash: string }) {
 
 function CreateForm({ onCreate }: { onCreate: (p: HostWallParams, password: string | undefined, agents: boolean) => void }) {
   const { t } = useTranslation();
-  const [ttl, setTtl] = useState<WallTtl>("h1");
+  const [name, setName] = useState("");
   const [burn, setBurn] = useState(false);
-  const [hostLeave, setHostLeave] = useState(true);
   const [agents, setAgents] = useState(false);
   const [pw, setPw] = useState("");
+  const [ack, setAck] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!ack || busy) return;
     setBusy(true);
-    const p = await createWall({ ttl, burn, hostLeave, password: pw.length > 0 });
+    // No expiry: the wall lives as long as the host keeps it open, and is
+    // destroyed when the host leaves.
+    const p = await createWall({ title: sanitizeWallTitle(name), burn, hostLeave: true, password: pw.length > 0 });
     onCreate(p, pw || undefined, agents);
   };
 
@@ -84,28 +88,24 @@ function CreateForm({ onCreate }: { onCreate: (p: HostWallParams, password: stri
     <form className="v3-result sw" data-testid="wall-create" onSubmit={submit}>
       <div className="v3-step">{t("wall.createTitle")}</div>
       <p className="v3-muted">{t("wall.createIntro")}</p>
-      <fieldset className="sw-field">
-        <legend>{t("wall.ttl")}</legend>
-        <div className="pz-expiry-choices" role="radiogroup" aria-label={t("wall.ttl")}>
-          {(Object.keys(WALL_TTLS) as WallTtl[]).map((k) => (
-            <button key={k} type="button" role="radio" aria-checked={ttl === k} className={ttl === k ? "on" : ""} data-testid={`wall-ttl-${k}`} onClick={() => setTtl(k)}>
-              {t(`wall.ttlChoice.${k}`)}
-            </button>
-          ))}
-        </div>
-      </fieldset>
+      <label className="v3-field sw-field">
+        <span>{t("wall.nameLabel")}</span>
+        <input
+          data-testid="wall-name"
+          type="text"
+          maxLength={WALL_TITLE_MAX}
+          autoComplete="off"
+          placeholder={t("wall.namePlaceholder")}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <small className="sw-small">{t("wall.nameHint")}</small>
+      </label>
       <label className="sw-check">
         <input type="checkbox" data-testid="wall-burn" checked={burn} onChange={(e) => setBurn(e.target.checked)} />
         <span>
           <strong>🔥 {t("wall.burn")}</strong>
           <small>{t("wall.burnHint")}</small>
-        </span>
-      </label>
-      <label className="sw-check">
-        <input type="checkbox" data-testid="wall-host-leave" checked={hostLeave} onChange={(e) => setHostLeave(e.target.checked)} />
-        <span>
-          <strong>🔌 {t("wall.hostLeave")}</strong>
-          <small>{t("wall.hostLeaveHint")}</small>
         </span>
       </label>
       <label className="sw-check">
@@ -119,7 +119,14 @@ function CreateForm({ onCreate }: { onCreate: (p: HostWallParams, password: stri
         <span>{t("wall.passwordOptional")}</span>
         <input data-testid="wall-password" type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} />
       </label>
-      <button type="submit" className="pz-btn pz-btn-block" data-testid="wall-create-submit" disabled={busy}>
+      <p className="sw-small" data-testid="wall-lifecycle">🔌 {t("wall.lifecycle")}</p>
+      <label className="sw-check sw-ack">
+        <input type="checkbox" data-testid="wall-ack-leave" required checked={ack} onChange={(e) => setAck(e.target.checked)} />
+        <span>
+          <strong>{t("wall.ackLeave")}</strong>
+        </span>
+      </label>
+      <button type="submit" className="pz-btn pz-btn-block" data-testid="wall-create-submit" disabled={busy || !ack}>
         {t("wall.createButton")}
       </button>
       <PrivacyNote />
@@ -180,6 +187,11 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
     [host, t],
   );
 
+  const live = !!state && state.status !== "destroyed" && state.status !== "expired";
+  // Closing the window destroys the wall for everyone: same confirmation as
+  // every service; on "Quitter" the wall is killed right away.
+  useLeaveGuard(live, { onLeave: () => hostRef.current?.destroyNow(), detail: "leave.wallHost" });
+
   if (state && (state.status === "destroyed" || state.status === "expired")) return <Ended status={state.status} host />;
   if (!state || !api) return null;
 
@@ -197,6 +209,7 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
     statusText,
     online: true,
     self: "host",
+    title: params.title ?? "",
     expiresAt: params.expiresAt,
     burn: params.burn,
     hostLeave: params.hostLeave,
@@ -220,7 +233,16 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
       invite={{ link }}
       testId="wall-host"
       statusTestId="wall-host-status"
-      onDestroy={() => window.confirm(t("wall.destroyConfirm")) && void hostRef.current?.destroy("destroyed")}
+      onDestroy={() =>
+        void confirmDialog({
+          title: t("leave.title"),
+          message: t("leave.message"),
+          detail: t("leave.wallHost"),
+          confirmLabel: t("leave.confirm"),
+          cancelLabel: t("leave.cancel"),
+          danger: true,
+        }).then((ok) => ok && void hostRef.current?.destroy("destroyed"))
+      }
     />
   );
 }
@@ -263,6 +285,9 @@ function PeerView({ params }: { params: WallParams }) {
   useEffect(() => {
     if (password !== undefined) void peerRef.current?.start(password);
   }, [password, peer]);
+
+  // Leaving drops everything this tab shows (the wall itself stays for others).
+  useLeaveGuard(state?.status === "online", { onLeave: () => void peerRef.current?.leave() });
 
   const api = useMemo<RoomApi | null>(
     () =>
@@ -320,6 +345,7 @@ function PeerView({ params }: { params: WallParams }) {
     statusText,
     online: s?.status === "online",
     self: s?.label,
+    title: s?.title ?? "",
     expiresAt: s?.expiresAt ?? params.expiresAt,
     burn: params.burn,
     hostLeave: params.hostLeave,
@@ -343,7 +369,7 @@ function PeerView({ params }: { params: WallParams }) {
       code={code}
       testId="wall-peer"
       statusTestId="wall-peer-status"
-      onLeave={() => window.confirm(t("wall.leaveConfirm")) && void peerRef.current?.leave()}
+      onLeave={() => void confirmLeave().then((ok) => ok && void peerRef.current?.leave())}
     />
   );
 }

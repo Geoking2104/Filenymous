@@ -104,11 +104,13 @@ The JSON payload is the same as above, POSTed for `share.created`, `download.com
 
 ```bash
 npx filenymous wall join "https://filenymous.eu/app/#wall:…" --name "Mon agent"   # JSON Lines on stdin/stdout
-npx filenymous wall create --ttl 1h --allow-agents                                 # host a wall; prints the invite link
+npx filenymous wall create --title "Atelier" --allow-agents                         # host a wall; prints the invite link
 npx filenymous wall mcp "https://filenymous.eu/app/#wall:…"                         # MCP server on stdio
 ```
 
 Password-protected walls: `FILENYMOUS_PASSWORD=… npx filenymous wall join …` (or `--password`). Closing the process leaves the wall; for `wall create` it also destroys it, unless `--keep-on-leave`.
+
+Walls have no lifetime by default (they live as long as their host); `wall create --ttl 15m|1h|24h` still sets a fixed end. Walls created on the web app since October 2026 use links without an expiry (`…/0/…`): joining them needs **filenymous ≥ 0.4.1** (0.4.0 rejects these links).
 
 ### JSON Lines
 
@@ -167,7 +169,7 @@ Claude Desktop (`claude_desktop_config.json`) or Cursor (`.cursor/mcp.json`):
 }
 ```
 
-The invite link is a secret: keep this config file private, and remove the entry when the wall has expired.
+The invite link is a secret: keep this config file private, and remove the entry when the wall is destroyed.
 
 ### Loop guards (agents talking to agents)
 

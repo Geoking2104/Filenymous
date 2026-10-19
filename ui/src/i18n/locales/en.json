@@ -542,7 +542,6 @@
     "title": "Instant share with confidence, no account, no cloud.",
     "subtitle": "End-to-end encrypted tools, right in your browser. Pick one, you’re set in two clicks.",
     "back": "Home",
-    "leaveConfirm": "A transfer is in progress. Leaving now will interrupt it. Continue?",
     "codeLabel": "Got a code?",
     "send": {
       "title": "Send files",
@@ -642,7 +641,7 @@
       "b1": "End-to-end encrypted",
       "b1d": "The key stays in the link: the relay never sees the content.",
       "b2": "Nothing on a server",
-      "b2d": "Content lives in the host tab's memory, for 15 min to 24 h.",
+      "b2d": "Content lives in the host tab's memory, as long as the host keeps the wall open.",
       "b3": "One click destroys it all",
       "b3d": "Every participant wipes its copy and the room is closed.",
       "cta": "Create a wall"
@@ -803,17 +802,9 @@
   "wall": {
     "title": "Sharewall",
     "createTitle": "Create a sharing wall",
-    "createIntro": "An ephemeral live wall: messages, reactions, polls, files, masked notes and screen or camera sharing, end-to-end encrypted. Everything stays in your tab's memory and disappears when the wall expires or when you destroy it. AI agents can take part if you allow them.",
-    "ttl": "Lifetime",
-    "ttlChoice": {
-      "m15": "15 min",
-      "h1": "1 h",
-      "h24": "24 h"
-    },
+    "createIntro": "An ephemeral live wall: messages, reactions, polls, files, masked notes and screen or camera sharing, end-to-end encrypted. Everything stays in your tab's memory and disappears when you leave or destroy the wall. AI agents can take part if you allow them.",
     "burn": "Self-destruct after 1 download",
     "burnHint": "Each item leaves the wall as soon as someone other than its author opens or downloads it.",
-    "hostLeave": "Destroy the wall when I disconnect",
-    "hostLeaveHint": "If your tab closes or loses its connection, participants wipe everything right away.",
     "passwordOptional": "Password (optional)",
     "createButton": "Create the wall",
     "invalidLink": "This wall link is invalid or incomplete.",
@@ -835,9 +826,7 @@
     "byHost": "Host",
     "byPeer": "Participant {{n}}",
     "destroy": "Destroy the wall",
-    "destroyConfirm": "Destroy the wall now? Every participant will wipe its copy and the link will stop working.",
     "leave": "Leave the wall",
-    "leaveConfirm": "Leave the wall? Everything this tab received will be wiped.",
     "expiresAt": "Expires on {{date}}",
     "code": "Code",
     "codeHint": "Compare this code out loud with the other participants: if it matches, you are on the same wall with the same key.",
@@ -881,8 +870,8 @@
     "privacy": {
       "title": "Privacy: what is protected, and what is not",
       "e2ee": "Content (files, names, notes) is encrypted in the browser (AES-256-GCM). The key only exists in the link, after “#”, which browsers never send to the server.",
-      "ram": "Nothing is stored on a server or in browser storage: content lives in the memory of the host's and participants' tabs and is wiped on destruction, expiry or close.",
-      "relay": "The signaling relay never sees the key, the password or the content: only an opaque wall id, the expiry and WebRTC connection parameters. It keeps no access log for walls, but sees your IP address during the connection (in-memory rate limiting).",
+      "ram": "Nothing is stored on a server or in browser storage: content lives in the memory of the host's and participants' tabs and is wiped when the wall is destroyed, when the host leaves, or on close.",
+      "relay": "The signaling relay never sees the key, the password, the wall name or the content: only an opaque wall id and WebRTC connection parameters. It keeps no access log for walls, but sees your IP address during the connection (in-memory rate limiting).",
       "ip": "This is not anonymity: with WebRTC, the host sees each participant's IP address and each participant sees the host's (unless a TURN relay is used).",
       "tor": "To hide your IP address, use a trusted VPN; Tor Browser disables WebRTC and cannot be used for the wall.",
       "whistle": "For a sensitive report (source, whistleblower), prefer the whistleblowing channel, which works with Tor Browser:",
@@ -1006,6 +995,19 @@
     "notice": {
       "rate-limited": "Easy! Too many actions in a row: try again in {{s}} s.",
       "bad-poll": "Invalid poll: a question and 2 to 6 different options."
-    }
+    },
+    "nameLabel": "Wall name",
+    "namePlaceholder": "e.g. Monday workshop, Project team…",
+    "nameHint": "Shown to every participant (80 characters max). It travels encrypted, never in clear through the server. Empty: “Untitled wall”.",
+    "untitled": "Untitled wall",
+    "lifecycle": "No time limit: the wall stays open as long as you keep this tab, and it is destroyed as soon as you leave it.",
+    "ackLeave": "I understand that when I leave, the wall and all its information will be destroyed."
+  },
+  "leave": {
+    "title": "Close this window?",
+    "message": "You are about to close this window. Its information will disappear. Do you confirm?",
+    "confirm": "Leave",
+    "cancel": "Cancel",
+    "wallHost": "The wall will be destroyed for every participant."
   }
 }

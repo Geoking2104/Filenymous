@@ -4,7 +4,7 @@
  * Chromium fake media devices; three browser contexts.
  */
 import { test, expect, type Browser, type Page } from "@playwright/test";
-import { createWall, join, newPage as open, startRelay, type Relay } from "./wall-helpers";
+import { answerLeave, createWall, join, newPage as open, startRelay, type Relay } from "./wall-helpers";
 
 test.use({
   launchOptions: {
@@ -39,7 +39,7 @@ async function playing(p: Page, n: number) {
 test("live camera + screen: the host forwards streams to every viewer, limit 2, stop everywhere", async ({ browser }) => {
   test.setTimeout(120_000);
   const host = await newPage(browser);
-  const { link } = await createWall(host.page, { hostLeave: false });
+  const { link } = await createWall(host.page);
   const [a, b] = await Promise.all([newPage(browser), newPage(browser)]);
   await join(a.page, link);
   await join(b.page, link);
@@ -90,7 +90,7 @@ test("live camera + screen: the host forwards streams to every viewer, limit 2, 
     expect(all).not.toMatch(/m=video|m=audio/);
   }
   host.page.removeAllListeners("dialog");
-  host.page.once("dialog", (d) => void d.accept());
   await host.page.getByTestId("wall-destroy").click();
+  await answerLeave(host.page, true);
   await expect(b.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed", { timeout: 10_000 });
 });

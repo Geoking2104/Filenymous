@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLeaveGuard } from "../home/confirmLeave";
 import { buildReportLink, exportKeyFile, fingerprint, generateMailboxKeys, sha256Hex, type KeyFile } from "./crypto";
 import { b64urlDecode } from "../p2p/protocol";
 import { createMailbox } from "./api";
@@ -15,6 +16,8 @@ export default function ReportCreatePanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ link: string; fp: string; file: KeyFile; saved: boolean } | null>(null);
+  // The private key file exists only here until it is saved.
+  useLeaveGuard(!!done && !done.saved);
 
   const valid = pass.length >= MIN_PASSPHRASE && pass === pass2;
   const submit = async (e: React.FormEvent) => {

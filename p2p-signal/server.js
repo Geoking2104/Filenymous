@@ -53,6 +53,11 @@ const WALL_MAX_TTL_MS = Number(process.env.WALL_MAX_TTL_MS || 24 * 3600 * 1000 +
 const MAX_WALL_PEERS = Number(process.env.MAX_WALL_PEERS || 8);
 const WALL_HOST_GRACE_MS = Number(process.env.WALL_HOST_GRACE_MS || 5_000);
 const WALL_SWEEP_MS = Number(process.env.WALL_SWEEP_MS || 15_000);
+// Walls without an expiry (the default since Oct 2026) live as long as their host.
+// A wall left without any host for this long is closed anyway, so nothing lingers.
+const WALL_ORPHAN_MS = Number(process.env.WALL_ORPHAN_MS || 3600 * 1000);
+// How long a closed wall id stays refused (a destroyed wall can never be reopened).
+const WALL_CLOSED_KEEP_MS = Number(process.env.WALL_CLOSED_KEEP_MS || 7 * 24 * 3600 * 1000);
 const walls = new Map();
 // Destroyed/expired wall ids, kept until their expiry so a closed wall can't
 // be revived with the host link. Opaque ids only, in memory.
@@ -294,7 +299,7 @@ function wallPeerIds(wall) {
 
 function closeWall(wallId, reason) {
   const wall = walls.get(wallId);
-  closedWalls.set(wallId, Math.max(wall?.expiresAt || 0, now() + 60_000));
+  closedWalls.set(wallId, Math.max(wall?.expiresAt || 0, now() + (wall?.expiresAt ? 60_000 : WALL_CLOSED_KEEP_MS)));
   if (!wall) return;
   clearTimeout(wall.graceTimer);
   for (const ws of [wall.host, ...wall.peers.values()]) {
@@ -315,6 +320,7 @@ function leaveWall(ws) {
   if (wall) {
     if (ws.wallRole === "host" && wall.host === ws) {
       wall.host = null;
+      wall.hostGoneAt = now();
       for (const p of wall.peers.values()) send(p, { type: "wall-host-offline", wallId });
       if (wall.destroyOnHostLeave) {
         // Short grace so a host reconnecting after a network blip keeps the wall.
@@ -455,6 +461,7 @@ const wallSweepTimer = setInterval(() => {
   const t = now();
   for (const [wallId, wall] of walls) {
     if (wall.expiresAt && wall.expiresAt <= t) closeWall(wallId, "expired");
+    else if (!wall.host && wall.hostGoneAt && t - wall.hostGoneAt >= WALL_ORPHAN_MS) closeWall(wallId, "host-left");
   }
   for (const [wallId, until] of closedWalls) if (until <= t) closedWalls.delete(wallId);
 }, WALL_SWEEP_MS);
@@ -708,15 +715,16 @@ wss.on("connection", (ws, req) => {
           send(ws, { type: "error", error: "wall-host-denied" });
           return;
         }
-        const requested = Number(msg.expiresAt);
-        if (!Number.isSafeInteger(requested) || requested <= now()) {
+        // expiresAt is optional: absent (or 0) means "no expiry, lives with its host".
+        const requested = msg.expiresAt === undefined ? 0 : Number(msg.expiresAt);
+        if (!Number.isSafeInteger(requested) || requested < 0 || (requested > 0 && requested <= now())) {
           send(ws, { type: "error", error: "wall-closed" });
           return;
         }
         leave(ws);
         let wall = walls.get(wallId);
         if (!wall) {
-          wall = { host: null, peers: new Map(), expiresAt: 0, destroyOnHostLeave: false, graceTimer: undefined };
+          wall = { host: null, peers: new Map(), expiresAt: 0, destroyOnHostLeave: false, graceTimer: undefined, hostGoneAt: 0 };
           walls.set(wallId, wall);
         }
         if (wall.host && wall.host !== ws) {
@@ -728,8 +736,11 @@ wss.on("connection", (ws, req) => {
         clearTimeout(wall.graceTimer);
         wall.graceTimer = undefined;
         // First host join fixes the expiry (capped); a reconnecting host can't extend it.
-        const capped = Math.min(requested, now() + WALL_MAX_TTL_MS);
-        wall.expiresAt = wall.expiresAt ? Math.min(wall.expiresAt, capped) : capped;
+        if (requested > 0) {
+          const capped = Math.min(requested, now() + WALL_MAX_TTL_MS);
+          wall.expiresAt = wall.expiresAt ? Math.min(wall.expiresAt, capped) : capped;
+        }
+        wall.hostGoneAt = 0;
         wall.destroyOnHostLeave = msg.destroyOnHostLeave === true;
         wall.host = ws;
         ws.wallId = wallId;
@@ -746,7 +757,7 @@ wss.on("connection", (ws, req) => {
       leave(ws);
       let wall = walls.get(wallId);
       if (!wall) {
-        wall = { host: null, peers: new Map(), expiresAt: 0, destroyOnHostLeave: false, graceTimer: undefined };
+        wall = { host: null, peers: new Map(), expiresAt: 0, destroyOnHostLeave: false, graceTimer: undefined, hostGoneAt: now() };
         walls.set(wallId, wall);
       }
       const current = wall.peers.get(peerId);

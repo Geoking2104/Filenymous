@@ -310,7 +310,7 @@ ${llmsTxt().split("\n").slice(2, 9).join("\n")}
 - Dropzone: ${abs(SITE.app)}#drop:<dropId>/<secret>/<expiry>/<flags>[/<name>] (owner: #drop-owner:…)
 - One-time secret: ${abs(SITE.app)}#s:<id>/<key>
 - Whistleblowing channel: ${abs(SITE.app)}#report:… (submit), #report-inbox, #report-follow
-- Sharewall: ${abs(SITE.app)}#wall:<wallId>/<key>/<expiry>/<flags> (host: #wall-host:…)
+- Sharewall: ${abs(SITE.app)}#wall:<wallId>/<key>/<expiry|0>/<flags> (0 = no expiry, the default; host: #wall-host:…)
 Never invent, guess or complete these values. Agents can safely generate only the entry points without secrets: ${abs(SITE.app)}, #drop-new, #secret-new, #report-new, #wall-new.
 
 ## Privacy model

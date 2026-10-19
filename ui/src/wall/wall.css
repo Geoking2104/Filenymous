@@ -97,6 +97,8 @@
 .sw2-top { display: flex; align-items: center; gap: .7rem; padding: .6rem .9rem; border-bottom: 1px solid var(--fy-border); background: var(--fy-surface-2); }
 .sw2-title { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .8rem; }
 .sw2-title strong { font-size: 1rem; }
+.sw2-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sw2-wallname { margin: 0 0 .5rem; font-size: 1.05rem; line-height: 1.3; overflow-wrap: anywhere; }
 .sw2-status { margin: 0 !important; font-size: .8rem; padding: 0 !important; background: none !important; border: 0 !important; }
 .sw2-drawer-btn { display: none !important; }
 .sw2-count { font-size: .75rem; font-weight: 700; }
@@ -288,3 +290,9 @@ audio.sw2-inline { background: none; padding: .4rem; box-sizing: border-box; cur
   .sw2-picker { bottom: 7.4rem; }
 }
 @media (prefers-reduced-motion: reduce) { .sw2-side { transition: none; } }
+/* Visible checkboxes in the create form; the "leaving destroys the wall" acknowledgement stands out. */
+.pz-app .sw-check input[type="checkbox"] { appearance: auto; -webkit-appearance: checkbox; accent-color: var(--fy-accent, #6366f1); width: 1.1rem !important; height: 1.1rem; margin-top: .1rem; cursor: pointer; }
+.sw-check > span { text-align: left; }
+.sw-check:has(input:checked) { border-color: var(--fy-accent, #6366f1); }
+.sw-ack { border-style: dashed; border-color: #f59e0b; background: rgba(245, 158, 11, .08); }
+.sw-ack:has(input:checked) { border-style: solid; border-color: #16a34a; background: rgba(22, 163, 74, .08); }

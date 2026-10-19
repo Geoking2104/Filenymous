@@ -40,6 +40,8 @@ export interface PeerUpload {
 export interface PeerState {
   status: PeerStatus;
   label?: string;
+  /** Wall display name sent by the host ("" = untitled). */
+  title: string;
   expiresAt: number;
   burn: boolean;
   hostLeave: boolean;
@@ -119,6 +121,7 @@ export class WallPeer {
     this.name = opts.name ?? "";
     this.state = {
       status: "connecting",
+      title: "",
       expiresAt: params.expiresAt,
       burn: params.burn,
       hostLeave: params.hostLeave,
@@ -347,7 +350,9 @@ export class WallPeer {
           status: "online",
           error: undefined,
           label: msg.label,
-          expiresAt: Math.min(msg.expiresAt, this.params.expiresAt),
+          title: msg.title ?? "",
+          // 0 = no expiry: keep the tighter of the two real deadlines.
+          expiresAt: !msg.expiresAt ? this.params.expiresAt : !this.params.expiresAt ? msg.expiresAt : Math.min(msg.expiresAt, this.params.expiresAt),
           agents: msg.agents,
           hostMedia: msg.media,
           posts: [],

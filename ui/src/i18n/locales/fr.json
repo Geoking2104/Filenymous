@@ -542,7 +542,6 @@
     "title": "Partage instantané et confidentiel, sans compte ni cloud.",
     "subtitle": "Des outils chiffrés de bout en bout, directement dans votre navigateur. Choisissez, c’est prêt en deux clics.",
     "back": "Accueil",
-    "leaveConfirm": "Un transfert est en cours. Quitter maintenant l’interrompra. Continuer ?",
     "codeLabel": "Vous avez reçu un code ?",
     "send": {
       "title": "Envoyer des fichiers",
@@ -642,7 +641,7 @@
       "b1": "Chiffré de bout en bout",
       "b1d": "La clé reste dans le lien : le relais ne voit jamais le contenu.",
       "b2": "Rien sur un serveur",
-      "b2d": "Le contenu vit dans la mémoire de l'onglet hôte, 15 min à 24 h.",
+      "b2d": "Le contenu vit dans la mémoire de l'onglet hôte, tant que l'hôte garde le mur ouvert.",
       "b3": "Un clic pour tout détruire",
       "b3d": "Chaque participant efface sa copie et la salle est fermée.",
       "cta": "Créer un mur"
@@ -803,17 +802,9 @@
   "wall": {
     "title": "Mur de partage",
     "createTitle": "Créer un mur de partage",
-    "createIntro": "Un mur en direct, éphémère : messages, réactions, sondages, fichiers, notes masquées et partage d'écran ou de caméra, chiffrés de bout en bout. Tout reste dans la mémoire de votre onglet et disparaît à l'expiration ou quand vous détruisez le mur. Des agents IA peuvent participer si vous l'autorisez.",
-    "ttl": "Durée de vie",
-    "ttlChoice": {
-      "m15": "15 min",
-      "h1": "1 h",
-      "h24": "24 h"
-    },
+    "createIntro": "Un mur en direct, éphémère : messages, réactions, sondages, fichiers, notes masquées et partage d'écran ou de caméra, chiffrés de bout en bout. Tout reste dans la mémoire de votre onglet et disparaît quand vous quittez ou détruisez le mur. Des agents IA peuvent participer si vous l'autorisez.",
     "burn": "Autodestruction après 1 téléchargement",
     "burnHint": "Chaque élément disparaît du mur dès qu'une autre personne que son auteur l'ouvre ou le télécharge.",
-    "hostLeave": "Détruire le mur quand je me déconnecte",
-    "hostLeaveHint": "Si votre onglet se ferme ou perd la connexion, les participants effacent tout aussitôt.",
     "passwordOptional": "Mot de passe (facultatif)",
     "createButton": "Créer le mur",
     "invalidLink": "Ce lien de mur est invalide ou incomplet.",
@@ -835,9 +826,7 @@
     "byHost": "Hôte",
     "byPeer": "Participant {{n}}",
     "destroy": "Détruire le mur",
-    "destroyConfirm": "Détruire le mur maintenant ? Tous les participants effaceront leur copie et le lien ne fonctionnera plus.",
     "leave": "Quitter le mur",
-    "leaveConfirm": "Quitter le mur ? Tout ce que cet onglet a reçu sera effacé.",
     "expiresAt": "Expire le {{date}}",
     "code": "Code",
     "codeHint": "Comparez ce code à voix haute avec les autres participants : s'il est identique, vous êtes sur le même mur avec la même clé.",
@@ -881,8 +870,8 @@
     "privacy": {
       "title": "Confidentialité : ce qui est protégé, et ce qui ne l'est pas",
       "e2ee": "Le contenu (fichiers, noms, notes) est chiffré dans le navigateur (AES-256-GCM). La clé n'existe que dans le lien, après « # », que les navigateurs n'envoient jamais au serveur.",
-      "ram": "Rien n'est stocké sur un serveur ni dans le stockage du navigateur : le contenu vit dans la mémoire de l'onglet hôte et des participants, et est effacé à la destruction, à l'expiration ou à la fermeture.",
-      "relay": "Le relais de signalisation ne voit ni la clé, ni le mot de passe, ni le contenu : seulement un identifiant de mur opaque, l'expiration et les paramètres de connexion WebRTC. Il ne tient pas de journal d'accès pour les murs, mais voit votre adresse IP pendant la connexion (limitation de débit en mémoire).",
+      "ram": "Rien n'est stocké sur un serveur ni dans le stockage du navigateur : le contenu vit dans la mémoire de l'onglet hôte et des participants, et est effacé à la destruction du mur, au départ de l'hôte ou à la fermeture.",
+      "relay": "Le relais de signalisation ne voit ni la clé, ni le mot de passe, ni le nom du mur, ni le contenu : seulement un identifiant de mur opaque et les paramètres de connexion WebRTC. Il ne tient pas de journal d'accès pour les murs, mais voit votre adresse IP pendant la connexion (limitation de débit en mémoire).",
       "ip": "Ce n'est pas de l'anonymat : en WebRTC, l'hôte voit l'adresse IP de chaque participant et chaque participant voit celle de l'hôte (sauf passage par un relais TURN).",
       "tor": "Pour masquer votre adresse IP, utilisez un VPN de confiance ; Tor Browser désactive WebRTC et ne permet pas d'utiliser le mur.",
       "whistle": "Pour un signalement sensible (source, lanceur d'alerte), préférez le canal de signalement, utilisable avec Tor Browser :",
@@ -1006,6 +995,19 @@
     "notice": {
       "rate-limited": "Doucement ! Trop d'actions d'affilée : réessayez dans {{s}} s.",
       "bad-poll": "Sondage invalide : une question et 2 à 6 options différentes."
-    }
+    },
+    "nameLabel": "Nom du mur",
+    "namePlaceholder": "ex. Atelier lundi, Équipe projet…",
+    "nameHint": "Affiché pour tous les participants (80 caractères max). Il voyage chiffré, jamais en clair par le serveur. Vide : « Mur sans nom ».",
+    "untitled": "Mur sans nom",
+    "lifecycle": "Pas de durée limite : le mur reste ouvert tant que vous gardez cet onglet, et il est détruit dès que vous le quittez.",
+    "ackLeave": "J'ai compris qu'en quittant, le mur et toutes ses informations seront détruits."
+  },
+  "leave": {
+    "title": "Fermer la fenêtre ?",
+    "message": "Vous êtes sur le point de fermer la fenêtre. Cela fera disparaître les informations de celle-ci. Confirmez-vous ?",
+    "confirm": "Quitter",
+    "cancel": "Annuler",
+    "wallHost": "Le mur sera détruit pour tous les participants."
   }
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLeaveGuard } from "../home/confirmLeave";
 import { MAX_SECRET_BYTES, buildSecretLink, sealSecret } from "./crypto";
 import { VaultError, createSecret } from "./api";
 
@@ -20,6 +21,8 @@ export default function VaultCreatePanel() {
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // A typed secret, or a link shown only once, would be lost by closing.
+  useLeaveGuard(!!link || text.length > 0);
   const bytes = new TextEncoder().encode(text).byteLength;
 
   const copy = async (value: string) => {
