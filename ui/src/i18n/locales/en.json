@@ -1001,7 +1001,34 @@
     "nameHint": "Shown to every participant (80 characters max). It travels encrypted, never in clear through the server. Empty: “Untitled wall”.",
     "untitled": "Untitled wall",
     "lifecycle": "No time limit: the wall stays open as long as you keep this tab, and it is destroyed as soon as you leave it.",
-    "ackLeave": "I understand that when I leave, the wall and all its information will be destroyed."
+    "ackLeave": "I understand that when I leave, the wall and all its information will be destroyed.",
+    "search": {
+      "open": "Search the wall",
+      "placeholder": "Search…",
+      "label": "Search messages, files and polls",
+      "clear": "Clear search",
+      "count_one": "{{count}} result",
+      "count_other": "{{count}} results"
+    },
+    "system": {
+      "exported": "The host exported the wall"
+    },
+    "export": {
+      "button": "Export the wall",
+      "title": "Export the wall?",
+      "warning": "Exporting creates a permanent copy on your device of content meant to disappear. Participants are not asked, but they will see in the feed that you exported the wall. Handle with care.",
+      "warningEn": "L'export crée une copie permanente, sur votre appareil, d'un contenu conçu pour disparaître. Les participants ne sont pas consultés. À manipuler avec soin.",
+      "format": "Format",
+      "json": "Full JSON (messages, polls and files ≤ 50 MB)",
+      "md": "Markdown transcript (text only)",
+      "confirm": "Export",
+      "cancel": "Cancel",
+      "blockedBurn": "Export disabled: this wall self-destructs (one download per file).",
+      "done": "Wall exported.",
+      "skipped_one": "{{count}} file not included (too large or unavailable): {{names}}",
+      "skipped_other": "{{count}} files not included (too large or unavailable): {{names}}",
+      "error": "Export failed."
+    }
   },
   "leave": {
     "title": "Close this window?",

@@ -5,16 +5,59 @@
 
 import type { Post } from "./feed";
 
+/** Lower-case, accent-free form of one character ("É" → "e"), for matching. */
+function foldChar(c: string): string {
+  return c.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+/** Folded text plus, for each folded code unit, the index of its source character. */
+function fold(text: string): { folded: string; map: number[] } {
+  let folded = "";
+  const map: number[] = [];
+  for (let i = 0; i < text.length; ) {
+    const cp = text.codePointAt(i)!;
+    const ch = String.fromCodePoint(cp);
+    const f = foldChar(ch);
+    for (let k = 0; k < f.length; k++) map.push(i);
+    folded += f;
+    i += ch.length;
+  }
+  map.push(text.length);
+  return { folded, map };
+}
+
+export const SEARCH_MAX_CHARS = 100;
+
+/** Normalised query ("" = no filter). */
+export function normalizeQuery(query: string): string {
+  return fold(String(query ?? "").trim().replace(/\s+/g, " ").slice(0, SEARCH_MAX_CHARS)).folded;
+}
+
+const has = (v: string | undefined, q: string) => !!v && fold(v).folded.includes(q);
+
+/**
+ * Live filter of the feed: message text, file / note names, poll question and
+ * options. Case- and accent-insensitive. Masked notes are matched by their
+ * name only (their content is never fetched for searching).
+ */
 export function searchPosts(posts: Post[], query: string): Post[] {
-  const q = query.trim().toLowerCase();
+  const q = normalizeQuery(query);
   if (!q) return posts;
-  return posts.filter((p) => {
-    if (p.text?.toLowerCase().includes(q)) return true;
-    if (p.item?.name.toLowerCase().includes(q)) return true;
-    if (p.poll?.question.toLowerCase().includes(q)) return true;
-    if (p.poll?.options.some((o) => o.toLowerCase().includes(q))) return true;
-    return false;
-  });
+  return posts.filter((p) => has(p.text, q) || has(p.item?.name, q) || has(p.poll?.question, q) || !!p.poll?.options.some((o) => has(o, q)));
+}
+
+/** [start, end) ranges of `query` in `text` (same folding as searchPosts), for highlighting. */
+export function highlightRanges(text: string, query: string): Array<[number, number]> {
+  const q = normalizeQuery(query);
+  if (!q || !text) return [];
+  const { folded, map } = fold(text);
+  const out: Array<[number, number]> = [];
+  for (let at = folded.indexOf(q); at >= 0 && out.length < 200; at = folded.indexOf(q, at + q.length)) {
+    const start = map[at]!;
+    const end = map[at + q.length] ?? text.length;
+    if (end > start) out.push([start, end]);
+  }
+  return out;
 }
 
 /** Simple stroke annotation for images (serialized as JSON, stored as a special text item or note). */

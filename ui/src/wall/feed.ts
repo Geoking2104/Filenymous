@@ -30,7 +30,16 @@ export interface Post {
   poll?: Poll;
   /** emoji → labels of the members who reacted. */
   reactions: Record<string, string[]>;
+  /**
+   * Host-authored transparency notice (e.g. "the host exported the wall").
+   * Only accepted from the host, on a "msg" post whose text is the fallback
+   * shown by older clients and agents.
+   */
+  system?: SystemNotice;
 }
+
+export type SystemNotice = "exported";
+export const SYSTEM_TEXT: Record<SystemNotice, string> = { exported: "📦 L'hôte a exporté le mur. / The host exported the wall." };
 
 export interface Member {
   label: string;
@@ -270,6 +279,10 @@ export function cleanPost(p: unknown, cleanItem: (m: unknown) => ItemMeta | null
   if (o.mentions !== undefined) {
     if (!Array.isArray(o.mentions) || o.mentions.length > 16 || !o.mentions.every(isLabel)) return null;
     post.mentions = o.mentions as string[];
+  }
+  if (o.system !== undefined) {
+    if (o.system !== "exported" || o.kind !== "msg" || o.by !== "host") return null;
+    post.system = o.system;
   }
   if (o.kind === "msg") {
     if (!isStr(o.text, MAX_MSG_CHARS + 16)) return null;

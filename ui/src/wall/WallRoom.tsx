@@ -11,7 +11,8 @@ import { useTranslation } from "react-i18next";
 import { QRCodeSVG } from "qrcode.react";
 import { formatBytes } from "../ux-v3/types";
 import { EmojiPicker } from "./EmojiPicker";
-import { Markup } from "./Markup";
+import { Hl, Markup } from "./Markup";
+import { normalizeQuery, searchPosts } from "./search-annotations";
 import { QUICK_REACTIONS } from "./emoji";
 import {
   BURSTS,
@@ -97,6 +98,11 @@ export interface RoomProps {
   invite?: { link: string };
   onDestroy?: () => void;
   onLeave?: () => void;
+  /** Host only: export the wall (opens the confirmation). */
+  onExport?: () => void;
+  /** Host only: why export is unavailable (e.g. self-destruct wall). */
+  exportBlocked?: string;
+  exportNote?: string;
   testId: string;
   statusTestId: string;
 }
@@ -163,7 +169,7 @@ function Avatar({ m, size = 36 }: { m: Pick<Member, "label" | "name" | "agent">;
 
 // ---------------------------------------------------------------------------
 
-export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, testId, statusTestId }: RoomProps) {
+export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onExport, exportBlocked, exportNote, testId, statusTestId }: RoomProps) {
   const { t, i18n } = useTranslation();
   const blobs = useBlobUrls();
   const [opened, setOpened] = useState<Map<string, Fetched>>(new Map());
@@ -182,6 +188,10 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, test
   /** Items being fetched: with burn, the host announces the removal before the bytes arrive. */
   const fetching = useRef(new Set<string>());
   const now = useNow(true);
+  // Search: client-only live filter of the feed (nothing is sent anywhere).
+  const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   for (const m of s.members) names.current.set(m.label, m.name);
   for (const p of s.posts) postsRef.current.set(p.id, p);
@@ -256,6 +266,23 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, test
     const extra = ghosts.filter((g) => !ids.has(g.id));
     return extra.length ? [...s.posts, ...extra].sort((a, b) => a.at - b.at) : s.posts;
   }, [s.posts, ghosts]);
+
+  const searching = normalizeQuery(query) !== "";
+  const shown = useMemo(() => (searching ? searchPosts(feed, query) : feed), [feed, query, searching]);
+  const openSearch = () => {
+    setSearchOpen(true);
+    requestAnimationFrame(() => searchRef.current?.focus());
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        openSearch();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const confirmBurn = (p: Post) => !s.burn || mine(p) || !live.has(p.id) || window.confirm(t("wall.burnConfirm"));
 
@@ -338,6 +365,32 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, test
             {s.statusText}
           </span>
         </div>
+        <div className={`sw2-search${searchOpen || query ? " is-open" : ""}`} role="search">
+          <button type="button" className="sw2-iconbtn sw2-search-btn" data-testid="wall-search-toggle" aria-label={t("wall.search.open")} title={t("wall.search.open")} onClick={openSearch}>
+            🔍
+          </button>
+          <input
+            ref={searchRef}
+            type="search"
+            data-testid="wall-search"
+            maxLength={100}
+            placeholder={t("wall.search.placeholder")}
+            aria-label={t("wall.search.label")}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setQuery("");
+                setSearchOpen(false);
+              }
+            }}
+          />
+          {query && (
+            <button type="button" className="sw2-search-clear" data-testid="wall-search-clear" aria-label={t("wall.search.clear")} title={t("wall.search.clear")} onClick={() => { setQuery(""); searchRef.current?.focus(); }}>
+              ✕
+            </button>
+          )}
+        </div>
         {s.expiresAt > 0 && (
           <span className={`sw-timer${left < 60_000 ? " is-low" : ""}`} data-testid="wall-countdown" title={t("wall.expiresAt", { date: new Date(s.expiresAt).toLocaleString() })}>
             ⏳ {formatRemaining(left)}
@@ -366,6 +419,15 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, test
             </ul>
           </section>
           <div className="sw2-side-actions">
+            {isHost && (onExport || exportBlocked) && (
+              <>
+                <button type="button" className="v3-btn-ghost" data-testid="wall-export" disabled={!!exportBlocked} onClick={onExport} title={exportBlocked}>
+                  📦 {t("wall.export.button")}
+                </button>
+                {exportBlocked && <p className="sw-small" data-testid="wall-export-blocked">{exportBlocked}</p>}
+                {exportNote && <p className="sw-small" role="status" data-testid="wall-export-note">{exportNote}</p>}
+              </>
+            )}
             {onDestroy && (
               <button type="button" className="sw-danger" data-testid="wall-destroy" onClick={onDestroy}>
                 💥 {t("wall.destroy")}
@@ -426,8 +488,14 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, test
             />
           )}
 
+          {searching && (
+            <p className="sw2-search-count" data-testid="wall-search-count" data-count={shown.length} aria-live="polite">
+              {t("wall.search.count", { count: shown.length })}
+            </p>
+          )}
           <Feed
-            posts={feed}
+            posts={shown}
+            highlight={searching ? query : undefined}
             live={live}
             s={s}
             nameOf={nameOf}
@@ -710,6 +778,8 @@ interface FeedProps {
   onVote: (id: string, i: number) => void;
   onClosePoll: (id: string) => void;
   confirmBurn: (p: Post) => boolean;
+  /** Active search ("" = none): matches are highlighted. */
+  highlight?: string;
 }
 
 function Feed(props: FeedProps) {
@@ -749,13 +819,21 @@ function Feed(props: FeedProps) {
 
 function PostRow({ post: p, first, ...f }: FeedProps & { post: Post; first: boolean }) {
   const { t } = useTranslation();
+  if (p.system === "exported") {
+    const at = new Date(p.at).toLocaleTimeString(f.lang, { hour: "2-digit", minute: "2-digit" });
+    return (
+      <div className="sw2-system" role="status" data-testid="wall-system" data-system={p.system} data-id={p.id}>
+        📦 {t("wall.system.exported")} <time>{at}</time>
+      </div>
+    );
+  }
   const author = f.memberOf(p.by);
   const gone = !f.live.has(p.id);
   const replied = p.replyTo ? f.posts.find((x) => x.id === p.replyTo) : undefined;
   const mentionsMe = !!f.s.self && !!p.mentions?.includes(f.s.self);
   const time = new Date(p.at).toLocaleTimeString(f.lang, { hour: "2-digit", minute: "2-digit" });
   const isItem = p.kind === "file" || p.kind === "note";
-  const canRemove = !gone && (f.mine(p) || f.s.role === "host");
+  const canRemove = !gone && !p.system && (f.mine(p) || f.s.role === "host");
   return (
     <article
       id={`post-${p.id}`}
@@ -797,7 +875,7 @@ function PostRow({ post: p, first, ...f }: FeedProps & { post: Post; first: bool
             {t("wall.localCopy")}
           </span>
         )}
-        {p.kind === "msg" && <Markup text={p.text ?? ""} members={f.s.members} self={f.s.self} />}
+        {p.kind === "msg" && <Markup text={p.text ?? ""} members={f.s.members} self={f.s.self} highlight={f.highlight} />}
         {p.kind === "file" && p.item && <FileBody p={p} item={p.item} gone={gone} {...f} />}
         {p.kind === "note" && p.item && <NoteBody p={p} {...f} />}
         {p.kind === "poll" && p.poll && <PollBody p={p} {...f} />}
@@ -866,7 +944,7 @@ function Reactions({ p, s, nameOf, onReact, onMoreReact, live }: FeedProps & { p
   );
 }
 
-function FileBody({ p, item, gone, s, opened, blobs, fetchItem, onPreview, onDownload }: FeedProps & { p: Post; item: ItemMeta; gone: boolean }) {
+function FileBody({ p, item, gone, s, opened, blobs, fetchItem, onPreview, onDownload, highlight }: FeedProps & { p: Post; item: ItemMeta; gone: boolean }) {
   const { t } = useTranslation();
   const kind = previewKind(item);
   const inline = !s.burn && (kind === "image" || kind === "video" || kind === "audio") && item.size <= INLINE_MAX;
@@ -912,7 +990,7 @@ function FileBody({ p, item, gone, s, opened, blobs, fetchItem, onPreview, onDow
       <div className="sw2-file-row">
         <span className="sw-item-icon" aria-hidden="true">{iconFor(kind)}</span>
         <span className="sw2-file-meta">
-          <span className="sw-item-name" title={item.name}>{item.name}</span>
+          <span className="sw-item-name" title={item.name}><Hl text={item.name} q={highlight} /></span>
           <span className="sw-item-size">{formatBytes(item.size)}</span>
         </span>
         <span className="sw-item-actions">
@@ -975,14 +1053,14 @@ function NoteBody({ p, fetchItem, confirmBurn }: FeedProps & { p: Post }) {
   );
 }
 
-function PollBody({ p, s, nameOf, onVote, onClosePoll, mine, live }: FeedProps & { p: Post }) {
+function PollBody({ p, s, nameOf, onVote, onClosePoll, mine, live, highlight }: FeedProps & { p: Post }) {
   const { t } = useTranslation();
   const poll = p.poll!;
   const { counts, total } = pollTotals(poll);
   const canVote = !poll.closed && live.has(p.id) && s.online;
   return (
     <div className={`sw2-poll${poll.closed ? " is-closed" : ""}`}>
-      <div className="sw2-poll-q">📊 {poll.question}</div>
+      <div className="sw2-poll-q">📊 <Hl text={poll.question} q={highlight} /></div>
       <ul>
         {poll.options.map((o, i) => {
           const n = counts[i] ?? 0;
@@ -1004,7 +1082,7 @@ function PollBody({ p, s, nameOf, onVote, onClosePoll, mine, live }: FeedProps &
                 <span className="sw2-poll-bar" style={{ width: `${pct}%` }} />
                 <span className="sw2-poll-label">
                   {voted ? "✓ " : ""}
-                  {o}
+                  <Hl text={o} q={highlight} />
                 </span>
                 <span className="sw2-poll-n">
                   {n} · {pct} %

@@ -9,6 +9,7 @@ import { WallHost, type HostState } from "./host";
 import { mediaSupported } from "./live";
 import { ENDED, WallPeer, type PeerState } from "./peer";
 import { PrivacyNote, WallRoom, reasonText, type RoomApi, type RoomState } from "./WallRoom";
+import { ExportBlockedError, buildSnapshot, buildTranscript, downloadBlob, snapshotBlob, snapshotFilename } from "./snapshot";
 import "./wall.css";
 
 const baseUrl = () => `${location.origin}${location.pathname}`;
@@ -187,6 +188,26 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
     [host, t],
   );
 
+  const [exporting, setExporting] = useState(false);
+  const [exportNote, setExportNote] = useState("");
+
+  async function runExport(format: "json" | "md") {
+    const h = hostRef.current;
+    if (!h || params.burn) return;
+    const st = h.state;
+    const lang = i18n.language.startsWith("en") ? "en" : "fr";
+    try {
+      const snap = await buildSnapshot({ title: params.title, burn: params.burn, members: st.members, posts: st.posts, getItem: (id) => h.exportItem(id) });
+      if (format === "json") downloadBlob(snapshotBlob(snap), snapshotFilename(params.title, "json"));
+      else downloadBlob(new Blob([buildTranscript(snap, lang)], { type: "text/markdown;charset=utf-8" }), snapshotFilename(params.title, "md"));
+      h.announceExport();
+      const sk = format === "json" ? snap.skipped : [];
+      setExportNote(sk.length ? t("wall.export.skipped", { count: sk.length, names: sk.map((x) => x.name).join(", ") }) : t("wall.export.done"));
+    } catch (e) {
+      setExportNote(e instanceof ExportBlockedError ? t("wall.export.blockedBurn") : t("wall.export.error"));
+    }
+  }
+
   const live = !!state && state.status !== "destroyed" && state.status !== "expired";
   // Closing the window destroys the wall for everyone: same confirmation as
   // every service; on "Quitter" the wall is killed right away.
@@ -226,6 +247,7 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
     mine: [],
   };
   return (
+    <>
     <WallRoom
       state={room}
       api={api}
@@ -233,6 +255,9 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
       invite={{ link }}
       testId="wall-host"
       statusTestId="wall-host-status"
+      onExport={params.burn ? undefined : () => setExporting(true)}
+      exportBlocked={params.burn ? t("wall.export.blockedBurn") : undefined}
+      exportNote={exportNote}
       onDestroy={() =>
         void confirmDialog({
           title: t("leave.title"),
@@ -244,6 +269,38 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
         }).then((ok) => ok && void hostRef.current?.destroy("destroyed"))
       }
     />
+    {exporting && <ExportDialog onCancel={() => setExporting(false)} onConfirm={(f) => { setExporting(false); void runExport(f); }} />}
+    </>
+  );
+}
+
+function ExportDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: (format: "json" | "md") => void }) {
+  const { t } = useTranslation();
+  const [format, setFormat] = useState<"json" | "md">("json");
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    cancelRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  return (
+    <div className="pz-modal-backdrop" onClick={onCancel}>
+      <div className="pz-modal pz-confirm" role="alertdialog" aria-modal="true" aria-labelledby="sw-export-title" aria-describedby="sw-export-warn" data-testid="wall-export-dialog" onClick={(e) => e.stopPropagation()}>
+        <h2 id="sw-export-title">📦 {t("wall.export.title")}</h2>
+        <p id="sw-export-warn" data-testid="wall-export-warning">⚠️ {t("wall.export.warning")}</p>
+        <p className="pz-confirm-detail" lang={t("wall.export.warningEn").startsWith("Export") ? "en" : "fr"}>{t("wall.export.warningEn")}</p>
+        <fieldset className="sw-export-formats">
+          <legend>{t("wall.export.format")}</legend>
+          <label><input type="radio" name="sw-export-format" data-testid="wall-export-format-json" checked={format === "json"} onChange={() => setFormat("json")} /> {t("wall.export.json")}</label>
+          <label><input type="radio" name="sw-export-format" data-testid="wall-export-format-md" checked={format === "md"} onChange={() => setFormat("md")} /> {t("wall.export.md")}</label>
+        </fieldset>
+        <div className="pz-confirm-actions">
+          <button ref={cancelRef} type="button" className="pz-btn pz-btn-ghost" data-testid="wall-export-cancel" onClick={onCancel}>{t("wall.export.cancel")}</button>
+          <button type="button" className="pz-btn" data-testid="wall-export-confirm" onClick={() => onConfirm(format)}>{t("wall.export.confirm")}</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
