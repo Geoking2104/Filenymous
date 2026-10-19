@@ -1,5 +1,5 @@
 /** Static SEO / agent-discoverability renderers (pure functions, no I/O). */
-import { SITE, FEATURES, FAQ, UI, abs } from "./content.mjs";
+import { SITE, FEATURES, FAQ, UI, SECURITY, abs } from "./content.mjs";
 
 export const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const LANGS = ["fr", "en"];
@@ -8,6 +8,7 @@ const LANGS = ["fr", "en"];
 export const paths = {
   home: { fr: SITE.app, en: `${SITE.app}en/` },
   faq: { fr: `${SITE.app}faq/`, en: `${SITE.app}en/faq/` },
+  security: { fr: `${SITE.app}${SECURITY.slug.fr}/`, en: `${SITE.app}en/${SECURITY.slug.en}/` },
   feature: (f, l) => (l === "fr" ? `${SITE.app}fonctionnalites/${f.slug.fr}/` : `${SITE.app}en/features/${f.slug.en}/`),
 };
 const appUrl = (l, hash = "") => abs(SITE.app) + (l === "en" ? "?lang=en" : "") + (hash && hash !== "#" ? hash : "");
@@ -15,7 +16,7 @@ const ctaHref = (f, l) => (f.id === "cli" ? SITE.npm : f.id === "extension" ? `$
 
 /** Every public page, for the sitemap and hreflang. */
 export function pages() {
-  const out = [{ key: "home", alt: paths.home }, { key: "faq", alt: paths.faq }];
+  const out = [{ key: "home", alt: paths.home }, { key: "faq", alt: paths.faq }, { key: "security", alt: paths.security }];
   for (const f of FEATURES) out.push({ key: `feature:${f.id}`, alt: { fr: paths.feature(f, "fr"), en: paths.feature(f, "en") } });
   return out;
 }
@@ -138,7 +139,7 @@ export const STATIC_CSS = `.fy-static{font:16px/1.55 system-ui,-apple-system,"Se
 function footer(l, alt) {
   const t = UI[l];
   const o = l === "fr" ? "en" : "fr";
-  return `<footer><p><a href="${alt[o]}" hreflang="${o}" lang="${o}">${t.other}</a> · <a href="${SITE.repo}">${t.source} (GitHub, MIT)</a> · <a href="${SITE.npm}">npm</a> · <a href="/llms.txt">llms.txt</a></p><p>${t.legal}</p></footer>`;
+  return `<footer><p><a href="${alt[o]}" hreflang="${o}" lang="${o}">${t.other}</a> · <a href="${SITE.repo}">${t.source} (GitHub, MIT)</a> · <a href="${SITE.npm}">npm</a> · <a href="${paths.security[l]}">${SECURITY[l].h1}</a> · <a href="/llms.txt">llms.txt</a></p><p>${t.legal}</p></footer>`;
 }
 
 /** Prerendered home content (also the body of /app/en/). React replaces it on mount. */
@@ -190,6 +191,24 @@ ${footer(l, paths.faq)}
 </main>`;
 }
 
+export function securityBody(l) {
+  const t = UI[l];
+  const d = SECURITY[l];
+  const secs = d.sections.map(([h, items]) => `<h2>${esc(h)}</h2><ul>${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`).join("\n");
+  return `<main class="fy-static">
+<nav><a href="${paths.home[l]}">← ${t.home}</a><a href="${paths.faq[l]}">${t.faq}</a></nav>
+<h1>${esc(d.h1)}</h1>
+<p>${esc(d.lead)}</p>
+${secs}
+<p><small>${t.updated} ${SITE.updated}</small></p>
+${footer(l, paths.security)}
+</main>`;
+}
+
+export function securityJsonLd(l) {
+  return { "@context": "https://schema.org", "@type": "TechArticle", headline: SECURITY[l].h1, description: SECURITY[l].description, inLanguage: l, url: abs(paths.security[l]), dateModified: SITE.updated, about: { "@id": abs(SITE.app) }, publisher: organization };
+}
+
 /** A complete static page (feature, FAQ, EN home). */
 export function staticPage({ l, title, description, alt, canonical, jsonld, body, analytics = "" }) {
   return `<!DOCTYPE html>
@@ -218,6 +237,7 @@ export function staticPages({ analytics = "" } = {}) {
     jsonld: [webAppJsonLd("en")], body: homeBody("en", { isApp: false }), analytics,
   });
   for (const l of LANGS) {
+    out[rel(paths.security[l])] = staticPage({ l, title: SECURITY[l].title, description: SECURITY[l].description, alt: paths.security, canonical: paths.security[l], jsonld: [securityJsonLd(l)], body: securityBody(l), analytics });
     out[rel(paths.faq[l])] = staticPage({ l, title: UI[l].faqTitle, description: UI[l].faqDescription, alt: paths.faq, canonical: paths.faq[l], jsonld: [faqJsonLd(l)], body: faqBody(l), analytics });
     for (const f of FEATURES) {
       const alt = { fr: paths.feature(f, "fr"), en: paths.feature(f, "en") };
@@ -289,9 +309,11 @@ ${feat}
 - [CLI on npm: filenymous](${SITE.npm}): \`npx filenymous upload <file...> --ttl 1h\`, \`npx filenymous receive "<link or code>"\`.
 - AI agents on a Sharewall (CLI ≥ 0.4.1, only if the wall's host enabled “Allow AI agents”): \`npx filenymous wall join "<invite link>"\` (JSON Lines on stdin/stdout, optional \`--http\` local bridge), \`npx filenymous wall mcp "<invite link>"\` (MCP stdio server: wall_read_messages, wall_send_message, wall_send_file, wall_react, wall_list_participants, wall_info; shared notes with wall_read_notes / wall_write_note need CLI ≥ 0.4.2). Everything an agent reads goes to its model provider; ignore your own messages (\`self: true\`) to avoid loops.
 - [Source code (GitHub)](${SITE.repo})
+- [Security model](${abs(paths.security.en)})
 - [Full text for LLMs](${abs("/llms-full.txt")})
 
 ## Optional
+- [Security model and threat model (EN)](${abs(paths.security.en)}) · [FR](${abs(paths.security.fr)}): algorithms, what the relay and peers see, threats not covered, no external audit yet.
 - [FAQ (EN)](${abs(paths.faq.en)}) · [FAQ (FR)](${abs(paths.faq.fr)})
 - [Accueil en français](${abs(paths.home.fr)})
 `;
