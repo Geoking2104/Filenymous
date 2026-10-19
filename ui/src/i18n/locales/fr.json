@@ -994,7 +994,12 @@
     },
     "notice": {
       "rate-limited": "Doucement ! Trop d'actions d'affilée : réessayez dans {{s}} s.",
-      "bad-poll": "Sondage invalide : une question et 2 à 6 options différentes."
+      "bad-poll": "Sondage invalide : une question et 2 à 6 options différentes.",
+      "note-too-many-notes": "Limite de notes atteinte sur ce mur.",
+      "note-too-large": "Note trop longue (64 Ko maximum).",
+      "note-not-found": "Cette note n'existe plus.",
+      "note-forbidden": "Seul l'auteur ou l'hôte peut supprimer cette note.",
+      "note-empty": "Note vide."
     },
     "nameLabel": "Nom du mur",
     "namePlaceholder": "ex. Atelier lundi, Équipe projet…",
@@ -1028,6 +1033,34 @@
       "skipped_one": "{{count}} fichier non inclus (trop volumineux ou indisponible) : {{names}}",
       "skipped_other": "{{count}} fichiers non inclus (trop volumineux ou indisponibles) : {{names}}",
       "error": "L'export a échoué."
+    },
+    "notes": {
+      "tab": "Notes ({{count}})",
+      "membersTab": "Participants ({{count}})",
+      "new": "Nouvelle note",
+      "empty": "Aucune note pour l'instant. Les notes sont partagées avec tout le mur et disparaissent avec lui.",
+      "untitled": "Sans titre",
+      "titlePlaceholder": "Titre de la note",
+      "textPlaceholder": "Écrivez ici… (**gras**, _italique_, `code`, > citation ; pas de HTML)",
+      "edit": "Modifier",
+      "preview": "Aperçu",
+      "close": "Fermer la note",
+      "delete": "Supprimer",
+      "deleteConfirm": "Supprimer la note « {{title}} » pour tout le monde ?",
+      "pin": "Épingler",
+      "unpin": "Désépingler",
+      "pinned": "Note épinglée par l'hôte",
+      "lastEdit": "Modifiée par {{name}} à {{time}}",
+      "writing": "{{name}} est en train d'écrire…",
+      "someoneWriting": "Quelqu'un écrit dans une note",
+      "overwritten": "Votre modification de « {{title}} » a été remplacée par celle de {{name}}.",
+      "conflict": "{{name}} vient de modifier cette note. Si vous continuez, votre version remplacera la sienne.",
+      "tooLarge": "Note trop longue (maximum {{max}} Ko) : réduisez-la pour l'enregistrer.",
+      "saving": "enregistrement…",
+      "emptyNote": "(note vide)",
+      "editorLabel": "Note partagée",
+      "searchHeading_one": "{{count}} note",
+      "searchHeading_other": "{{count}} notes"
     }
   },
   "leave": {

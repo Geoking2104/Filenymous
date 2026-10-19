@@ -994,7 +994,12 @@
     },
     "notice": {
       "rate-limited": "Easy! Too many actions in a row: try again in {{s}} s.",
-      "bad-poll": "Invalid poll: a question and 2 to 6 different options."
+      "bad-poll": "Invalid poll: a question and 2 to 6 different options.",
+      "note-too-many-notes": "Note limit reached on this wall.",
+      "note-too-large": "Note too long (64 KB max).",
+      "note-not-found": "This note no longer exists.",
+      "note-forbidden": "Only its author or the host can delete this note.",
+      "note-empty": "Empty note."
     },
     "nameLabel": "Wall name",
     "namePlaceholder": "e.g. Monday workshop, Project team…",
@@ -1028,6 +1033,34 @@
       "skipped_one": "{{count}} file not included (too large or unavailable): {{names}}",
       "skipped_other": "{{count}} files not included (too large or unavailable): {{names}}",
       "error": "Export failed."
+    },
+    "notes": {
+      "tab": "Notes ({{count}})",
+      "membersTab": "People ({{count}})",
+      "new": "New note",
+      "empty": "No notes yet. Notes are shared with the whole wall and vanish with it.",
+      "untitled": "Untitled",
+      "titlePlaceholder": "Note title",
+      "textPlaceholder": "Write here… (**bold**, _italic_, `code`, > quote; no HTML)",
+      "edit": "Edit",
+      "preview": "Preview",
+      "close": "Close note",
+      "delete": "Delete",
+      "deleteConfirm": "Delete the note “{{title}}” for everyone?",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "pinned": "Pinned by the host",
+      "lastEdit": "Edited by {{name}} at {{time}}",
+      "writing": "{{name}} is writing…",
+      "someoneWriting": "Someone is writing in a note",
+      "overwritten": "Your edit to “{{title}}” was replaced by {{name}}’s.",
+      "conflict": "{{name}} just edited this note. If you keep typing, your version will replace theirs.",
+      "tooLarge": "Note too long (max {{max}} KB): shorten it to save.",
+      "saving": "saving…",
+      "emptyNote": "(empty note)",
+      "editorLabel": "Shared note",
+      "searchHeading_one": "{{count}} note",
+      "searchHeading_other": "{{count}} notes"
     }
   },
   "leave": {

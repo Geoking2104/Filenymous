@@ -3,6 +3,7 @@
  * RAM, never IndexedDB/localStorage/Cache), item metadata shown in the grid,
  * the control messages and their validation, plus the pure TTL/burn rules.
  */
+import { cleanNoteText, cleanNoteTitle, cleanSharedNote, isNoteId, type SharedNote } from "./notes";
 import { sanitizeWallTitle } from "./link";
 import { safeFileName } from "../p2p/protocol";
 import {
@@ -62,6 +63,11 @@ export type WallMessage =
   | { t: "live-start"; kind: LiveKind; tracks: number }
   | { t: "live-stop"; sid: string }
   | { t: "bye" }
+  // shared notes (peer → host operations; the host decides and versions)
+  | { t: "snote-new"; title: string; text: string }
+  | { t: "snote-edit"; id: string; base: number; title?: string; text?: string }
+  | { t: "snote-del"; id: string }
+  | { t: "snote-lock"; id: string; on: boolean }
   // both directions: media signaling for live streams, inside the sealed channel
   | RtcMessage
   // host → peer
@@ -83,7 +89,10 @@ export type WallMessage =
   | { t: "get-begin"; rid: number; item: ItemMeta }
   | { t: "get-end"; rid: number; chunks: number }
   | { t: "get-fail"; rid: number; reason: "gone" | "busy" }
-  | { t: "destroy"; reason: DestroyReason };
+  | { t: "destroy"; reason: DestroyReason }
+  | { t: "snote"; note: SharedNote; overwrote?: string }
+  | { t: "snote-gone"; id: string }
+  | { t: "snote-lock-by"; id: string; label: string | null; until: number };
 
 export interface RtcMessage {
   t: "rtc";
@@ -178,6 +187,32 @@ export function parseWallMessage(m: unknown): WallMessage | null {
       return isPostId(o.sid) ? { t: o.t, sid: o.sid } : null;
     case "bye":
       return { t: "bye" };
+    case "snote-new": {
+      const title = cleanNoteTitle(o.title);
+      const text = cleanNoteText(o.text);
+      return title !== null && text !== null ? { t: "snote-new", title, text } : null;
+    }
+    case "snote-edit": {
+      if (!isNoteId(o.id) || !int(o.base)) return null;
+      if (o.title === undefined && o.text === undefined) return null;
+      const title = o.title === undefined ? undefined : cleanNoteTitle(o.title);
+      const text = o.text === undefined ? undefined : cleanNoteText(o.text);
+      if (title === null || text === null) return null;
+      return { t: "snote-edit", id: o.id, base: o.base as number, ...(title !== undefined ? { title } : {}), ...(text !== undefined ? { text } : {}) };
+    }
+    case "snote-del":
+      return isNoteId(o.id) ? { t: "snote-del", id: o.id } : null;
+    case "snote-lock":
+      return isNoteId(o.id) && typeof o.on === "boolean" ? { t: "snote-lock", id: o.id, on: o.on } : null;
+    case "snote": {
+      const note = cleanSharedNote(o.note);
+      if (!note || (o.overwrote !== undefined && !isLabel(o.overwrote))) return null;
+      return { t: "snote", note, ...(o.overwrote ? { overwrote: o.overwrote as string } : {}) };
+    }
+    case "snote-gone":
+      return isNoteId(o.id) ? { t: "snote-gone", id: o.id } : null;
+    case "snote-lock-by":
+      return isNoteId(o.id) && (o.label === null || isLabel(o.label)) && int(o.until) ? { t: "snote-lock-by", id: o.id, label: o.label as string | null, until: o.until as number } : null;
     case "rtc": {
       if (typeof o.link !== "string" || !LINK_RE.test(o.link)) return null;
       if (o.kind === "offer" || o.kind === "answer") return str(o.sdp, 64 * 1024) && o.sdp ? { t: "rtc", link: o.link, kind: o.kind, sdp: o.sdp as string } : null;

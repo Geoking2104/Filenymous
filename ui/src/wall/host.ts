@@ -23,6 +23,7 @@ import {
   type Post,
   type WallEvent,
 } from "./feed";
+import { NoteBoard, type NoteError, type NoteLock, type SharedNote } from "./notes";
 import { isExpired, type HostWallParams } from "./link";
 import { LIVE_WAIT_TRACKS_MS, MediaLink, stopStream } from "./live";
 import {
@@ -58,6 +59,12 @@ export interface HostState {
   typing: Record<string, number>;
   /** Whether AI agents may join (host setting, off by default). */
   agents: boolean;
+  /** Shared notes (host-authoritative), pinned first. */
+  notes: SharedNote[];
+  /** note id → soft lock ("X est en train d'écrire"). */
+  noteLocks: Record<string, NoteLock>;
+  /** Set when one of your note edits was replaced by someone who had not seen it. */
+  noteOverwrite?: { id: string; by: string; at: number };
   error?: string;
   notice?: { code: string; at: number; retryMs?: number };
 }
@@ -132,6 +139,8 @@ export class WallHost {
   private chatLimit: RateLimiter;
   private reactLimit: RateLimiter;
   private burstLimit: RateLimiter;
+  private noteLimit: RateLimiter;
+  private board = new NoteBoard();
   private self: Member;
   state: HostState;
 
@@ -145,10 +154,13 @@ export class WallHost {
     this.chatLimit = new RateLimiter(LIMITS.chat.capacity, LIMITS.chat.perSecond);
     this.reactLimit = new RateLimiter(LIMITS.react.capacity, LIMITS.react.perSecond);
     this.burstLimit = new RateLimiter(LIMITS.burst.capacity, LIMITS.burst.perSecond);
+    this.noteLimit = new RateLimiter(LIMITS.note.capacity, LIMITS.note.perSecond);
     this.state = {
       status: "starting",
       expiresAt: params.expiresAt,
       posts: [],
+      notes: [],
+      noteLocks: {},
       members: [this.self],
       pinned: null,
       live: [],
@@ -286,6 +298,8 @@ export class WallHost {
       this.chatLimit.forget(peer.label);
       this.reactLimit.forget(peer.label);
       this.burstLimit.forget(peer.label);
+      this.noteLimit.forget(peer.label);
+      for (const id of this.board.releaseAll(peer.label)) this.publishLock(id, null);
     }
     try { peer.pc.close(); } catch { /* ignore */ }
     if (peer.member) this.refreshMembers();
@@ -428,6 +442,11 @@ export class WallHost {
     // Posts go one by one so no single message hits the DataChannel size limit.
     for (const post of this.state.posts) void this.sendControl(peer, { t: "post", post });
     if (this.state.pinned) void this.sendControl(peer, { t: "pin", id: this.state.pinned });
+    for (const note of this.board.list()) void this.sendControl(peer, { t: "snote", note });
+    for (const note of this.board.list()) {
+      const l = this.board.lockOf(note.id);
+      if (l) void this.sendControl(peer, { t: "snote-lock-by", id: l.id, label: l.label, until: l.until });
+    }
     void this.sendControl(peer, { t: "live", streams: this.state.live });
     this.refreshMembers();
     if (msg.media) for (const pub of this.pubs.values()) if (pub.announced) void this.openDown(peer, pub);
@@ -574,9 +593,79 @@ export class WallHost {
         this.refreshMembers();
         return;
       }
+      case "snote-new": {
+        if (limited(this.chatLimit)) return;
+        const r = this.board.create(label, msg.title, msg.text);
+        if (typeof r === "string") return this.noteFail(peer, r);
+        this.publishNote(r);
+        return;
+      }
+      case "snote-edit": {
+        if (limited(this.noteLimit)) return;
+        const r = this.board.edit(label, msg.id, msg.base, { title: msg.title, text: msg.text });
+        if (typeof r === "string") return this.noteFail(peer, r);
+        this.publishNote(r.note, r.overwrote);
+        return;
+      }
+      case "snote-del": {
+        if (limited(this.reactLimit)) return;
+        const r = this.board.remove(label, msg.id);
+        if (r !== true) return this.noteFail(peer, r);
+        const noteLocks = { ...this.state.noteLocks };
+        delete noteLocks[msg.id];
+        this.update({ notes: this.board.list(), noteLocks });
+        this.broadcast({ t: "snote-gone", id: msg.id });
+        this.emit({ type: "note-gone", id: msg.id });
+        return;
+      }
+      case "snote-lock": {
+        if (limited(this.reactLimit)) return;
+        const r = this.board.lock(label, msg.id, msg.on);
+        if (r !== undefined) this.publishLock(msg.id, r);
+        return;
+      }
       default:
         return;
     }
+  }
+
+  private noteFail(peer: Peer | null, err: NoteError) {
+    this.notify(peer, `note-${err}`);
+  }
+
+  private publishNote(note: SharedNote, overwrote?: string) {
+    this.update({ notes: this.board.list(), ...(overwrote === HOST_LABEL ? { noteOverwrite: { id: note.id, by: note.editedBy, at: Date.now() } } : {}) });
+    this.broadcast({ t: "snote", note, ...(overwrote ? { overwrote } : {}) });
+    this.emit({ type: "note", note, ...(overwrote ? { overwrote } : {}) });
+  }
+
+  private publishLock(id: string, lock: NoteLock | null) {
+    const noteLocks = { ...this.state.noteLocks };
+    if (lock) noteLocks[id] = lock;
+    else delete noteLocks[id];
+    this.update({ noteLocks });
+    this.broadcast({ t: "snote-lock-by", id, label: lock?.label ?? null, until: lock?.until ?? 0 });
+    this.emit({ type: "note-lock", id, label: lock?.label ?? null, until: lock?.until ?? 0 });
+  }
+
+  // ---- shared notes: host's own actions (never rate limited) ----
+  createNote(title: string, text = "") {
+    this.apply(HOST_LABEL, null, { t: "snote-new", title, text });
+  }
+  editNote(id: string, base: number, patch: { title?: string; text?: string }) {
+    this.apply(HOST_LABEL, null, { t: "snote-edit", id, base, ...patch });
+  }
+  deleteNote(id: string) {
+    this.apply(HOST_LABEL, null, { t: "snote-del", id });
+  }
+  lockNote(id: string, on: boolean) {
+    this.apply(HOST_LABEL, null, { t: "snote-lock", id, on });
+  }
+  /** Host only: pinned notes come first for everyone. */
+  pinNote(id: string, on: boolean) {
+    if (this.done) return;
+    const r = this.board.pin(id, on);
+    if (typeof r !== "string") this.publishNote(r);
   }
 
   private findPost(id: string): Post | undefined {
@@ -897,10 +986,11 @@ export class WallHost {
     }
     this.peers.clear();
     this.store.wipe();
+    this.board.clear();
     this.base = null;
     this.signal?.close();
     releaseUnloadGuard(HOST_GUARD);
-    this.update({ status, posts: [], members: [], pinned: null, live: [], media: {}, typing: {} });
+    this.update({ status, posts: [], notes: [], noteLocks: {}, members: [], pinned: null, live: [], media: {}, typing: {} });
   }
 
   /** Leaving the page / unmount: peers see the host go away (and wipe if the option is on). */

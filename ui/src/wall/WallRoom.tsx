@@ -12,7 +12,9 @@ import { QRCodeSVG } from "qrcode.react";
 import { formatBytes } from "../ux-v3/types";
 import { EmojiPicker } from "./EmojiPicker";
 import { Hl, Markup } from "./Markup";
-import { normalizeQuery, searchPosts } from "./search-annotations";
+import { normalizeQuery, searchNotes, searchPosts } from "./search-annotations";
+import { NoteEditor, NoteSearchHits, NotesList, liveLock, type NotesApi } from "./NotesUi";
+import type { NoteLock, SharedNote } from "./notes";
 import { QUICK_REACTIONS } from "./emoji";
 import {
   BURSTS,
@@ -67,9 +69,12 @@ export interface RoomState {
   uploads?: PeerUpload[];
   /** Ids of items this tab authored. */
   mine: string[];
+  notes: SharedNote[];
+  noteLocks: Record<string, NoteLock>;
+  noteOverwrite?: { id: string; by: string; at: number };
 }
 
-export interface RoomApi {
+export interface RoomApi extends NotesApi {
   say(text: string, replyTo?: string): void | Promise<void>;
   react(id: string, emoji: string): void | Promise<void>;
   poll(question: string, options: string[]): void | Promise<void> | boolean;
@@ -175,6 +180,8 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
   const [opened, setOpened] = useState<Map<string, Fetched>>(new Map());
   const [ghosts, setGhosts] = useState<Post[]>([]);
   const [drawer, setDrawer] = useState(false);
+  const [sideTab, setSideTab] = useState<"members" | "notes">("members");
+  const [openNote, setOpenNote] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [picker, setPicker] = useState<{ target: "composer" } | { target: "post"; id: string } | null>(null);
   const [preview, setPreview] = useState<{ meta: ItemMeta; url?: string; text?: string } | null>(null);
@@ -235,6 +242,30 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
   }, [s.notice, t]);
 
   useEffect(() => {
+    if (!s.noteOverwrite) return;
+    const n = s.notes.find((x) => x.id === s.noteOverwrite!.id);
+    say(t("wall.notes.overwritten", { title: n?.title || t("wall.notes.untitled"), name: nameOf(s.noteOverwrite.by) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.noteOverwrite]);
+
+  // Open the note you just created as soon as the host confirms it.
+  const createdFrom = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const before = createdFrom.current;
+    if (!before) return;
+    const n = s.notes.find((x) => !before.has(x.id) && x.by === s.self);
+    if (n) {
+      createdFrom.current = null;
+      setOpenNote(n.id);
+    }
+  }, [s.notes, s.self]);
+
+  // A note deleted by someone else closes its editor.
+  useEffect(() => {
+    if (openNote && !s.notes.some((n) => n.id === openNote)) setOpenNote(null);
+  }, [s.notes, openNote]);
+
+  useEffect(() => {
     if (!notice) return;
     const id = setTimeout(() => setNotice((n) => (n === notice ? null : n)), 6000);
     return () => clearTimeout(id);
@@ -269,6 +300,14 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
 
   const searching = normalizeQuery(query) !== "";
   const shown = useMemo(() => (searching ? searchPosts(feed, query) : feed), [feed, query, searching]);
+  const noteHits = useMemo(() => (searching ? searchNotes(s.notes, query) : []), [s.notes, query, searching]);
+  const openNoteById = (id: string) => {
+    setOpenNote(id);
+    setSideTab("notes");
+    setDrawer(false);
+  };
+  const editing = openNote ? s.notes.find((n) => n.id === openNote) : undefined;
+  const notesWriting = s.notes.filter((n) => { const l = liveLock(s.noteLocks[n.id], now); return !!l && l.label !== s.self; }).length;
   const openSearch = () => {
     setSearchOpen(true);
     requestAnimationFrame(() => searchRef.current?.focus());
@@ -401,8 +440,33 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
       <div className="sw2-body">
         <aside className="sw2-side" aria-label={t("wall.members")}>
           <WallInfo s={s} code={code} invite={invite} />
-          {isHost && api.setAgents && <AgentsToggle on={s.agents} onChange={api.setAgents} />}
-          <section className="sw2-section">
+          <div className="sw2-tabs" role="tablist">
+            <button type="button" role="tab" className="sw2-tab" data-testid="wall-tab-members" aria-selected={sideTab === "members"} onClick={() => setSideTab("members")}>
+              👥 {t("wall.notes.membersTab", { count: s.members.length })}
+            </button>
+            <button type="button" role="tab" className="sw2-tab" data-testid="wall-tab-notes" aria-selected={sideTab === "notes"} onClick={() => setSideTab("notes")}>
+              📝 {t("wall.notes.tab", { count: s.notes.length })}
+              {notesWriting > 0 && <span className="sw2-tab-dot" aria-label={t("wall.notes.someoneWriting")} />}
+            </button>
+          </div>
+          {sideTab === "notes" && (
+            <NotesList
+              notes={s.notes}
+              locks={s.noteLocks}
+              self={s.self}
+              now={now}
+              nameOf={nameOf}
+              openId={openNote}
+              onOpen={openNoteById}
+              onCreate={() => {
+                createdFrom.current = new Set(s.notes.map((n) => n.id));
+                setDrawer(false);
+                void Promise.resolve(api.createNote("")).catch(() => undefined);
+              }}
+            />
+          )}
+          {sideTab === "members" && isHost && api.setAgents && <AgentsToggle on={s.agents} onChange={api.setAgents} />}
+          {sideTab === "members" && <section className="sw2-section">
             <h3 className="sw2-h">{t("wall.membersCount", { count: s.members.length })}</h3>
             <ul className="sw2-members" data-testid="wall-members">
               {s.members.map((m) => (
@@ -417,7 +481,7 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
                 />
               ))}
             </ul>
-          </section>
+          </section>}
           <div className="sw2-side-actions">
             {isHost && (onExport || exportBlocked) && (
               <>
@@ -488,11 +552,26 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
             />
           )}
 
+          {editing && (
+            <NoteEditor
+              key={editing.id}
+              note={editing}
+              lock={s.noteLocks[editing.id]}
+              self={s.self}
+              isHost={isHost}
+              now={now}
+              nameOf={nameOf}
+              members={s.members}
+              api={api}
+              onClose={() => setOpenNote(null)}
+            />
+          )}
           {searching && (
-            <p className="sw2-search-count" data-testid="wall-search-count" data-count={shown.length} aria-live="polite">
-              {t("wall.search.count", { count: shown.length })}
+            <p className="sw2-search-count" data-testid="wall-search-count" data-count={shown.length + noteHits.length} aria-live="polite">
+              {t("wall.search.count", { count: shown.length + noteHits.length })}
             </p>
           )}
+          {searching && <NoteSearchHits notes={noteHits} query={query} onOpen={openNoteById} />}
           <Feed
             posts={shown}
             highlight={searching ? query : undefined}

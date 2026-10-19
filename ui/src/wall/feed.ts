@@ -1,3 +1,4 @@
+import type { SharedNote } from "./notes";
 /**
  * Sharewall live feed: posts (messages, files, masked notes, polls), members
  * (presence), reactions, mentions, grouping and rate limiting. Pure logic,
@@ -315,13 +316,18 @@ export type WallEvent =
   | { type: "live"; streams: LiveInfo[] }
   | { type: "typing"; label: string }
   | { type: "burst"; label: string; kind: BurstKind }
-  | { type: "notice"; code: string; retryMs?: number };
+  | { type: "notice"; code: string; retryMs?: number }
+  | { type: "note"; note: SharedNote; overwrote?: string }
+  | { type: "note-gone"; id: string }
+  | { type: "note-lock"; id: string; label: string | null; until: number };
 
 /** Host-side limits per member (the host itself is exempt). */
 export const LIMITS = {
   chat: { capacity: 8, perSecond: 1 / 1.5 },
   react: { capacity: 20, perSecond: 4 },
   burst: { capacity: 3, perSecond: 1 / 3 },
+  /** Shared-note edits (the UI debounces to ~1 per 700 ms while typing). */
+  note: { capacity: 20, perSecond: 3 },
   typingGapMs: 2000,
 } as const;
 

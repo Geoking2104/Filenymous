@@ -134,6 +134,7 @@ Also `note` (masked: no text until `get`), `poll`, `poll.update`, `removed`, `pi
 {"cmd":"note","text":"secret"}                          {"cmd":"get","id":"i1-…"}
 {"cmd":"poll","question":"Format ?","options":["JSON","YAML"]}   {"cmd":"vote","id":"…","option":0}
 {"cmd":"read","since":0}  {"cmd":"members"}  {"cmd":"info"}  {"cmd":"leave"}
+{"cmd":"notes"}  {"cmd":"write-note","title":"Ordre du jour","text":"…"}  {"cmd":"write-note","id":"n-…","text":"…"}  {"cmd":"delete-note","id":"n-…"}
 host only: {"cmd":"pin","id":"…"}  {"cmd":"kick","label":"peer:3"}  {"cmd":"allow-agents","on":false}
 ```
 
@@ -153,7 +154,7 @@ curl -H "Authorization: Bearer $TOKEN" -H content-type:application/json -d '{"te
 
 ### MCP
 
-`filenymous wall mcp "<link>"` (or `--create [--allow-agents]` to host) is an MCP server on stdio with tools `wall_read_messages` (`since`, `wait_ms` long-poll), `wall_send_message`, `wall_send_file`, `wall_react`, `wall_list_participants`, `wall_get_item`, `wall_info`.
+`filenymous wall mcp "<link>"` (or `--create [--allow-agents]` to host) is an MCP server on stdio with tools `wall_read_messages` (`since`, `wait_ms` long-poll), `wall_send_message`, `wall_send_file`, `wall_react`, `wall_list_participants`, `wall_get_item`, `wall_info`, and (from 0.4.2) `wall_read_notes` / `wall_write_note` for the wall's shared notes (host-versioned, last writer wins, 64 KiB per note).
 
 Claude Desktop (`claude_desktop_config.json`) or Cursor (`.cursor/mcp.json`):
 

@@ -1,4 +1,5 @@
 import { iceServers } from "../p2p/config";
+import { sortNotes, type NoteLock, type SharedNote } from "./notes";
 import { CONNECT_TIMEOUT_MS, LOW_WATER, addRemoteCandidate, waitForDrain } from "../p2p/session";
 import { iceCandidateInit, type SignalPayload } from "../p2p/signal";
 import { b64urlEncode } from "../p2p/protocol";
@@ -59,6 +60,9 @@ export interface PeerState {
   uploads: PeerUpload[];
   /** Ids of items this tab authored (never burned when it re-opens them). */
   mine: string[];
+  notes: SharedNote[];
+  noteLocks: Record<string, NoteLock>;
+  noteOverwrite?: { id: string; by: string; at: number };
   notice?: { code: string; at: number; retryMs?: number };
   error?: string;
 }
@@ -135,6 +139,8 @@ export class WallPeer {
       typing: {},
       uploads: [],
       mine: [],
+      notes: [],
+      noteLocks: {},
     };
   }
 
@@ -356,10 +362,34 @@ export class WallPeer {
           agents: msg.agents,
           hostMedia: msg.media,
           posts: [],
+          notes: [],
+          noteLocks: {},
           pinned: null,
           live: [],
           media: {},
         });
+      case "snote": {
+        const notes = sortNotes([...this.state.notes.filter((n) => n.id !== msg.note.id), msg.note]);
+        const mine = !!this.state.label && msg.overwrote === this.state.label;
+        this.update({ notes, ...(mine ? { noteOverwrite: { id: msg.note.id, by: msg.note.editedBy, at: Date.now() } } : {}) });
+        this.emit({ type: "note", note: msg.note, ...(msg.overwrote ? { overwrote: msg.overwrote } : {}) });
+        return;
+      }
+      case "snote-gone": {
+        const noteLocks = { ...this.state.noteLocks };
+        delete noteLocks[msg.id];
+        this.update({ notes: this.state.notes.filter((n) => n.id !== msg.id), noteLocks });
+        this.emit({ type: "note-gone", id: msg.id });
+        return;
+      }
+      case "snote-lock-by": {
+        const noteLocks = { ...this.state.noteLocks };
+        if (msg.label) noteLocks[msg.id] = { id: msg.id, label: msg.label, until: msg.until };
+        else delete noteLocks[msg.id];
+        this.update({ noteLocks });
+        this.emit({ type: "note-lock", id: msg.id, label: msg.label, until: msg.until });
+        return;
+      }
       case "members": {
         const { joined, left } = diffMembers(this.state.members, msg.members);
         const typing = { ...this.state.typing };
@@ -633,6 +663,19 @@ export class WallPeer {
     return this.uploadChain;
   }
 
+  createNote(title: string, text = ""): Promise<void> {
+    return this.sendControl({ t: "snote-new", title, text });
+  }
+  editNote(id: string, base: number, patch: { title?: string; text?: string }): Promise<void> {
+    return this.sendControl({ t: "snote-edit", id, base, ...patch });
+  }
+  deleteNote(id: string): Promise<void> {
+    return this.sendControl({ t: "snote-del", id });
+  }
+  lockNote(id: string, on: boolean) {
+    void this.sendControl({ t: "snote-lock", id, on }).catch(() => undefined);
+  }
+
   say(text: string, replyTo?: string): Promise<void> {
     return this.sendControl({ t: "say", text, ...(replyTo ? { replyTo } : {}) });
   }
@@ -704,7 +747,7 @@ export class WallPeer {
     this.closePc();
     this.signal?.close();
     for (const fn of this.wipeListeners) fn();
-    this.update({ status: reason, posts: [], members: [], pinned: null, live: [], media: {}, typing: {}, uploads: [], mine: [], label: undefined });
+    this.update({ status: reason, posts: [], members: [], pinned: null, live: [], media: {}, typing: {}, uploads: [], mine: [], notes: [], noteLocks: {}, label: undefined });
   }
 
   async leave() {
