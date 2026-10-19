@@ -5,7 +5,7 @@
 
 Filenymous est un logiciel libre (MIT). Les fichiers passent directement d'un navigateur à l'autre (WebRTC), chiffrés en AES-256-GCM ; la clé ne vit que dans le fragment du lien (`#…`), que les navigateurs n'envoient jamais aux serveurs. Seuls les **secrets** (≤ 64 Kio, effacés à la lecture ou à l'expiration) et les **signalements** sont conservés côté serveur, chiffrés, sans la clé.
 
-**Application :** https://filenymous.eu/app/ · **FAQ :** [FR](https://filenymous.eu/app/faq/) / [EN](https://filenymous.eu/app/en/faq/) · **Fonctionnalités :** [FR](https://filenymous.eu/app/fonctionnalites/) / [EN](https://filenymous.eu/app/en/features/) · **CLI :** [`npx filenymous`](https://www.npmjs.com/package/filenymous) (0.4.1) · **Pour les assistants IA :** [llms.txt](https://filenymous.eu/llms.txt) · [llms-full.txt](https://filenymous.eu/llms-full.txt)
+**Application :** https://filenymous.eu/app/ · **FAQ :** [FR](https://filenymous.eu/app/faq/) / [EN](https://filenymous.eu/app/en/faq/) · **Fonctionnalités :** [FR](https://filenymous.eu/app/fonctionnalites/) / [EN](https://filenymous.eu/app/en/features/) · **CLI :** [`npx filenymous`](https://www.npmjs.com/package/filenymous) (0.4.2) · **Pour les assistants IA :** [llms.txt](https://filenymous.eu/llms.txt) · [llms-full.txt](https://filenymous.eu/llms-full.txt)
 
 | Service | Français | English |
 |---|---|---|
@@ -81,7 +81,7 @@ Chaque carte de l'accueil ouvre un écran qui garde la même icône et le même 
   <img src="docs/img/sharewall-destroyed.png" width="48%" alt="Sharewall détruit : chaque participant efface sa copie" />
 </p>
 
-### CLI npm `filenymous` 0.4.1
+### CLI npm `filenymous` 0.4.2
 
 Node.js ≥ 18.17, sans installation : `npx filenymous`. Documentation complète : [`cli/README.md`](cli/README.md).
 
@@ -110,7 +110,7 @@ Configuration MCP (Claude Desktop `claude_desktop_config.json`, Cursor `.cursor/
   "mcpServers": {
     "sharewall": {
       "command": "npx",
-      "args": ["-y", "filenymous@0.4.1", "wall", "mcp", "https://filenymous.eu/app/#wall:…", "--name", "Claude"],
+      "args": ["-y", "filenymous@0.4.2", "wall", "mcp", "https://filenymous.eu/app/#wall:…", "--name", "Claude"],
       "env": { "FILENYMOUS_PASSWORD": "" }
     }
   }
@@ -232,7 +232,7 @@ Each home card opens a screen that keeps the same icon and title. Every service 
   <img src="docs/img/mobile-dark.png" width="48%" alt="Service screens on mobile, dark theme" />
 </p>
 
-### npm CLI `filenymous` 0.4.1
+### npm CLI `filenymous` 0.4.2
 
 Node.js ≥ 18.17, nothing to install: `npx filenymous`. Full documentation: [`cli/README.md`](cli/README.md).
 
