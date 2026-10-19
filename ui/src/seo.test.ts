@@ -11,7 +11,7 @@ describe("SEO / agent discoverability output", () => {
   it("sitemap lists absolute public URLs only: no fragment, no query, reciprocal hreflang", () => {
     const xml: string = seo.sitemapXml();
     const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-    expect(locs.length).toBe(2 * (2 + FEATURES.length));
+    expect(locs.length).toBe(2 * (3 + FEATURES.length));
     expect(new Set(locs).size).toBe(locs.length);
     for (const u of urlsIn(xml).filter((u) => u.startsWith(ORIGIN))) {
       expect(u).not.toMatch(/[#?]/);
