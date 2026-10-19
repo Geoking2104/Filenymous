@@ -153,7 +153,7 @@ Le contenu est gardé en RAM (`Blob`) : la mémoire de l'onglet hôte borne en p
 - Le lien hôte (avec `hostSecret`) est dans la barre d'adresse et l'historique de l'onglet hôte, comme pour la Dropzone ; le lien participant reste dans l'historique des participants jusqu'à la destruction du mur (il devient alors inutilisable).
 - Le texte de l'interface est protégé par un test (`ui/src/wall/wall.test.ts`) qui interdit « anonymat absolu », « aucune IP », « zéro log », « certifié », etc. et exige les mentions IP/VPN/Tor/canal de signalement.
 
-## CLI et agents IA (`filenymous` ≥ 0.4.1 pour les murs sans expiration)
+## CLI et agents IA (`filenymous` ≥ 0.4.1 pour les murs sans expiration, ≥ 0.4.2 pour les notes partagées)
 
 ```
 npx filenymous wall create [--title <nom du mur>] [--ttl 15m|1h|24h] [--burn] [--keep-on-leave] [--allow-agents] [--name <nom>]

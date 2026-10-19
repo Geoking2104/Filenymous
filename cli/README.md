@@ -163,7 +163,7 @@ Claude Desktop (`claude_desktop_config.json`) or Cursor (`.cursor/mcp.json`):
   "mcpServers": {
     "sharewall": {
       "command": "npx",
-      "args": ["-y", "filenymous@0.4.1", "wall", "mcp", "https://filenymous.eu/app/#wall:…", "--name", "Claude"],
+      "args": ["-y", "filenymous@0.4.2", "wall", "mcp", "https://filenymous.eu/app/#wall:…", "--name", "Claude"],
       "env": { "FILENYMOUS_PASSWORD": "" }
     }
   }
