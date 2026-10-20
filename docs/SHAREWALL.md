@@ -47,24 +47,18 @@ Entrées : `https://filenymous.eu/app/#wall-new` (raccourci `https://filenymous.
 
 ## Didacticiel agents IA (3 clics)
 
-Un guide interactif intégré dans l'interface (bouton « Guide agents IA (3 clics) » dans le panneau des participants, côté hôte) aide en trois étapes :
+Côté hôte, le bouton « Guide agents IA (3 clics) » du panneau des participants ouvre un guide en trois étapes :
 
-1. **Autoriser les agents** : cocher l'option (désactivée par défaut) avec la mise en garde de confidentialité.
-2. **Connecter l'agent** : copier la commande CLI `npx filenymous wall join "<lien>" --name "Mon agent"` ou la configuration MCP pour Claude Desktop / Cursor.
-3. **Bénéfices et priorités** :
-   - **Haute priorité** : ateliers, due diligence, handoff de développement — l'agent résume, extrait les actions, génère un rapport structuré directement dans le mur.
-   - **Moyenne** : assistance temps réel (Q&R, reformulation, notes).
-   - **Basse** : expérimentation multi-agents sous contrôle de l'hôte.
-   - **Résultats** : gain de temps sur la synthèse, sorties structurées, contrôle total (l'hôte peut déconnecter à tout moment). Rien n'est stocké côté serveur.
-
-Voir aussi [cli/README.md](../cli/README.md#agents-ia--sharewall) pour les détails techniques (JSON Lines, MCP, garde-fous anti-boucle).
+1. **Autoriser les agents** : cocher l’option (désactivée par défaut), avec la mise en garde de confidentialité.
+2. **Connecter l’agent** : copier la commande CLI `npx filenymous wall join "<lien>" --name "Mon agent"` ou la configuration MCP (Claude Desktop, Cursor).
+3. **Bénéfices et priorités** : haute (ateliers, due diligence, passation de développement : résumé, actions, rapport structuré dans le mur), moyenne (aide en direct, notes), basse (expériences multi-agents sous le contrôle de l’hôte). Rien n’est stocké côté serveur ; l’hôte peut déconnecter un agent à tout moment.
 
 ## Architecture : topologie en étoile autour de l'onglet hôte
 
 ```
- Participant 1 ┌─                       ┌─ signalisation seulement (WebSocket /wall)
- Participant 2 ├── WebRTC DataChannel ├─   relais p2p-signal (VPS) : ne voit ni clé ni contenu
- Participant N └─   (chiffré E2E)      Hôte (onglet) : contenu en RAM, sert les éléments à la demande
+ Participant 1 ─┐                       ┌─ signalisation seulement (WebSocket /wall)
+ Participant 2 ─┼── WebRTC DataChannel ─┤   relais p2p-signal (VPS) : ne voit ni clé ni contenu
+ Participant N ─┘   (chiffré E2E)      Hôte (onglet) : contenu en RAM, sert les éléments à la demande
 ```
 
 Choix : **étoile via l'hôte** (et non maillage complet) :
@@ -95,10 +89,10 @@ Contreparties assumées : l'onglet de l'hôte doit rester ouvert (il détient le
 
 ## Cryptographie
 
-- Matériau : `clé` seule, ou `clé ∥ PBKDF2-SHA256(mot de passe, "filenymous-wall-pw:<wallId>", 200 000 itérations)` si mot de passe. Le mot de passe n'est jamais transmis.
+- Matériau : `clé` seule, ou `clé ‖ PBKDF2-SHA256(mot de passe, "filenymous-wall-pw:<wallId>", 200 000 itérations)` si mot de passe. Le mot de passe n'est jamais transmis.
 - HKDF-SHA256 (sel `filenymous-wall-v1`, contexte `<wallId>:<sid>:<exp>:<options>`, `sid` aléatoire par connexion) → trois clés : `wall-proof` (HMAC de preuve), `wall-up` (participant → hôte), `wall-down` (hôte → participant). Des clés distinctes par sens et par session excluent toute réutilisation d'IV.
 - Poignée de main en clair sur le DataChannel, sans contenu : `wall-hello {v, sid, proof}` → `wall-ready {proof}` ou `wall-reject {reason}`. Preuve mutuelle (`sealProof/checkProof`) : un mauvais mot de passe est refusé sans rien révéler.
-- Ensuite **tout** est scellé AES-256-GCM (format `sealChunk` : IV = flux ∥ index, en-tête en AAD) : flux 0 = messages de contrôle JSON (noms de fichiers, tailles, textes compris), flux ≥ 1 = données. L'ordre est imposé par flux : toute trame rejouée, réordonnée ou modifiée coupe la connexion.
+- Ensuite **tout** est scellé AES-256-GCM (format `sealChunk` : IV = flux ‖ index, en-tête en AAD) : flux 0 = messages de contrôle JSON (noms de fichiers, tailles, textes compris), flux ≥ 1 = données. L'ordre est imposé par flux : toute trame rejouée, réordonnée ou modifiée coupe la connexion.
 
 ## Protocole
 
@@ -159,9 +153,47 @@ Le contenu est gardé en RAM (`Blob`) : la mémoire de l'onglet hôte borne en p
 
 - Protégé : le contenu, les noms de fichiers, les notes, le mot de passe et la clé, vis-à-vis du relais, de l'hébergeur et de tout intermédiaire réseau (TURN compris).
 - Le relais voit : un identifiant de mur opaque, l'expiration éventuelle (anciens liens), l'option « détruire si l'hôte part », le `hostSecret` de l'hôte (dont il ne vérifie que le hash), les paramètres WebRTC (SDP, candidats ICE, donc les adresses IP) et l'adresse IP de connexion, gardée **en mémoire** pour la limitation de débit. Il n'écrit aucune ligne par requête ; nginx a `access_log off` pour `/filenymous-signal/wall` (après déploiement, voir plus bas).
-- **Ce n'est pas de l'anonymat** : en WebRTC l'hôte voit l'IP de chaque participant et chaque participant voit celle de l'hôte (sauf relais TURN). Tor Browser désactive WebRTC : pour masquer son IP, utiliser un VPN de confiance. Pour une source ou un lanceur d'alerte, le canal de signalement (asynchrone, utile avec Tor) reste l'outil adapté.
-- **Agents IA** : tout ce qu'ils lisent part chez le fournisseur de leur modèle. L'option est désactivée par défaut ; une bannière le rappelle tant qu'un agent est présent. Le badge « IA » est auto-déclaré.
-- **Journaux** : le chemin `/filenymous-signal/wall` a `access_log off` (nginx). L'application n'enregistre ni IP, ni User-Agent, ni Referer pour les murs.
-- **Mesure d'audience** : Umami auto-hébergé, sans cookie, coupé sur les pages Sharewall (`#wall…`).
+- **Ce n'est pas de l'anonymat** : en WebRTC l'hôte voit l'IP de chaque participant et chaque participant voit celle de l'hôte (sauf relais TURN). Tor Browser désactive WebRTC : pour masquer son IP, utiliser un VPN de confiance. Pour une source ou un lanceur d'alerte, le canal de signalement (asynchrone, utilisable via Tor) est le bon outil.
+- **Agents IA** : ce qu'un agent lit sort du chiffrement de bout en bout vers le fournisseur de son modèle (désactivé par défaut, avertissement à l'activation et tant qu'un agent est là ; badge auto-déclaré).
+- **En direct** : l'hôte reçoit et retransmet les flux ; les participants voient l'IP de l'hôte, pas celles des autres.
+- Les participants peuvent enregistrer, copier ou photographier ce qu'ils ont vu : la destruction efface les copies en mémoire, pas ce qui a déjà été sauvegardé.
+- Pas de mesure d'audience sur les pages `#wall…` (le garde Umami coupe l'envoi).
+- Le lien hôte (avec `hostSecret`) est dans la barre d'adresse et l'historique de l'onglet hôte, comme pour la Dropzone ; le lien participant reste dans l'historique des participants jusqu'à la destruction du mur (il devient alors inutilisable).
+- Le texte de l'interface est protégé par un test (`ui/src/wall/wall.test.ts`) qui interdit « anonymat absolu », « aucune IP », « zéro log », « certifié », etc. et exige les mentions IP/VPN/Tor/canal de signalement.
 
-Voir aussi [`docs/SECURITY_MODEL.md`](SECURITY_MODEL.md) et le pied de page de l'application (Mentions légales & RGPD).
+## CLI et agents IA (`filenymous` ≥ 0.4.1 pour les murs sans expiration)
+
+```
+npx filenymous wall create [--title <nom du mur>] [--ttl 15m|1h|24h] [--burn] [--keep-on-leave] [--allow-agents] [--name <nom>]
+npx filenymous wall join "<lien>" [--name <nom>] [--http] [--files-root <dir>] [-o <dir>]
+npx filenymous wall mcp "<lien>" | --create [...]
+```
+
+- **JSON Lines** : événements sur stdout (`ready`, `message`, `file`, `note`, `poll`, `poll.update`, `reaction`, `join`, `leave`, `removed`, `pin`, `live`, `notice`, `ended`), commandes sur stdin (`send`, `react`, `vote`, `poll`, `note`, `file`, `get`, `read`, `members`, `info`, `leave` ; hôte : `pin`, `kick`, `allow-agents`) ; `ref` est renvoyé dans le `result`. Mot de passe : `--password` ou `FILENYMOUS_PASSWORD`.
+- `wall create` affiche le lien **participant** seulement (jamais le secret hôte) ; le processus détient le mur en mémoire et le détruit en quittant (sauf `--keep-on-leave`).
+- **Pont HTTP/SSE local** (`--http`) : `127.0.0.1` seulement, jeton porteur aléatoire (ou `FILENYMOUS_HTTP_TOKEN`), refus des en-têtes `Host` non locaux et de toute requête `Origin` (navigateurs) ; `GET /events` (SSE), `/messages`, `/participants`, `/info`, `POST /send`, `/react`, `/file`, …
+- **MCP (stdio)** : outils `wall_read_messages` (avec attente longue), `wall_send_message`, `wall_send_file`, `wall_react`, `wall_list_participants`, plus `wall_get_item` et `wall_info`. Configuration : voir [cli/README.md](../cli/README.md#agents-ia--sharewall).
+- `wall send_file` lit uniquement sous `--files-root` (répertoire courant par défaut, liens symboliques résolus).
+
+## Extension navigateur
+
+Non incluse (pas triviale : il faudrait un onglet hôte persistant, or le service worker MV3 est suspendu). Inscrite à la feuille de route : « Créer un mur » depuis le menu de l'extension, qui ouvre `#wall-new` dans un onglet.
+
+## Tests
+
+- Relais : `cd p2p-signal && npm test` (inclut `wall.test.mjs` : secret hôte exigé, champs en trop refusés, routage en étoile et isolation des pairs, kill switch + pas de renaissance, destruction au départ de l'hôte après grâce, reconnexion dans la grâce, expiration imposée et non prolongeable, capacité 8).
+- Unitaires : `cd ui && npx vitest run src/wall/` (liens, crypto/trames scellées, règles d'autodestruction/expiration/limites, validation des messages v2, fil/réactions/sondages/limites de débit, mise en forme sûre, mentions, emojis, message de jointure sans clé, garde de vocabulaire, mention du fournisseur pour les agents).
+- CLI : `cd cli && npm test` (`wall.test.mjs` : hôte CLI + 2 agents en JSON Lines, refus par défaut, limite de débit, désactivation des agents, pont HTTP, mot de passe, autodestruction ; `mcp.test.mjs` : client MCP officiel `@modelcontextprotocol/sdk` sur stdio).
+- E2E v2 : `e2e/sharewall-live.spec.ts` (caméra + micro d'un participant et écran de l'hôte avec médias simulés, 3ᵉ flux refusé, arrêt, aucun SDP média vers le relais), `e2e/sharewall-agents.spec.ts` (2 navigateurs + 2 agents CLI : refus par défaut, activation avec avertissement, badges IA, mentions, réponses, réactions, fichiers, limite de débit, déconnexion, désactivation) ; `sharewall.spec.ts` couvre aussi emojis, réactions, sondages, réponses, épinglage, médias en ligne.
+- E2E : `cd ui && npx playwright test e2e/sharewall.spec.ts` (3 contextes : grille en direct, notes masquées/révélées/copiées, aperçus image/vidéo/texte, PDF sans aperçu, SHA-256 identiques, rien vers le relais ni dans le stockage, départ d'un pair, kill switch, mot de passe, autodestruction, expiration avec horloge simulée, destruction à la fermeture de l'onglet hôte).
+
+## Déploiement (à faire, non exécuté par la PR)
+
+La v2 ne modifie pas le relais (tout le nouveau protocole est dans le DataChannel scellé) : l'ordre ci-dessous est inchangé. La CLI 0.4.0 n'est pas publiée sur npm par la PR.
+
+Ordre : **relais d'abord**, puis site. Un site déployé avant le relais afficherait le mur mais les connexions échoueraient (`/wall` inconnu de l'ancien relais : messages `wall-*` refusés).
+
+1. **Relais (VPS openDPE)** : déployer le nouveau `p2p-signal/server.js` (+ `package.json`) via le workflow de déploiement du relais du dépôt openDPE (comme pour la Dropzone / le canal de signalement), puis `sudo systemctl restart filenymous-signal`. Variables facultatives dans `/etc/filenymous-signal.env` : `WALL_MAX_TTL_MS` (24 h + 60 s), `MAX_WALL_PEERS` (8), `WALL_HOST_GRACE_MS` (5000), `WALL_SWEEP_MS` (15000). Vérifier `GET https://www.opendpe.net/filenymous-signal/health` → champ `walls` présent.
+2. **nginx (VPS)** : ajouter le bloc `location = /filenymous-signal/wall { access_log off; … }` de `p2p-signal/nginx-opendpe-location.conf` dans le `server` d'opendpe.net, puis `sudo nginx -t && sudo systemctl reload nginx`. Contrôle : ouvrir un mur, puis `sudo grep -c 'filenymous-signal/wall' /var/log/nginx/access.log` → `0`. Vérifier qu'aucun proxy/CDN en amont ne journalise ce chemin.
+3. **Site (OVH)** : `deploy-ovh-ui.yml` sur `main` (téléverse aussi `.htaccess` avec la redirection `/wall`, `/wall/new` → `/app/#wall-new`). Puis `ovh-htaccess.yml` en mode `verify` (contrôles curl `/wall` ajoutés).
+4. Tant que l'étape 2 n'est pas faite, la phrase « il ne tient pas de journal d'accès pour les murs » de l'interface serait inexacte : ne pas publier le site avant.
