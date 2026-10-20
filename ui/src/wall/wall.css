@@ -352,3 +352,4 @@ mark.sw2-hl { background: rgba(250, 204, 21, .55); color: inherit; border-radius
 .sw-guide-nav { display: flex; justify-content: flex-end; gap: .5rem; padding: .6rem 0 0; }
 .sw-guide-btn { margin-top: .4rem; font-size: .8rem; }
 .sw-warn { color: #b45309; font-size: .85rem; }
+.sw-guide-link { display: flex; gap: .5rem; flex-wrap: wrap; margin: .4rem 0; }

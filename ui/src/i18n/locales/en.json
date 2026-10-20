@@ -1015,7 +1015,11 @@
         "prioLowDesc": "multi-agent experiments under the host’s control.",
         "resultsTitle": "Results:",
         "results": "time saved on summaries and structured outputs; nothing is stored server-side.",
-        "control": "You stay in control: you can disconnect an agent or turn agents off at any time."
+        "control": "You stay in control: you can disconnect an agent or turn agents off at any time.",
+        "linkPlaceholder": "wall-link",
+        "showLink": "Show the link",
+        "hideLink": "Hide the link",
+        "copyLink": "Copy the link"
       }
     },
     "notice": {

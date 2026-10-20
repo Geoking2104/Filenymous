@@ -95,6 +95,34 @@ jobs:
           src/web_mode_standalone.test.ts
         working-directory: tests
 
+  ui-typecheck:
+    name: UI typecheck + build + wall tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - name: Install UI dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: ui
+      - name: Placeholder guard (catches truncated pushes)
+        run: |
+          if grep -rnE "FULL_[A-Z_]*CONTENT_HERE|full (original )?(file )?content continues" src; then echo "::error::placeholder content found"; exit 1; fi
+          for f in src/i18n/locales/*.json; do node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" || exit 1; done
+        working-directory: ui
+      - name: Typecheck (tsc --noEmit)
+        run: npx tsc --noEmit
+        working-directory: ui
+      - name: Build (base /app/)
+        run: npm run build -- --base=/app/
+        working-directory: ui
+      - name: Wall, home and SEO unit tests
+        run: npx vitest run src/wall/ src/home/ src/seo.test.ts
+        working-directory: ui
+
   cli-tests:
     name: CLI (filenymous) tests
     runs-on: ubuntu-latest

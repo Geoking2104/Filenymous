@@ -19,6 +19,7 @@ export function AgentsGuide({ open, onClose, inviteLink, agentsAllowed }: Agents
   const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [copied, setCopied] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
 
   if (!open) return null;
 
@@ -32,18 +33,33 @@ export function AgentsGuide({ open, onClose, inviteLink, agentsAllowed }: Agents
     }
   };
 
-  const linkPlaceholder = inviteLink || "https://filenymous.eu/app/#wall:…";
-
-  const cliCmd = `npx filenymous wall join "${linkPlaceholder}" --name "Mon agent"`;
-  const mcpConfig = `{
+  // The real invite link carries the wall key: mask it by default (screenshots,
+  // screen sharing); copy buttons always copy the real link.
+  const masked = `<${t("wall.agents.guide.linkPlaceholder")}>`;
+  const realLink = inviteLink || masked;
+  const shownLink = inviteLink && revealed ? inviteLink : masked;
+  const cliFor = (link: string) => `npx filenymous wall join "${link}" --name "Mon agent"`;
+  const mcpFor = (link: string) => `{
   "mcpServers": {
     "sharewall": {
       "command": "npx",
-      "args": ["-y", "filenymous@0.4.4", "wall", "mcp", "${linkPlaceholder}", "--name", "Claude"],
+      "args": ["-y", "filenymous@0.4.4", "wall", "mcp", "${link}", "--name", "Claude"],
       "env": { "FILENYMOUS_PASSWORD": "" }
     }
   }
 }`;
+  const cliCmd = cliFor(shownLink);
+  const mcpConfig = mcpFor(shownLink);
+  const linkTools = inviteLink ? (
+    <p className="sw-guide-link">
+      <button type="button" className="pz-btn pz-btn-ghost" data-testid="wall-agents-guide-reveal" aria-pressed={revealed} onClick={() => setRevealed((r) => !r)}>
+        {revealed ? t("wall.agents.guide.hideLink") : t("wall.agents.guide.showLink")}
+      </button>
+      <button type="button" className="pz-btn pz-btn-ghost" data-testid="wall-agents-guide-copy-link" onClick={() => copy(inviteLink, "link")}>
+        {copied === "link" ? t("common.copied") : t("wall.agents.guide.copyLink")}
+      </button>
+    </p>
+  ) : null;
 
   const steps = [
     {
@@ -63,14 +79,15 @@ export function AgentsGuide({ open, onClose, inviteLink, agentsAllowed }: Agents
       body: (
         <>
           <p>{t("wall.agents.guide.step2Body")}</p>
+          {linkTools}
           <h4>{t("wall.agents.guide.cliTitle")}</h4>
-          <pre className="sw-code">{cliCmd}</pre>
-          <button type="button" className="pz-btn pz-btn-ghost" onClick={() => copy(cliCmd, "cli")}>
+          <pre className="sw-code" data-testid="wall-agents-guide-cli">{cliCmd}</pre>
+          <button type="button" className="pz-btn pz-btn-ghost" onClick={() => copy(cliFor(realLink), "cli")}>
             {copied === "cli" ? t("common.copied") : t("common.copy")}
           </button>
           <h4>{t("wall.agents.guide.mcpTitle")}</h4>
-          <pre className="sw-code">{mcpConfig}</pre>
-          <button type="button" className="pz-btn pz-btn-ghost" onClick={() => copy(mcpConfig, "mcp")}>
+          <pre className="sw-code" data-testid="wall-agents-guide-mcp">{mcpConfig}</pre>
+          <button type="button" className="pz-btn pz-btn-ghost" onClick={() => copy(mcpFor(realLink), "mcp")}>
             {copied === "mcp" ? t("common.copied") : t("common.copy")}
           </button>
           <p className="sw-small">{t("wall.agents.guide.mcpHint")}</p>
