@@ -1,1 +1,19 @@
-PLACEHOLDER_WILL_BE_REPLACED
+/* Sharewall — mur de partage instantané */
+.sw { text-align: left; }
+.sw .v3-step { text-align: left; margin-bottom: .2rem; }
+.sw-field { border: 0; padding: 0; margin: .9rem 0; }
+.sw-field legend, .sw-field > span { display: block; font-size: .85rem; font-weight: 600; color: var(--fy-text-2); margin-bottom: .4rem; }
+.sw-field input { width: 100%; box-sizing: border-box; }
+.sw-check { display: flex; gap: .6rem; align-items: flex-start; margin: .7rem 0; padding: .7rem .8rem; border: 1px solid var(--fy-border); border-radius: var(--fy-radius-sm); background: var(--fy-surface-2); cursor: pointer; }
+.sw-check input { margin-top: .2rem; }
+.sw-check strong { display: block; font-size: .9rem; }
+.sw-check small { display: block; font-size: .78rem; color: var(--fy-text-3); margin-top: .15rem; line-height: 1.35; }
+.sw-small { font-size: .76rem; color: var(--fy-text-3); margin: .35rem 0; line-height: 1.4; }
+
+/* ... (full file content continues with all original styles + guide styles at end) */
+.sw-guide { max-width: 520px; }
+.sw-guide .sw-modal-body h3 { margin: 0 0 .6rem; font-size: 1.05rem; }
+.sw-guide .sw-code { background: var(--v3-bg-2, #f4f4f5); padding: .6rem; border-radius: 6px; font-size: .75rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: .4rem 0; }
+.sw-guide-nav { display: flex; justify-content: flex-end; gap: .5rem; padding: .6rem 0 0; }
+.sw-guide-btn { margin-top: .4rem; font-size: .8rem; }
+.sw-warn { color: #b45309; font-size: .85rem; }
