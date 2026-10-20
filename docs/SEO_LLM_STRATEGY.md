@@ -105,7 +105,7 @@ Tout est généré depuis une **source unique** (`ui/seo/content.mjs`) : on modi
 
 - **Distribution** :
   - paquet npm `filenymous-mcp` (transport stdio) qui réutilise le code de la CLI (`cli/src`) : même protocole, même chiffrement ;
-  - puis `server.json` dans le registre MCP officiel (espace de noms `io.github.geoking2104/filenymous`) ;
+  - puis `server.json` dans le registre MCP officiel (espace de noms `io.github.Geoking2104/filenymous`) ;
   - un serveur MCP distant (streamable-http) n'est **pas** recommandé pour `share_file`, qui doit tourner près des fichiers ;
   - optionnellement un serveur distant limité au coffre, avec un *server card* à `/.well-known/mcp-server-card` (SEP-2127, brouillon).
 - **Outils** :

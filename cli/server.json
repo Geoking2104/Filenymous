@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.geoking2104/filenymous",
+  "name": "io.github.Geoking2104/filenymous",
   "title": "Filenymous Sharewall",
   "description": "AI agents join an end-to-end encrypted, ephemeral Filenymous Sharewall: messages, files, notes.",
   "repository": {
@@ -9,12 +9,12 @@
     "subfolder": "cli"
   },
   "websiteUrl": "https://filenymous.eu/app/",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "filenymous",
-      "version": "0.4.3",
+      "version": "0.4.4",
       "transport": {
         "type": "stdio"
       },

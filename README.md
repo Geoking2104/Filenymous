@@ -81,7 +81,7 @@ Chaque carte de l'accueil ouvre un écran qui garde la même icône et le même 
   <img src="docs/img/sharewall-destroyed.png" width="48%" alt="Sharewall détruit : chaque participant efface sa copie" />
 </p>
 
-### CLI npm `filenymous` 0.4.3
+### CLI npm `filenymous` 0.4.4
 
 Node.js ≥ 18.17, sans installation : `npx filenymous`. Documentation complète : [`cli/README.md`](cli/README.md).
 
@@ -110,7 +110,7 @@ Configuration MCP (Claude Desktop `claude_desktop_config.json`, Cursor `.cursor/
   "mcpServers": {
     "sharewall": {
       "command": "npx",
-      "args": ["-y", "filenymous@0.4.3", "wall", "mcp", "https://filenymous.eu/app/#wall:…", "--name", "Claude"],
+      "args": ["-y", "filenymous@0.4.4", "wall", "mcp", "https://filenymous.eu/app/#wall:…", "--name", "Claude"],
       "env": { "FILENYMOUS_PASSWORD": "" }
     }
   }
@@ -232,7 +232,7 @@ Each home card opens a screen that keeps the same icon and title. Every service 
   <img src="docs/img/mobile-dark.png" width="48%" alt="Service screens on mobile, dark theme" />
 </p>
 
-### npm CLI `filenymous` 0.4.3
+### npm CLI `filenymous` 0.4.4
 
 Node.js ≥ 18.17, nothing to install: `npx filenymous`. Full documentation: [`cli/README.md`](cli/README.md).
 
