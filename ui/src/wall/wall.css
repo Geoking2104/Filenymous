@@ -345,7 +345,7 @@ mark.sw2-hl { background: rgba(250, 204, 21, .55); color: inherit; border-radius
 
 /* AI agents guide (3 steps) */
 .sw-guide { max-width: 560px; }
-.sw-guide .sw-modal-body { overflow-y: auto; }
+.sw-guide .sw-modal-body { display: block; overflow-y: auto; }
 .sw-guide .sw-modal-body h3 { margin: 0 0 .6rem; font-size: 1.05rem; }
 .sw-guide .sw-modal-body h4 { margin: .8rem 0 .2rem; font-size: .9rem; }
 .sw-guide .sw-code { background: var(--fy-surface-2); border: 1px solid var(--fy-border); padding: .6rem; border-radius: var(--fy-radius-sm); font-size: .75rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: .4rem 0; }
