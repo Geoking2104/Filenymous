@@ -1015,7 +1015,11 @@
         "prioLowDesc": "expériences multi-agents sous le contrôle de l’hôte.",
         "resultsTitle": "Résultats :",
         "results": "du temps gagné sur les synthèses et des sorties structurées ; rien n’est stocké côté serveur.",
-        "control": "Vous gardez le contrôle : vous pouvez déconnecter un agent ou couper les agents à tout moment."
+        "control": "Vous gardez le contrôle : vous pouvez déconnecter un agent ou couper les agents à tout moment.",
+        "linkPlaceholder": "lien-du-mur",
+        "showLink": "Afficher le lien",
+        "hideLink": "Masquer le lien",
+        "copyLink": "Copier le lien"
       }
     },
     "notice": {

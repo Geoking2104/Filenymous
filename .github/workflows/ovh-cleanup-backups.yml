@@ -1,0 +1,39 @@
+name: OVH backups cleanup (inspect / apply)
+
+# Manual only. inspect: lists app.bak-* and www.bak-* deploy backups with size,
+# completeness and the KEEP/DELETE plan (keeps the N most recent complete ones
+# of each kind), plus disk usage. apply: same listing, then deletes the DELETE
+# entries and prints disk usage after.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "inspect | apply"
+        required: true
+        default: inspect
+      keep:
+        description: "complete backups to keep per kind"
+        required: true
+        default: "2"
+
+concurrency:
+  group: deploy-ovh-ui
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deploy dependencies
+        working-directory: scripts
+        run: npm ci --no-audit --no-fund
+      - name: Cleanup
+        env:
+          OVH_SFTP_PASS: ${{ secrets.OVH_SFTP_PASS }}
+          MODE: ${{ inputs.mode }}
+          KEEP: ${{ inputs.keep }}
+        run: node scripts/ovh-cleanup-backups.mjs --mode "$MODE" --keep "$KEEP"
