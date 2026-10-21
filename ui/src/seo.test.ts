@@ -1,3 +1,4 @@
+// @ts-expect-error plain ESM module without types
 import { GUIDES } from "../seo/guides.mjs";
 import { describe, expect, it } from "vitest";
 // @ts-expect-error plain ESM module without types
