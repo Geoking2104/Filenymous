@@ -16,7 +16,7 @@ export const SITE = {
   relay: "wss://www.opendpe.net/filenymous-signal/",
   vaultApi: "https://www.opendpe.net/filenymous-signal/api/v1/secrets",
   license: "MIT",
-  updated: "2026-10-19",
+  updated: "2026-10-21",
 };
 
 export const abs = (path) => SITE.origin + path;

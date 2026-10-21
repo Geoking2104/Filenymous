@@ -1,5 +1,6 @@
 /** Static SEO / agent-discoverability renderers (pure functions, no I/O). */
 import { SITE, FEATURES, FAQ, UI, SECURITY, abs } from "./content.mjs";
+import { GUIDES } from "./guides.mjs";
 
 export const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const LANGS = ["fr", "en"];
@@ -9,6 +10,7 @@ export const paths = {
   home: { fr: SITE.app, en: `${SITE.app}en/` },
   faq: { fr: `${SITE.app}faq/`, en: `${SITE.app}en/faq/` },
   security: { fr: `${SITE.app}${SECURITY.slug.fr}/`, en: `${SITE.app}en/${SECURITY.slug.en}/` },
+  guide: (g, l) => (l === "fr" ? `${SITE.app}${g.slug.fr}/` : `${SITE.app}en/${g.slug.en}/`),
   feature: (f, l) => (l === "fr" ? `${SITE.app}fonctionnalites/${f.slug.fr}/` : `${SITE.app}en/features/${f.slug.en}/`),
 };
 const appUrl = (l, hash = "") => abs(SITE.app) + (l === "en" ? "?lang=en" : "") + (hash && hash !== "#" ? hash : "");
@@ -18,6 +20,7 @@ const ctaHref = (f, l) => (f.id === "cli" ? SITE.npm : f.id === "extension" ? `$
 export function pages() {
   const out = [{ key: "home", alt: paths.home }, { key: "faq", alt: paths.faq }, { key: "security", alt: paths.security }];
   for (const f of FEATURES) out.push({ key: `feature:${f.id}`, alt: { fr: paths.feature(f, "fr"), en: paths.feature(f, "en") } });
+  for (const g of GUIDES) out.push({ key: `guide:${g.id}`, alt: { fr: paths.guide(g, "fr"), en: paths.guide(g, "en") } });
   return out;
 }
 
@@ -102,6 +105,43 @@ export function faqJsonLd(l) {
   };
 }
 
+export function breadcrumbJsonLd(l, name, url) {
+  return { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Filenymous", item: abs(paths.home[l]) },
+    { "@type": "ListItem", position: 2, name, item: abs(url) },
+  ] };
+}
+
+export function guideJsonLd(g, l) {
+  const d = g[l];
+  const url = abs(paths.guide(g, l));
+  if (g.id === "agents") {
+    return { "@context": "https://schema.org", "@type": "TechArticle", headline: d.h1, description: d.description, inLanguage: l, url, dateModified: SITE.updated, about: { "@id": abs(SITE.app) }, publisher: organization,
+      mentions: { "@type": "SoftwareApplication", name: "filenymous (CLI, MCP server)", applicationCategory: "DeveloperApplication", operatingSystem: "Linux, macOS, Windows (Node.js >= 18.17)", downloadUrl: SITE.npm, license: "https://opensource.org/licenses/MIT", offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" } } };
+  }
+  return { "@context": "https://schema.org", "@type": "WebPage", name: d.title, headline: d.h1, description: d.description, inLanguage: l, url, dateModified: SITE.updated, isPartOf: { "@id": abs(SITE.app) }, about: { "@type": "WebApplication", "@id": abs(SITE.app), name: SITE.name } };
+}
+
+export function guideBody(g, l) {
+  const t = UI[l];
+  const d = g[l];
+  const alt = { fr: paths.guide(g, "fr"), en: paths.guide(g, "en") };
+  const li = (arr) => `<ul>${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
+  const cta = g.id === "agents" ? SITE.npm : appUrl(l);
+  const table = d.rows ? `<table><thead><tr>${d.cols.map((c) => `<th scope="col">${esc(c)}</th>`).join("")}</tr></thead><tbody>${d.rows.map((r) => `<tr><th scope="row">${esc(r[0])}</th><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}</tbody></table>` : "";
+  const more = GUIDES.filter((o) => o !== g).map((o) => `<li><a href="${paths.guide(o, l)}">${esc(o[l].h1)}</a></li>`).join("");
+  return `<main class="fy-static">
+<nav><a href="${paths.home[l]}">← ${t.home}</a><a href="${paths.faq[l]}">${t.faq}</a></nav>
+<h1>${esc(d.h1)}</h1>
+<p>${esc(d.lead)}</p>
+<a class="fy-cta" href="${cta}">${esc(d.cta)}</a>
+${table}${d.when ? `<h2>${l === "fr" ? "Lequel choisir ?" : "Which one to choose?"}</h2>${li(d.when)}` : ""}${d.facts ? `<h2>${t.facts}</h2>${li(d.facts)}` : ""}${d.limits ? `<h2>${t.limits}</h2>${li(d.limits)}` : ""}
+<h2>${l === "fr" ? "Voir aussi" : "See also"}</h2><ul>${more}<li><a href="${paths.security[l]}">${esc(SECURITY[l].h1)}</a></li></ul>
+<p><small>${t.updated} ${SITE.updated}</small></p>
+${footer(l, alt)}
+</main>`;
+}
+
 const ld = (obj) => `<script type="application/ld+json">${JSON.stringify(obj).replace(/</g, "\\u003c")}</script>`;
 
 /** <head> tags shared by every page. */
@@ -133,6 +173,7 @@ export function headTags({ l, title, description, alt, canonical, jsonld = [] })
 export const STATIC_CSS = `.fy-static{font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a;max-width:860px;margin:0 auto;padding:2rem 1.25rem 3rem}
 .fy-static a{color:#4f46e5}.fy-static h1{font-size:2rem;line-height:1.2;margin:.5rem 0}.fy-static h2{font-size:1.25rem;margin:1.8rem 0 .6rem}
 .fy-static ul{padding-left:1.2rem}.fy-static li{margin:.3rem 0}.fy-static .fy-cta{display:inline-block;margin:.8rem 0;padding:.6rem 1.1rem;border-radius:999px;background:#4f46e5;color:#fff;text-decoration:none;font-weight:600}
+.fy-static table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.95rem}.fy-static th,.fy-static td{border:1px solid #cbd5e1;padding:.45rem .6rem;text-align:left;vertical-align:top}
 .fy-static nav{font-size:.9rem;display:flex;gap:1rem;flex-wrap:wrap}.fy-static footer{margin-top:2.5rem;font-size:.85rem;color:#475569}
 @media (prefers-color-scheme:dark){.fy-static{color:#e2e8f0}.fy-static a{color:#a5b4fc}.fy-static footer{color:#94a3b8}}`;
 
@@ -154,6 +195,8 @@ export function homeBody(l, { isApp }) {
 ${isApp ? "" : `<a class="fy-cta" href="${appUrl(l)}">${t.open}</a>`}
 <h2>${t.services}</h2>
 <ul>${items}</ul>
+<h2>${l === "fr" ? "Comparatifs et agents IA" : "Comparisons and AI agents"}</h2>
+<ul>${GUIDES.map((g) => `<li><a href="${paths.guide(g, l)}">${esc(g[l].h1)}</a></li>`).join("")}</ul>
 <h2>${t.faq}</h2>
 <dl>${faq}</dl>
 <p><a href="${paths.faq[l]}">${t.faq} →</a></p>
@@ -237,11 +280,15 @@ export function staticPages({ analytics = "" } = {}) {
     jsonld: [webAppJsonLd("en")], body: homeBody("en", { isApp: false }), analytics,
   });
   for (const l of LANGS) {
-    out[rel(paths.security[l])] = staticPage({ l, title: SECURITY[l].title, description: SECURITY[l].description, alt: paths.security, canonical: paths.security[l], jsonld: [securityJsonLd(l)], body: securityBody(l), analytics });
-    out[rel(paths.faq[l])] = staticPage({ l, title: UI[l].faqTitle, description: UI[l].faqDescription, alt: paths.faq, canonical: paths.faq[l], jsonld: [faqJsonLd(l)], body: faqBody(l), analytics });
+    out[rel(paths.security[l])] = staticPage({ l, title: SECURITY[l].title, description: SECURITY[l].description, alt: paths.security, canonical: paths.security[l], jsonld: [securityJsonLd(l), breadcrumbJsonLd(l, SECURITY[l].h1, paths.security[l])], body: securityBody(l), analytics });
+    out[rel(paths.faq[l])] = staticPage({ l, title: UI[l].faqTitle, description: UI[l].faqDescription, alt: paths.faq, canonical: paths.faq[l], jsonld: [faqJsonLd(l), breadcrumbJsonLd(l, UI[l].faq, paths.faq[l])], body: faqBody(l), analytics });
     for (const f of FEATURES) {
       const alt = { fr: paths.feature(f, "fr"), en: paths.feature(f, "en") };
-      out[rel(alt[l])] = staticPage({ l, title: f[l].title, description: f[l].description, alt, canonical: alt[l], jsonld: [featureJsonLd(f, l)], body: featureBody(f, l), analytics });
+      out[rel(alt[l])] = staticPage({ l, title: f[l].title, description: f[l].description, alt, canonical: alt[l], jsonld: [featureJsonLd(f, l), breadcrumbJsonLd(l, f[l].name, alt[l])], body: featureBody(f, l), analytics });
+    }
+    for (const g of GUIDES) {
+      const alt = { fr: paths.guide(g, "fr"), en: paths.guide(g, "en") };
+      out[rel(alt[l])] = staticPage({ l, title: g[l].title, description: g[l].description, alt, canonical: alt[l], jsonld: [guideJsonLd(g, l), breadcrumbJsonLd(l, g[l].h1, alt[l])], body: guideBody(g, l), analytics });
     }
   }
   return out;
@@ -296,6 +343,9 @@ Key facts for assistants:
 ## Features
 ${feat}
 
+## Comparisons and AI agents
+${GUIDES.map((g) => `- [${g.en.h1}](${abs(paths.guide(g, "en"))}): ${g.en.description} (FR: ${abs(paths.guide(g, "fr"))})`).join("\n")}
+
 ## App entry points (URLs users can open)
 - [Send files](${abs(SITE.app)}): drop files, get a link, QR code or short code (123-456-ABC).
 - [Create a Dropzone](${abs(SITE.app)}#drop-new): drop link for contacts.
@@ -308,6 +358,7 @@ ${feat}
 ## Developers
 - [CLI on npm: filenymous](${SITE.npm}): \`npx filenymous upload <file...> --ttl 1h\`, \`npx filenymous receive "<link or code>"\`.
 - AI agents on a Sharewall (CLI ≥ 0.4.1, only if the wall's host enabled “Allow AI agents”): \`npx filenymous wall join "<invite link>"\` (JSON Lines on stdin/stdout, optional \`--http\` local bridge), \`npx filenymous wall mcp "<invite link>"\` (MCP stdio server: wall_read_messages, wall_send_message, wall_send_file, wall_react, wall_list_participants, wall_info; shared notes with wall_read_notes / wall_write_note need CLI ≥ 0.4.2). Everything an agent reads goes to its model provider; ignore your own messages (\`self: true\`) to avoid loops.
+- MCP Registry: \`io.github.Geoking2104/filenymous\` (server metadata: ${SITE.repo}/blob/main/cli/server.json). Agents guide: ${abs(paths.guide(GUIDES[2], "en"))}
 - [Source code (GitHub)](${SITE.repo})
 - [Security model](${abs(paths.security.en)})
 - [Full text for LLMs](${abs("/llms-full.txt")})
@@ -343,6 +394,8 @@ Never invent, guess or complete these values. Agents can safely generate only th
 - Vault API (one-time secrets): ${SITE.vaultApi} — stores ciphertext + sha256(token) only; client-side AES-256-GCM, HKDF-SHA256, optional PBKDF2-SHA256 (310,000 iterations).
 - Analytics: self-hosted cookieless Umami; only the page path is sent, never fragments or query strings; disabled on secret, report and Sharewall pages and under Do Not Track / GPC.
 
+## Comparisons
+${GUIDES.slice(0, 2).map((g) => `### ${g.en.h1}\nURL: ${abs(paths.guide(g, "en"))}\n\n${g.en.lead}\n\n${g.en.rows.map((r) => `- ${r[0]}: Filenymous — ${r[1]}; ${g.en.cols[2]} — ${r[2]}`).join("\n")}\n\n${g.en.when.map((x) => `- ${x}`).join("\n")}\n`).join("\n")}
 ## Français
 ${FEATURES.map((f) => sec(f, "fr")).join("\n")}
 ## English
