@@ -180,7 +180,7 @@ export const STATIC_CSS = `.fy-static{font:16px/1.55 system-ui,-apple-system,"Se
 function footer(l, alt) {
   const t = UI[l];
   const o = l === "fr" ? "en" : "fr";
-  return `<footer><p><a href="${alt[o]}" hreflang="${o}" lang="${o}">${t.other}</a> · <a href="${SITE.repo}">${t.source} (GitHub, MIT)</a> · <a href="${SITE.npm}">npm</a> · <a href="${paths.security[l]}">${SECURITY[l].h1}</a> · <a href="/llms.txt">llms.txt</a></p><p>${t.legal}</p></footer>`;
+  return `<footer><p><a href="${alt[o]}" hreflang="${o}" lang="${o}">${t.other}</a> · <a href="${SITE.repo}">${t.source} (GitHub, MIT)</a> · <a href="${SITE.npm}">npm</a> · <a href="${paths.security[l]}">${SECURITY[l].h1}</a> · <a href="/llms.txt">llms.txt</a> · <a href="https://geoking2104.github.io/autonymous.me/" target="_blank" rel="noopener">autonymous.me</a></p><p>${t.legal}</p></footer>`;
 }
 
 /** Prerendered home content (also the body of /app/en/). React replaces it on mount. */
