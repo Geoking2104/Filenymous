@@ -42,6 +42,9 @@ export default function Footer() {
           <a href="https://developer.holochain.org" target="_blank" rel="noreferrer" className="footer-link">
             {t("footer.holochain")}
           </a>
+          <a href="https://geoking2104.github.io/autonymous.me/" target="_blank" rel="noopener" className="footer-link">
+            autonymous.me
+          </a>
         </div>
       </footer>
     </>
