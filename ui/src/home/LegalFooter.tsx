@@ -30,7 +30,7 @@ export default function LegalFooter() {
         <button type="button" className="pz-link pz-terms-link" data-testid="terms-link" onClick={() => setTerms(true)}>
           {t("terms.link")}
         </button>
-        <a className="pz-link" data-testid="autonymous-link" href="https://geoking2104.github.io/autonymous.me/" target="_blank" rel="noopener">
+        <a className="pz-link pz-terms-link" data-testid="autonymous-link" href="https://geoking2104.github.io/autonymous.me/" target="_blank" rel="noopener">
           autonymous.me
         </a>
       </div>
