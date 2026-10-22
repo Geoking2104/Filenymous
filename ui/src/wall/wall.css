@@ -104,7 +104,7 @@
 .sw2-count { font-size: .75rem; font-weight: 700; }
 .sw2-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 270px 1fr; }
 
-.sw2-side { border-right: 1px solid var(--fy-border); overflow-y: auto; padding: .7rem .8rem; background: var(--fy-surface-2); display: flex; flex-direction: column; gap: .4rem; }
+.sw2-side { border-right: 1px solid var(--fy-border); overflow-y: auto; overflow-x: hidden; min-width: 0; padding: .7rem .8rem; background: var(--fy-surface-2); display: flex; flex-direction: column; gap: .4rem; }
 .sw2-section { padding-bottom: .5rem; border-bottom: 1px solid var(--fy-border); }
 .sw2-h { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--fy-text-3); margin: .4rem 0; }
 .sw2-info .sw-code { display: inline-block; margin: .3rem 0; }
@@ -318,8 +318,8 @@ mark.sw2-hl { background: rgba(250, 204, 21, .55); color: inherit; border-radius
 .sw-export-formats input[type="radio"] { appearance: auto; width: 1rem; height: 1rem; opacity: 1; position: static; }
 
 /* ---- shared notes ---- */
-.sw2-tabs { display: flex; gap: .25rem; padding: .2rem; border-radius: 10px; background: var(--fy-surface); border: 1px solid var(--fy-border); }
-.sw2-tab { flex: 1; font: inherit; font-size: .76rem; font-weight: 600; padding: .4rem .3rem; white-space: nowrap; border: 0; border-radius: 8px; background: none; color: var(--fy-text-2, var(--fy-text)); cursor: pointer; position: relative; }
+.sw2-tabs { display: flex; flex-wrap: wrap; gap: .25rem; padding: .2rem; border-radius: 10px; background: var(--fy-surface); border: 1px solid var(--fy-border); }
+.sw2-tab { flex: 1; font: inherit; font-size: .76rem; font-weight: 600; padding: .4rem .3rem; white-space: nowrap; min-width: 0; border: 0; border-radius: 8px; background: none; color: var(--fy-text-2, var(--fy-text)); cursor: pointer; position: relative; }
 .sw2-tab[aria-selected="true"] { background: var(--fy-surface-solid); color: var(--fy-accent); box-shadow: 0 1px 3px rgba(2, 6, 23, .12); }
 .sw2-tab-dot { position: absolute; top: .35rem; right: .45rem; width: .45rem; height: .45rem; border-radius: 50%; background: #f59e0b; }
 .sw2-notes { display: grid; gap: .5rem; }

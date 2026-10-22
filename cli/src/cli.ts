@@ -289,12 +289,16 @@ async function wall(rest: string[]): Promise<number> {
   if (sub !== "join" && sub !== "create") throw new Error("wall: use `wall join <link>`, `wall create` or `wall mcp <link>`");
   if (sub === "join" && !link) throw new Error("wall join: missing invite link");
   let info: Record<string, unknown>;
+  // The "pending" (awaiting host approval) event fires before join() resolves: forward it now.
+  let started = false;
+  agent.on((e) => { if (!started && e.event === "pending") out(e); });
   try {
     info = sub === "create" ? await agent.create() : await agent.join(link!);
   } catch (e) {
     out({ event: "error", error: String((e as Error).message || e) });
     return 1;
   }
+  started = true;
   out({ event: "ready", ...info });
   if (!o.quiet) {
     if (sub === "create") err(`Sharewall hosted by this process — invite link in the "ready" event. Code: ${agent.code}. Closing the process destroys it${o["keep-on-leave"] ? " (unless --keep-on-leave)" : ""}.`);
