@@ -41,7 +41,8 @@ jobs:
           KEEP=""
           for r in $REFS; do
             d="/tmp/keep-$(git rev-parse --short "$r")"
-            git worktree add "$d" "$r"
+            # --detach: a branch name such as "main" may already be checked out here.
+            git worktree add --detach "$d" "$(git rev-parse "$r^{commit}")"
             ln -s "$PWD/ui/node_modules" "$d/ui/node_modules"
             (cd "$d/ui" && npx vite build --base=/app/ > /dev/null)
             KEEP="$KEEP --keep-dist $d/ui/dist"

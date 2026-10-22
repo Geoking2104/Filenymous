@@ -521,7 +521,8 @@ mark.sw2-hl { background: rgba(250, 204, 21, .55); color: inherit; border-radius
 .pz-main.is-wide:has(.sw2) .pz-screen-head { margin: 0; }
 .pz-app .sw2 .sw-task-form { display: grid; grid-template-columns: 1fr auto; gap: var(--sw-s2); align-items: center; }
 .pz-app .sw2 .sw-task-form > .sw-task-kinds, .pz-app .sw2 .sw-task-form > .sw-task-input { grid-column: 1 / -1; }
-.pz-app .sw2 .sw-task-form .pz-btn { grid-column: 2; padding: .35rem .9rem; font-size: var(--sw-fs-sm); background: var(--fy-accent); box-shadow: none; border-radius: 8px; }
+.pz-app .sw2 .sw-task-form .pz-btn { grid-column: 2; padding: .35rem .9rem !important; font-size: var(--sw-fs-sm) !important; font-weight: 600 !important; background: var(--fy-accent) !important; box-shadow: none; border-radius: 8px !important; }
+.pz-app .sw2 .sw-task-form .pz-btn:disabled { opacity: .5; }
 .sw2-code-m { display: none; }
 @media (max-width: 860px) { .sw2-code-m { display: inline-flex; margin: var(--sw-s1) 0; } }
 .sw2-post-author { color: var(--fy-text); }
