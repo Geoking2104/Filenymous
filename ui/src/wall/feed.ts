@@ -1,3 +1,4 @@
+import { cleanScope, type AgentScope, type BoardElement, type Task } from "./collab";
 import type { SharedNote } from "./notes";
 /**
  * Sharewall live feed: posts (messages, files, masked notes, polls), members
@@ -51,6 +52,8 @@ export interface Member {
   hand: boolean;
   /** Can receive live audio/video (browsers; not the CLI). */
   media: boolean;
+  /** AI agents only: what the host allowed it to do (enforced by the host). */
+  scope?: AgentScope;
 }
 
 export type LiveKind = "screen" | "camera";
@@ -245,6 +248,7 @@ export function cleanMember(m: unknown): Member | null {
     host: o.label === "host",
     hand: o.hand === true,
     media: o.media === true,
+    ...(o.agent === true && cleanScope(o.scope) ? { scope: cleanScope(o.scope)! } : {}),
   };
 }
 
@@ -319,7 +323,10 @@ export type WallEvent =
   | { type: "notice"; code: string; retryMs?: number }
   | { type: "note"; note: SharedNote; overwrote?: string }
   | { type: "note-gone"; id: string }
-  | { type: "note-lock"; id: string; label: string | null; until: number };
+  | { type: "note-lock"; id: string; label: string | null; until: number }
+  | { type: "task"; task: Task }
+  | { type: "task-gone"; id: string }
+  | { type: "board"; elements: BoardElement[] };
 
 /** Host-side limits per member (the host itself is exempt). */
 export const LIMITS = {

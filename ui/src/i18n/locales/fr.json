@@ -866,7 +866,8 @@
       "offline": "hôte injoignable",
       "connection-lost": "connexion perdue",
       "other": "échec",
-      "rate-limited": "trop d'actions d'affilée, réessayez dans un instant"
+      "rate-limited": "trop d'actions d'affilée, réessayez dans un instant",
+      "denied": "Accès refusé par l'hôte (droits de l'agent)."
     },
     "privacy": {
       "title": "Confidentialité : ce qui est protégé, et ce qui ne l'est pas",
@@ -1029,7 +1030,13 @@
       "note-too-large": "Note trop longue (64 Ko maximum).",
       "note-not-found": "Cette note n'existe plus.",
       "note-forbidden": "Seul l'auteur ou l'hôte peut supprimer cette note.",
-      "note-empty": "Note vide."
+      "note-empty": "Note vide.",
+      "scope-denied": "Action refusée : vos droits sur ce mur ne le permettent pas (réglage de l'hôte).",
+      "task-too-many": "Limite de tâches atteinte sur ce mur.",
+      "task-empty": "Texte vide.",
+      "task-not-found": "Cette tâche n'existe plus.",
+      "task-forbidden": "Seul l'auteur ou l'hôte peut modifier ce texte ou supprimer.",
+      "task-bad-owner": "Ce participant n'est plus sur le mur."
     },
     "nameLabel": "Nom du mur",
     "namePlaceholder": "ex. Atelier lundi, Équipe projet…",
@@ -1054,15 +1061,17 @@
       "warning": "L'export crée une copie permanente, sur votre appareil, d'un contenu conçu pour disparaître. Les participants ne sont pas consultés, mais ils verront dans le fil que vous avez exporté le mur. À manipuler avec soin.",
       "warningEn": "Exporting creates a permanent copy on your device of content meant to disappear. Participants are not asked (they will see a notice in the feed). Handle with care.",
       "format": "Format",
-      "json": "JSON complet (messages, sondages et fichiers ≤ 50 Mo)",
-      "md": "Transcription Markdown (texte seul)",
+      "json": "JSON complet (messages, sondages, tâches, décisions, tableau blanc et fichiers ≤ 50 Mo)",
+      "md": "Transcription Markdown (texte, tâches et décisions)",
       "confirm": "Exporter",
       "cancel": "Annuler",
       "blockedBurn": "Export désactivé : ce mur est en mode autodestruction (un seul téléchargement par fichier).",
       "done": "Mur exporté.",
       "skipped_one": "{{count}} fichier non inclus (trop volumineux ou indisponible) : {{names}}",
       "skipped_other": "{{count}} fichiers non inclus (trop volumineux ou indisponibles) : {{names}}",
-      "error": "L'export a échoué."
+      "error": "L'export a échoué.",
+      "boardJson": "Tableau blanc (.excalidraw)",
+      "boardPng": "Tableau blanc (image PNG)"
     },
     "notes": {
       "tab": "Notes ({{count}})",
@@ -1091,6 +1100,59 @@
       "editorLabel": "Note partagée",
       "searchHeading_one": "{{count}} note",
       "searchHeading_other": "{{count}} notes"
+    },
+    "tasks": {
+      "tab": "Tâches ({{count}})",
+      "kind": "Type",
+      "task": "Tâche",
+      "decision": "Décision",
+      "text": "Texte",
+      "owner": "Responsable",
+      "unassigned": "Non attribuée",
+      "placeholderTask": "Nouvelle tâche…",
+      "placeholderDecision": "Décision prise…",
+      "add": "Ajouter",
+      "checklist": "Tâches ({{done}}/{{count}} faites)",
+      "emptyTasks": "Aucune tâche pour l'instant.",
+      "decisions": "Décisions ({{count}})",
+      "emptyDecisions": "Aucune décision consignée.",
+      "by": "par {{name}} · {{time}}",
+      "delete": "Supprimer"
+    },
+    "board": {
+      "title": "Tableau blanc",
+      "toggle": "Ouvrir ou fermer le tableau blanc partagé",
+      "note": "Synchronisé par l'hôte dans le canal chiffré, en mémoire seulement. Les agents IA ne voient pas le tableau. Pas d'images.",
+      "close": "Fermer le tableau",
+      "loading": "Chargement du tableau blanc…",
+      "exportEmpty": "Le tableau blanc est vide : rien à exporter."
+    },
+    "scope": {
+      "hint": "Droits fixés par l'hôte et appliqués par son onglet (le relais n'y a pas accès).",
+      "name": {
+        "read-only": "Lecture seule",
+        "post": "Peut publier",
+        "full": "Accès complet",
+        "custom": "Droits personnalisés"
+      },
+      "post": "Publier",
+      "postHint": "Messages, fichiers, sondages, réactions, notes et tâches.",
+      "files": "Télécharger les fichiers",
+      "filesHint": "Récupérer le contenu des fichiers du mur.",
+      "secrets": "Révéler les secrets",
+      "secretsHint": "Ouvrir les notes masquées (clés, mots de passe…).",
+      "limited": "Vue limitée",
+      "limitedHint": "Ne voit que ses messages, ses mentions, les réponses à ses messages, ses tâches et ce que vous lui partagez (🤖).",
+      "pendingTitle_one": "{{count}} agent IA attend votre accord",
+      "pendingTitle_other": "{{count}} agents IA attendent votre accord",
+      "wantsToJoin": "veut rejoindre le mur. Choisissez ce qu'il peut faire :",
+      "approve": "Accepter",
+      "refuse": "Refuser",
+      "pendingNote": "Tant que vous n'avez pas accepté, l'agent ne voit rien du mur. Ce qu'un agent lit est envoyé au fournisseur de son modèle.",
+      "edit": "Modifier les droits de l'agent",
+      "save": "Enregistrer",
+      "share": "Partager avec un agent en vue limitée",
+      "shareHint": "Visible par :"
     }
   },
   "leave": {

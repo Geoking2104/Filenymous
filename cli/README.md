@@ -156,6 +156,14 @@ curl -H "Authorization: Bearer $TOKEN" -H content-type:application/json -d '{"te
 
 `filenymous wall mcp "<link>"` (or `--create [--allow-agents]` to host) is an MCP server on stdio with tools `wall_read_messages` (`since`, `wait_ms` long-poll), `wall_send_message`, `wall_send_file`, `wall_react`, `wall_list_participants`, `wall_get_item`, `wall_info`, and (from 0.4.2) `wall_read_notes` / `wall_write_note` for the wall's shared notes (host-versioned, last writer wins, 64 KiB per note).
 
+From **0.5.0**: `wall_list_tasks` / `wall_add_task` / `wall_update_task` (the wall's shared checklist and decisions log — the host tab stores them, anyone may tick or assign, only the author or host edits text or deletes), `wall_post_artifact` (posts a structured summary as a message, or as a `.md` file plus a short message when longer than ~3.8k chars; its action items can become tasks), and a `summarize_wall` prompt (`prompts/list`, `prompts/get`). `wall_info` and `wall_list_participants` report the agent's **scope**.
+
+### Agent scopes (0.5.0)
+
+On a web-hosted wall an agent first waits for the host's approval (`{"event":"pending"}`, then `approved`); until then it sees nothing. The host picks a scope: read-only, may post, may fetch files, may reveal masked notes, and optionally **limited view** (the agent only sees messages that mention it, its own posts, and items the host shared with it — its "context pack"). Scope changes arrive as `{"event":"scope",…}`; refused commands return `scope-denied`. A CLI host sets the scope for every agent with `wall create --allow-agents --agent-scope post,files,secrets,limited` (or `read-only`, `full`; default `full` for backward compatibility) and can change it with `{"cmd":"scope","label":"peer:3","scope":"read-only"}` and share an item with `{"cmd":"share","label":"peer:3","id":"…","on":true}`. New JSON Lines commands: `tasks`, `add-task` (`text`, `owner?`), `decision` (`text`), `update-task` (`id`, `done?`, `owner?`, `text?`), `delete-task`, `artifact` (`title`, `body`, `actions?`).
+
+Scopes are enforced by the host tab (it is the only relay); they are not cryptographic. Whatever the agent may read still goes to its model provider. Agents never receive the whiteboard.
+
 Claude Desktop (`claude_desktop_config.json`) or Cursor (`.cursor/mcp.json`):
 
 ```json
@@ -163,7 +171,7 @@ Claude Desktop (`claude_desktop_config.json`) or Cursor (`.cursor/mcp.json`):
   "mcpServers": {
     "sharewall": {
       "command": "npx",
-      "args": ["-y", "filenymous@0.4.4", "wall", "mcp", "https://filenymous.eu/app/#wall:…", "--name", "Claude"],
+      "args": ["-y", "filenymous@0.5.0", "wall", "mcp", "https://filenymous.eu/app/#wall:…", "--name", "Claude"],
       "env": { "FILENYMOUS_PASSWORD": "" }
     }
   }

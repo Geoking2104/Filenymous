@@ -22,6 +22,7 @@ import { ENDED, WallPeer } from "../../ui/src/wall/peer";
 import { buildWallLink, createWall, parseWallLink, wallCode, type HostWallParams, type WallParams, type WallTtl } from "../../ui/src/wall/link";
 import { cleanName, pseudonym, type Member, type Post, type WallEvent } from "../../ui/src/wall/feed";
 import { safeFileName } from "../../ui/src/p2p/protocol";
+import { SCOPE_FULL, cleanTaskText, isTaskId, parseScopeArg, scopeName, type AgentScope, type Task, type TaskKind } from "../../ui/src/wall/collab";
 import { NOTE_MAX_BYTES, cleanNoteText, cleanNoteTitle, isNoteId, utf8Bytes, type SharedNote } from "../../ui/src/wall/notes";
 
 declare const __VERSION__: string;
@@ -37,6 +38,8 @@ export interface WallCliOptions {
   burn?: boolean;
   keepOnLeave?: boolean;
   allowAgents?: boolean;
+  /** wall create: scope given to agents that join (they are admitted without asking). */
+  agentScope?: string;
   filesRoot?: string;
   output?: string;
   quiet?: boolean;
@@ -196,10 +199,17 @@ export class WallAgent {
         this.names.set(ev.member.label, ev.member.name);
         this.emit({ event: ev.type, label: ev.member.label, name: ev.member.name, agent: ev.member.agent, host: ev.member.host, self: ev.member.label === this.self });
         return;
-      case "members":
+      case "members": {
         this.members = ev.members;
         for (const m of ev.members) this.names.set(m.label, m.name);
+        const mine = this.self ? ev.members.find((m) => m.label === this.self)?.scope : undefined;
+        const key = mine ? JSON.stringify(mine) : "";
+        if (mine && key !== this.lastScope) {
+          this.lastScope = key;
+          this.emit({ event: "scope", scope: this.scopeOut(mine) });
+        }
         return;
+      }
       case "pin":
         this.emit({ event: "pin", id: ev.id });
         return;
@@ -217,12 +227,39 @@ export class WallAgent {
         for (const w of this.waiters) w();
         return;
       case "notice":
-        this.emit({ event: "notice", code: ev.code, ...(ev.retryMs !== undefined ? { retryMs: ev.retryMs } : {}) });
+        this.emit({ event: "notice", code: ev.code, ...(ev.code === "scope-denied" ? { hint: "your permissions on this wall (set by the host) don't allow this action; see wall_info.scope" } : {}), ...(ev.retryMs !== undefined ? { retryMs: ev.retryMs } : {}) });
+        return;
+      case "task":
+        this.emit({ event: "task", ...this.taskOut(ev.task) });
+        for (const w of this.waiters) w();
+        return;
+      case "task-gone":
+        this.emit({ event: "task.removed", id: ev.id });
         return;
       default:
         return;
     }
   };
+
+  private lastScope = "";
+  private pendingSeen = false;
+
+  /** This agent's permissions as set by the host (undefined when hosting, or when an older host doesn't send scopes). */
+  get scope(): AgentScope | undefined {
+    if (this.host) return undefined;
+    return this.members.find((m) => m.label === this.self)?.scope;
+  }
+
+  private scopeOut(s: AgentScope | undefined): Out | null {
+    if (!s) return null;
+    return { name: scopeName(s), post: s.post, files: s.files, secrets: s.secrets, limitedView: s.limited };
+  }
+
+  /** Refuses locally what the host would refuse anyway (clearer errors for the agent). */
+  private needScope(need: "post" | "files" | "secrets") {
+    const s = this.scope;
+    if (s && !s[need]) throw new Error(`refused: your permissions on this wall don't allow ${need === "post" ? "posting" : need === "files" ? "fetching files" : "revealing secrets"} (set by the host; see wall_info.scope)`);
+  }
 
   private end(reason: string) {
     if (this.endedReason) return;
@@ -234,6 +271,7 @@ export class WallAgent {
 
   /** Hosts a new wall (the agent's process holds it in memory). */
   async create(): Promise<Out> {
+    if (this.opts.agentScope && !parseScopeArg(this.opts.agentScope)) throw new Error("--agent-scope: read-only | post | full | comma list of post,files,secrets,limited");
     const name = cleanName(this.opts.name) || `Agent ${pseudonym("en")}`;
     const params: HostWallParams = await createWall({ ttl: wallTtl(this.opts.ttl), title: this.opts.title, password: !!this.opts.password, burn: !!this.opts.burn, hostLeave: !this.opts.keepOnLeave });
     this.params = params;
@@ -248,7 +286,17 @@ export class WallAgent {
         if (st.status === "destroyed" || st.status === "expired") this.end(st.status);
         if (st.status === "error") this.readyReject(new Error(st.error ?? "error"));
       },
-      { signalUrl: this.opts.signalUrl, password: this.opts.password, name, agent: true, media: false, allowAgents: !!this.opts.allowAgents },
+      {
+        signalUrl: this.opts.signalUrl,
+        password: this.opts.password,
+        name,
+        agent: true,
+        media: false,
+        allowAgents: !!this.opts.allowAgents,
+        // No human tab to approve: agents are admitted with the scope given on the command line.
+        autoApproveAgents: true,
+        agentScope: this.opts.agentScope ? (parseScopeArg(this.opts.agentScope) ?? SCOPE_FULL) : SCOPE_FULL,
+      },
     );
     this.host = host;
     this.members = host.state.members;
@@ -270,7 +318,16 @@ export class WallAgent {
       (st) => {
         debug("peer", st.status);
         this.relayError(st.error);
-        if (st.status === "online" && !this.ready_) this.markReady();
+        if (st.status === "online" && st.pending && !this.pendingSeen) {
+          this.pendingSeen = true;
+          this.emit({ event: "pending", note: "waiting for the host to approve this agent; nothing of the wall is visible until then" });
+        }
+        if (st.status === "online" && !st.pending && this.pendingSeen) {
+          this.pendingSeen = false;
+          this.emit({ event: "approved", scope: this.scopeOut(this.scope) });
+        }
+        // Ready once the host has listed us (so wall_info already reports our scope).
+        if (st.status === "online" && !st.pending && !this.ready_ && st.members.some((m) => m.label === st.label)) this.markReady();
         else if (st.status === "bad-password") this.fail("bad-password");
         else if (st.status === "full") this.fail("wall-full");
         else if (st.status === "error" && !this.ready_) this.fail(st.error ?? "error");
@@ -317,12 +374,13 @@ export class WallAgent {
       destroyOnHostLeave: this.params.hostLeave,
       password: this.params.password,
       agentsAllowed: this.host ? this.host.state.agents : this.peer?.state.agents,
+      ...(this.host ? { agentScope: this.scopeOut(this.opts.agentScope ? (parseScopeArg(this.opts.agentScope) ?? SCOPE_FULL) : SCOPE_FULL) } : { scope: this.scopeOut(this.scope) }),
       ...(this.link ? { link: this.link } : {}),
     };
   }
 
   participants(): Array<Out> {
-    return this.members.map((m) => ({ label: m.label, name: m.name, agent: m.agent, host: m.host, handRaised: m.hand, self: m.label === this.self }));
+    return this.members.map((m) => ({ label: m.label, name: m.name, agent: m.agent, host: m.host, handRaised: m.hand, self: m.label === this.self, ...(m.scope ? { scope: this.scopeOut(m.scope) } : {}) }));
   }
 
   /** Feed entries after `since` (seq), oldest first; reactions/poll counts are current. */
@@ -352,6 +410,7 @@ export class WallAgent {
 
   async send(text: string, replyTo?: string): Promise<Out> {
     this.alive();
+    this.needScope("post");
     if (typeof text !== "string" || !text.trim()) throw new Error("text is required");
     if (this.host) this.host.say(text, replyTo);
     else await this.peer!.say(text, replyTo);
@@ -360,6 +419,7 @@ export class WallAgent {
 
   async react(id: string, emoji: string): Promise<Out> {
     this.alive();
+    this.needScope("post");
     if (!this.posts.has(id)) throw new Error(`unknown message id: ${id}`);
     if (this.host) this.host.react(id, emoji);
     else await this.peer!.react(id, emoji);
@@ -368,6 +428,7 @@ export class WallAgent {
 
   async vote(id: string, option: number): Promise<Out> {
     this.alive();
+    this.needScope("post");
     if (this.host) this.host.vote(id, option);
     else await this.peer!.vote(id, option);
     return { ok: true };
@@ -375,6 +436,7 @@ export class WallAgent {
 
   async poll(question: string, options: string[]): Promise<Out> {
     this.alive();
+    this.needScope("post");
     if (this.host) this.host.createPoll(question, options);
     else await this.peer!.createPoll(question, options);
     return { ok: true };
@@ -426,6 +488,7 @@ export class WallAgent {
    */
   async writeNote(o: { id?: string; title?: string; text?: string }): Promise<Out> {
     this.alive();
+    this.needScope("post");
     const text = o.text === undefined ? undefined : cleanNoteText(o.text);
     const title = o.title === undefined ? undefined : cleanNoteTitle(o.title);
     if (text === null) throw new Error(`note text too long (max ${NOTE_MAX_BYTES} bytes)`);
@@ -452,6 +515,7 @@ export class WallAgent {
 
   async deleteNote(id: string): Promise<Out> {
     this.alive();
+    this.needScope("post");
     if (!this.noteList().some((x) => x.id === id)) throw new Error(`unknown note id: ${id}`);
     if (this.host) this.host.deleteNote(id);
     else await this.peer!.deleteNote(id);
@@ -462,6 +526,7 @@ export class WallAgent {
 
   async note(text: string): Promise<Out> {
     this.alive();
+    this.needScope("post");
     const r = this.host ? this.host.addText(text) : this.peer!.addText(text);
     if (typeof r === "string") throw new Error(r);
     if (r) await r;
@@ -480,6 +545,7 @@ export class WallAgent {
 
   async file(input: { path?: string; name?: string; content?: string; base64?: boolean; replyTo?: string }): Promise<Out> {
     this.alive();
+    this.needScope("post");
     let name: string;
     let data: Blob;
     if (input.path) {
@@ -505,7 +571,13 @@ export class WallAgent {
     this.alive();
     const post = this.posts.get(id);
     if (!post?.item) throw new Error(`unknown item id: ${id}`);
-    const got = this.host ? this.host.fetch(id) : await this.peer!.fetch(id);
+    let got;
+    try {
+      got = this.host ? this.host.fetch(id) : await this.peer!.fetch(id);
+    } catch (e) {
+      if ((e as Error).message === "denied") throw new Error(`refused by the host: your permissions don't allow fetching this ${post.kind === "note" ? "secret" : "file"} (see wall_info.scope; the host can share it with you)`);
+      throw e;
+    }
     if (!got) throw new Error("gone");
     const isText = got.meta.kind === "text" || /^text\/|json|xml|yaml|csv/.test(got.meta.mime);
     if (isText && got.data.size <= TEXT_INLINE_MAX) return { ok: true, id, name: got.meta.name, text: await got.data.text() };
@@ -514,6 +586,154 @@ export class WallAgent {
     const path = uniquePath(dir, safeFileName(got.meta.name || "file"));
     writeFileSync(path, new Uint8Array(await got.data.arrayBuffer()));
     return { ok: true, id, name: got.meta.name, path, size: got.data.size };
+  }
+
+  // ---- checklist / decisions ----
+
+  private taskList(): Task[] {
+    return (this.host ? this.host.state.tasks : this.peer?.state.tasks) ?? [];
+  }
+
+  private taskOut(t: Task): Out {
+    return {
+      id: t.id,
+      kind: t.kind,
+      text: t.text,
+      ...(t.kind === "task" ? { done: t.done, owner: t.owner, ownerName: t.owner ? this.nameOf(t.owner) : null, mine: t.owner === this.self } : {}),
+      by: t.by,
+      name: this.nameOf(t.by),
+      at: new Date(t.at).toISOString(),
+      editedBy: t.editedBy,
+      editedAt: new Date(t.editedAt).toISOString(),
+      self: t.by === this.self,
+    };
+  }
+
+  tasks(): Out {
+    const all = this.taskList();
+    return { ok: true, tasks: all.filter((t) => t.kind === "task").map((t) => this.taskOut(t)), decisions: all.filter((t) => t.kind === "decision").map((t) => this.taskOut(t)) };
+  }
+
+  private async untilTask(pred: (l: Task[]) => Task | undefined, ms = 8000): Promise<Task | undefined> {
+    const t0 = Date.now();
+    for (;;) {
+      const hit = pred(this.taskList());
+      if (hit || Date.now() - t0 > ms || this.endedReason) return hit;
+      await new Promise((ok) => setTimeout(ok, 50));
+    }
+  }
+
+  /** `owner`: a participant label, "me", or omitted. */
+  private ownerLabel(owner: string | undefined | null): string | null | undefined {
+    if (owner === undefined) return undefined;
+    if (owner === null || owner === "") return null;
+    if (owner === "me") return this.self ?? null;
+    const m = this.members.find((x) => x.label === owner || x.name === owner);
+    if (!m) throw new Error(`unknown participant: ${owner} (use a label from wall_list_participants, or "me")`);
+    return m.label;
+  }
+
+  async addTask(kind: TaskKind, text: string, owner?: string | null): Promise<Out> {
+    this.alive();
+    this.needScope("post");
+    if (kind !== "task" && kind !== "decision") throw new Error('kind must be "task" or "decision"');
+    const clean = cleanTaskText(text);
+    if (!clean) throw new Error("text is required (max 500 characters)");
+    const o = this.ownerLabel(owner) ?? null;
+    const before = new Set(this.taskList().map((t) => t.id));
+    if (this.host) this.host.addTask(kind, clean, o);
+    else await this.peer!.addTask(kind, clean, o);
+    const t = await this.untilTask((l) => l.find((x) => !before.has(x.id) && x.by === this.self));
+    if (!t) throw new Error("the host did not accept the task (limit reached, rate-limited, or not supported by this host)");
+    return { ok: true, task: this.taskOut(t) };
+  }
+
+  async updateTask(id: string, patch: { done?: boolean; owner?: string | null; text?: string }): Promise<Out> {
+    this.alive();
+    this.needScope("post");
+    if (!isTaskId(id)) throw new Error(`invalid task id: ${id}`);
+    const cur = this.taskList().find((x) => x.id === id);
+    if (!cur) throw new Error(`unknown task id: ${id}`);
+    const p: { done?: boolean; owner?: string | null; text?: string } = {};
+    if (typeof patch.done === "boolean") p.done = patch.done;
+    if (patch.owner !== undefined) p.owner = this.ownerLabel(patch.owner) ?? null;
+    if (patch.text !== undefined) {
+      const c = cleanTaskText(patch.text);
+      if (!c) throw new Error("text is empty or too long");
+      p.text = c;
+    }
+    if (!Object.keys(p).length) throw new Error("give done, owner or text");
+    if (this.host) this.host.updateTask(id, p);
+    else await this.peer!.updateTask(id, p);
+    const t = await this.untilTask((l) => l.find((x) => x.id === id && x.editedBy === this.self && x.editedAt >= cur.editedAt && JSON.stringify(x) !== JSON.stringify(cur)));
+    if (!t) throw new Error("the host did not apply the change (only the author or the host can edit the text)");
+    return { ok: true, task: this.taskOut(t) };
+  }
+
+  async deleteTask(id: string): Promise<Out> {
+    this.alive();
+    this.needScope("post");
+    if (!this.taskList().some((x) => x.id === id)) throw new Error(`unknown task id: ${id}`);
+    if (this.host) this.host.deleteTask(id);
+    else await this.peer!.deleteTask(id);
+    const gone = await this.untilTask((l) => (l.some((x) => x.id === id) ? undefined : ({} as Task)), 5000);
+    if (!gone) throw new Error("not deleted (only the author or the host can delete it)");
+    return { ok: true };
+  }
+
+  /**
+   * Posts a structured artifact (summary, action items, report…): a chat
+   * message when it fits, otherwise a Markdown file; `actionItems` also become
+   * checklist tasks (owner optional).
+   */
+  async postArtifact(a: { kind?: string; title?: string; body?: string; actionItems?: Array<string | { text: string; owner?: string }> }): Promise<Out> {
+    this.alive();
+    this.needScope("post");
+    const kinds: Record<string, string> = { summary: "📝 Summary", "action-items": "✅ Action items", report: "📄 Report", decisions: "🧭 Decisions", answer: "💬 Answer" };
+    const kind = a.kind && kinds[a.kind] ? a.kind : "report";
+    const title = (a.title ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 120);
+    const body = (a.body ?? "").trim();
+    const items = (a.actionItems ?? []).map((x) => (typeof x === "string" ? { text: x } : x)).filter((x) => x && typeof x.text === "string" && x.text.trim()).slice(0, 30);
+    if (!body && !items.length) throw new Error("body or actionItems is required");
+    const NL = "\n";
+    const head = `**${kinds[kind]}${title ? ` — ${title}` : ""}**`;
+    const list = items.length ? NL + NL + items.map((x) => `- [ ] ${x.text.trim()}`).join(NL) : "";
+    const text = (head + NL + NL + body + list).trim();
+    let posted: Out;
+    if (text.length <= 3800) {
+      await this.send(text);
+      posted = { as: "message" };
+    } else {
+      const name = `${(title || kind).replace(/[^\p{L}\p{N} _-]+/gu, "").trim().replace(/\s+/g, "-").slice(0, 60) || kind}.md`;
+      await this.file({ name, content: `# ${kinds[kind]}${title ? ` — ${title}` : ""}` + NL + NL + body + list + NL });
+      await this.send(head + NL + NL + body.slice(0, 600) + (body.length > 600 ? "…" : "") + NL + NL + `📎 ${name}`);
+      posted = { as: "file", name };
+    }
+    const tasks: Out[] = [];
+    for (const it of items) {
+      try {
+        tasks.push((await this.addTask("task", it.text, it.owner)).task as Out);
+      } catch (e) {
+        tasks.push({ error: String((e as Error).message || e), text: it.text });
+      }
+    }
+    return { ok: true, ...posted, ...(tasks.length ? { tasks } : {}) };
+  }
+
+  /** Host: changes an agent's permissions. */
+  setScope(label: string, raw: string): Out {
+    if (!this.host) throw new Error("only the host can change permissions");
+    const sc = parseScopeArg(raw);
+    if (!sc) throw new Error("scope: read-only | post | full | comma list of post,files,secrets,limited");
+    this.host.setAgentScope(label, sc);
+    return { ok: true };
+  }
+
+  /** Host: adds/removes an entry from an agent's context pack (limited view). */
+  share(label: string, id: string, on: boolean): Out {
+    if (!this.host) throw new Error("only the host can share entries with an agent");
+    this.host.shareWithAgent(label, id, on);
+    return { ok: true };
   }
 
   pin(id: string | null): Out {
@@ -608,6 +828,23 @@ export async function runCommand(agent: WallAgent, c: Record<string, unknown>): 
       return { ok: true, participants: agent.participants() };
     case "info":
       return { ok: true, ...agent.info() };
+    case "tasks":
+      return agent.tasks();
+    case "task":
+    case "add-task":
+      return agent.addTask((s("kind") as TaskKind) ?? "task", s("text") ?? "", s("owner"));
+    case "decision":
+      return agent.addTask("decision", s("text") ?? "");
+    case "update-task":
+      return agent.updateTask(s("id") ?? "", { done: typeof c.done === "boolean" ? c.done : undefined, owner: c.owner === null ? null : s("owner"), text: s("text") });
+    case "delete-task":
+      return agent.deleteTask(s("id") ?? "");
+    case "artifact":
+      return agent.postArtifact({ kind: s("kind"), title: s("title"), body: s("body"), actionItems: Array.isArray(c.actionItems) ? (c.actionItems as string[]) : undefined });
+    case "scope":
+      return agent.setScope(s("label") ?? "", s("scope") ?? "");
+    case "share":
+      return agent.share(s("label") ?? "", s("id") ?? "", c.on !== false);
     case "pin":
       return agent.pin(s("id") ?? null);
     case "kick":
@@ -615,7 +852,7 @@ export async function runCommand(agent: WallAgent, c: Record<string, unknown>): 
     case "allow-agents":
       return agent.allowAgents(c.on !== false);
     default:
-      throw new Error(`unknown cmd: ${String(c.cmd)} (send, file, note, react, vote, poll, get, read, notes, write-note, delete-note, members, info, leave)`);
+      throw new Error(`unknown cmd: ${String(c.cmd)} (send, file, note, react, vote, poll, get, read, notes, write-note, delete-note, tasks, add-task, decision, update-task, delete-task, artifact, members, info, leave; host: pin, kick, allow-agents, scope, share)`);
   }
 }
 
@@ -775,10 +1012,76 @@ export const MCP_TOOLS = [
   },
   {
     name: "wall_info",
-    description: "Wall settings and your role: expiry, burn, destroy-on-host-leave, verification code, and the invite link when you host it.",
+    description: "Wall settings and your role: expiry, burn, destroy-on-host-leave, verification code, your permissions (`scope`: post, files, secrets, limitedView — set by the host), and the invite link when you host it.",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "wall_list_tasks",
+    description: "Read the wall's shared checklist (tasks with owner and done state) and decisions log. In limited view you only see tasks you own or that the host shared with you. Everything you read is sent to your model provider.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "wall_add_task",
+    description: 'Add a checklist task (optionally with an owner: a participant label, "me", or omit) or log a decision (kind="decision"). Max 500 characters. Needs the "post" permission.',
+    inputSchema: {
+      type: "object",
+      properties: { text: { type: "string" }, kind: { type: "string", enum: ["task", "decision"] }, owner: { type: "string", description: 'Participant label (peer:N, host) or "me".' } },
+      required: ["text"],
+    },
+  },
+  {
+    name: "wall_update_task",
+    description: "Tick / untick a task (done), (re)assign it (owner: label, \"me\", or null), or change its text (author or host only). Needs the \"post\" permission.",
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string" }, done: { type: "boolean" }, owner: { type: ["string", "null"] }, text: { type: "string" } },
+      required: ["id"],
+    },
+  },
+  {
+    name: "wall_post_artifact",
+    description:
+      "Post a structured result on the wall: kind summary | action-items | report | decisions | answer, a title and a Markdown body. Short artifacts become a chat message, long ones a .md file plus a short message. `action_items` are also added to the shared checklist. Needs the \"post\" permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["summary", "action-items", "report", "decisions", "answer"] },
+        title: { type: "string" },
+        body: { type: "string" },
+        action_items: { type: "array", items: { anyOf: [{ type: "string" }, { type: "object", properties: { text: { type: "string" }, owner: { type: "string" } }, required: ["text"] }] } },
+      },
+    },
+  },
 ];
+
+/** MCP prompts (templates the client may offer to its user). */
+export const MCP_PROMPTS = [
+  {
+    name: "summarize_wall",
+    description: "Summarize what you can see of the wall (messages, notes, tasks, decisions) and post it back as an artifact with action items.",
+    arguments: [{ name: "focus", description: "Optional topic to focus on.", required: false }],
+  },
+];
+
+function promptMessages(name: string, args: Record<string, unknown>) {
+  if (name !== "summarize_wall") throw Object.assign(new Error(`unknown prompt: ${name}`), { code: -32602 });
+  const focus = typeof args.focus === "string" && args.focus.trim() ? ` Focus on: ${args.focus.trim().slice(0, 200)}.` : "";
+  return {
+    description: "Summarize the Sharewall and post the summary back",
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text:
+            "You are a participant of an ephemeral, end-to-end encrypted Sharewall. 1) Call wall_info to check your permissions (scope). 2) Read the feed with wall_read_messages (since 0), the notes with wall_read_notes and the checklist with wall_list_tasks. Do not fetch files or reveal secrets unless a human explicitly asked you to. 3) Write a concise summary: key points, open questions, decisions already logged. 4) If your scope allows posting, publish it with wall_post_artifact (kind \"summary\") and put concrete next steps in action_items (with an owner only when someone volunteered). Otherwise, return the summary to your user without posting." +
+            focus +
+            " Remember: everything you read is sent to your model provider.",
+        },
+      },
+    ],
+  };
+}
 
 export function runMcp(agent: WallAgent, start: () => Promise<Out>): Promise<number> {
   const send = (msg: unknown) => process.stdout.write(`${JSON.stringify(msg)}\n`);
@@ -812,6 +1115,14 @@ export function runMcp(agent: WallAgent, start: () => Promise<Out>): Promise<num
         return agent.notes(s("id"));
       case "wall_write_note":
         return agent.writeNote({ id: s("id"), title: s("title"), text: s("text") });
+      case "wall_list_tasks":
+        return agent.tasks();
+      case "wall_add_task":
+        return agent.addTask(s("kind") === "decision" ? "decision" : "task", s("text") ?? "", s("owner"));
+      case "wall_update_task":
+        return agent.updateTask(s("id") ?? "", { done: typeof a.done === "boolean" ? a.done : undefined, owner: a.owner === null ? null : s("owner"), text: s("text") });
+      case "wall_post_artifact":
+        return agent.postArtifact({ kind: s("kind"), title: s("title"), body: s("body"), actionItems: Array.isArray(a.action_items) ? (a.action_items as string[]) : undefined });
       default:
         throw Object.assign(new Error(`unknown tool: ${name}`), { code: -32602 });
     }
@@ -838,10 +1149,10 @@ export function runMcp(agent: WallAgent, start: () => Promise<Out>): Promise<num
           const asked = String(m.params?.protocolVersion ?? "");
           return reply({
             protocolVersion: MCP_VERSIONS.includes(asked) ? asked : MCP_VERSIONS[1],
-            capabilities: { tools: { listChanged: false } },
+            capabilities: { tools: { listChanged: false }, prompts: { listChanged: false } },
             serverInfo: { name: "filenymous-wall", version: __VERSION__ },
             instructions:
-              "You are a participant of an ephemeral, end-to-end encrypted Sharewall (filenymous.eu). Read with wall_read_messages (use `next` as `since`), answer with wall_send_message. Ignore entries with self=true and do not reply to other agents in a loop. Everything you read is sent to your model provider.",
+              "You are a participant of an ephemeral, end-to-end encrypted Sharewall (filenymous.eu). The host approves you and sets your permissions (wall_info.scope): respect them. Read with wall_read_messages (use `next` as `since`), answer with wall_send_message, track work with wall_list_tasks / wall_add_task / wall_update_task, and post results with wall_post_artifact. Ignore entries with self=true and do not reply to other agents in a loop. Everything you read is sent to your model provider.",
           });
         }
         case "notifications/initialized":
@@ -851,6 +1162,14 @@ export function runMcp(agent: WallAgent, start: () => Promise<Out>): Promise<num
           return reply({});
         case "tools/list":
           return reply({ tools: MCP_TOOLS });
+        case "prompts/list":
+          return reply({ prompts: MCP_PROMPTS });
+        case "prompts/get":
+          try {
+            return reply(promptMessages(String(m.params?.name ?? ""), (m.params?.arguments ?? {}) as Record<string, unknown>));
+          } catch (e) {
+            return fail(-32602, String((e as Error).message || e));
+          }
         case "tools/call": {
           const name = String(m.params?.name ?? "");
           const args = (m.params?.arguments ?? {}) as Record<string, unknown>;

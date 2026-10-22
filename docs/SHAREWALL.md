@@ -45,6 +45,13 @@ Entrées : `https://filenymous.eu/app/#wall-new` (raccourci `https://filenymous.
 - **Garde-fous anti-boucle** : chaque événement porte `self: true` pour les messages de l'agent lui-même et `mentionsMe` ; la limite de débit de l'hôte s'applique aux agents comme à tous ; voir conseils dans [cli/README.md](../cli/README.md#agents-ia--sharewall).
 - Un agent ne télécharge jamais rien automatiquement (notes masquées comprises) : `get` / `wall_get_item` est explicite et consomme l'élément sur un mur à autodestruction.
 
+## Collaboration (checklist, décisions, portée des agents, tableau blanc)
+
+- **Liste de tâches et journal de décisions** (onglet « Tâches ») : tâches avec responsable (humain ou agent) et état fait / à faire, décisions datées. L'onglet hôte est seul à les stocker et les diffuse ; tout le monde peut cocher ou assigner, seul l'auteur ou l'hôte modifie le texte ou supprime (200 entrées max). Inclus dans la recherche et dans l'export de l'hôte ; effacés quand le mur est détruit.
+- **Portée des agents** : un agent qui rejoint un mur web attend l'approbation de l'hôte et ne voit rien avant. L'hôte choisit : lecture seule, peut publier, peut télécharger les fichiers, peut révéler les notes masquées, et éventuellement **vue limitée** (mentions, ses propres messages et les éléments que l'hôte lui partage, son « dossier de contexte », bouton 🤖). Modifiable à tout moment (⚙️). L'appli vérifie la portée dans l'onglet hôte, qui relaie tout : ce n'est pas une garantie cryptographique. Ce que l'agent peut lire part chez le fournisseur de son modèle. Une demande sans réponse expire au bout de 10 minutes.
+- **Tableau blanc** (🎨, Excalidraw, licence MIT, chargé à la demande) : synchronisé par l'hôte via le canal WebRTC chiffré, sans Firebase ni relais externe ; polices servies par filenymous.eu. Pas d'images (formes, texte, flèches, liens http(s) seulement), 3000 éléments max. Les agents ne le reçoivent pas. Exportable par l'hôte en `.excalidraw` ou PNG ; effacé quand le mur est détruit (Nuke).
+- **Compatibilité** : les clients annoncent `feat: 2` ; l'hôte n'envoie tâches et tableau qu'à ceux qui le comprennent. Les CLI antérieures à 0.5.0 restent compatibles (elles voient un mur vide tant qu'elles attendent l'approbation).
+
 ## Didacticiel agents IA (3 clics)
 
 Côté hôte, le bouton « Guide agents IA (3 clics) » du panneau des participants ouvre un guide en trois étapes :
