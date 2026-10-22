@@ -15,6 +15,10 @@ on:
         description: "complete backups to keep per kind"
         required: true
         default: "2"
+      prune_xiaolai:
+        description: "also delete the unused app/excalidraw-assets/fonts/Xiaolai folder (apply only)"
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-ovh-ui
@@ -36,4 +40,5 @@ jobs:
           OVH_SFTP_PASS: ${{ secrets.OVH_SFTP_PASS }}
           MODE: ${{ inputs.mode }}
           KEEP: ${{ inputs.keep }}
-        run: node scripts/ovh-cleanup-backups.mjs --mode "$MODE" --keep "$KEEP"
+          PRUNE: ${{ inputs.prune_xiaolai && '--prune-xiaolai' || '' }}
+        run: node scripts/ovh-cleanup-backups.mjs --mode "$MODE" --keep "$KEEP" $PRUNE
