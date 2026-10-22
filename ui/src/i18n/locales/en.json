@@ -925,7 +925,7 @@
     "viewOnceHint": "Burn after reading: opening it removes it from the wall for the others.",
     "viewOnceButton": "Open",
     "attach": "Attach files (or drag and drop, or paste)",
-    "msgPlaceholder": "Write a message… (Enter to send, Shift+Enter for a new line, @ to mention)",
+    "msgPlaceholder": "Write a message…",
     "msgLabel": "Message",
     "send": "Send",
     "noteButton": "Masked note",
@@ -1099,7 +1099,8 @@
       "emptyNote": "(empty note)",
       "editorLabel": "Shared note",
       "searchHeading_one": "{{count}} note",
-      "searchHeading_other": "{{count}} notes"
+      "searchHeading_other": "{{count}} notes",
+      "title": "Notes"
     },
     "tasks": {
       "tab": "Tasks ({{count}})",
@@ -1129,7 +1130,8 @@
         "failed": "failed",
         "canceled": "canceled",
         "rejected": "rejected"
-      }
+      },
+      "title": "Tasks"
     },
     "board": {
       "title": "Whiteboard",
@@ -1165,7 +1167,10 @@
       "save": "Save",
       "share": "Share with an agent in limited view",
       "shareHint": "Visible to:"
-    }
+    },
+    "panel": "Wall panel",
+    "hostMenu": "Wall actions",
+    "msgHint": "Enter to send · Shift+Enter for a new line · @ to mention"
   },
   "leave": {
     "title": "Close this window?",
