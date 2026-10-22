@@ -5,7 +5,10 @@
  * *complete* backups of each kind; everything else of that kind is deleted
  * (incl. partial copies left by failed runs). Prints sizes and, when the host
  * allows SSH exec, disk usage/quota before and after. Never prints secrets.
- *   node scripts/ovh-cleanup-backups.mjs --mode inspect|apply [--keep 2]
+ * Also reports the size of the live app folders, and with --prune-xiaolai
+ * removes the unused Xiaolai (CJK) Excalidraw font folder (dropped from the
+ * build in #58; only partial uploads remain) in apply mode.
+ *   node scripts/ovh-cleanup-backups.mjs --mode inspect|apply [--keep 2] [--prune-xiaolai]
  */
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
@@ -69,10 +72,22 @@ for (const k of KINDS) {
     if (action === "DELETE") plan.push({ path, bytes: size.bytes });
   }
 }
+const APP = `${HOME}/www/app`;
+console.log(`\n== live app folders in ${APP} ==`);
+for (const e of (await sftp.list(APP)).filter((x) => x.type === "d")) {
+  const size = await du(`${APP}/${e.name}`);
+  console.log(`${e.name.padEnd(24)} ${mb(size.bytes)}  ${size.files} files`);
+}
+const XIAOLAI = `${APP}/excalidraw-assets/fonts/Xiaolai`;
+if (process.argv.includes("--prune-xiaolai") && (await sftp.exists(XIAOLAI)) === "d") {
+  const size = await du(XIAOLAI);
+  console.log(`DELETE ${XIAOLAI}  ${mb(size.bytes)}  ${size.files} files (unused since #58)`);
+  plan.push({ path: XIAOLAI, bytes: size.bytes });
+}
 console.log(`\nTo delete: ${plan.length} dirs, ${mb(plan.reduce((s, p) => s + p.bytes, 0))}`);
 if (mode === "apply") {
   for (const p of plan) {
-    if (!/^\/home\/filenyb\/(www\/app|www)\.bak-\d{14}$/.test(p.path)) throw new Error(`refusing ${p.path}`);
+    if (!/^\/home\/filenyb\/(www\/app|www)\.bak-\d{14}$/.test(p.path) && p.path !== XIAOLAI) throw new Error(`refusing ${p.path}`);
     await sftp.rmdir(p.path, true);
     console.log(`deleted ${p.path}`);
   }
