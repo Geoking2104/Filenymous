@@ -189,6 +189,15 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
         deleteNote: (id) => host.deleteNote(id),
         lockNote: (id, on) => host.lockNote(id, on),
         pinNote: (id, on) => host.pinNote(id, on),
+        addTask: (k, x, o) => host.addTask(k, x, o),
+        updateTask: (id, patch) => host.updateTask(id, patch),
+        deleteTask: (id) => host.deleteTask(id),
+        boardOp: (els) => host.boardOp(els),
+        boardElements: () => host.boardElements(),
+        approveAgent: (l, sc) => host.approveAgent(l, sc),
+        refuseAgent: (l) => host.refuseAgent(l),
+        setAgentScope: (l, sc) => host.setAgentScope(l, sc),
+        shareWithAgent: (l, id, on) => host.shareWithAgent(l, id, on),
       },
     [host, t],
   );
@@ -196,13 +205,22 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
   const [exporting, setExporting] = useState(false);
   const [exportNote, setExportNote] = useState("");
 
-  async function runExport(format: "json" | "md") {
+  async function runExport(format: ExportFormat) {
     const h = hostRef.current;
     if (!h || params.burn) return;
     const st = h.state;
     const lang = i18n.language.startsWith("en") ? "en" : "fr";
     try {
-      const snap = await buildSnapshot({ title: params.title, burn: params.burn, members: st.members, posts: st.posts, notes: st.notes, getItem: (id) => h.exportItem(id) });
+      if (format === "board-json" || format === "board-png") {
+        const els = h.boardElements();
+        if (!els.some((e) => !e.isDeleted)) return setExportNote(t("wall.board.exportEmpty"));
+        const { boardToExcalidrawFile, boardToPng } = await import("./boardExport");
+        const blob = format === "board-png" ? await boardToPng(els) : await boardToExcalidrawFile(els);
+        downloadBlob(blob, snapshotFilename(params.title, format === "board-png" ? "png" : "excalidraw"));
+        h.announceExport();
+        return setExportNote(t("wall.export.done"));
+      }
+      const snap = await buildSnapshot({ title: params.title, burn: params.burn, members: st.members, posts: st.posts, notes: st.notes, tasks: st.tasks, board: h.boardElements(), getItem: (id) => h.exportItem(id) });
       if (format === "json") downloadBlob(snapshotBlob(snap), snapshotFilename(params.title, "json"));
       else downloadBlob(new Blob([buildTranscript(snap, lang)], { type: "text/markdown;charset=utf-8" }), snapshotFilename(params.title, "md"));
       h.announceExport();
@@ -253,6 +271,10 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
     notes: state.notes,
     noteLocks: state.noteLocks,
     noteOverwrite: state.noteOverwrite,
+    tasks: state.tasks,
+    boardRev: state.boardRev,
+    pendingAgents: state.pendingAgents,
+    packs: state.packs,
   };
   return (
     <>
@@ -282,9 +304,11 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
   );
 }
 
-function ExportDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: (format: "json" | "md") => void }) {
+type ExportFormat = "json" | "md" | "board-json" | "board-png";
+
+function ExportDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: (format: ExportFormat) => void }) {
   const { t } = useTranslation();
-  const [format, setFormat] = useState<"json" | "md">("json");
+  const [format, setFormat] = useState<ExportFormat>("json");
   const cancelRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     cancelRef.current?.focus();
@@ -302,6 +326,8 @@ function ExportDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm
           <legend>{t("wall.export.format")}</legend>
           <label><input type="radio" name="sw-export-format" data-testid="wall-export-format-json" checked={format === "json"} onChange={() => setFormat("json")} /> {t("wall.export.json")}</label>
           <label><input type="radio" name="sw-export-format" data-testid="wall-export-format-md" checked={format === "md"} onChange={() => setFormat("md")} /> {t("wall.export.md")}</label>
+          <label><input type="radio" name="sw-export-format" data-testid="wall-export-format-board-json" checked={format === "board-json"} onChange={() => setFormat("board-json")} /> {t("wall.export.boardJson")}</label>
+          <label><input type="radio" name="sw-export-format" data-testid="wall-export-format-board-png" checked={format === "board-png"} onChange={() => setFormat("board-png")} /> {t("wall.export.boardPng")}</label>
         </fieldset>
         <div className="pz-confirm-actions">
           <button ref={cancelRef} type="button" className="pz-btn pz-btn-ghost" data-testid="wall-export-cancel" onClick={onCancel}>{t("wall.export.cancel")}</button>
@@ -383,6 +409,11 @@ function PeerView({ params }: { params: WallParams }) {
         editNote: (id, base, patch) => peer.editNote(id, base, patch),
         deleteNote: (id) => peer.deleteNote(id),
         lockNote: (id, on) => peer.lockNote(id, on),
+        addTask: (k, x, o) => peer.addTask(k, x, o),
+        updateTask: (id, patch) => peer.updateTask(id, patch),
+        deleteTask: (id) => peer.deleteTask(id),
+        boardOp: (els) => peer.boardOp(els),
+        boardElements: () => peer.boardElements(),
       },
     [peer],
   );
@@ -433,6 +464,8 @@ function PeerView({ params }: { params: WallParams }) {
     notes: s?.notes ?? [],
     noteLocks: s?.noteLocks ?? {},
     noteOverwrite: s?.noteOverwrite,
+    tasks: s?.tasks ?? [],
+    boardRev: s?.boardRev ?? 0,
   };
   return (
     <WallRoom

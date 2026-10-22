@@ -1,3 +1,4 @@
+import type { Task } from "./collab";
 /**
  * Feed search + image annotation helpers.
  * Pure client-side; no protocol changes required for search.
@@ -62,6 +63,13 @@ export function searchNotes(notes: SharedNote[], query: string): SharedNote[] {
 }
 
 /** A short excerpt of `text` around the first match (whole lines collapsed). */
+/** Checklist items and decisions whose text matches (accent- and case-insensitive). */
+export function searchTasks(tasks: Task[], query: string): Task[] {
+  const q = normalizeQuery(query);
+  if (!q) return [];
+  return tasks.filter((x) => has(x.text, q));
+}
+
 export function matchSnippet(text: string, query: string, around = 50): string {
   const flat = text.replace(/\s+/g, " ").trim();
   const r = highlightRanges(flat, query)[0];

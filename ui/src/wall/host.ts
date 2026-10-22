@@ -24,6 +24,19 @@ import {
   type WallEvent,
 } from "./feed";
 import { NoteBoard, type NoteError, type NoteLock, type SharedNote } from "./notes";
+import {
+  BoardStore,
+  SCOPE_FULL,
+  TaskBoard,
+  boardBatches,
+  scopeAllows,
+  visibleTo,
+  type AgentScope,
+  type BoardElement,
+  type Task,
+  type TaskError,
+  type TaskKind,
+} from "./collab";
 import { isExpired, type HostWallParams } from "./link";
 import { LIVE_WAIT_TRACKS_MS, MediaLink, stopStream } from "./live";
 import {
@@ -65,6 +78,14 @@ export interface HostState {
   noteLocks: Record<string, NoteLock>;
   /** Set when one of your note edits was replaced by someone who had not seen it. */
   noteOverwrite?: { id: string; by: string; at: number };
+  /** Shared checklist and decisions log (host-authoritative). */
+  tasks: Task[];
+  /** Bumped on every whiteboard change (elements: boardElements()). */
+  boardRev: number;
+  /** Agents waiting for the host's approval (they see nothing meanwhile). */
+  pendingAgents: Array<{ label: string; name: string }>;
+  /** Context packs: agent label → ids (posts, notes, tasks) the host shared with it. */
+  packs: Record<string, string[]>;
   error?: string;
   notice?: { code: string; at: number; retryMs?: number };
 }
@@ -92,7 +113,17 @@ interface Peer {
   lastTyping: number;
   /** Host → this viewer media links, by publication sid. */
   down: Map<string, MediaLink>;
+  /** Protocol feature level announced in the profile (1 = before tasks/board). */
+  feat: number;
+  /** An agent waiting for approval (not a member yet). */
+  pending?: Member;
+  approvalTimer?: ReturnType<typeof setTimeout>;
+  /** Agents: ids actually delivered (to retract them when visibility shrinks). */
+  seen: Set<string>;
 }
+
+/** How long an agent may wait for the host's approval before it is turned away. */
+export const APPROVAL_TIMEOUT_MS = 10 * 60_000;
 
 interface Publication {
   sid: string;
@@ -118,6 +149,12 @@ export interface WallHostOptions {
   media?: boolean;
   /** Let AI agents join (default false). */
   allowAgents?: boolean;
+  /**
+   * Admit agents without asking (CLI host), with `agentScope` (default: full).
+   * Browser hosts approve every agent explicitly and choose its scope.
+   */
+  autoApproveAgents?: boolean;
+  agentScope?: AgentScope;
 }
 
 /**
@@ -141,6 +178,10 @@ export class WallHost {
   private burstLimit: RateLimiter;
   private noteLimit: RateLimiter;
   private board = new NoteBoard();
+  private taskBoard = new TaskBoard();
+  private wb = new BoardStore();
+  private boardLimit: RateLimiter;
+  private packs = new Map<string, Set<string>>();
   private self: Member;
   state: HostState;
 
@@ -155,6 +196,7 @@ export class WallHost {
     this.reactLimit = new RateLimiter(LIMITS.react.capacity, LIMITS.react.perSecond);
     this.burstLimit = new RateLimiter(LIMITS.burst.capacity, LIMITS.burst.perSecond);
     this.noteLimit = new RateLimiter(LIMITS.note.capacity, LIMITS.note.perSecond);
+    this.boardLimit = new RateLimiter(60, 20);
     this.state = {
       status: "starting",
       expiresAt: params.expiresAt,
@@ -167,6 +209,10 @@ export class WallHost {
       media: {},
       typing: {},
       agents: !!opts.allowAgents,
+      tasks: [],
+      boardRev: 0,
+      pendingAgents: [],
+      packs: {},
     };
   }
 
@@ -278,7 +324,73 @@ export class WallHost {
   }
 
   private broadcast(msg: WallMessage, except?: string) {
-    for (const [, p] of this.members()) if (p.label !== except) void this.sendControl(p, msg);
+    for (const [, p] of this.members()) if (p.label !== except) this.deliver(p, msg);
+  }
+
+  private byOf = (id: string) => this.findPost(id)?.by;
+
+  /** Whether a member may see a post / note / task (agents in limited view see a subset). */
+  private sees(p: Peer, e: { id: string; by: string; mentions?: string[]; replyTo?: string; owner?: string | null }): boolean {
+    const m = p.member;
+    if (!m?.agent) return true;
+    return visibleTo(m.label, m.scope, this.packs.get(m.label) ?? new Set(), e, this.byOf);
+  }
+
+  private seesId(p: Peer, id: string): boolean {
+    const post = this.findPost(id);
+    if (post) return this.sees(p, post);
+    const note = this.board.list().find((n) => n.id === id);
+    if (note) return this.sees(p, note);
+    const task = this.taskBoard.get(id);
+    if (task) return this.sees(p, task);
+    return false;
+  }
+
+  /**
+   * Sends one message to one member, applying feature gating (older clients
+   * never get messages they can't parse) and agent visibility: a limited agent
+   * only receives what it may see, and gets an "unpost"/"gone" when an entry it
+   * saw leaves its view.
+   */
+  private deliver(p: Peer, msg: WallMessage) {
+    if ((msg.t === "task" || msg.t === "task-gone" || msg.t === "board") && p.feat < 2) return;
+    if (msg.t === "board" && p.member?.agent) return;
+    if (!p.member?.agent) return void this.sendControl(p, msg);
+    const show = (id: string, visible: boolean, gone: WallMessage) => {
+      if (visible) {
+        p.seen.add(id);
+        return void this.sendControl(p, msg);
+      }
+      if (p.seen.delete(id)) void this.sendControl(p, gone);
+    };
+    switch (msg.t) {
+      case "post":
+        return show(msg.post.id, this.sees(p, msg.post), { t: "unpost", id: msg.post.id });
+      case "snote":
+        return show(msg.note.id, this.sees(p, msg.note), { t: "snote-gone", id: msg.note.id });
+      case "task":
+        return show(msg.task.id, this.sees(p, msg.task), { t: "task-gone", id: msg.task.id });
+      case "unpost":
+      case "snote-gone":
+      case "task-gone":
+        if (p.seen.delete(msg.id)) void this.sendControl(p, msg);
+        return;
+      case "snote-lock-by":
+        if (p.seen.has(msg.id)) void this.sendControl(p, msg);
+        return;
+      case "pin":
+        return void this.sendControl(p, msg.id && !p.seen.has(msg.id) ? { t: "pin", id: null } : msg);
+      default:
+        return void this.sendControl(p, msg);
+    }
+  }
+
+  /** Re-sends what an agent may now see and retracts what it may no longer see. */
+  private resync(p: Peer) {
+    if (!p.member?.agent) return;
+    for (const post of this.state.posts) if (this.sees(p, post) !== p.seen.has(post.id)) this.deliver(p, { t: "post", post });
+    for (const note of this.board.list()) if (this.sees(p, note) !== p.seen.has(note.id)) this.deliver(p, { t: "snote", note });
+    for (const task of this.taskBoard.list()) if (this.sees(p, task) !== p.seen.has(task.id)) this.deliver(p, { t: "task", task });
   }
 
   private notify(peer: Peer | null, code: string, retryMs?: number) {
@@ -291,6 +403,8 @@ export class WallHost {
     if (!peer) return;
     this.peers.delete(id);
     peer.uploads.clear();
+    if (peer.approvalTimer) clearTimeout(peer.approvalTimer);
+    if (peer.pending) this.update({ pendingAgents: this.state.pendingAgents.filter((a) => a.label !== peer.label) });
     for (const l of peer.down.values()) l.close();
     peer.down.clear();
     if (peer.label) {
@@ -299,6 +413,7 @@ export class WallHost {
       this.reactLimit.forget(peer.label);
       this.burstLimit.forget(peer.label);
       this.noteLimit.forget(peer.label);
+      this.boardLimit.forget(peer.label);
       for (const id of this.board.releaseAll(peer.label)) this.publishLock(id, null);
     }
     try { peer.pc.close(); } catch { /* ignore */ }
@@ -312,7 +427,7 @@ export class WallHost {
       this.dropPeer(from);
       if (this.peers.size >= MAX_PEERS) return;
       const pc = new RTCPeerConnection({ iceServers: await iceServers() });
-      const peer: Peer = { pc, pendingIce: [], uploads: new Map(), out: Promise.resolve(), lastTyping: 0, down: new Map() };
+      const peer: Peer = { pc, pendingIce: [], uploads: new Map(), out: Promise.resolve(), lastTyping: 0, down: new Map(), feat: 1, seen: new Set() };
       this.peers.set(from, peer);
       pc.onicecandidate = (ev) => {
         if (ev.candidate && this.peers.get(from) === peer) this.signal?.send({ kind: "ice", candidate: iceCandidateInit(ev.candidate) }, from);
@@ -323,7 +438,7 @@ export class WallHost {
         this.serve(from, peer, ev.channel);
       };
       const timer = setTimeout(() => {
-        if (this.peers.get(from) === peer && !peer.member) this.dropPeer(from);
+        if (this.peers.get(from) === peer && !peer.member && !peer.pending) this.dropPeer(from);
       }, CONNECT_TIMEOUT_MS);
       pc.onconnectionstatechange = () => {
         if (pc.connectionState === "failed" || pc.connectionState === "closed") {
@@ -408,6 +523,11 @@ export class WallHost {
       }
       const msg = parseWallMessage(frame.control);
       if (!msg) return this.dropPeer(peerId);
+      if (peer.pending) {
+        // Waiting for approval: only leaving is allowed.
+        if (msg.t === "bye") return this.dropPeer(peerId);
+        return;
+      }
       if (!peer.member) {
         if (msg.t !== "profile") return this.dropPeer(peerId);
         return this.admit(peerId, peer, msg);
@@ -428,8 +548,22 @@ export class WallHost {
       return;
     }
     const label = peer.label!;
-    peer.member = { label, name: msg.name || label, agent: msg.agent, host: false, hand: false, media: msg.media };
-    void this.sendControl(peer, {
+    peer.feat = msg.feat ?? 1;
+    const member: Member = { label, name: msg.name || label, agent: msg.agent, host: false, hand: false, media: msg.media };
+    if (msg.agent && !this.opts.autoApproveAgents) {
+      // The host approves each agent and picks its scope; meanwhile it sees nothing.
+      peer.pending = member;
+      void this.sendControl(peer, this.welcome(label, true));
+      this.update({ pendingAgents: [...this.state.pendingAgents, { label, name: member.name }] });
+      peer.approvalTimer = setTimeout(() => this.peers.get(peerId) === peer && peer.pending && this.kick(label), APPROVAL_TIMEOUT_MS);
+      return;
+    }
+    if (msg.agent) member.scope = { ...(this.opts.agentScope ?? SCOPE_FULL) };
+    this.join(peer, member, false);
+  }
+
+  private welcome(label: string, pending: boolean): WallMessage {
+    return {
       t: "welcome",
       label,
       expiresAt: this.params.expiresAt,
@@ -438,22 +572,109 @@ export class WallHost {
       agents: this.state.agents,
       media: !!this.opts.media,
       ...(this.params.title ? { title: this.params.title } : {}),
-    });
+      ...(pending ? { pending: true } : {}),
+    };
+  }
+
+  /** Makes a peer a member and replays the wall to it (filtered for limited agents). */
+  private join(peer: Peer, member: Member, rewelcome: boolean) {
+    peer.member = member;
+    if (rewelcome || !peer.pending) void this.sendControl(peer, this.welcome(member.label, false));
+    peer.pending = undefined;
+    peer.seen.clear();
     // Posts go one by one so no single message hits the DataChannel size limit.
-    for (const post of this.state.posts) void this.sendControl(peer, { t: "post", post });
-    if (this.state.pinned) void this.sendControl(peer, { t: "pin", id: this.state.pinned });
-    for (const note of this.board.list()) void this.sendControl(peer, { t: "snote", note });
+    for (const post of this.state.posts) this.deliver(peer, { t: "post", post });
+    if (this.state.pinned) this.deliver(peer, { t: "pin", id: this.state.pinned });
+    for (const note of this.board.list()) this.deliver(peer, { t: "snote", note });
     for (const note of this.board.list()) {
       const l = this.board.lockOf(note.id);
-      if (l) void this.sendControl(peer, { t: "snote-lock-by", id: l.id, label: l.label, until: l.until });
+      if (l) this.deliver(peer, { t: "snote-lock-by", id: l.id, label: l.label, until: l.until });
     }
+    for (const task of this.taskBoard.list()) this.deliver(peer, { t: "task", task });
+    for (const els of boardBatches(this.wb.list())) this.deliver(peer, { t: "board", els });
     void this.sendControl(peer, { t: "live", streams: this.state.live });
     this.refreshMembers();
-    if (msg.media) for (const pub of this.pubs.values()) if (pub.announced) void this.openDown(peer, pub);
+    if (member.media) for (const pub of this.pubs.values()) if (pub.announced) void this.openDown(peer, pub);
+  }
+
+  // ---- agent approval, scopes and context packs (host only) ----
+
+  approveAgent(label: string, scope: AgentScope) {
+    const found = Array.from(this.peers.values()).find((p) => p.label === label && p.pending);
+    if (!found || this.done) return;
+    if (found.approvalTimer) clearTimeout(found.approvalTimer);
+    this.update({ pendingAgents: this.state.pendingAgents.filter((a) => a.label !== label) });
+    this.join(found, { ...found.pending!, scope: { ...scope } }, true);
+  }
+
+  refuseAgent(label: string) {
+    this.kick(label);
+  }
+
+  setAgentScope(label: string, scope: AgentScope) {
+    const found = this.peerByLabel(label);
+    const p = found?.[1];
+    if (!p?.member?.agent || this.done) return;
+    p.member = { ...p.member, scope: { ...scope } };
+    this.refreshMembers();
+    this.resync(p);
+  }
+
+  /** Adds or removes an entry (post, note or task id) from an agent's context pack. */
+  shareWithAgent(label: string, id: string, on: boolean) {
+    if (this.done) return;
+    const set = new Set(this.packs.get(label) ?? []);
+    if (on) set.add(id);
+    else set.delete(id);
+    this.packs.set(label, set);
+    this.update({ packs: { ...this.state.packs, [label]: [...set] } });
+    const p = this.peerByLabel(label)?.[1];
+    if (p) this.resync(p);
+  }
+
+  /** What an action needs from an agent's scope. */
+  private need(msg: WallMessage): "post" | "files" | "secrets" | null {
+    switch (msg.t) {
+      case "say": case "put": case "poll": case "react": case "vote": case "poll-close": case "remove":
+      case "snote-new": case "snote-edit": case "snote-del": case "snote-lock":
+      case "task-new": case "task-set": case "task-del":
+      case "hand": case "burst": case "live-start": case "board-op":
+        return "post";
+      case "get": {
+        const post = this.findPost(msg.id);
+        return post?.kind === "note" ? "secrets" : "files";
+      }
+      default:
+        return null;
+    }
+  }
+
+  /** Scope and visibility checks for agents; returns false (and tells the agent) when refused. */
+  private agentMay(peer: Peer, msg: WallMessage): boolean {
+    const m = peer.member;
+    if (!m?.agent) return true;
+    if (msg.t === "board-op") return false; // agents don't use the whiteboard
+    if (msg.t === "typing") return scopeAllows(m.scope, "post");
+    const need = this.need(msg);
+    const shared = this.packs.get(m.label);
+    // A file or secret the host explicitly shared with this agent may be fetched.
+    const grantedByPack = msg.t === "get" && !!shared?.has(msg.id);
+    let ok = grantedByPack || scopeAllows(m.scope, need);
+    const target = "id" in msg && typeof msg.id === "string" ? msg.id : undefined;
+    if (ok && target && msg.t !== "task-new" && (msg.t === "get" || msg.t === "react" || msg.t === "vote" || msg.t === "poll-close" || msg.t === "remove" || msg.t.startsWith("snote-") || msg.t.startsWith("task-"))) {
+      ok = this.seesId(peer, target);
+    }
+    if (ok) return true;
+    this.notify(peer, "scope-denied");
+    if (msg.t === "put") void this.sendControl(peer, { t: "put-fail", uid: msg.uid, reason: "scope" });
+    if (msg.t === "get") void this.sendControl(peer, { t: "get-fail", rid: msg.rid, reason: peer.feat >= 2 ? "denied" : "gone" });
+    return false;
   }
 
   private async onPeerMessage(peerId: string, peer: Peer, msg: WallMessage) {
     const label = peer.label!;
+    if (peer.pending || !peer.member) return;
+    if (!this.agentMay(peer, msg)) return;
     switch (msg.t) {
       case "put": {
         if (!this.chatLimit.take(label)) {
@@ -624,6 +845,40 @@ export class WallHost {
         if (r !== undefined) this.publishLock(msg.id, r);
         return;
       }
+      case "task-new": {
+        if (limited(this.chatLimit)) return;
+        if (msg.owner && !this.state.members.some((m) => m.label === msg.owner)) return this.notify(peer, "task-bad-owner");
+        const r = this.taskBoard.create(label, msg.kind, msg.text, msg.owner);
+        if (typeof r === "string") return this.taskFail(peer, r);
+        this.publishTask(r);
+        return;
+      }
+      case "task-set": {
+        if (limited(this.reactLimit)) return;
+        if (msg.owner && !this.state.members.some((m) => m.label === msg.owner)) return this.notify(peer, "task-bad-owner");
+        const r = this.taskBoard.update(label, msg.id, { done: msg.done, owner: msg.owner, text: msg.text }, !peer);
+        if (typeof r === "string") return this.taskFail(peer, r);
+        this.publishTask(r);
+        return;
+      }
+      case "task-del": {
+        if (limited(this.reactLimit)) return;
+        const r = this.taskBoard.remove(label, msg.id, !peer);
+        if (r !== true) return this.taskFail(peer, r);
+        this.update({ tasks: this.taskBoard.list() });
+        this.broadcast({ t: "task-gone", id: msg.id });
+        this.emit({ type: "task-gone", id: msg.id });
+        return;
+      }
+      case "board-op": {
+        if (peer && !this.boardLimit.take(label)) return;
+        const accepted = this.wb.merge(msg.els);
+        if (!accepted.length) return;
+        this.update({ boardRev: this.state.boardRev + 1 });
+        for (const els of boardBatches(accepted)) this.broadcast({ t: "board", els }, label);
+        if (peer) this.emit({ type: "board", elements: accepted });
+        return;
+      }
       default:
         return;
     }
@@ -631,6 +886,36 @@ export class WallHost {
 
   private noteFail(peer: Peer | null, err: NoteError) {
     this.notify(peer, `note-${err}`);
+  }
+
+  private taskFail(peer: Peer | null, err: TaskError) {
+    this.notify(peer, `task-${err}`);
+  }
+
+  private publishTask(task: Task) {
+    this.update({ tasks: this.taskBoard.list() });
+    this.broadcast({ t: "task", task });
+    this.emit({ type: "task", task });
+  }
+
+  // ---- checklist / decisions: host's own actions (never rate limited) ----
+  addTask(kind: TaskKind, text: string, owner: string | null = null) {
+    this.apply(HOST_LABEL, null, { t: "task-new", kind, text, owner });
+  }
+  updateTask(id: string, patch: { done?: boolean; owner?: string | null; text?: string }) {
+    this.apply(HOST_LABEL, null, { t: "task-set", id, ...patch });
+  }
+  deleteTask(id: string) {
+    this.apply(HOST_LABEL, null, { t: "task-del", id });
+  }
+
+  // ---- whiteboard ----
+  /** The host's own drawing (already validated by the same rules as peers'). */
+  boardOp(els: unknown[]) {
+    this.apply(HOST_LABEL, null, { t: "board-op", els });
+  }
+  boardElements(): BoardElement[] {
+    return this.wb.list();
   }
 
   private publishNote(note: SharedNote, overwrote?: string) {
@@ -921,7 +1206,10 @@ export class WallHost {
     if (this.done || this.state.agents === allowed) return;
     this.update({ agents: allowed });
     this.broadcast({ t: "settings", agents: allowed });
-    if (!allowed) for (const [, p] of this.members()) if (p.member!.agent) this.kick(p.label!, "agents-off");
+    if (!allowed) {
+      for (const [, p] of this.members()) if (p.member!.agent) this.kick(p.label!, "agents-off");
+      for (const p of this.peers.values()) if (p.pending) this.kick(p.label!, "agents-off");
+    }
   }
 
   /** Adds files dropped by the host; returns the refusal reasons (if any) by file name. */
@@ -987,10 +1275,13 @@ export class WallHost {
     this.peers.clear();
     this.store.wipe();
     this.board.clear();
+    this.taskBoard.clear();
+    this.wb.clear();
+    this.packs.clear();
     this.base = null;
     this.signal?.close();
     releaseUnloadGuard(HOST_GUARD);
-    this.update({ status, posts: [], notes: [], noteLocks: {}, members: [], pinned: null, live: [], media: {}, typing: {} });
+    this.update({ status, posts: [], notes: [], noteLocks: {}, members: [], pinned: null, live: [], media: {}, typing: {}, tasks: [], boardRev: this.state.boardRev + 1, pendingAgents: [], packs: {} });
   }
 
   /** Leaving the page / unmount: peers see the host go away (and wipe if the option is on). */

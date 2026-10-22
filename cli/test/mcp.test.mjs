@@ -32,7 +32,7 @@ test("MCP: tools list, read/send/react/participants/file/get between a CLI host 
   assert.equal(client.getServerVersion().name, "filenymous-wall");
   assert.match(client.getInstructions() ?? "", /model provider/);
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["wall_get_item", "wall_info", "wall_list_participants", "wall_react", "wall_read_messages", "wall_read_notes", "wall_send_file", "wall_send_message", "wall_write_note"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["wall_add_task", "wall_get_item", "wall_info", "wall_list_participants", "wall_list_tasks", "wall_post_artifact", "wall_react", "wall_read_messages", "wall_read_notes", "wall_send_file", "wall_send_message", "wall_update_task", "wall_write_note"]);
 
   const info = await call(client, "wall_info");
   assert.equal(info.json.role, "peer");
@@ -150,5 +150,78 @@ test("MCP: shared notes with wall_read_notes / wall_write_note (host-versioned, 
   await client.close();
   host.send({ cmd: "delete-note", id: w2.note.id, ref: "d1" });
   assert.equal((await host.wait((l) => l.event === "result" && l.ref === "d1")).ok, true);
+  host.send({ cmd: "leave" });
+});
+
+test("MCP: tasks, decisions, artifacts, summarize prompt; scope set by the host is reported and enforced", { timeout: 90_000 }, async () => {
+  const host = wallCli(["create", "--allow-agents", "--agent-scope", "post,limited", "--name", "Hôte", "--quiet", ...common()]);
+  const ready = await host.wait((l) => l.event === "ready");
+  host.send({ cmd: "send", text: "Discussion privée entre humains" });
+  host.send({ cmd: "note", text: "API_KEY=sk-test-123" });
+  const secret = await host.wait((l) => l.event === "note");
+  const client = await mcpClient([ready.link, "--name", "Résumeur"]);
+  const info = await call(client, "wall_info");
+  assert.deepEqual(info.json.scope, { name: "post", post: true, files: false, secrets: false, limitedView: true });
+  const parts = await call(client, "wall_list_participants");
+  const me = parts.json.participants.find((p) => p.self);
+  assert.equal(me.scope.limitedView, true);
+  // Limited view: the human-only message and the secret are not delivered.
+  const read0 = await call(client, "wall_read_messages", { since: 0 });
+  assert.deepEqual(read0.json.messages, []);
+  host.send({ cmd: "send", text: `@Résumeur peux-tu résumer ?` });
+  const r1 = await call(client, "wall_read_messages", { since: 0, wait_ms: 8000 });
+  assert.equal(r1.json.messages.length, 1);
+  assert.match(r1.json.messages[0].text, /résumer/);
+  const denied = await call(client, "wall_get_item", { id: secret.id });
+  assert.equal(denied.isError, true);
+  // Context pack: the host shares the secret item; the agent sees it (but may not reveal it: no "secrets" scope).
+  host.send({ cmd: "share", label: me.label, id: secret.id, ref: "sh" });
+  assert.equal((await host.wait((l) => l.ref === "sh")).ok, true);
+  let seen;
+  for (let i = 0; i < 40 && !seen; i++) {
+    seen = (await call(client, "wall_read_messages", { since: 0 })).json.messages.find((m) => m.id === secret.id);
+    if (!seen) await new Promise((r) => setTimeout(r, 100));
+  }
+  assert.ok(seen, "shared entry becomes visible");
+  // Tasks and decisions.
+  const t1 = await call(client, "wall_add_task", { text: "Envoyer le compte rendu", owner: "me" });
+  assert.equal(t1.isError, false, t1.text);
+  assert.equal(t1.json.task.owner, me.label);
+  const hostTask = await host.wait((l) => l.event === "task" && l.id === t1.json.task.id);
+  assert.equal(hostTask.ownerName, "Résumeur");
+  const d1 = await call(client, "wall_add_task", { text: "On publie vendredi", kind: "decision" });
+  assert.equal(d1.json.task.kind, "decision");
+  const up = await call(client, "wall_update_task", { id: t1.json.task.id, done: true });
+  assert.equal(up.json.task.done, true);
+  host.send({ cmd: "add-task", text: "Tâche réservée aux humains", ref: "ht" });
+  await host.wait((l) => l.ref === "ht");
+  const list = await call(client, "wall_list_tasks");
+  assert.deepEqual(list.json.tasks.map((t) => t.text), ["Envoyer le compte rendu"], "limited view: only its own tasks");
+  assert.equal(list.json.decisions.length, 1);
+  // Artifact: summary + action items become checklist tasks.
+  const art = await call(client, "wall_post_artifact", { kind: "summary", title: "Point du jour", body: "- Décision : publier vendredi", action_items: ["Relire la doc"] });
+  assert.equal(art.isError, false, art.text);
+  assert.equal(art.json.as, "message");
+  assert.equal(art.json.tasks.length, 1);
+  const posted = await host.wait((l) => l.event === "message" && l.text?.includes("Point du jour"));
+  assert.match(posted.text, /Summary/);
+  // Prompt.
+  const prompts = await client.listPrompts();
+  assert.deepEqual(prompts.prompts.map((p) => p.name), ["summarize_wall"]);
+  const pr = await client.getPrompt({ name: "summarize_wall", arguments: { focus: "planning" } });
+  assert.match(pr.messages[0].content.text, /wall_post_artifact/);
+  assert.match(pr.messages[0].content.text, /model provider/);
+  // The host restricts it to read-only: posting is refused.
+  host.send({ cmd: "scope", label: me.label, scope: "read-only", ref: "sc" });
+  await host.wait((l) => l.ref === "sc");
+  let refused;
+  for (let i = 0; i < 40; i++) {
+    refused = await call(client, "wall_send_message", { text: "encore ?" });
+    if (refused.isError) break;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  assert.equal(refused.isError, true);
+  assert.match(refused.text, /permissions/);
+  await client.close();
   host.send({ cmd: "leave" });
 });

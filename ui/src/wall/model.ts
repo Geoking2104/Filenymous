@@ -5,6 +5,7 @@
  */
 import { cleanNoteText, cleanNoteTitle, cleanSharedNote, isNoteId, type SharedNote } from "./notes";
 import { sanitizeWallTitle } from "./link";
+import { cleanBoardElement, cleanTask, cleanTaskText, isTaskId, type BoardElement, type Task, type TaskKind } from "./collab";
 import { safeFileName } from "../p2p/protocol";
 import {
   MAX_LIVE,
@@ -46,7 +47,7 @@ export const WALL_CHUNK = 64 * 1024;
 /** Control messages (always sent sealed, see crypto.ts). */
 export type WallMessage =
   // peer → host
-  | { t: "profile"; name: string; agent: boolean; media: boolean }
+  | { t: "profile"; name: string; agent: boolean; media: boolean; feat?: number }
   | { t: "say"; text: string; replyTo?: string }
   | { t: "put"; uid: number; kind: ItemKind; name: string; size: number; mime: string; replyTo?: string }
   | { t: "put-end"; uid: number; chunks: number }
@@ -68,10 +69,15 @@ export type WallMessage =
   | { t: "snote-edit"; id: string; base: number; title?: string; text?: string }
   | { t: "snote-del"; id: string }
   | { t: "snote-lock"; id: string; on: boolean }
+  // checklist / decisions and whiteboard (peers with feat ≥ 2 only)
+  | { t: "task-new"; kind: TaskKind; text: string; owner: string | null }
+  | { t: "task-set"; id: string; done?: boolean; owner?: string | null; text?: string }
+  | { t: "task-del"; id: string }
+  | { t: "board-op"; els: unknown[] }
   // both directions: media signaling for live streams, inside the sealed channel
   | RtcMessage
   // host → peer
-  | { t: "welcome"; label: string; expiresAt: number; burn: boolean; hostLeave: boolean; agents: boolean; media: boolean; title?: string }
+  | { t: "welcome"; label: string; expiresAt: number; burn: boolean; hostLeave: boolean; agents: boolean; media: boolean; title?: string; pending?: boolean }
   | { t: "members"; members: Member[] }
   | { t: "post"; post: Post }
   | { t: "unpost"; id: string }
@@ -88,11 +94,14 @@ export type WallMessage =
   | { t: "put-fail"; uid: number; reason: string }
   | { t: "get-begin"; rid: number; item: ItemMeta }
   | { t: "get-end"; rid: number; chunks: number }
-  | { t: "get-fail"; rid: number; reason: "gone" | "busy" }
+  | { t: "get-fail"; rid: number; reason: "gone" | "busy" | "denied" }
   | { t: "destroy"; reason: DestroyReason }
   | { t: "snote"; note: SharedNote; overwrote?: string }
   | { t: "snote-gone"; id: string }
-  | { t: "snote-lock-by"; id: string; label: string | null; until: number };
+  | { t: "snote-lock-by"; id: string; label: string | null; until: number }
+  | { t: "task"; task: Task }
+  | { t: "task-gone"; id: string }
+  | { t: "board"; els: BoardElement[] };
 
 export interface RtcMessage {
   t: "rtc";
@@ -149,7 +158,7 @@ export function parseWallMessage(m: unknown): WallMessage | null {
   switch (o.t) {
     case "profile":
       return str(o.name, 200) && typeof o.agent === "boolean" && typeof o.media === "boolean"
-        ? { t: "profile", name: cleanName(o.name), agent: o.agent, media: o.media }
+        ? { t: "profile", name: cleanName(o.name), agent: o.agent, media: o.media, ...(int(o.feat, 1) && (o.feat as number) < 1000 ? { feat: o.feat as number } : {}) }
         : null;
     case "say":
       if (!str(o.text, MAX_MSG_CHARS + 64) || !optId(o.replyTo)) return null;
@@ -213,6 +222,34 @@ export function parseWallMessage(m: unknown): WallMessage | null {
       return isNoteId(o.id) ? { t: "snote-gone", id: o.id } : null;
     case "snote-lock-by":
       return isNoteId(o.id) && (o.label === null || isLabel(o.label)) && int(o.until) ? { t: "snote-lock-by", id: o.id, label: o.label as string | null, until: o.until as number } : null;
+    case "task-new": {
+      const text = cleanTaskText(o.text);
+      if ((o.kind !== "task" && o.kind !== "decision") || !text || !(o.owner === null || o.owner === undefined || isLabel(o.owner))) return null;
+      return { t: "task-new", kind: o.kind, text, owner: (o.owner as string | undefined) ?? null };
+    }
+    case "task-set": {
+      if (!isTaskId(o.id)) return null;
+      if (o.done !== undefined && typeof o.done !== "boolean") return null;
+      if (o.owner !== undefined && !(o.owner === null || isLabel(o.owner))) return null;
+      const text = o.text === undefined ? undefined : cleanTaskText(o.text);
+      if (text === null) return null;
+      if (o.done === undefined && o.owner === undefined && text === undefined) return null;
+      return { t: "task-set", id: o.id, ...(o.done !== undefined ? { done: o.done as boolean } : {}), ...(o.owner !== undefined ? { owner: o.owner as string | null } : {}), ...(text !== undefined ? { text } : {}) };
+    }
+    case "task-del":
+    case "task-gone":
+      return isTaskId(o.id) ? { t: o.t, id: o.id } : null;
+    case "task": {
+      const task = cleanTask(o.task);
+      return task ? { t: "task", task } : null;
+    }
+    case "board-op":
+    case "board": {
+      if (!Array.isArray(o.els) || o.els.length > 500) return null;
+      if (o.t === "board-op") return { t: "board-op", els: o.els as unknown[] };
+      const els = o.els.map(cleanBoardElement).filter((e): e is BoardElement => !!e);
+      return { t: "board", els };
+    }
     case "rtc": {
       if (typeof o.link !== "string" || !LINK_RE.test(o.link)) return null;
       if (o.kind === "offer" || o.kind === "answer") return str(o.sdp, 64 * 1024) && o.sdp ? { t: "rtc", link: o.link, kind: o.kind, sdp: o.sdp as string } : null;
@@ -224,7 +261,7 @@ export function parseWallMessage(m: unknown): WallMessage | null {
     }
     case "welcome":
       return isLabel(o.label) && int(o.expiresAt) && typeof o.burn === "boolean" && typeof o.hostLeave === "boolean" && typeof o.agents === "boolean" && typeof o.media === "boolean"
-        ? { t: "welcome", label: o.label, expiresAt: o.expiresAt as number, burn: o.burn, hostLeave: o.hostLeave, agents: o.agents, media: o.media, title: typeof o.title === "string" && o.title.length <= 1024 ? sanitizeWallTitle(o.title) : "" }
+        ? { t: "welcome", label: o.label, expiresAt: o.expiresAt as number, burn: o.burn, hostLeave: o.hostLeave, agents: o.agents, media: o.media, title: typeof o.title === "string" && o.title.length <= 1024 ? sanitizeWallTitle(o.title) : "", ...(o.pending === true ? { pending: true } : {}) }
         : null;
     case "members": {
       if (!Array.isArray(o.members) || o.members.length > 64) return null;
@@ -267,7 +304,7 @@ export function parseWallMessage(m: unknown): WallMessage | null {
     case "get-end":
       return int(o.rid, 1) && int(o.chunks) ? { t: "get-end", rid: o.rid as number, chunks: o.chunks as number } : null;
     case "get-fail":
-      return int(o.rid, 1) && (o.reason === "gone" || o.reason === "busy") ? { t: "get-fail", rid: o.rid as number, reason: o.reason } : null;
+      return int(o.rid, 1) && (o.reason === "gone" || o.reason === "busy" || o.reason === "denied") ? { t: "get-fail", rid: o.rid as number, reason: o.reason } : null;
     case "destroy":
       return ["destroyed", "expired", "host-left"].includes(o.reason as string) ? { t: "destroy", reason: o.reason as DestroyReason } : null;
     default:

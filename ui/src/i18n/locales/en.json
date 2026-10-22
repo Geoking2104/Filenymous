@@ -866,7 +866,8 @@
       "offline": "host unreachable",
       "connection-lost": "connection lost",
       "other": "failed",
-      "rate-limited": "too many actions in a row, try again shortly"
+      "rate-limited": "too many actions in a row, try again shortly",
+      "denied": "Access refused by the host (agent permissions)."
     },
     "privacy": {
       "title": "Privacy: what is protected, and what is not",
@@ -1029,7 +1030,13 @@
       "note-too-large": "Note too long (64 KB max).",
       "note-not-found": "This note no longer exists.",
       "note-forbidden": "Only its author or the host can delete this note.",
-      "note-empty": "Empty note."
+      "note-empty": "Empty note.",
+      "scope-denied": "Action refused: your permissions on this wall don't allow it (host setting).",
+      "task-too-many": "Task limit reached on this wall.",
+      "task-empty": "Empty text.",
+      "task-not-found": "This task no longer exists.",
+      "task-forbidden": "Only the author or the host can edit this text or delete.",
+      "task-bad-owner": "This participant is no longer on the wall."
     },
     "nameLabel": "Wall name",
     "namePlaceholder": "e.g. Monday workshop, Project team…",
@@ -1054,15 +1061,17 @@
       "warning": "Exporting creates a permanent copy on your device of content meant to disappear. Participants are not asked, but they will see in the feed that you exported the wall. Handle with care.",
       "warningEn": "L'export crée une copie permanente, sur votre appareil, d'un contenu conçu pour disparaître. Les participants ne sont pas consultés. À manipuler avec soin.",
       "format": "Format",
-      "json": "Full JSON (messages, polls and files ≤ 50 MB)",
-      "md": "Markdown transcript (text only)",
+      "json": "Full JSON (messages, polls, tasks, decisions, whiteboard and files ≤ 50 MB)",
+      "md": "Markdown transcript (text, tasks and decisions)",
       "confirm": "Export",
       "cancel": "Cancel",
       "blockedBurn": "Export disabled: this wall self-destructs (one download per file).",
       "done": "Wall exported.",
       "skipped_one": "{{count}} file not included (too large or unavailable): {{names}}",
       "skipped_other": "{{count}} files not included (too large or unavailable): {{names}}",
-      "error": "Export failed."
+      "error": "Export failed.",
+      "boardJson": "Whiteboard (.excalidraw)",
+      "boardPng": "Whiteboard (PNG image)"
     },
     "notes": {
       "tab": "Notes ({{count}})",
@@ -1091,6 +1100,59 @@
       "editorLabel": "Shared note",
       "searchHeading_one": "{{count}} note",
       "searchHeading_other": "{{count}} notes"
+    },
+    "tasks": {
+      "tab": "Tasks ({{count}})",
+      "kind": "Type",
+      "task": "Task",
+      "decision": "Decision",
+      "text": "Text",
+      "owner": "Owner",
+      "unassigned": "Unassigned",
+      "placeholderTask": "New task…",
+      "placeholderDecision": "Decision made…",
+      "add": "Add",
+      "checklist": "Tasks ({{done}}/{{count}} done)",
+      "emptyTasks": "No tasks yet.",
+      "decisions": "Decisions ({{count}})",
+      "emptyDecisions": "No decisions logged.",
+      "by": "by {{name}} · {{time}}",
+      "delete": "Delete"
+    },
+    "board": {
+      "title": "Whiteboard",
+      "toggle": "Open or close the shared whiteboard",
+      "note": "Synced by the host over the encrypted channel, in memory only. AI agents don't see the board. No images.",
+      "close": "Close the whiteboard",
+      "loading": "Loading the whiteboard…",
+      "exportEmpty": "The whiteboard is empty: nothing to export."
+    },
+    "scope": {
+      "hint": "Permissions set by the host and enforced by its tab (the relay has no access).",
+      "name": {
+        "read-only": "Read-only",
+        "post": "Can post",
+        "full": "Full access",
+        "custom": "Custom permissions"
+      },
+      "post": "Post",
+      "postHint": "Messages, files, polls, reactions, notes and tasks.",
+      "files": "Download files",
+      "filesHint": "Fetch the content of the wall's files.",
+      "secrets": "Reveal secrets",
+      "secretsHint": "Open masked notes (keys, passwords…).",
+      "limited": "Limited view",
+      "limitedHint": "Only sees its own messages, its mentions, replies to its messages, its tasks and what you share with it (🤖).",
+      "pendingTitle_one": "{{count}} AI agent is waiting for your approval",
+      "pendingTitle_other": "{{count}} AI agents are waiting for your approval",
+      "wantsToJoin": "wants to join the wall. Choose what it may do:",
+      "approve": "Approve",
+      "refuse": "Refuse",
+      "pendingNote": "Until you approve, the agent sees nothing of the wall. What an agent reads is sent to its model provider.",
+      "edit": "Edit the agent's permissions",
+      "save": "Save",
+      "share": "Share with an agent in limited view",
+      "shareHint": "Visible to:"
     }
   },
   "leave": {

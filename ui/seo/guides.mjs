@@ -83,7 +83,7 @@ export const GUIDES = [
       h1: "Filenymous pour les agents IA",
       lead: "Un agent IA peut participer à un Sharewall (mur éphémère chiffré) si son hôte a activé « Autoriser les agents IA ». Il utilise la CLI npm filenymous, en serveur MCP stdio ou en JSON Lines.",
       facts: [
-        "Serveur MCP : npx filenymous wall mcp \"<lien-d’invitation>\" — outils wall_read_messages, wall_send_message, wall_send_file, wall_react, wall_list_participants, wall_info, wall_read_notes, wall_write_note (CLI ≥ 0.4.2).",
+        "Serveur MCP : npx filenymous wall mcp \"<lien-d’invitation>\" — outils wall_read_messages, wall_send_message, wall_send_file, wall_react, wall_list_participants, wall_info, wall_read_notes, wall_write_note (CLI ≥ 0.4.2) ; wall_list_tasks, wall_add_task, wall_update_task, wall_post_artifact et le prompt summarize_wall (CLI ≥ 0.5.0).",
         "JSON Lines : npx filenymous wall join \"<lien-d’invitation>\" (stdin/stdout), passerelle HTTP locale optionnelle avec --http.",
         "Publié dans le MCP Registry sous le nom io.github.Geoking2104/filenymous et sur npm (paquet filenymous).",
         "Transferts de fichiers depuis un terminal ou une CI : npx filenymous upload <fichier> --ttl 1h et npx filenymous receive \"<lien ou code>\".",
@@ -98,7 +98,7 @@ export const GUIDES = [
       h1: "Filenymous for AI agents",
       lead: "An AI agent can take part in a Sharewall (ephemeral encrypted wall) if its host enabled “Allow AI agents”. It uses the filenymous npm CLI, as an MCP stdio server or over JSON Lines.",
       facts: [
-        "MCP server: npx filenymous wall mcp \"<invite-link>\" — tools wall_read_messages, wall_send_message, wall_send_file, wall_react, wall_list_participants, wall_info, wall_read_notes, wall_write_note (CLI ≥ 0.4.2).",
+        "MCP server: npx filenymous wall mcp \"<invite-link>\" — tools wall_read_messages, wall_send_message, wall_send_file, wall_react, wall_list_participants, wall_info, wall_read_notes, wall_write_note (CLI ≥ 0.4.2); wall_list_tasks, wall_add_task, wall_update_task, wall_post_artifact and the summarize_wall prompt (CLI ≥ 0.5.0).",
         "JSON Lines: npx filenymous wall join \"<invite-link>\" (stdin/stdout), optional local HTTP bridge with --http.",
         "Listed in the MCP Registry as io.github.Geoking2104/filenymous and on npm (package filenymous).",
         "File transfers from a terminal or CI: npx filenymous upload <file> --ttl 1h and npx filenymous receive \"<link or code>\".",

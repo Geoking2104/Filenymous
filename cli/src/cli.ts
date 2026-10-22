@@ -47,7 +47,8 @@ wall options (agents show an "AI" badge; it is self-declared):
   --http-port <n>         port for --http (default: random)
   --files-root <dir>      directory files may be sent from (default .)
   -o, --output <dir>      where explicit "get" saves files (default .)
-  create: --title <wall name>, --burn, --keep-on-leave, --allow-agents
+  create: --title <wall name>, --burn, --keep-on-leave, --allow-agents,
+          --agent-scope read-only|post|full|post,files,secrets,limited (default full)
           (no lifetime by default: the wall lives as long as this process;
            optional --ttl 15m|1h|24h also ends it at a fixed time)
   JSON Lines: events on stdout (ready, message, file, note, poll, reaction, join,
@@ -85,6 +86,7 @@ const { values: o, positionals } = parseArgs({
     "keep-on-leave": { type: "boolean" },
     title: { type: "string" },
     "allow-agents": { type: "boolean" },
+    "agent-scope": { type: "string" },
     http: { type: "boolean" },
     "http-port": { type: "string" },
     "files-root": { type: "string" },
@@ -271,6 +273,7 @@ async function wall(rest: string[]): Promise<number> {
     burn: !!o.burn,
     keepOnLeave: !!o["keep-on-leave"],
     allowAgents: !!o["allow-agents"],
+    agentScope: typeof o["agent-scope"] === "string" ? o["agent-scope"] : undefined,
     filesRoot: o["files-root"],
     output: o.output,
     quiet: o.quiet,

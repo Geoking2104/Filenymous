@@ -5,7 +5,7 @@
  * picker, mentions, replies, paste/drop. Shared by the host and the peers;
  * every action goes through the host (star topology), in memory only.
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { QRCodeSVG } from "qrcode.react";
@@ -13,8 +13,17 @@ import { formatBytes } from "../ux-v3/types";
 import { EmojiPicker } from "./EmojiPicker";
 import { AgentsGuide } from "./AgentsGuide";
 import { Hl, Markup } from "./Markup";
-import { normalizeQuery, searchNotes, searchPosts } from "./search-annotations";
+import { normalizeQuery, searchNotes, searchPosts, searchTasks } from "./search-annotations";
 import { NoteEditor, NoteSearchHits, NotesList, liveLock, type NotesApi } from "./NotesUi";
+import { AgentShare, PendingAgents, ScopeChips, ScopeEditor, TaskSearchHits, TasksPanel, type TasksApi } from "./CollabUi";
+import type { AgentScope, BoardElement, Task } from "./collab";
+import { setLocalExcalidrawAssets } from "./boardExport";
+
+// The whiteboard (Excalidraw) is only downloaded when someone opens it.
+const Whiteboard = lazy(() => {
+  setLocalExcalidrawAssets();
+  return import("./Whiteboard");
+});
 import type { NoteLock, SharedNote } from "./notes";
 import { QUICK_REACTIONS } from "./emoji";
 import {
@@ -73,9 +82,22 @@ export interface RoomState {
   notes: SharedNote[];
   noteLocks: Record<string, NoteLock>;
   noteOverwrite?: { id: string; by: string; at: number };
+  tasks: Task[];
+  /** Bumped on each whiteboard change. */
+  boardRev: number;
+  /** Host only: agents waiting for approval. */
+  pendingAgents?: Array<{ label: string; name: string }>;
+  /** Host only: context packs (agent label → shared ids). */
+  packs?: Record<string, string[]>;
 }
 
-export interface RoomApi extends NotesApi {
+export interface RoomApi extends NotesApi, TasksApi {
+  boardOp(els: unknown[]): void;
+  boardElements(): BoardElement[];
+  approveAgent?(label: string, scope: AgentScope): void;
+  refuseAgent?(label: string): void;
+  setAgentScope?(label: string, scope: AgentScope): void;
+  shareWithAgent?(label: string, id: string, on: boolean): void;
   say(text: string, replyTo?: string): void | Promise<void>;
   react(id: string, emoji: string): void | Promise<void>;
   poll(question: string, options: string[]): void | Promise<void> | boolean;
@@ -181,7 +203,8 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
   const [opened, setOpened] = useState<Map<string, Fetched>>(new Map());
   const [ghosts, setGhosts] = useState<Post[]>([]);
   const [drawer, setDrawer] = useState(false);
-  const [sideTab, setSideTab] = useState<"members" | "notes">("members");
+  const [sideTab, setSideTab] = useState<"members" | "notes" | "tasks">("members");
+  const [boardOpen, setBoardOpen] = useState(false);
   const [agentsGuideOpen, setAgentsGuideOpen] = useState(false);
   const [openNote, setOpenNote] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<string | null>(null);
@@ -303,6 +326,13 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
   const searching = normalizeQuery(query) !== "";
   const shown = useMemo(() => (searching ? searchPosts(feed, query) : feed), [feed, query, searching]);
   const noteHits = useMemo(() => (searching ? searchNotes(s.notes, query) : []), [s.notes, query, searching]);
+  const taskHits = useMemo(() => (searching ? searchTasks(s.tasks, query) : []), [s.tasks, query, searching]);
+  const limitedAgents = s.members.filter((m) => m.agent && m.scope?.limited);
+  const shareFor = isHost && api.shareWithAgent && limitedAgents.length
+    ? (id: string) => <AgentShare id={id} agents={limitedAgents} packs={s.packs ?? {}} onShare={api.shareWithAgent!} />
+    : undefined;
+  const subscribeBoard = useCallback((fn: (els: BoardElement[]) => void) => api.on((e) => e.type === "board" && fn(e.elements)), [api]);
+  const dark = typeof document !== "undefined" && document.documentElement.dataset.theme === "dark";
   const openNoteById = (id: string) => {
     setOpenNote(id);
     setSideTab("notes");
@@ -432,6 +462,9 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
             </button>
           )}
         </div>
+        <button type="button" className={`sw2-iconbtn sw-board-btn${boardOpen ? " is-on" : ""}`} data-testid="wall-board-toggle" aria-pressed={boardOpen} title={t("wall.board.toggle")} onClick={() => setBoardOpen((o) => !o)}>
+          🎨 <span className="sw-board-btn-label">{t("wall.board.title")}</span>
+        </button>
         {s.expiresAt > 0 && (
           <span className={`sw-timer${left < 60_000 ? " is-low" : ""}`} data-testid="wall-countdown" title={t("wall.expiresAt", { date: new Date(s.expiresAt).toLocaleString() })}>
             ⏳ {formatRemaining(left)}
@@ -450,7 +483,16 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
               📝 {t("wall.notes.tab", { count: s.notes.length })}
               {notesWriting > 0 && <span className="sw2-tab-dot" aria-label={t("wall.notes.someoneWriting")} />}
             </button>
+            <button type="button" role="tab" className="sw2-tab" data-testid="wall-tab-tasks" aria-selected={sideTab === "tasks"} onClick={() => setSideTab("tasks")}>
+              ✅ {t("wall.tasks.tab", { count: s.tasks.filter((x) => x.kind === "task" && !x.done).length })}
+            </button>
           </div>
+          {sideTab === "tasks" && (
+            <TasksPanel tasks={s.tasks} members={s.members} self={s.self} isHost={isHost} nameOf={nameOf} api={api} canWrite={s.online} share={shareFor} />
+          )}
+          {sideTab === "members" && isHost && api.approveAgent && api.refuseAgent && (
+            <PendingAgents pending={s.pendingAgents ?? []} onApprove={api.approveAgent} onRefuse={(l) => api.refuseAgent!(l)} />
+          )}
           {sideTab === "notes" && (
             <NotesList
               notes={s.notes}
@@ -480,6 +522,7 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
                   live={s.live.some((l) => l.by === m.label)}
                   onRename={m.label === s.self ? (n) => void Promise.resolve(api.rename(n)).catch(() => undefined) : undefined}
                   onKick={isHost && !m.host && api.kick ? () => window.confirm(t("wall.kickConfirm", { name: m.name })) && api.kick!(m.label) : undefined}
+                  onScope={isHost && m.agent && !m.host && api.setAgentScope ? (sc) => api.setAgentScope!(m.label, sc) : undefined}
                 />
               ))}
             </ul>
@@ -554,6 +597,20 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
             />
           )}
 
+          {boardOpen && (
+            <section className="sw-board" data-testid="wall-board" aria-label={t("wall.board.title")}>
+              <div className="sw-board-head">
+                <strong>🎨 {t("wall.board.title")}</strong>
+                <small>{t("wall.board.note")}</small>
+                <button type="button" className="sw-x" data-testid="wall-board-close" aria-label={t("wall.board.close")} title={t("wall.board.close")} onClick={() => setBoardOpen(false)}>
+                  ✕
+                </button>
+              </div>
+              <Suspense fallback={<p className="sw-small" data-testid="wall-board-loading">{t("wall.board.loading")}</p>}>
+                <Whiteboard initial={api.boardElements()} subscribe={subscribeBoard} send={(els) => api.boardOp(els)} dark={dark} lang={i18n.language} />
+              </Suspense>
+            </section>
+          )}
           {editing && (
             <NoteEditor
               key={editing.id}
@@ -569,11 +626,12 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
             />
           )}
           {searching && (
-            <p className="sw2-search-count" data-testid="wall-search-count" data-count={shown.length + noteHits.length} aria-live="polite">
-              {t("wall.search.count", { count: shown.length + noteHits.length })}
+            <p className="sw2-search-count" data-testid="wall-search-count" data-count={shown.length + noteHits.length + taskHits.length} aria-live="polite">
+              {t("wall.search.count", { count: shown.length + noteHits.length + taskHits.length })}
             </p>
           )}
           {searching && <NoteSearchHits notes={noteHits} query={query} onOpen={openNoteById} />}
+          {searching && <TaskSearchHits tasks={taskHits} query={query} onOpen={() => { setSideTab("tasks"); setDrawer(true); }} />}
           <Feed
             posts={shown}
             highlight={searching ? query : undefined}
@@ -596,6 +654,7 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
             onVote={(id, i) => void Promise.resolve(api.vote(id, i)).catch(() => undefined)}
             onClosePoll={(id) => void Promise.resolve(api.closePoll(id)).catch(() => undefined)}
             confirmBurn={confirmBurn}
+            share={shareFor}
           />
 
           <div className="sw2-typing" data-testid="wall-typing" aria-live="polite">
@@ -737,9 +796,10 @@ function AgentsToggle({ on, onChange, onOpenGuide }: { on: boolean; onChange: (b
   );
 }
 
-function MemberRow({ m, self, typing, live, onRename, onKick }: { m: Member; self: boolean; typing: boolean; live: boolean; onRename?: (n: string) => void; onKick?: () => void }) {
+function MemberRow({ m, self, typing, live, onRename, onKick, onScope }: { m: Member; self: boolean; typing: boolean; live: boolean; onRename?: (n: string) => void; onKick?: () => void; onScope?: (s: AgentScope) => void }) {
   const { t } = useTranslation();
   const [edit, setEdit] = useState(false);
+  const [scopeEdit, setScopeEdit] = useState<AgentScope | null>(null);
   const [name, setName] = useState(m.name);
   return (
     <li className="sw2-member" data-testid="wall-member" data-label={m.label} data-agent={m.agent} data-host={m.host} data-hand={m.hand}>
@@ -771,6 +831,7 @@ function MemberRow({ m, self, typing, live, onRename, onKick }: { m: Member; sel
               {t("wall.badgeAi")}
             </span>
           )}
+          {m.agent && <ScopeChips scope={m.scope} />}
           {live && <span className="sw2-badge is-live">● {t("wall.live.badge")}</span>}
           {typing && <span className="sw2-member-typing">{t("wall.typingShort")}</span>}
         </span>
@@ -785,10 +846,23 @@ function MemberRow({ m, self, typing, live, onRename, onKick }: { m: Member; sel
           ✏️
         </button>
       )}
+      {onScope && m.scope && (
+        <button type="button" className="sw2-iconbtn" data-testid="wall-scope-edit" aria-label={t("wall.scope.edit")} title={t("wall.scope.edit")} onClick={() => setScopeEdit((x) => (x ? null : { ...m.scope! }))}>
+          ⚙️
+        </button>
+      )}
       {onKick && (
         <button type="button" className="sw2-iconbtn" data-testid="wall-kick" aria-label={t("wall.kick")} title={t("wall.kick")} onClick={onKick}>
           🚪
         </button>
+      )}
+      {scopeEdit && onScope && (
+        <div className="sw-scope-pop">
+          <ScopeEditor value={scopeEdit} onChange={setScopeEdit} />
+          <button type="button" className="pz-btn" data-testid="wall-scope-save" onClick={() => (onScope(scopeEdit), setScopeEdit(null))}>
+            {t("wall.scope.save")}
+          </button>
+        </div>
       )}
     </li>
   );
@@ -867,6 +941,8 @@ interface FeedProps {
   confirmBurn: (p: Post) => boolean;
   /** Active search ("" = none): matches are highlighted. */
   highlight?: string;
+  /** Host only: share a post with agents in limited view. */
+  share?: (id: string) => ReactNode;
 }
 
 function Feed(props: FeedProps) {
@@ -986,6 +1062,7 @@ function PostRow({ post: p, first, ...f }: FeedProps & { post: Post; first: bool
               📌
             </button>
           )}
+          {f.share?.(p.id)}
           {canRemove && (
             <button type="button" data-testid="wall-remove" aria-label={t("wall.remove")} title={t("wall.remove")} onClick={() => f.onRemove(p.id)}>
               🗑

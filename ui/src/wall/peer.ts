@@ -3,6 +3,7 @@ import { sortNotes, type NoteLock, type SharedNote } from "./notes";
 import { CONNECT_TIMEOUT_MS, LOW_WATER, addRemoteCandidate, waitForDrain } from "../p2p/session";
 import { iceCandidateInit, type SignalPayload } from "../p2p/signal";
 import { b64urlEncode } from "../p2p/protocol";
+import { WALL_FEATURES, mergeScene, sortTasks, type BoardElement, type Task, type TaskKind } from "./collab";
 import { SealedPipe, WALL_PROTOCOL_VERSION, checkProof, deriveWallKeys, parseHandshake, sealProof, wallBaseMaterial } from "./crypto";
 import { MAX_POSTS, diffMembers, type BurstKind, type LiveInfo, type LiveKind, type Member, type Post, type WallEvent } from "./feed";
 import { isExpired, type WallParams } from "./link";
@@ -63,6 +64,12 @@ export interface PeerState {
   notes: SharedNote[];
   noteLocks: Record<string, NoteLock>;
   noteOverwrite?: { id: string; by: string; at: number };
+  /** Shared checklist and decisions log. */
+  tasks: Task[];
+  /** Bumped on every whiteboard change (elements: boardElements()). */
+  boardRev: number;
+  /** An agent waiting for the host's approval: it sees nothing yet. */
+  pending: boolean;
   notice?: { code: string; at: number; retryMs?: number };
   error?: string;
 }
@@ -141,7 +148,17 @@ export class WallPeer {
       mine: [],
       notes: [],
       noteLocks: {},
+      tasks: [],
+      boardRev: 0,
+      pending: false,
     };
+  }
+
+  private board: BoardElement[] = [];
+
+  /** Current whiteboard scene as relayed by the host. */
+  boardElements(): BoardElement[] {
+    return this.board;
   }
 
   private update(patch: Partial<PeerState>) {
@@ -284,7 +301,7 @@ export class WallPeer {
         if (msg?.type !== "wall-ready" || !(await checkProof(keys.proof, msg.proof, `ready:${sid}`))) return this.lost(pc);
         this.pipe = new SealedPipe(keys.up, keys.down);
         // First sealed message: who we say we are (name, agent badge, media capability).
-        void this.sendControl({ t: "profile", name: this.name, agent: !!this.opts.agent, media: !!this.opts.media });
+        void this.sendControl({ t: "profile", name: this.name, agent: !!this.opts.agent, media: !!this.opts.media, feat: WALL_FEATURES });
         return;
       }
       if (typeof data === "string") return this.lost(pc);
@@ -352,6 +369,7 @@ export class WallPeer {
     switch (msg.t) {
       case "welcome":
         // A (re)connection: the host replays the feed right after.
+        this.board = [];
         return this.update({
           status: "online",
           error: undefined,
@@ -367,7 +385,26 @@ export class WallPeer {
           pinned: null,
           live: [],
           media: {},
+          tasks: [],
+          boardRev: this.state.boardRev + 1,
+          pending: !!msg.pending,
         });
+      case "task":
+        this.update({ tasks: sortTasks([...this.state.tasks.filter((x) => x.id !== msg.task.id), msg.task]) });
+        this.emit({ type: "task", task: msg.task });
+        return;
+      case "task-gone":
+        this.update({ tasks: this.state.tasks.filter((x) => x.id !== msg.id) });
+        this.emit({ type: "task-gone", id: msg.id });
+        return;
+      case "board": {
+        const next = mergeScene(this.board, msg.els);
+        if (next === this.board) return;
+        this.board = next;
+        this.update({ boardRev: this.state.boardRev + 1 });
+        this.emit({ type: "board", elements: msg.els });
+        return;
+      }
       case "snote": {
         const notes = sortNotes([...this.state.notes.filter((n) => n.id !== msg.note.id), msg.note]);
         const mine = !!this.state.label && msg.overwrote === this.state.label;
@@ -676,6 +713,20 @@ export class WallPeer {
     void this.sendControl({ t: "snote-lock", id, on }).catch(() => undefined);
   }
 
+  addTask(kind: TaskKind, text: string, owner: string | null = null): Promise<void> {
+    return this.sendControl({ t: "task-new", kind, text, owner });
+  }
+  updateTask(id: string, patch: { done?: boolean; owner?: string | null; text?: string }): Promise<void> {
+    return this.sendControl({ t: "task-set", id, ...patch });
+  }
+  deleteTask(id: string): Promise<void> {
+    return this.sendControl({ t: "task-del", id });
+  }
+  /** Sends whiteboard element changes to the host (it merges and relays them). */
+  boardOp(els: unknown[]) {
+    void this.sendControl({ t: "board-op", els }).catch(() => undefined);
+  }
+
   say(text: string, replyTo?: string): Promise<void> {
     return this.sendControl({ t: "say", text, ...(replyTo ? { replyTo } : {}) });
   }
@@ -747,7 +798,8 @@ export class WallPeer {
     this.closePc();
     this.signal?.close();
     for (const fn of this.wipeListeners) fn();
-    this.update({ status: reason, posts: [], members: [], pinned: null, live: [], media: {}, typing: {}, uploads: [], mine: [], notes: [], noteLocks: {}, label: undefined });
+    this.board = [];
+    this.update({ status: reason, posts: [], members: [], pinned: null, live: [], media: {}, typing: {}, uploads: [], mine: [], notes: [], noteLocks: {}, tasks: [], boardRev: this.state.boardRev + 1, pending: false, label: undefined });
   }
 
   async leave() {
