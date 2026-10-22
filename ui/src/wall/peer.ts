@@ -3,7 +3,7 @@ import { sortNotes, type NoteLock, type SharedNote } from "./notes";
 import { CONNECT_TIMEOUT_MS, LOW_WATER, addRemoteCandidate, waitForDrain } from "../p2p/session";
 import { iceCandidateInit, type SignalPayload } from "../p2p/signal";
 import { b64urlEncode } from "../p2p/protocol";
-import { WALL_FEATURES, mergeScene, sortTasks, type BoardElement, type Task, type TaskKind } from "./collab";
+import { WALL_FEATURES, mergeScene, sortTasks, type BoardElement, type Task, type TaskKind, type TaskPatch } from "./collab";
 import { SealedPipe, WALL_PROTOCOL_VERSION, checkProof, deriveWallKeys, parseHandshake, sealProof, wallBaseMaterial } from "./crypto";
 import { MAX_POSTS, diffMembers, type BurstKind, type LiveInfo, type LiveKind, type Member, type Post, type WallEvent } from "./feed";
 import { isExpired, type WallParams } from "./link";
@@ -70,6 +70,8 @@ export interface PeerState {
   boardRev: number;
   /** An agent waiting for the host's approval: it sees nothing yet. */
   pending: boolean;
+  /** Host's protocol feature level (3 = delegated-task states). */
+  hostFeat: number;
   notice?: { code: string; at: number; retryMs?: number };
   error?: string;
 }
@@ -151,6 +153,7 @@ export class WallPeer {
       tasks: [],
       boardRev: 0,
       pending: false,
+      hostFeat: 1,
     };
   }
 
@@ -388,6 +391,7 @@ export class WallPeer {
           tasks: [],
           boardRev: this.state.boardRev + 1,
           pending: !!msg.pending,
+          hostFeat: msg.feat ?? 1,
         });
       case "task":
         this.update({ tasks: sortTasks([...this.state.tasks.filter((x) => x.id !== msg.task.id), msg.task]) });
@@ -713,10 +717,13 @@ export class WallPeer {
     void this.sendControl({ t: "snote-lock", id, on }).catch(() => undefined);
   }
 
-  addTask(kind: TaskKind, text: string, owner: string | null = null): Promise<void> {
-    return this.sendControl({ t: "task-new", kind, text, owner });
+  addTask(kind: TaskKind, text: string, owner: string | null = null, state?: "submitted"): Promise<void> {
+    if (state && this.state.hostFeat < 3) return Promise.reject(new Error("this wall's host does not support delegated-task states (older version)"));
+    return this.sendControl({ t: "task-new", kind, text, owner, ...(state ? { state } : {}) });
   }
-  updateTask(id: string, patch: { done?: boolean; owner?: string | null; text?: string }): Promise<void> {
+  updateTask(id: string, patch: TaskPatch): Promise<void> {
+    if ((patch.state !== undefined || patch.note !== undefined || patch.result !== undefined) && this.state.hostFeat < 3)
+      return Promise.reject(new Error("this wall's host does not support delegated-task states (older version)"));
     return this.sendControl({ t: "task-set", id, ...patch });
   }
   deleteTask(id: string): Promise<void> {

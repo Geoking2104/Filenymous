@@ -10,7 +10,7 @@
 
 /** Protocol feature level of this build, announced in the sealed profile. Peers
  * below 2 (older tabs and CLIs) never receive task/board messages they could not parse. */
-export const WALL_FEATURES = 2;
+export const WALL_FEATURES = 3;
 
 const LABEL_RE = /^(host|peer:\d{1,6})$/;
 const isLabel = (v: unknown): v is string => typeof v === "string" && LABEL_RE.test(v);
@@ -107,7 +107,27 @@ export interface Task {
   editedBy: string;
   editedAt: number;
   v: number;
+  /** Agent-to-agent lifecycle (A2A-style) for delegated tasks; absent on plain checklist items. */
+  state?: AgentTaskState;
+  /** Short status message from the assignee (e.g. what input is needed). */
+  note?: string;
+  /** Id of the wall post holding the result (artifact). */
+  result?: string;
 }
+
+/** Delegated-task states, named after the A2A TaskState values (lower-case, without prefix). */
+export const AGENT_TASK_STATES = ["submitted", "working", "input-required", "completed", "failed", "canceled", "rejected"] as const;
+export type AgentTaskState = (typeof AGENT_TASK_STATES)[number];
+export const TERMINAL_STATES: ReadonlySet<AgentTaskState> = new Set(["completed", "failed", "canceled", "rejected"]);
+export const TASK_NOTE_MAX = 500;
+export const isAgentTaskState = (v: unknown): v is AgentTaskState => typeof v === "string" && (AGENT_TASK_STATES as readonly string[]).includes(v);
+const RESULT_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+export const isResultId = (v: unknown): v is string => typeof v === "string" && RESULT_ID_RE.test(v);
+export function cleanTaskNote(v: unknown): string | null {
+  if (typeof v !== "string" || v.length > TASK_NOTE_MAX * 2) return null;
+  return clean(v, TASK_NOTE_MAX);
+}
+export type TaskPatch = { done?: boolean; owner?: string | null; text?: string; state?: AgentTaskState; note?: string; result?: string };
 
 export type TaskError = "too-many" | "empty" | "not-found" | "forbidden";
 const TASK_ID_RE = /^t-[0-9a-f]{16}$/;
@@ -131,7 +151,12 @@ export function cleanTask(v: unknown): Task | null {
   const text = cleanTaskText(o.text);
   if (!text || !(o.owner === null || isLabel(o.owner)) || typeof o.done !== "boolean") return null;
   if (!isLabel(o.by) || !isLabel(o.editedBy) || !int(o.at) || !int(o.editedAt) || !int(o.v, 1)) return null;
-  return { id: o.id, kind: o.kind, text, owner: o.owner as string | null, done: o.kind === "task" ? o.done : false, by: o.by, at: o.at as number, editedBy: o.editedBy, editedAt: o.editedAt as number, v: o.v as number };
+  const t: Task = { id: o.id, kind: o.kind, text, owner: o.owner as string | null, done: o.kind === "task" ? o.done : false, by: o.by, at: o.at as number, editedBy: o.editedBy, editedAt: o.editedAt as number, v: o.v as number };
+  if (o.kind === "task" && isAgentTaskState(o.state)) t.state = o.state;
+  const note = o.note === undefined ? null : cleanTaskNote(o.note);
+  if (t.state && note) t.note = note;
+  if (t.state && isResultId(o.result)) t.result = o.result;
+  return t;
 }
 
 /** Open tasks first, then done tasks; decisions are listed separately, oldest first. */
@@ -152,16 +177,18 @@ export class TaskBoard {
     return this.tasks.get(id);
   }
 
-  create(by: string, kind: TaskKind, text: string, owner: string | null, now = Date.now()): Task | TaskError {
+  create(by: string, kind: TaskKind, text: string, owner: string | null, now = Date.now(), state?: AgentTaskState): Task | TaskError {
     if (this.tasks.size >= MAX_TASKS) return "too-many";
     const t = cleanTaskText(text);
     if (!t) return "empty";
     const task: Task = { id: newTaskId(), kind, text: t, owner: kind === "task" ? owner : null, done: false, by, at: now, editedBy: by, editedAt: now, v: ++this.v };
+    if (kind === "task" && state) task.state = state;
     this.tasks.set(task.id, task);
     return task;
   }
 
-  update(by: string, id: string, patch: { done?: boolean; owner?: string | null; text?: string }, isHost = by === "host", now = Date.now()): Task | TaskError {
+  /** Agent state/note/result: only the assignee, the author or the host. Completing marks it done. */
+  update(by: string, id: string, patch: TaskPatch, isHost = by === "host", now = Date.now()): Task | TaskError {
     const cur = this.tasks.get(id);
     if (!cur) return "not-found";
     const next: Task = { ...cur };
@@ -174,6 +201,22 @@ export class TaskBoard {
     if (cur.kind === "task") {
       if (patch.done !== undefined) next.done = patch.done;
       if (patch.owner !== undefined) next.owner = patch.owner;
+      if (patch.state !== undefined || patch.note !== undefined || patch.result !== undefined) {
+        if (!isHost && cur.by !== by && cur.owner !== by) return "forbidden";
+        if (patch.state !== undefined && !isAgentTaskState(patch.state)) return "empty";
+        if (patch.result !== undefined && !isResultId(patch.result)) return "empty";
+        if (patch.state !== undefined) {
+          next.state = patch.state;
+          if (patch.state === "completed") next.done = true;
+        }
+        if (!next.state) next.state = "working";
+        if (patch.note !== undefined) {
+          const n = cleanTaskNote(patch.note);
+          if (n) next.note = n;
+          else delete next.note;
+        }
+        if (patch.result !== undefined) next.result = patch.result;
+      }
     }
     next.editedBy = by;
     next.editedAt = now;

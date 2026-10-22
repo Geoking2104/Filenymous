@@ -9,7 +9,7 @@ import { SCOPE_DEFAULT, TASK_TEXT_MAX, scopeName, type AgentScope, type Task, ty
 import type { Member } from "./feed";
 import { Hl } from "./Markup";
 
-type Patch = { done?: boolean; owner?: string | null; text?: string };
+type Patch = import("./collab").TaskPatch;
 
 export interface TasksApi {
   addTask(kind: TaskKind, text: string, owner: string | null): void | Promise<void>;
@@ -80,6 +80,20 @@ export function TasksPanel({ tasks, members, self, isHost, nameOf, api, canWrite
               <input type="checkbox" data-testid="wall-task-done" checked={x.done} disabled={!canWrite} onChange={(e) => quiet(api.updateTask(x.id, { done: e.target.checked }))} />
               <span className="sw-task-text">{x.text}</span>
             </label>
+            {x.state && (
+              <span className="sw-task-a2a">
+                <span className={`sw-task-state is-${x.state}`} data-testid="wall-task-state" data-state={x.state} title={t("wall.tasks.stateHint")}>
+                  🤝 {t(`wall.tasks.state.${x.state}`)}
+                </span>
+                {x.note && <small className="sw-task-note" data-testid="wall-task-note">{x.note}</small>}
+                {x.result && <small data-testid="wall-task-result">📎 {t("wall.tasks.result")}</small>}
+                {canWrite && (isHost || x.by === self) && !["completed", "failed", "canceled", "rejected"].includes(x.state) && (
+                  <button type="button" className="sw2-linkbtn" data-testid="wall-task-cancel" onClick={() => quiet(api.updateTask(x.id, { state: "canceled" }))}>
+                    {t("wall.tasks.cancel")}
+                  </button>
+                )}
+              </span>
+            )}
             <span className="sw-task-meta">
               {canWrite ? ownerSelect(x.owner ?? "", (v) => quiet(api.updateTask(x.id, { owner: v || null })), "wall-task-owner") : <span>{x.owner ? nameOf(x.owner) : t("wall.tasks.unassigned")}</span>}
               <small>{t("wall.tasks.by", { name: nameOf(x.by), time: hhmm(x.at, i18n.language) })}</small>

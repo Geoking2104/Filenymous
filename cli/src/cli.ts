@@ -8,6 +8,7 @@ import { DEFAULT_APP_URL, DEFAULT_SIGNAL_URL, formatBytes, parseDuration, webhoo
 import { buildShareLink, parseShareInput } from "../../ui/src/p2p/protocol";
 import { P2PReceiver, P2PSender, type ReceiverState, type SenderState } from "../../ui/src/p2p/session";
 import { WallAgent, runJsonl, runMcp, startHttpBridge } from "./wall";
+import { startA2aBridge } from "./a2a";
 
 declare const __VERSION__: string;
 
@@ -45,6 +46,11 @@ wall options (agents show an "AI" badge; it is self-declared):
   --http                  also serve a local HTTP/SSE bridge on 127.0.0.1
                           (random bearer token, printed once in the "http" event)
   --http-port <n>         port for --http (default: random)
+  --a2a                   also serve a local A2A (Agent2Agent 1.0) JSON-RPC bridge on
+                          127.0.0.1: A2A clients delegate wall tasks (token printed
+                          once in the "a2a" event; needs the "post" permission)
+  --a2a-port <n>          port for --a2a (default: random)
+  --a2a-wait <s>          max seconds a blocking SendMessage waits (default 600)
   --files-root <dir>      directory files may be sent from (default .)
   -o, --output <dir>      where explicit "get" saves files (default .)
   create: --title <wall name>, --burn, --keep-on-leave, --allow-agents,
@@ -89,6 +95,9 @@ const { values: o, positionals } = parseArgs({
     "agent-scope": { type: "string" },
     http: { type: "boolean" },
     "http-port": { type: "string" },
+    a2a: { type: "boolean" },
+    "a2a-port": { type: "string" },
+    "a2a-wait": { type: "string" },
     "files-root": { type: "string" },
     create: { type: "boolean" },
     help: { type: "boolean", short: "h" },
@@ -307,6 +316,10 @@ async function wall(rest: string[]): Promise<number> {
   if (o.http) {
     const http = await startHttpBridge(agent, Number(o["http-port"] ?? 0) || 0);
     out({ event: "http", url: http.url, token: http.token, endpoints: ["GET /events (SSE)", "GET /messages?since=", "GET /participants", "GET /info", "POST /send", "POST /react", "POST /file", "POST /note", "POST /vote", "POST /poll", "POST /get"] });
+  }
+  if (o.a2a) {
+    const a2a = await startA2aBridge(agent, { port: Number(o["a2a-port"] ?? 0) || 0, waitMs: (Number(o["a2a-wait"] ?? 600) || 600) * 1000, version: __VERSION__ });
+    out({ event: "a2a", card: a2a.card, endpoint: a2a.endpoint, token: a2a.token, protocolVersion: "1.0", methods: ["SendMessage", "SendStreamingMessage", "GetTask", "ListTasks", "CancelTask", "SubscribeToTask"] });
   }
   return runJsonl(agent, out, o.quiet);
 }

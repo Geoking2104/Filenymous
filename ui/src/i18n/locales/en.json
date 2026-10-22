@@ -1117,7 +1117,19 @@
       "decisions": "Decisions ({{count}})",
       "emptyDecisions": "No decisions logged.",
       "by": "by {{name}} · {{time}}",
-      "delete": "Delete"
+      "delete": "Delete",
+      "stateHint": "Delegated task (A2A-style lifecycle): only the assignee, the author or the host change its state.",
+      "result": "result in the feed",
+      "cancel": "Cancel",
+      "state": {
+        "submitted": "submitted",
+        "working": "working",
+        "input-required": "needs input",
+        "completed": "completed",
+        "failed": "failed",
+        "canceled": "canceled",
+        "rejected": "rejected"
+      }
     },
     "board": {
       "title": "Whiteboard",

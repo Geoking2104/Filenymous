@@ -390,3 +390,9 @@ mark.sw2-hl { background: rgba(250, 204, 21, .55); color: inherit; border-radius
 .sw-board-canvas { height: min(62vh, 560px); position: relative; }
 .sw-board-canvas .default-sidebar-trigger, .sw-board-canvas .sidebar-trigger { display: none !important; }
 @media (max-width: 860px) { .sw-board-btn-label { display: none; } .sw-board-canvas { height: 55vh; } }
+
+.sw-task-a2a { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; margin: .2rem 0 0 1.4rem; }
+.sw-task-state { font-size: .72rem; padding: .05rem .4rem; border-radius: 999px; background: var(--fy-surface-2); border: 1px solid var(--fy-border); }
+.sw-task-state.is-completed { background: #e7f7ec; } .sw-task-state.is-failed, .sw-task-state.is-rejected { background: #fdecec; }
+.sw-task-state.is-input-required { background: #fff6dd; }
+.sw-task-note { color: var(--fy-text-3); overflow-wrap: anywhere; }

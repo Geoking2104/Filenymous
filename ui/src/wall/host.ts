@@ -28,6 +28,7 @@ import {
   BoardStore,
   SCOPE_FULL,
   TaskBoard,
+  WALL_FEATURES,
   boardBatches,
   scopeAllows,
   visibleTo,
@@ -36,6 +37,7 @@ import {
   type Task,
   type TaskError,
   type TaskKind,
+  type TaskPatch,
 } from "./collab";
 import { isExpired, type HostWallParams } from "./link";
 import { LIVE_WAIT_TRACKS_MS, MediaLink, stopStream } from "./live";
@@ -573,6 +575,7 @@ export class WallHost {
       media: !!this.opts.media,
       ...(this.params.title ? { title: this.params.title } : {}),
       ...(pending ? { pending: true } : {}),
+      feat: WALL_FEATURES,
     };
   }
 
@@ -848,7 +851,7 @@ export class WallHost {
       case "task-new": {
         if (limited(this.chatLimit)) return;
         if (msg.owner && !this.state.members.some((m) => m.label === msg.owner)) return this.notify(peer, "task-bad-owner");
-        const r = this.taskBoard.create(label, msg.kind, msg.text, msg.owner);
+        const r = this.taskBoard.create(label, msg.kind, msg.text, msg.owner, Date.now(), msg.state);
         if (typeof r === "string") return this.taskFail(peer, r);
         this.publishTask(r);
         return;
@@ -856,7 +859,7 @@ export class WallHost {
       case "task-set": {
         if (limited(this.reactLimit)) return;
         if (msg.owner && !this.state.members.some((m) => m.label === msg.owner)) return this.notify(peer, "task-bad-owner");
-        const r = this.taskBoard.update(label, msg.id, { done: msg.done, owner: msg.owner, text: msg.text }, !peer);
+        const r = this.taskBoard.update(label, msg.id, { done: msg.done, owner: msg.owner, text: msg.text, state: msg.state, note: msg.note, result: msg.result }, !peer);
         if (typeof r === "string") return this.taskFail(peer, r);
         this.publishTask(r);
         return;
@@ -899,10 +902,10 @@ export class WallHost {
   }
 
   // ---- checklist / decisions: host's own actions (never rate limited) ----
-  addTask(kind: TaskKind, text: string, owner: string | null = null) {
-    this.apply(HOST_LABEL, null, { t: "task-new", kind, text, owner });
+  addTask(kind: TaskKind, text: string, owner: string | null = null, state?: "submitted") {
+    this.apply(HOST_LABEL, null, { t: "task-new", kind, text, owner, ...(state ? { state } : {}) });
   }
-  updateTask(id: string, patch: { done?: boolean; owner?: string | null; text?: string }) {
+  updateTask(id: string, patch: TaskPatch) {
     this.apply(HOST_LABEL, null, { t: "task-set", id, ...patch });
   }
   deleteTask(id: string) {
