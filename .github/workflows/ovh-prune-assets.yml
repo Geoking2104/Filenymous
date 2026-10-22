@@ -1,0 +1,58 @@
+name: OVH stale assets prune (inspect / apply)
+
+# Manual only. Builds the UI at each ref in `refs` (space-separated) and keeps
+# every file of their dist/assets; deletes other files in /home/filenyb/www/app/assets
+# (older than grace_days) after checking the live HTML/JS/CSS import graph is covered.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "inspect | apply"
+        required: true
+        default: inspect
+      refs:
+        description: "builds to keep (git refs, space-separated)"
+        required: true
+        default: "main"
+      grace_days:
+        description: "also keep remote files modified in the last N days"
+        required: true
+        default: "0"
+
+concurrency:
+  group: deploy-ovh-ui
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build keep-list builds
+        env:
+          REFS: ${{ inputs.refs }}
+        run: |
+          (cd ui && npm ci --no-audit --no-fund)
+          KEEP=""
+          for r in $REFS; do
+            d="/tmp/keep-$(git rev-parse --short "$r")"
+            git worktree add "$d" "$r"
+            ln -s "$PWD/ui/node_modules" "$d/ui/node_modules"
+            (cd "$d/ui" && npx vite build --base=/app/ > /dev/null)
+            KEEP="$KEEP --keep-dist $d/ui/dist"
+          done
+          echo "KEEP=$KEEP" >> "$GITHUB_ENV"
+      - name: Install deploy dependencies
+        working-directory: scripts
+        run: npm ci --no-audit --no-fund
+      - name: Prune
+        env:
+          OVH_SFTP_PASS: ${{ secrets.OVH_SFTP_PASS }}
+          MODE: ${{ inputs.mode }}
+          GRACE: ${{ inputs.grace_days }}
+        run: node scripts/ovh-prune-assets.mjs --mode "$MODE" --grace-days "$GRACE" $KEEP
