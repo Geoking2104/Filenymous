@@ -788,6 +788,11 @@ function WallInfo({ s, code, invite }: { s: RoomState; code: string; invite?: { 
         {s.password && <span className="sw-flag">🔑 {t("wall.flagPassword")}</span>}
         {s.agents && <span className="sw-flag sw-flag-ai">🤖 {t("wall.flagAgents")}</span>}
       </div>
+      {code && (
+        <span className="sw2-codechip sw2-code-m">
+          <span className="sw2-codechip-k">{t("wall.code")}</span> <strong>{code}</strong>
+        </span>
+      )}
       {code && <p className="sw-small">{t("wall.codeHint")}</p>}
       {invite && (
         <details className="sw2-invite" open={s.members.length <= 1}>
@@ -1058,7 +1063,7 @@ function PostRow({ post: p, first, ...f }: FeedProps & { post: Post; first: bool
         )}
         {first && (
           <div className="sw2-post-head">
-            <span className="sw2-post-author" style={{ color: `hsl(${avatarHue(p.by)} 60% 50%)` }}>
+            <span className="sw2-post-author">
               {author.name}
             </span>
             {author.host && <span className="sw2-badge is-host">{t("wall.badgeHost")}</span>}
