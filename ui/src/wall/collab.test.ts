@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import type { Task } from "./collab";
 import {
   BoardStore,
   SCOPE_DEFAULT,
@@ -42,7 +43,7 @@ describe("agent scopes", () => {
     expect(visibleTo("peer:2", s, pack, { id: "m-mine", by: "peer:2" }, byOf)).toBe(true);
     expect(visibleTo("peer:2", s, pack, { id: "m2", by: "host", mentions: ["peer:2"] }, byOf)).toBe(true);
     expect(visibleTo("peer:2", s, pack, { id: "m3", by: "host", replyTo: "m-mine" }, byOf)).toBe(true);
-    expect(visibleTo("peer:2", s, pack, { id: "t1", by: "host", owner: "peer:2" }, byOf)).toBe(true);
+    expect(visibleTo("peer:2", s, pack, { id: "t-0123456789abcdef", by: "host", owner: "peer:2" }, byOf)).toBe(true);
     expect(visibleTo("peer:2", s, pack, { id: "m-shared", by: "host" }, byOf)).toBe(true);
     expect(visibleTo("peer:2", SCOPE_DEFAULT, pack, { id: "m1", by: "host" }, byOf)).toBe(true);
   });
@@ -281,5 +282,27 @@ describe("export", () => {
     expect(back?.tasks).toHaveLength(2);
     expect(back?.board).toHaveLength(1);
     expect(parseSnapshot(JSON.stringify({ ...snap, board: [{ id: "x", type: "image", version: 1, versionNonce: 1, isDeleted: false }] }))).toBeNull();
+  });
+});
+
+describe("delegated task states (A2A-style)", () => {
+  it("lets only host, author or owner move the state; completed ticks done", () => {
+    const b = new TaskBoard();
+    const t = b.create("a1", "task", "summarise the PDF", "b2", 1, "submitted") as Task;
+    expect(t.state).toBe("submitted");
+    expect(b.update("c3", t.id, { state: "working" })).toBe("forbidden");
+    const w = b.update("b2", t.id, { state: "working", note: "on it" }) as Task;
+    expect(w.state).toBe("working");
+    expect(w.note).toBe("on it");
+    const d = b.update("b2", t.id, { state: "completed", result: "post_1" }) as Task;
+    expect(d.done).toBe(true);
+    expect(d.result).toBe("post_1");
+    expect(b.update("a1", t.id, { state: "bogus" as never })).toBe("empty");
+  });
+  it("parses task-set with state/note/result and rejects bad values", () => {
+    expect(parseWallMessage({ t: "task-set", id: "t-0123456789abcdef", state: "working", note: "x" })).toMatchObject({ state: "working", note: "x" });
+    expect(parseWallMessage({ t: "task-set", id: "t-0123456789abcdef", state: "nope" })).toBeNull();
+    expect(parseWallMessage({ t: "task-new", kind: "task", text: "x", owner: null, state: "working" })).toBeNull();
+    expect(parseWallMessage({ t: "welcome", label: "peer:1", expiresAt: 0, burn: false, hostLeave: false, agents: true, media: false, feat: 3 })).toMatchObject({ feat: 3 });
   });
 });

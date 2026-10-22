@@ -1117,7 +1117,19 @@
       "decisions": "Décisions ({{count}})",
       "emptyDecisions": "Aucune décision consignée.",
       "by": "par {{name}} · {{time}}",
-      "delete": "Supprimer"
+      "delete": "Supprimer",
+      "stateHint": "Tâche déléguée (cycle de vie inspiré d'A2A) : seuls l'assigné, l'auteur ou l'hôte changent l'état.",
+      "result": "résultat dans le fil",
+      "cancel": "Annuler",
+      "state": {
+        "submitted": "soumise",
+        "working": "en cours",
+        "input-required": "attend une précision",
+        "completed": "terminée",
+        "failed": "échouée",
+        "canceled": "annulée",
+        "rejected": "refusée"
+      }
     },
     "board": {
       "title": "Tableau blanc",

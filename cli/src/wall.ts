@@ -22,7 +22,7 @@ import { ENDED, WallPeer } from "../../ui/src/wall/peer";
 import { buildWallLink, createWall, parseWallLink, wallCode, type HostWallParams, type WallParams, type WallTtl } from "../../ui/src/wall/link";
 import { cleanName, pseudonym, type Member, type Post, type WallEvent } from "../../ui/src/wall/feed";
 import { safeFileName } from "../../ui/src/p2p/protocol";
-import { SCOPE_FULL, cleanTaskText, isTaskId, parseScopeArg, scopeName, type AgentScope, type Task, type TaskKind } from "../../ui/src/wall/collab";
+import { AGENT_TASK_STATES, SCOPE_FULL, TASK_NOTE_MAX, cleanTaskText, isAgentTaskState, isResultId, isTaskId, parseScopeArg, scopeName, type AgentScope, type Task, type TaskKind, type TaskPatch } from "../../ui/src/wall/collab";
 import { NOTE_MAX_BYTES, cleanNoteText, cleanNoteTitle, isNoteId, utf8Bytes, type SharedNote } from "../../ui/src/wall/notes";
 
 declare const __VERSION__: string;
@@ -390,6 +390,12 @@ export class WallAgent {
     return { messages: fresh, next: fresh.length ? fresh[fresh.length - 1]!.seq : since };
   }
 
+  /** One feed entry by post id (for the A2A bridge's artifacts). */
+  entryById(id: string): Entry | undefined {
+    const p = this.posts.get(id);
+    return p ? this.entry(p) : undefined;
+  }
+
   /** Waits until an entry newer than `since` exists (or the timeout/end). */
   waitFor(since: number, ms: number): Promise<void> {
     if (this.log.some((e) => e.seq > since) || this.endedReason) return Promise.resolve();
@@ -600,6 +606,7 @@ export class WallAgent {
       kind: t.kind,
       text: t.text,
       ...(t.kind === "task" ? { done: t.done, owner: t.owner, ownerName: t.owner ? this.nameOf(t.owner) : null, mine: t.owner === this.self } : {}),
+      ...(t.state ? { state: t.state, ...(t.note ? { note: t.note } : {}), ...(t.result ? { result: t.result } : {}) } : {}),
       by: t.by,
       name: this.nameOf(t.by),
       at: new Date(t.at).toISOString(),
@@ -633,7 +640,24 @@ export class WallAgent {
     return m.label;
   }
 
-  async addTask(kind: TaskKind, text: string, owner?: string | null): Promise<Out> {
+  /** Raw task (for the A2A bridge). */
+  getTask(id: string): Task | undefined {
+    return this.taskList().find((x) => x.id === id);
+  }
+  allTasks(): Task[] {
+    return this.taskList();
+  }
+  get selfLabel(): string | undefined {
+    return this.self;
+  }
+
+  /** Delegates a task to another participant (A2A-style lifecycle: submitted → working → completed/…). */
+  delegate(text: string, owner: string): Promise<Out> {
+    if (!owner) throw new Error("owner is required (a participant label or name)");
+    return this.addTask("task", text, owner, "submitted");
+  }
+
+  async addTask(kind: TaskKind, text: string, owner?: string | null, state?: "submitted"): Promise<Out> {
     this.alive();
     this.needScope("post");
     if (kind !== "task" && kind !== "decision") throw new Error('kind must be "task" or "decision"');
@@ -641,20 +665,30 @@ export class WallAgent {
     if (!clean) throw new Error("text is required (max 500 characters)");
     const o = this.ownerLabel(owner) ?? null;
     const before = new Set(this.taskList().map((t) => t.id));
-    if (this.host) this.host.addTask(kind, clean, o);
-    else await this.peer!.addTask(kind, clean, o);
+    if (state && kind !== "task") throw new Error("only tasks can be delegated");
+    if (this.host) this.host.addTask(kind, clean, o, state);
+    else await this.peer!.addTask(kind, clean, o, state);
     const t = await this.untilTask((l) => l.find((x) => !before.has(x.id) && x.by === this.self));
     if (!t) throw new Error("the host did not accept the task (limit reached, rate-limited, or not supported by this host)");
     return { ok: true, task: this.taskOut(t) };
   }
 
-  async updateTask(id: string, patch: { done?: boolean; owner?: string | null; text?: string }): Promise<Out> {
+  async updateTask(id: string, patch: { done?: boolean; owner?: string | null; text?: string; state?: string; note?: string; result?: string }): Promise<Out> {
     this.alive();
     this.needScope("post");
     if (!isTaskId(id)) throw new Error(`invalid task id: ${id}`);
     const cur = this.taskList().find((x) => x.id === id);
     if (!cur) throw new Error(`unknown task id: ${id}`);
-    const p: { done?: boolean; owner?: string | null; text?: string } = {};
+    const p: TaskPatch = {};
+    if (patch.state !== undefined) {
+      if (!isAgentTaskState(patch.state)) throw new Error(`state must be one of: ${AGENT_TASK_STATES.join(", ")}`);
+      p.state = patch.state;
+    }
+    if (patch.note !== undefined) p.note = String(patch.note).slice(0, TASK_NOTE_MAX);
+    if (patch.result !== undefined) {
+      if (!isResultId(patch.result)) throw new Error("result must be a post id from this wall");
+      p.result = patch.result;
+    }
     if (typeof patch.done === "boolean") p.done = patch.done;
     if (patch.owner !== undefined) p.owner = this.ownerLabel(patch.owner) ?? null;
     if (patch.text !== undefined) {
@@ -662,7 +696,7 @@ export class WallAgent {
       if (!c) throw new Error("text is empty or too long");
       p.text = c;
     }
-    if (!Object.keys(p).length) throw new Error("give done, owner or text");
+    if (!Object.keys(p).length) throw new Error("give done, owner, text, state, note or result");
     if (this.host) this.host.updateTask(id, p);
     else await this.peer!.updateTask(id, p);
     const t = await this.untilTask((l) => l.find((x) => x.id === id && x.editedBy === this.self && x.editedAt >= cur.editedAt && JSON.stringify(x) !== JSON.stringify(cur)));
@@ -836,7 +870,9 @@ export async function runCommand(agent: WallAgent, c: Record<string, unknown>): 
     case "decision":
       return agent.addTask("decision", s("text") ?? "");
     case "update-task":
-      return agent.updateTask(s("id") ?? "", { done: typeof c.done === "boolean" ? c.done : undefined, owner: c.owner === null ? null : s("owner"), text: s("text") });
+      return agent.updateTask(s("id") ?? "", { done: typeof c.done === "boolean" ? c.done : undefined, owner: c.owner === null ? null : s("owner"), text: s("text"), state: s("state"), note: s("note"), result: s("result") });
+    case "delegate":
+      return agent.delegate(s("text") ?? "", s("owner") ?? "");
     case "delete-task":
       return agent.deleteTask(s("id") ?? "");
     case "artifact":
@@ -852,7 +888,7 @@ export async function runCommand(agent: WallAgent, c: Record<string, unknown>): 
     case "allow-agents":
       return agent.allowAgents(c.on !== false);
     default:
-      throw new Error(`unknown cmd: ${String(c.cmd)} (send, file, note, react, vote, poll, get, read, notes, write-note, delete-note, tasks, add-task, decision, update-task, delete-task, artifact, members, info, leave; host: pin, kick, allow-agents, scope, share)`);
+      throw new Error(`unknown cmd: ${String(c.cmd)} (send, file, note, react, vote, poll, get, read, notes, write-note, delete-note, tasks, add-task, decision, update-task, delegate, delete-task, artifact, members, info, leave; host: pin, kick, allow-agents, scope, share)`);
   }
 }
 
@@ -1031,12 +1067,17 @@ export const MCP_TOOLS = [
   },
   {
     name: "wall_update_task",
-    description: "Tick / untick a task (done), (re)assign it (owner: label, \"me\", or null), or change its text (author or host only). Needs the \"post\" permission.",
+    description: "Tick / untick a task (done), (re)assign it (owner: label, \"me\", or null), change its text (author or host only), or report progress on a delegated task: state (working | input-required | completed | failed | rejected | canceled), a short note, and result (a post id from this wall, e.g. an artifact). Only the assignee, author or host can change the state. Needs the \"post\" permission.",
     inputSchema: {
       type: "object",
-      properties: { id: { type: "string" }, done: { type: "boolean" }, owner: { type: ["string", "null"] }, text: { type: "string" } },
+      properties: { id: { type: "string" }, done: { type: "boolean" }, owner: { type: ["string", "null"] }, text: { type: "string" }, state: { type: "string", enum: [...AGENT_TASK_STATES] }, note: { type: "string" }, result: { type: "string" } },
       required: ["id"],
     },
+  },
+  {
+    name: "wall_delegate_task",
+    description: "Delegate a task to another participant (usually another agent): it appears on the checklist as \"submitted\" and the assignee reports state/note/result with wall_update_task. Tasks assigned to you show mine: true in wall_list_tasks. Needs the \"post\" permission.",
+    inputSchema: { type: "object", properties: { text: { type: "string" }, owner: { type: "string", description: "participant label or name" } }, required: ["text", "owner"] },
   },
   {
     name: "wall_post_artifact",
@@ -1120,7 +1161,9 @@ export function runMcp(agent: WallAgent, start: () => Promise<Out>): Promise<num
       case "wall_add_task":
         return agent.addTask(s("kind") === "decision" ? "decision" : "task", s("text") ?? "", s("owner"));
       case "wall_update_task":
-        return agent.updateTask(s("id") ?? "", { done: typeof a.done === "boolean" ? a.done : undefined, owner: a.owner === null ? null : s("owner"), text: s("text") });
+        return agent.updateTask(s("id") ?? "", { done: typeof a.done === "boolean" ? a.done : undefined, owner: a.owner === null ? null : s("owner"), text: s("text"), state: s("state"), note: s("note"), result: s("result") });
+      case "wall_delegate_task":
+        return agent.delegate(s("text") ?? "", s("owner") ?? "");
       case "wall_post_artifact":
         return agent.postArtifact({ kind: s("kind"), title: s("title"), body: s("body"), actionItems: Array.isArray(a.action_items) ? (a.action_items as string[]) : undefined });
       default:

@@ -5,7 +5,7 @@
  */
 import { cleanNoteText, cleanNoteTitle, cleanSharedNote, isNoteId, type SharedNote } from "./notes";
 import { sanitizeWallTitle } from "./link";
-import { cleanBoardElement, cleanTask, cleanTaskText, isTaskId, type BoardElement, type Task, type TaskKind } from "./collab";
+import { cleanBoardElement, cleanTask, cleanTaskText, isAgentTaskState, isResultId, isTaskId, type AgentTaskState, type BoardElement, type Task, type TaskKind, type TaskPatch } from "./collab";
 import { safeFileName } from "../p2p/protocol";
 import {
   MAX_LIVE,
@@ -70,14 +70,14 @@ export type WallMessage =
   | { t: "snote-del"; id: string }
   | { t: "snote-lock"; id: string; on: boolean }
   // checklist / decisions and whiteboard (peers with feat ≥ 2 only)
-  | { t: "task-new"; kind: TaskKind; text: string; owner: string | null }
-  | { t: "task-set"; id: string; done?: boolean; owner?: string | null; text?: string }
+  | { t: "task-new"; kind: TaskKind; text: string; owner: string | null; state?: AgentTaskState }
+  | ({ t: "task-set"; id: string } & TaskPatch)
   | { t: "task-del"; id: string }
   | { t: "board-op"; els: unknown[] }
   // both directions: media signaling for live streams, inside the sealed channel
   | RtcMessage
   // host → peer
-  | { t: "welcome"; label: string; expiresAt: number; burn: boolean; hostLeave: boolean; agents: boolean; media: boolean; title?: string; pending?: boolean }
+  | { t: "welcome"; label: string; expiresAt: number; burn: boolean; hostLeave: boolean; agents: boolean; media: boolean; title?: string; pending?: boolean; feat?: number }
   | { t: "members"; members: Member[] }
   | { t: "post"; post: Post }
   | { t: "unpost"; id: string }
@@ -225,7 +225,8 @@ export function parseWallMessage(m: unknown): WallMessage | null {
     case "task-new": {
       const text = cleanTaskText(o.text);
       if ((o.kind !== "task" && o.kind !== "decision") || !text || !(o.owner === null || o.owner === undefined || isLabel(o.owner))) return null;
-      return { t: "task-new", kind: o.kind, text, owner: (o.owner as string | undefined) ?? null };
+      if (o.state !== undefined && o.state !== "submitted") return null;
+      return { t: "task-new", kind: o.kind, text, owner: (o.owner as string | undefined) ?? null, ...(o.state === "submitted" ? { state: "submitted" as const } : {}) };
     }
     case "task-set": {
       if (!isTaskId(o.id)) return null;
@@ -233,8 +234,20 @@ export function parseWallMessage(m: unknown): WallMessage | null {
       if (o.owner !== undefined && !(o.owner === null || isLabel(o.owner))) return null;
       const text = o.text === undefined ? undefined : cleanTaskText(o.text);
       if (text === null) return null;
-      if (o.done === undefined && o.owner === undefined && text === undefined) return null;
-      return { t: "task-set", id: o.id, ...(o.done !== undefined ? { done: o.done as boolean } : {}), ...(o.owner !== undefined ? { owner: o.owner as string | null } : {}), ...(text !== undefined ? { text } : {}) };
+      if (o.state !== undefined && !isAgentTaskState(o.state)) return null;
+      if (o.note !== undefined && typeof o.note !== "string") return null;
+      if (o.result !== undefined && !isResultId(o.result)) return null;
+      if (o.done === undefined && o.owner === undefined && text === undefined && o.state === undefined && o.note === undefined && o.result === undefined) return null;
+      return {
+        t: "task-set",
+        id: o.id,
+        ...(o.done !== undefined ? { done: o.done as boolean } : {}),
+        ...(o.owner !== undefined ? { owner: o.owner as string | null } : {}),
+        ...(text !== undefined ? { text } : {}),
+        ...(o.state !== undefined ? { state: o.state as AgentTaskState } : {}),
+        ...(o.note !== undefined ? { note: (o.note as string).slice(0, 1000) } : {}),
+        ...(o.result !== undefined ? { result: o.result as string } : {}),
+      };
     }
     case "task-del":
     case "task-gone":
@@ -261,7 +274,7 @@ export function parseWallMessage(m: unknown): WallMessage | null {
     }
     case "welcome":
       return isLabel(o.label) && int(o.expiresAt) && typeof o.burn === "boolean" && typeof o.hostLeave === "boolean" && typeof o.agents === "boolean" && typeof o.media === "boolean"
-        ? { t: "welcome", label: o.label, expiresAt: o.expiresAt as number, burn: o.burn, hostLeave: o.hostLeave, agents: o.agents, media: o.media, title: typeof o.title === "string" && o.title.length <= 1024 ? sanitizeWallTitle(o.title) : "", ...(o.pending === true ? { pending: true } : {}) }
+        ? { t: "welcome", label: o.label, expiresAt: o.expiresAt as number, burn: o.burn, hostLeave: o.hostLeave, agents: o.agents, media: o.media, title: typeof o.title === "string" && o.title.length <= 1024 ? sanitizeWallTitle(o.title) : "", ...(o.pending === true ? { pending: true } : {}), ...(int(o.feat, 1) && (o.feat as number) < 1000 ? { feat: o.feat as number } : {}) }
         : null;
     case "members": {
       if (!Array.isArray(o.members) || o.members.length > 64) return null;

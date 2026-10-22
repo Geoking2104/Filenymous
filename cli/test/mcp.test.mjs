@@ -32,7 +32,7 @@ test("MCP: tools list, read/send/react/participants/file/get between a CLI host 
   assert.equal(client.getServerVersion().name, "filenymous-wall");
   assert.match(client.getInstructions() ?? "", /model provider/);
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["wall_add_task", "wall_get_item", "wall_info", "wall_list_participants", "wall_list_tasks", "wall_post_artifact", "wall_react", "wall_read_messages", "wall_read_notes", "wall_send_file", "wall_send_message", "wall_update_task", "wall_write_note"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["wall_add_task", "wall_delegate_task", "wall_get_item", "wall_info", "wall_list_participants", "wall_list_tasks", "wall_post_artifact", "wall_react", "wall_read_messages", "wall_read_notes", "wall_send_file", "wall_send_message", "wall_update_task", "wall_write_note"]);
 
   const info = await call(client, "wall_info");
   assert.equal(info.json.role, "peer");
