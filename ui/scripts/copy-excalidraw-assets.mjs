@@ -12,5 +12,7 @@ if (!existsSync(src)) {
   process.exit(1);
 }
 rmSync(dst, { recursive: true, force: true });
-cpSync(src, dst, { recursive: true });
+// Xiaolai (CJK handwriting fallback) is ~13 MB of shards: not shipped. CJK text on the
+// whiteboard then falls back to a local system font; nothing is fetched from a CDN.
+cpSync(src, dst, { recursive: true, filter: (p) => !/[\\/]Xiaolai([\\/]|$)/.test(p) });
 console.log("excalidraw fonts ->", dst);
