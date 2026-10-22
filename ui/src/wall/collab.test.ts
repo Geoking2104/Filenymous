@@ -299,6 +299,17 @@ describe("delegated task states (A2A-style)", () => {
     expect(d.result).toBe("post_1");
     expect(b.update("a1", t.id, { state: "bogus" as never })).toBe("empty");
   });
+  it("drops a stale progress note when the task reaches a terminal state", () => {
+    const b = new TaskBoard();
+    const t = b.create("a1", "task", "do it", "b2", 1, "submitted") as Task;
+    expect((b.update("b2", t.id, { state: "working", note: "on it" }) as Task).note).toBe("on it");
+    const done = b.update("b2", t.id, { state: "completed" }) as Task;
+    expect(done.done).toBe(true);
+    expect(done.note).toBeUndefined();
+    const t2 = b.create("a1", "task", "other", "b2", 2, "submitted") as Task;
+    expect((b.update("b2", t2.id, { state: "failed", note: "network down" }) as Task).note).toBe("network down");
+  });
+
   it("parses task-set with state/note/result and rejects bad values", () => {
     expect(parseWallMessage({ t: "task-set", id: "t-0123456789abcdef", state: "working", note: "x" })).toMatchObject({ state: "working", note: "x" });
     expect(parseWallMessage({ t: "task-set", id: "t-0123456789abcdef", state: "nope" })).toBeNull();

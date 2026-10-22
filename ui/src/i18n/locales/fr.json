@@ -925,7 +925,7 @@
     "viewOnceHint": "Autodestruction : l'ouvrir le retire du mur pour les autres.",
     "viewOnceButton": "Ouvrir",
     "attach": "Joindre des fichiers (ou glisser-déposer, ou coller)",
-    "msgPlaceholder": "Écrire un message… (Entrée pour envoyer, Maj+Entrée pour aller à la ligne, @ pour mentionner)",
+    "msgPlaceholder": "Écrire un message…",
     "msgLabel": "Message",
     "send": "Envoyer",
     "noteButton": "Note masquée",
@@ -1099,7 +1099,8 @@
       "emptyNote": "(note vide)",
       "editorLabel": "Note partagée",
       "searchHeading_one": "{{count}} note",
-      "searchHeading_other": "{{count}} notes"
+      "searchHeading_other": "{{count}} notes",
+      "title": "Notes"
     },
     "tasks": {
       "tab": "Tâches ({{count}})",
@@ -1129,7 +1130,8 @@
         "failed": "échouée",
         "canceled": "annulée",
         "rejected": "refusée"
-      }
+      },
+      "title": "Tâches"
     },
     "board": {
       "title": "Tableau blanc",
@@ -1165,7 +1167,10 @@
       "save": "Enregistrer",
       "share": "Partager avec un agent en vue limitée",
       "shareHint": "Visible par :"
-    }
+    },
+    "panel": "Panneau du mur",
+    "hostMenu": "Actions du mur",
+    "msgHint": "Entrée pour envoyer · Maj+Entrée pour aller à la ligne · @ pour mentionner"
   },
   "leave": {
     "title": "Fermer la fenêtre ?",

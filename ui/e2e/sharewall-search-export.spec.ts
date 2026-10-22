@@ -63,6 +63,7 @@ test("host exports JSON and Markdown; peer sees the notice and has no export", a
 
   await expect(peer.page.getByTestId("wall-export")).toHaveCount(0);
 
+  await host.page.getByTestId("wall-actions").click();
   await host.page.getByTestId("wall-export").click();
   const dialog = host.page.getByTestId("wall-export-dialog");
   await expect(dialog).toBeVisible();
@@ -73,6 +74,7 @@ test("host exports JSON and Markdown; peer sees the notice and has no export", a
   await expect(dialog).toHaveCount(0);
   await expect(peer.page.getByTestId("wall-system")).toHaveCount(0);
 
+  await host.page.getByTestId("wall-actions").click();
   await host.page.getByTestId("wall-export").click();
   const [dl] = await Promise.all([host.page.waitForEvent("download"), host.page.getByTestId("wall-export-confirm").click()]);
   expect(dl.suggestedFilename()).toMatch(/^filenymous-mur-equipe-q4-\d{4}-\d{2}-\d{2}\.json$/);
@@ -90,6 +92,7 @@ test("host exports JSON and Markdown; peer sees the notice and has no export", a
   await shot(peer.page, "local-peer-notice");
   await expect(peer.page.getByTestId("wall-system").getByRole("button")).toHaveCount(0);
 
+  await host.page.getByTestId("wall-actions").click();
   await host.page.getByTestId("wall-export").click();
   await host.page.getByTestId("wall-export-format-md").check();
   const [md] = await Promise.all([host.page.waitForEvent("download"), host.page.getByTestId("wall-export-confirm").click()]);
@@ -104,6 +107,7 @@ test("host exports JSON and Markdown; peer sees the notice and has no export", a
 test("burn wall: export is disabled with an explanation", async ({ browser }) => {
   const host = await newPage(browser);
   await createWall(host.page, { burn: true });
+  await host.page.getByTestId("wall-actions").click();
   await expect(host.page.getByTestId("wall-export")).toBeDisabled();
   await expect(host.page.getByTestId("wall-export-blocked")).toContainText(/autodestruction|self-destructs/);
   await shot(host.page, "local-burn-blocked");

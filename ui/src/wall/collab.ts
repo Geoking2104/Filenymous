@@ -208,6 +208,8 @@ export class TaskBoard {
         if (patch.state !== undefined) {
           next.state = patch.state;
           if (patch.state === "completed") next.done = true;
+          // A progress note ("on it…") is stale once the task is over.
+          if (TERMINAL_STATES.has(patch.state) && patch.note === undefined) delete next.note;
         }
         if (!next.state) next.state = "working";
         if (patch.note !== undefined) {

@@ -189,7 +189,7 @@ function postPreview(t: T, p: Post): string {
 function Avatar({ m, size = 36 }: { m: Pick<Member, "label" | "name" | "agent">; size?: number }) {
   const hue = avatarHue(m.label);
   return (
-    <span className="sw2-avatar" aria-hidden="true" style={{ width: size, height: size, background: `hsl(${hue} 62% 46%)`, fontSize: size * 0.38 }}>
+    <span className="sw2-avatar" aria-hidden="true" style={{ width: size, height: size, background: `hsl(${hue} 38% 40%)`, fontSize: size * 0.38 }}>
       {m.agent ? "🤖" : initials(m.name)}
     </span>
   );
@@ -436,6 +436,19 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
             {s.statusText}
           </span>
         </div>
+        {code && (
+          <span className="sw2-codechip" data-testid="wall-code" title={t("wall.codeHint")}>
+            <span className="sw2-codechip-k">{t("wall.code")}</span> <strong>{code}</strong>
+          </span>
+        )}
+        <button type="button" className="sw2-people" data-testid="wall-people" aria-label={t("wall.membersCount", { count: s.members.length })} title={t("wall.membersCount", { count: s.members.length })} onClick={() => { setSideTab("members"); setDrawer(true); }}>
+          <span className="sw2-people-stack" aria-hidden="true">
+            {s.members.slice(0, 3).map((m) => (
+              <Avatar key={m.label} m={m} size={22} />
+            ))}
+          </span>
+          <span className="sw2-people-n">{s.members.length}</span>
+        </button>
         <div className={`sw2-search${searchOpen || query ? " is-open" : ""}`} role="search">
           <button type="button" className="sw2-iconbtn sw2-search-btn" data-testid="wall-search-toggle" aria-label={t("wall.search.open")} title={t("wall.search.open")} onClick={openSearch}>
             🔍
@@ -470,21 +483,47 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
             ⏳ {formatRemaining(left)}
           </span>
         )}
+        {(onExport || exportBlocked || onDestroy || onLeave) && (
+          <HostMenu label={t("wall.hostMenu")}>
+            {isHost && (onExport || exportBlocked) && (
+              <>
+                <button type="button" role="menuitem" className="sw2-menu-item" data-testid="wall-export" disabled={!!exportBlocked} onClick={onExport} title={exportBlocked}>
+                  {t("wall.export.button")}
+                </button>
+                {exportBlocked && <p className="sw2-menu-note" data-testid="wall-export-blocked">{exportBlocked}</p>}
+              </>
+            )}
+            {onLeave && (
+              <button type="button" role="menuitem" className="sw2-menu-item" data-testid="wall-leave" onClick={onLeave}>
+                {t("wall.leave")}
+              </button>
+            )}
+            {onDestroy && (
+              <button type="button" role="menuitem" className="sw2-menu-item is-danger" data-testid="wall-destroy" onClick={onDestroy}>
+                {t("wall.destroy")}
+              </button>
+            )}
+          </HostMenu>
+        )}
       </header>
 
       <div className="sw2-body">
-        <aside className="sw2-side" aria-label={t("wall.members")}>
+        <aside className="sw2-side" aria-label={t("wall.panel")}>
+          <div className="sw2-sheet-head">
+            <span className="sw2-sheet-grip" aria-hidden="true" />
+            <button type="button" className="sw2-iconbtn" data-testid="wall-sheet-close" aria-label={t("common.close")} onClick={() => setDrawer(false)}>✕</button>
+          </div>
           <WallInfo s={s} code={code} invite={invite} />
           <div className="sw2-tabs" role="tablist">
             <button type="button" role="tab" className="sw2-tab" data-testid="wall-tab-members" aria-selected={sideTab === "members"} onClick={() => setSideTab("members")}>
-              👥 {t("wall.notes.membersTab", { count: s.members.length })}
+              <span>{t("wall.members")}</span><span className="sw2-tab-n">{s.members.length}</span>
             </button>
             <button type="button" role="tab" className="sw2-tab" data-testid="wall-tab-notes" aria-selected={sideTab === "notes"} onClick={() => setSideTab("notes")}>
-              📝 {t("wall.notes.tab", { count: s.notes.length })}
+              <span>{t("wall.notes.title")}</span><span className="sw2-tab-n">{s.notes.length}</span>
               {notesWriting > 0 && <span className="sw2-tab-dot" aria-label={t("wall.notes.someoneWriting")} />}
             </button>
             <button type="button" role="tab" className="sw2-tab" data-testid="wall-tab-tasks" aria-selected={sideTab === "tasks"} onClick={() => setSideTab("tasks")}>
-              ✅ {t("wall.tasks.tab", { count: s.tasks.filter((x) => x.kind === "task" && !x.done).length })}
+              <span>{t("wall.tasks.title")}</span><span className="sw2-tab-n" data-testid="wall-tasks-count">{s.tasks.length}</span>
             </button>
           </div>
           {sideTab === "tasks" && (
@@ -527,27 +566,7 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
               ))}
             </ul>
           </section>}
-          <div className="sw2-side-actions">
-            {isHost && (onExport || exportBlocked) && (
-              <>
-                <button type="button" className="v3-btn-ghost" data-testid="wall-export" disabled={!!exportBlocked} onClick={onExport} title={exportBlocked}>
-                  📦 {t("wall.export.button")}
-                </button>
-                {exportBlocked && <p className="sw-small" data-testid="wall-export-blocked">{exportBlocked}</p>}
-                {exportNote && <p className="sw-small" role="status" data-testid="wall-export-note">{exportNote}</p>}
-              </>
-            )}
-            {onDestroy && (
-              <button type="button" className="sw-danger" data-testid="wall-destroy" onClick={onDestroy}>
-                💥 {t("wall.destroy")}
-              </button>
-            )}
-            {onLeave && (
-              <button type="button" className="v3-btn-ghost" data-testid="wall-leave" onClick={onLeave}>
-                {t("wall.leave")}
-              </button>
-            )}
-          </div>
+          {exportNote && <p className="sw-small" role="status" data-testid="wall-export-note">{exportNote}</p>}
           <PrivacyNote />
         </aside>
         {drawer && <div className="sw2-scrim" onClick={() => setDrawer(false)} aria-hidden="true" />}
@@ -718,6 +737,34 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
 
 // ---------------------------------------------------------------------------
 
+function HostMenu({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const down = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const key = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", down);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("mousedown", down);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open]);
+  return (
+    <div className="sw2-menu" ref={ref}>
+      <button type="button" className="sw2-iconbtn sw2-menu-btn" data-testid="wall-actions" aria-haspopup="menu" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen((o) => !o)}>
+        ⋯
+      </button>
+      {open && (
+        <div className="sw2-menu-pop" role="menu" onClick={(e) => (e.target as HTMLElement).closest("button") && setOpen(false)}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WallInfo({ s, code, invite }: { s: RoomState; code: string; invite?: { link: string } }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
@@ -742,13 +789,13 @@ function WallInfo({ s, code, invite }: { s: RoomState; code: string; invite?: { 
         {s.agents && <span className="sw-flag sw-flag-ai">🤖 {t("wall.flagAgents")}</span>}
       </div>
       {code && (
-        <div className="sw-code" data-testid="wall-code" title={t("wall.codeHint")}>
-          {t("wall.code")} <strong>{code}</strong>
-        </div>
+        <span className="sw2-codechip sw2-code-m">
+          <span className="sw2-codechip-k">{t("wall.code")}</span> <strong>{code}</strong>
+        </span>
       )}
-      <p className="sw-small">{t("wall.codeHint")}</p>
+      {code && <p className="sw-small">{t("wall.codeHint")}</p>}
       {invite && (
-        <details className="sw2-invite" open>
+        <details className="sw2-invite" open={s.members.length <= 1}>
           <summary>{t("wall.invite")}</summary>
           <div className="v3-qr">
             <QRCodeSVG value={invite.link} size={132} level="M" marginSize={2} bgColor="#ffffff" fgColor="#0f172a" title={t("wall.qrTitle")} />
@@ -1016,7 +1063,7 @@ function PostRow({ post: p, first, ...f }: FeedProps & { post: Post; first: bool
         )}
         {first && (
           <div className="sw2-post-head">
-            <span className="sw2-post-author" style={{ color: `hsl(${avatarHue(p.by)} 60% 50%)` }}>
+            <span className="sw2-post-author">
               {author.name}
             </span>
             {author.host && <span className="sw2-badge is-host">{t("wall.badgeHost")}</span>}
@@ -1420,6 +1467,7 @@ function Composer(c: ComposerProps) {
           disabled={disabled}
           maxLength={MAX_MSG_CHARS}
           placeholder={t("wall.msgPlaceholder")}
+          title={t("wall.msgHint")}
           aria-label={t("wall.msgLabel")}
           onChange={(e) => {
             setText(e.target.value);

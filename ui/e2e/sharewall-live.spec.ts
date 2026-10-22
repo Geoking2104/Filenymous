@@ -90,6 +90,7 @@ test("live camera + screen: the host forwards streams to every viewer, limit 2, 
     expect(all).not.toMatch(/m=video|m=audio/);
   }
   host.page.removeAllListeners("dialog");
+  await host.page.getByTestId("wall-actions").click();
   await host.page.getByTestId("wall-destroy").click();
   await answerLeave(host.page, true);
   await expect(b.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed", { timeout: 10_000 });

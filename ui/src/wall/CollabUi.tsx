@@ -5,7 +5,7 @@
  */
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { SCOPE_DEFAULT, TASK_TEXT_MAX, scopeName, type AgentScope, type Task, type TaskKind } from "./collab";
+import { SCOPE_DEFAULT, TASK_TEXT_MAX, TERMINAL_STATES, scopeName, type AgentScope, type Task, type TaskKind } from "./collab";
 import type { Member } from "./feed";
 import { Hl } from "./Markup";
 
@@ -85,7 +85,7 @@ export function TasksPanel({ tasks, members, self, isHost, nameOf, api, canWrite
                 <span className={`sw-task-state is-${x.state}`} data-testid="wall-task-state" data-state={x.state} title={t("wall.tasks.stateHint")}>
                   🤝 {t(`wall.tasks.state.${x.state}`)}
                 </span>
-                {x.note && <small className="sw-task-note" data-testid="wall-task-note">{x.note}</small>}
+                {x.note && !x.done && !TERMINAL_STATES.has(x.state) && <small className="sw-task-note" data-testid="wall-task-note">{x.note}</small>}
                 {x.result && <small data-testid="wall-task-result">📎 {t("wall.tasks.result")}</small>}
                 {canWrite && (isHost || x.by === self) && !["completed", "failed", "canceled", "rejected"].includes(x.state) && (
                   <button type="button" className="sw2-linkbtn" data-testid="wall-task-cancel" onClick={() => quiet(api.updateTask(x.id, { state: "canceled" }))}>

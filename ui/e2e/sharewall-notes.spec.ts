@@ -156,11 +156,13 @@ test("host export contains the notes (JSON + Markdown)", async ({ browser }) => 
   await expect.poll(async () => (await host.getByTestId("note-row").first().textContent()) ?? "").toContain("Compte rendu");
   await a.getByTestId("note-close").click(); // flush
   await host.getByTestId("wall-tab-members").click();
+  await host.getByTestId("wall-actions").click();
   await host.getByTestId("wall-export").click();
   const [dl] = await Promise.all([host.waitForEvent("download"), host.getByTestId("wall-export-confirm").click()]);
   const snap = JSON.parse(readFileSync((await dl.path())!, "utf8"));
   expect(snap.notes).toHaveLength(1);
   expect(snap.notes[0]).toMatchObject({ title: "Compte rendu", text: "On garde le **café**.", by: expect.stringMatching(/^peer:/) });
+  await host.getByTestId("wall-actions").click();
   await host.getByTestId("wall-export").click();
   await host.getByTestId("wall-export-format-md").check();
   const [md] = await Promise.all([host.waitForEvent("download"), host.getByTestId("wall-export-confirm").click()]);

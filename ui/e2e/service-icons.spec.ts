@@ -180,6 +180,7 @@ test("each card's icon is shown on every screen of its service (desktop, light)"
   await peer.goto(local(wallLink));
   await expect(peer.getByTestId("wall-peer-status")).toHaveAttribute("data-status", "online", { timeout: 20_000 });
   await expectIcon(peer, "wall", "21-wall-peer");
+  await host.getByTestId("wall-actions").click();
   await host.getByTestId("wall-destroy").click();
   await host.getByTestId("leave-confirm").click();
   await expect(peer.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed", { timeout: 10_000 });

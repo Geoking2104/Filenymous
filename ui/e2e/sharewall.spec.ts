@@ -156,15 +156,18 @@ test("3 contexts: live grid, snippets, previews, identical downloads, kill switc
   // A peer can leave: it wipes its copy, the others keep going.
   b.page.removeAllListeners("dialog");
   // "Quitter le mur" asks first; Cancel keeps the peer on the wall.
+  await b.page.getByTestId("wall-actions").click();
   await b.page.getByTestId("wall-leave").click();
   await answerLeave(b.page, false);
   await expect(b.page.getByTestId("wall-peer-status")).toHaveAttribute("data-status", "online");
+  await b.page.getByTestId("wall-actions").click();
   await b.page.getByTestId("wall-leave").click();
   await answerLeave(b.page, true);
   await expect(b.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "left");
   await expect(host.page.getByTestId("wall-host")).toHaveAttribute("data-peers", "1");
 
   // Kill switch: the host destroys the wall, peers wipe, the relay closes the room.
+  await host.page.getByTestId("wall-actions").click();
   await host.page.getByTestId("wall-destroy").click();
   await answerLeave(host.page, true);
   await expect(host.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed");
@@ -221,6 +224,7 @@ test("password + burn after one download; the host sees the item disappear", asy
   await expect(item(b.page, "once.bin").locator(".sw-chip")).toBeVisible();
   await expect(item(a.page, "once.bin").locator(".sw-chip")).toBeVisible({ timeout: 10_000 });
 
+  await host.page.getByTestId("wall-actions").click();
   await host.page.getByTestId("wall-destroy").click();
   await answerLeave(host.page, true);
   await expect(b.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed", { timeout: 10_000 });
@@ -400,6 +404,7 @@ test("3 contexts: live feed, emoji picker, reactions, replies, mentions, poll, r
     const all = c.sent.join("\n");
     for (const s of ["tout le monde", "Alice", "On commande", "Pizza", "🚀"]) expect(all).not.toContain(s);
   }
+  await host.page.getByTestId("wall-actions").click();
   await host.page.getByTestId("wall-destroy").click();
   await answerLeave(host.page, true);
   await expect(a.page.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed", { timeout: 10_000 });
