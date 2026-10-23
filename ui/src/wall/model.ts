@@ -26,6 +26,7 @@ import {
 } from "./feed";
 
 import { parseSearchMessage, type SearchRequest, type SearchResponse } from "./wallsearch";
+import { parseThreadMessage, type ThreadRequest, type ThreadUpdate } from "./threads";
 
 export type ItemKind = "file" | "text";
 
@@ -105,6 +106,8 @@ export type WallMessage =
   | { t: "task-gone"; id: string }
   | { t: "board"; els: BoardElement[] }
   | SearchRequest
+  | ThreadRequest
+  | ThreadUpdate
   | SearchResponse;
 
 export interface RtcMessage {
@@ -325,7 +328,7 @@ export function parseWallMessage(m: unknown): WallMessage | null {
     case "destroy":
       return ["destroyed", "expired", "host-left"].includes(o.reason as string) ? { t: "destroy", reason: o.reason as DestroyReason } : null;
     default:
-      return parseSearchMessage(o);
+      return String(o.t).startsWith("thread") ? parseThreadMessage(o) : parseSearchMessage(o);
   }
 }
 

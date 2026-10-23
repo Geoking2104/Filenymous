@@ -54,6 +54,7 @@ import {
   type WallMessage,
 } from "./model";
 import { WallSignalClient, type WallJoin } from "./signal";
+import { THREAD_KEEP, ThreadBoard, type Thread, type ThreadMsg } from "./threads";
 import { SEARCH_K_DEFAULT, rankDocs, type SearchDoc, type SemanticRanker } from "./wallsearch";
 
 export const MAX_PEERS = 8;
@@ -89,6 +90,10 @@ export interface HostState {
   pendingAgents: Array<{ label: string; name: string }>;
   /** Context packs: agent label → ids (posts, notes, tasks) the host shared with it. */
   packs: Record<string, string[]>;
+  /** Private agent-to-agent threads (the host routes and sees them). */
+  threads: Thread[];
+  /** thread id → messages (last THREAD_KEEP). */
+  threadMsgs: Record<string, ThreadMsg[]>;
   error?: string;
   notice?: { code: string; at: number; retryMs?: number };
 }
@@ -160,6 +165,8 @@ export interface WallHostOptions {
   agentScope?: AgentScope;
   /** Local semantic ranker for agents' wall_search (browser: on-device embeddings). Keyword ranking otherwise. */
   ranker?: SemanticRanker | null;
+  /** Open agent-to-agent threads without asking (CLI host). Browser hosts approve each one. */
+  autoApproveThreads?: boolean;
 }
 
 /**
@@ -188,6 +195,8 @@ export class WallHost {
   private boardLimit: RateLimiter;
   private packs = new Map<string, Set<string>>();
   private searchLimit = new RateLimiter(6, 1 / 5);
+  private threads = new ThreadBoard();
+  private threadLimit = new RateLimiter(LIMITS.chat.capacity, LIMITS.chat.perSecond);
   private self: Member;
   state: HostState;
 
@@ -219,6 +228,8 @@ export class WallHost {
       boardRev: 0,
       pendingAgents: [],
       packs: {},
+      threads: [],
+      threadMsgs: {},
     };
   }
 
@@ -421,6 +432,82 @@ export class WallHost {
     return docs;
   }
 
+  // ---- private agent-to-agent threads ----
+
+  /** Agents that can be in a thread: approved agent members, plus the host when it is an agent itself. */
+  private threadPeer(label: string): Peer | "self" | null {
+    if (label === HOST_LABEL) return this.self.agent ? "self" : null;
+    const p = this.peerByLabel(label)?.[1];
+    return p?.member?.agent && p.feat >= 4 ? p : null;
+  }
+
+  private publishThread(t: Thread) {
+    this.update({ threads: [...this.threads.list()] });
+    for (const l of [t.a, t.b]) {
+      const p = this.threadPeer(l);
+      if (p && p !== "self") void this.sendControl(p, { t: "thread", thread: t });
+    }
+    this.emit({ type: "thread", thread: t });
+  }
+
+  private threadOpen(by: string, to: string, goal?: string, task?: string) {
+    if (this.done) return;
+    const me = this.threadPeer(by);
+    const peer = by === HOST_LABEL ? null : this.peerByLabel(by)?.[1] ?? null;
+    if (!me) return void (peer && this.notify(peer, "thread-denied"));
+    if (!this.threadPeer(to)) return void (peer ? this.notify(peer, "thread-denied") : this.update({ notice: { code: "thread-denied", at: Date.now() } }));
+    if (task && !this.taskBoard.list().some((x) => x.id === task)) task = undefined;
+    const t = this.threads.open(by, to, goal, task);
+    if (typeof t === "string") return void (peer ? this.notify(peer, t === "limit" ? "thread-limit" : "thread-denied") : undefined);
+    this.update({ threadMsgs: { ...this.state.threadMsgs, [t.id]: [] } });
+    this.publishThread(t);
+    if (this.opts.autoApproveThreads) this.approveThread(t.id);
+  }
+
+  private threadSay(by: string, id: string, text: string) {
+    const peer = by === HOST_LABEL ? null : this.peerByLabel(by)?.[1] ?? null;
+    if (peer && !this.threadLimit.take(by)) return void this.notify(peer, "rate-limited", this.threadLimit.retryIn(by));
+    const r = this.threads.say(id, by, text);
+    if (!r) return void (peer && this.notify(peer, "thread-denied"));
+    const list = [...(this.state.threadMsgs[id] ?? []), r.msg].slice(-THREAD_KEEP);
+    this.update({ threads: [...this.threads.list()], threadMsgs: { ...this.state.threadMsgs, [id]: list } });
+    for (const l of [r.thread.a, r.thread.b]) {
+      const p = this.threadPeer(l);
+      if (p && p !== "self") void this.sendControl(p, { t: "thread-msg", id, msg: r.msg });
+    }
+    this.emit({ type: "thread-msg", id, msg: r.msg });
+  }
+
+  private threadClose(by: string, id: string) {
+    const t = this.threads.get(id);
+    if (!t || (by !== HOST_LABEL && !this.threads.involves(t, by))) return;
+    const next = this.threads.setState(id, "closed", by);
+    if (next) this.publishThread(next);
+  }
+
+  /** Host: lets a pending thread start (both agents then exchange through this tab). */
+  approveThread(id: string) {
+    const t = this.threads.get(id);
+    if (!t || t.state !== "pending" || !this.threadPeer(t.a) || !this.threadPeer(t.b)) return;
+    const next = this.threads.setState(id, "open");
+    if (next) this.publishThread(next);
+  }
+
+  /** Host: closes (or refuses) a thread. */
+  closeThread(id: string) {
+    this.threadClose(HOST_LABEL, id);
+  }
+
+  /** The host's own agent side (CLI host that is an agent): open / write in its threads. */
+  openThreadAsHost(to: string, goal?: string, task?: string): Thread | null {
+    const before = new Set(this.threads.list().map((t) => t.id));
+    this.threadOpen(HOST_LABEL, to, goal, task);
+    return this.threads.list().find((t) => !before.has(t.id)) ?? null;
+  }
+  sayInThreadAsHost(id: string, text: string) {
+    this.threadSay(HOST_LABEL, id, text);
+  }
+
   /** The host's own search over everything on the wall (never leaves this process/tab). */
   searchLocal(q: string, k = SEARCH_K_DEFAULT) {
     return rankDocs(q, this.searchDocs(null), k, this.opts.ranker);
@@ -464,6 +551,8 @@ export class WallHost {
       this.noteLimit.forget(peer.label);
       this.boardLimit.forget(peer.label);
       this.searchLimit.forget(peer.label);
+      this.threadLimit.forget(peer.label);
+      for (const t of this.threads.closeAllOf(peer.label)) this.publishThread(t);
       for (const id of this.board.releaseAll(peer.label)) this.publishLock(id, null);
     }
     try { peer.pc.close(); } catch { /* ignore */ }
@@ -690,6 +779,7 @@ export class WallHost {
       case "snote-new": case "snote-edit": case "snote-del": case "snote-lock":
       case "task-new": case "task-set": case "task-del":
       case "hand": case "burst": case "live-start": case "board-op":
+      case "thread-open": case "thread-say": case "thread-close":
         return "post";
       case "get": {
         const post = this.findPost(msg.id);
@@ -729,6 +819,15 @@ export class WallHost {
     switch (msg.t) {
       case "search":
         return void this.search(peer, msg.rid, msg.q, msg.k);
+      case "thread-open":
+        return this.threadOpen(label, msg.to, msg.goal, msg.task);
+      case "thread-say":
+        return this.threadSay(label, msg.id, msg.text);
+      case "thread-close":
+        return this.threadClose(label, msg.id);
+      case "thread":
+      case "thread-msg":
+        return;
       case "put": {
         if (!this.chatLimit.take(label)) {
           this.notify(peer, "rate-limited", this.chatLimit.retryIn(label));

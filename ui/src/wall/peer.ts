@@ -4,6 +4,7 @@ import { CONNECT_TIMEOUT_MS, LOW_WATER, addRemoteCandidate, waitForDrain } from 
 import { iceCandidateInit, type SignalPayload } from "../p2p/signal";
 import { b64urlEncode } from "../p2p/protocol";
 import type { SearchHit, SearchMode } from "./wallsearch";
+import { THREAD_KEEP, type Thread, type ThreadMsg } from "./threads";
 import { WALL_FEATURES, mergeScene, sortTasks, type BoardElement, type Task, type TaskKind, type TaskPatch } from "./collab";
 import { SealedPipe, WALL_PROTOCOL_VERSION, checkProof, deriveWallKeys, parseHandshake, sealProof, wallBaseMaterial } from "./crypto";
 import { MAX_POSTS, diffMembers, type BurstKind, type LiveInfo, type LiveKind, type Member, type Post, type WallEvent } from "./feed";
@@ -73,6 +74,9 @@ export interface PeerState {
   pending: boolean;
   /** Host's protocol feature level (3 = delegated-task states). */
   hostFeat: number;
+  /** Private threads this agent is in (routed and seen by the host). */
+  threads: Thread[];
+  threadMsgs: Record<string, ThreadMsg[]>;
   notice?: { code: string; at: number; retryMs?: number };
   error?: string;
 }
@@ -156,6 +160,8 @@ export class WallPeer {
       boardRev: 0,
       pending: false,
       hostFeat: 1,
+      threads: [],
+      threadMsgs: {},
     };
   }
 
@@ -394,7 +400,21 @@ export class WallPeer {
           boardRev: this.state.boardRev + 1,
           pending: !!msg.pending,
           hostFeat: msg.feat ?? 1,
+          threads: [],
+          threadMsgs: {},
         });
+      case "thread": {
+        const t = msg.thread;
+        this.update({ threads: [...this.state.threads.filter((x) => x.id !== t.id), t], threadMsgs: this.state.threadMsgs[t.id] ? this.state.threadMsgs : { ...this.state.threadMsgs, [t.id]: [] } });
+        this.emit({ type: "thread", thread: t });
+        return;
+      }
+      case "thread-msg": {
+        const list = [...(this.state.threadMsgs[msg.id] ?? []), msg.msg].slice(-THREAD_KEEP);
+        this.update({ threadMsgs: { ...this.state.threadMsgs, [msg.id]: list } });
+        this.emit({ type: "thread-msg", id: msg.id, msg: msg.msg });
+        return;
+      }
       case "task":
         this.update({ tasks: sortTasks([...this.state.tasks.filter((x) => x.id !== msg.task.id), msg.task]) });
         this.emit({ type: "task", task: msg.task });
@@ -729,6 +749,20 @@ export class WallPeer {
     void this.sendControl({ t: "snote-lock", id, on }).catch(() => undefined);
   }
 
+  /** Asks the host to open a private thread with another agent (the host approves it and sees it). */
+  openThread(to: string, goal?: string, task?: string): Promise<void> {
+    if (this.state.hostFeat < 4) return Promise.reject(new Error("this wall's host does not support agent threads (older version)"));
+    return this.sendControl({ t: "thread-open", to, ...(goal ? { goal } : {}), ...(task ? { task } : {}) });
+  }
+  sayInThread(id: string, text: string): Promise<void> {
+    if (this.state.hostFeat < 4) return Promise.reject(new Error("this wall's host does not support agent threads (older version)"));
+    return this.sendControl({ t: "thread-say", id, text });
+  }
+  closeThread(id: string): Promise<void> {
+    if (this.state.hostFeat < 4) return Promise.reject(new Error("this wall's host does not support agent threads (older version)"));
+    return this.sendControl({ t: "thread-close", id });
+  }
+
   /** Asks the host tab to search the wall (feature 4); resolves with top-k snippets. */
   search(q: string, k?: number): Promise<{ mode: SearchMode; hits: SearchHit[] }> {
     if (this.state.hostFeat < 4) return Promise.reject(new Error("this wall's host does not support wall search (older version)"));
@@ -836,7 +870,7 @@ export class WallPeer {
     this.signal?.close();
     for (const fn of this.wipeListeners) fn();
     this.board = [];
-    this.update({ status: reason, posts: [], members: [], pinned: null, live: [], media: {}, typing: {}, uploads: [], mine: [], notes: [], noteLocks: {}, tasks: [], boardRev: this.state.boardRev + 1, pending: false, label: undefined });
+    this.update({ status: reason, posts: [], members: [], pinned: null, live: [], media: {}, typing: {}, uploads: [], mine: [], notes: [], noteLocks: {}, tasks: [], boardRev: this.state.boardRev + 1, pending: false, label: undefined, threads: [], threadMsgs: {} });
   }
 
   async leave() {

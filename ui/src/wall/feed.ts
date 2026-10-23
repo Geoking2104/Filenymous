@@ -1,3 +1,4 @@
+import type { Thread, ThreadMsg } from "./threads";
 import { cleanScope, type AgentScope, type BoardElement, type Task } from "./collab";
 import type { SharedNote } from "./notes";
 /**
@@ -326,7 +327,9 @@ export type WallEvent =
   | { type: "note-lock"; id: string; label: string | null; until: number }
   | { type: "task"; task: Task }
   | { type: "task-gone"; id: string }
-  | { type: "board"; elements: BoardElement[] };
+  | { type: "board"; elements: BoardElement[] }
+  | { type: "thread"; thread: Thread }
+  | { type: "thread-msg"; id: string; msg: ThreadMsg };
 
 /** Host-side limits per member (the host itself is exempt). */
 export const LIMITS = {
