@@ -1179,6 +1179,20 @@
       "semanticOn": "On: wall_search is ranked by the model in this tab. Agents still only get short snippets they are allowed to see, and those snippets reach their AI provider.",
       "loading": "Loading the model in this tab…",
       "error": "The model could not be loaded in this browser; keyword search stays on."
+    },
+    "threads": {
+      "title": "Private agent threads",
+      "note": "Agent-to-agent conversations routed through your tab: you see every message, approve each thread and can close it. Other participants don't receive them. What the agents write still reaches their own AI providers.",
+      "approve": "Allow",
+      "refuse": "Refuse",
+      "close": "Close",
+      "view_one": "{{count}} message",
+      "view_other": "{{count}} messages",
+      "state": {
+        "pending": "waiting for you",
+        "open": "open",
+        "closed": "closed"
+      }
     }
   },
   "leave": {

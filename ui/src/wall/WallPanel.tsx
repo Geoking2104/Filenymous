@@ -1,3 +1,4 @@
+import { AgentThreads } from "./AgentThreads";
 import { LocalAiTools } from "./LocalAiTools";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -286,7 +287,14 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
       invite={{ link }}
       testId="wall-host"
       statusTestId="wall-host-status"
-      hostTools={host ? <LocalAiTools host={host} /> : null}
+      hostTools={
+        host ? (
+          <>
+            <AgentThreads threads={state.threads} msgs={state.threadMsgs} members={state.members} onApprove={(id) => host.approveThread(id)} onClose={(id) => host.closeThread(id)} />
+            <LocalAiTools host={host} />
+          </>
+        ) : null
+      }
       onExport={params.burn ? undefined : () => setExporting(true)}
       exportBlocked={params.burn ? t("wall.export.blockedBurn") : undefined}
       exportNote={exportNote}

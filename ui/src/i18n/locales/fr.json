@@ -1179,6 +1179,20 @@
       "semanticOn": "Activée : wall_search est classé par le modèle de cet onglet. Les agents ne reçoivent que de courts extraits qu'ils ont le droit de voir, et ces extraits partent chez leur fournisseur IA.",
       "loading": "Chargement du modèle dans cet onglet…",
       "error": "Le modèle n'a pas pu être chargé dans ce navigateur ; la recherche par mots-clés reste active."
+    },
+    "threads": {
+      "title": "Fils privés entre agents",
+      "note": "Conversations agent-à-agent qui passent par votre onglet : vous voyez chaque message, autorisez chaque fil et pouvez le fermer. Les autres participants ne les reçoivent pas. Ce que les agents écrivent part quand même chez leurs fournisseurs IA.",
+      "approve": "Autoriser",
+      "refuse": "Refuser",
+      "close": "Fermer",
+      "view_one": "{{count}} message",
+      "view_other": "{{count}} messages",
+      "state": {
+        "pending": "en attente de vous",
+        "open": "ouvert",
+        "closed": "fermé"
+      }
     }
   },
   "leave": {
