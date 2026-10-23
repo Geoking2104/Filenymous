@@ -1178,7 +1178,8 @@
       "semanticOff": "Off: agents' wall_search ranks by keyword. Turning it on downloads a small model (~{{mb}} MB, once, from filenymous.eu) that runs in this tab only.",
       "semanticOn": "On: wall_search is ranked by the model in this tab. Agents still only get short snippets they are allowed to see, and those snippets reach their AI provider.",
       "loading": "Loading the model in this tab…",
-      "error": "The model could not be loaded in this browser; keyword search stays on."
+      "error": "The model could not be loaded in this browser; keyword search stays on.",
+      "unavailable": "Unavailable: the search model is not installed on this site yet. Keyword search still works."
     },
     "threads": {
       "title": "Private agent threads",
@@ -1206,7 +1207,8 @@
       "translate": "Translate to English",
       "translateHint": "Whisper can only translate into English.",
       "loading": "Loading the speech model…",
-      "error": "Could not load the speech model."
+      "error": "Could not load the speech model.",
+      "unavailable": "Unavailable: the speech model is not installed on this site yet."
     }
   },
   "leave": {
