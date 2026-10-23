@@ -1193,6 +1193,20 @@
         "open": "ouvert",
         "closed": "fermé"
       }
+    },
+    "captions": {
+      "on": "Sous-titres en direct activés : l’hôte transcrit l’audio en direct sur son propre appareil (Whisper) et publie le texte sur le mur.",
+      "onEn": "Sous-titres en direct activés, traduits en anglais : l’hôte transcrit l’audio en direct sur son propre appareil (Whisper) et publie le texte sur le mur.",
+      "badge": "sous-titre",
+      "badgeEn": "sous-titre · EN",
+      "badgeHint": "Transcription automatique faite sur l’appareil de l’hôte ; elle peut contenir des erreurs.",
+      "toggle": "Sous-titres en direct",
+      "toggleOff": "Désactivés. Transcrit l’audio en direct dans cet onglet ; les participants sont prévenus. Télécharge ~{{mb}} Mo une fois.",
+      "toggleOn": "Activés : les participants voient un indicateur.",
+      "translate": "Traduire en anglais",
+      "translateHint": "Whisper ne sait traduire que vers l’anglais.",
+      "loading": "Chargement du modèle vocal…",
+      "error": "Impossible de charger le modèle vocal."
     }
   },
   "leave": {

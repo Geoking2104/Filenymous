@@ -75,6 +75,8 @@ export interface Entry {
   at: string;
   text?: string;
   replyTo?: string;
+  /** Automatic live caption transcribed on the host's device (may contain errors); en: translated to English. */
+  caption?: { en: boolean };
   mentions?: string[];
   mentionsMe?: boolean;
   file?: { name: string; size: number; mime: string };
@@ -156,6 +158,7 @@ export class WallAgent {
     };
     if (p.text) e.text = p.text;
     if (p.replyTo) e.replyTo = p.replyTo;
+    if (p.caption) e.caption = { en: !!p.caption.en };
     if (p.mentions?.length) {
       e.mentions = p.mentions;
       e.mentionsMe = !!this.self && p.mentions.includes(this.self);
@@ -213,6 +216,9 @@ export class WallAgent {
       }
       case "pin":
         this.emit({ event: "pin", id: ev.id });
+        return;
+      case "captions":
+        this.emit({ event: "captions", on: !!ev.mode, ...(ev.mode ? { en: ev.mode.en } : {}) });
         return;
       case "live":
         if (!ev.streams.length && !this.liveCount) return;

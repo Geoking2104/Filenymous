@@ -1193,6 +1193,20 @@
         "open": "open",
         "closed": "closed"
       }
+    },
+    "captions": {
+      "on": "Live captions are on: the host transcribes live audio on their own device (Whisper) and posts the text to the wall.",
+      "onEn": "Live captions are on, translated to English: the host transcribes live audio on their own device (Whisper) and posts the text to the wall.",
+      "badge": "caption",
+      "badgeEn": "caption · EN",
+      "badgeHint": "Automatic transcription made on the host's device; it may contain errors.",
+      "toggle": "Live captions",
+      "toggleOff": "Off. Transcribes live audio in this tab; participants are told. Downloads ~{{mb}} MB once.",
+      "toggleOn": "On: participants see a captions indicator.",
+      "translate": "Translate to English",
+      "translateHint": "Whisper can only translate into English.",
+      "loading": "Loading the speech model…",
+      "error": "Could not load the speech model."
     }
   },
   "leave": {

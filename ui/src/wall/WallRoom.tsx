@@ -37,6 +37,7 @@ import {
   initials,
   pollTotals,
   type BurstKind,
+  type CaptionMode,
   type LiveInfo,
   type LiveKind,
   type Member,
@@ -71,6 +72,8 @@ export interface RoomState {
   members: Member[];
   pinned: string | null;
   live: LiveInfo[];
+  /** Live captions announced by the host (participants see an indicator). */
+  captions?: CaptionMode | null;
   media: Record<string, MediaStream>;
   typing: Record<string, number>;
   agents: boolean;
@@ -608,6 +611,11 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
               )}
             </div>
           )}
+          {s.captions && (
+            <div className="sw2-captions-on" role="status" data-testid="wall-captions-on">
+              🎙️ {t(s.captions.en ? "wall.captions.onEn" : "wall.captions.on")}
+            </div>
+          )}
           {s.live.length > 0 && (
             <LiveStage
               live={s.live}
@@ -1050,7 +1058,7 @@ function PostRow({ post: p, first, ...f }: FeedProps & { post: Post; first: bool
   return (
     <article
       id={`post-${p.id}`}
-      className={`sw2-post${first ? " is-first" : ""}${mentionsMe ? " is-mention" : ""}${f.s.pinned === p.id ? " is-pinned" : ""}${gone ? " is-local" : ""}`}
+      className={`sw2-post${first ? " is-first" : ""}${mentionsMe ? " is-mention" : ""}${f.s.pinned === p.id ? " is-pinned" : ""}${gone ? " is-local" : ""}${p.caption ? " is-caption" : ""}`}
       data-testid={isItem ? "wall-item" : p.kind === "poll" ? "wall-poll" : "wall-msg"}
       data-kind={p.kind === "note" ? "text" : p.kind === "file" ? "file" : p.kind}
       data-name={p.item?.name}
@@ -1070,6 +1078,11 @@ function PostRow({ post: p, first, ...f }: FeedProps & { post: Post; first: bool
               {author.name}
             </span>
             {author.host && <span className="sw2-badge is-host">{t("wall.badgeHost")}</span>}
+            {p.caption && (
+              <span className="sw2-badge is-caption" data-testid="wall-caption-badge" title={t("wall.captions.badgeHint")}>
+                🎙️ {t(p.caption.en ? "wall.captions.badgeEn" : "wall.captions.badge")}
+              </span>
+            )}
             {author.agent && (
               <span className="sw2-badge is-ai" title={t("wall.agents.badgeHint")}>
                 {t("wall.badgeAi")}

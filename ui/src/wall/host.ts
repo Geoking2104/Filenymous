@@ -4,8 +4,10 @@ import { iceCandidateInit, type SignalPayload } from "../p2p/signal";
 import { holdUnloadGuard, releaseUnloadGuard } from "../p2p/unloadGuardCore";
 import { SealedPipe, WALL_PROTOCOL_VERSION, checkProof, deriveWallKeys, parseHandshake, sealProof, wallBaseMaterial } from "./crypto";
 import {
+  CAPTION_PREFIX,
   LIMITS,
   MAX_LIVE,
+  MAX_MSG_CHARS,
   MAX_POSTS,
   RateLimiter,
   castVote,
@@ -17,6 +19,7 @@ import {
   randomPostId,
   toggleReaction,
   type BurstKind,
+  type CaptionMode,
   type LiveInfo,
   type LiveKind,
   type Member,
@@ -70,6 +73,8 @@ export interface HostState {
   members: Member[];
   pinned: string | null;
   live: LiveInfo[];
+  /** Live captions announced to everyone (null = off). Opt-in by the host. */
+  captions: CaptionMode | null;
   /** sid → stream shown in this tab (own capture or forwarded from a publisher). */
   media: Record<string, MediaStream>;
   /** label → last "typing" signal (ms). */
@@ -221,6 +226,7 @@ export class WallHost {
       members: [this.self],
       pinned: null,
       live: [],
+      captions: null,
       media: {},
       typing: {},
       agents: !!opts.allowAgents,
@@ -403,6 +409,33 @@ export class WallHost {
   }
 
   /** Swaps the semantic ranker (the host enabled / disabled the local model). */
+  private liveMsg(streams: LiveInfo[]): WallMessage {
+    return { t: "live", streams, ...(this.state.captions ? { captions: this.state.captions } : {}) };
+  }
+
+  /**
+   * Turns live captions on/off. Participants are told (they show an
+   * indicator) before any caption is posted. Transcription itself runs in the
+   * host tab (see ai/transcriber.ts) and calls postCaption.
+   */
+  setCaptions(mode: CaptionMode | null) {
+    if (JSON.stringify(mode) === JSON.stringify(this.state.captions)) return;
+    this.update({ captions: mode });
+    this.broadcast(this.liveMsg(this.state.live));
+    this.emit({ type: "captions", mode });
+  }
+
+  /** Posts one caption chunk for live stream `sid` (attributed to its speaker). */
+  postCaption(sid: string, text: string): Post | null {
+    const mode = this.state.captions;
+    const live = this.state.live.find((l) => l.sid === sid);
+    const clean = cleanMessage(text.slice(0, MAX_MSG_CHARS - 8));
+    if (!mode || !live || !clean) return null;
+    const post: Post = { id: randomPostId("m"), kind: "msg", by: live.by, at: Date.now(), text: CAPTION_PREFIX + clean, caption: { sid, ...(mode.en ? { en: true as const } : {}) }, reactions: {} };
+    this.upsert(post);
+    return post;
+  }
+
   setRanker(r: SemanticRanker | null) {
     this.opts.ranker = r;
   }
@@ -732,7 +765,7 @@ export class WallHost {
     }
     for (const task of this.taskBoard.list()) this.deliver(peer, { t: "task", task });
     for (const els of boardBatches(this.wb.list())) this.deliver(peer, { t: "board", els });
-    void this.sendControl(peer, { t: "live", streams: this.state.live });
+    void this.sendControl(peer, this.liveMsg(this.state.live));
     this.refreshMembers();
     if (member.media) for (const pub of this.pubs.values()) if (pub.announced) void this.openDown(peer, pub);
   }
@@ -1216,7 +1249,7 @@ export class WallHost {
     pub.stream = stream;
     const live = [...this.state.live, { sid: pub.sid, by: pub.by, kind: pub.kind }];
     this.update({ live, media: { ...this.state.media, [pub.sid]: stream } });
-    this.broadcast({ t: "live", streams: live });
+    this.broadcast(this.liveMsg(live));
     this.emit({ type: "live", streams: live });
     for (const [, p] of this.members()) if (p.member!.media && p.label !== pub.by) void this.openDown(p, pub);
   }
@@ -1255,7 +1288,7 @@ export class WallHost {
     const live = this.state.live.filter((l) => l.sid !== sid);
     this.update({ live, media });
     if (pub.announced) {
-      this.broadcast({ t: "live", streams: live });
+      this.broadcast(this.liveMsg(live));
       this.emit({ type: "live", streams: live });
     }
   }

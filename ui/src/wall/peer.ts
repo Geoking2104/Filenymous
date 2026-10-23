@@ -7,7 +7,7 @@ import type { SearchHit, SearchMode } from "./wallsearch";
 import { THREAD_KEEP, type Thread, type ThreadMsg } from "./threads";
 import { WALL_FEATURES, mergeScene, sortTasks, type BoardElement, type Task, type TaskKind, type TaskPatch } from "./collab";
 import { SealedPipe, WALL_PROTOCOL_VERSION, checkProof, deriveWallKeys, parseHandshake, sealProof, wallBaseMaterial } from "./crypto";
-import { MAX_POSTS, diffMembers, type BurstKind, type LiveInfo, type LiveKind, type Member, type Post, type WallEvent } from "./feed";
+import { MAX_POSTS, diffMembers, type BurstKind, type CaptionMode, type LiveInfo, type LiveKind, type Member, type Post, type WallEvent } from "./feed";
 import { isExpired, type WallParams } from "./link";
 import { MediaLink, stopStream } from "./live";
 import { MAX_TEXT_BYTES, WALL_CHUNK, admitItem, parseWallMessage, type ItemKind, type ItemMeta, type RtcMessage, type WallMessage } from "./model";
@@ -57,6 +57,8 @@ export interface PeerState {
   members: Member[];
   pinned: string | null;
   live: LiveInfo[];
+  /** Live captions announced by the host (null = off). */
+  captions: CaptionMode | null;
   /** sid → stream (own capture, or received from the host). */
   media: Record<string, MediaStream>;
   typing: Record<string, number>;
@@ -150,6 +152,7 @@ export class WallPeer {
       members: [],
       pinned: null,
       live: [],
+      captions: null,
       media: {},
       typing: {},
       uploads: [],
@@ -368,7 +371,7 @@ export class WallPeer {
     for (const done of this.puts.values()) done({ reason: "connection-lost" });
     this.puts.clear();
     if (wasOnline && this.params.hostLeave) return this.wipe("host-left");
-    this.update({ status: "waiting-host", live: [], media: {}, typing: {} });
+    this.update({ status: "waiting-host", live: [], captions: null, media: {}, typing: {} });
     this.retry = setTimeout(() => void this.begin(), 3000);
   }
 
@@ -509,6 +512,10 @@ export class WallPeer {
       case "kick":
         return this.wipe(msg.reason);
       case "live":
+        if (JSON.stringify(msg.captions ?? null) !== JSON.stringify(this.state.captions)) {
+          this.update({ captions: msg.captions ?? null });
+          this.emit({ type: "captions", mode: msg.captions ?? null });
+        }
         return this.onLive(msg.streams);
       case "live-ok":
         this.liveWait?.({ sid: msg.sid });
@@ -870,7 +877,7 @@ export class WallPeer {
     this.signal?.close();
     for (const fn of this.wipeListeners) fn();
     this.board = [];
-    this.update({ status: reason, posts: [], members: [], pinned: null, live: [], media: {}, typing: {}, uploads: [], mine: [], notes: [], noteLocks: {}, tasks: [], boardRev: this.state.boardRev + 1, pending: false, label: undefined, threads: [], threadMsgs: {} });
+    this.update({ status: reason, posts: [], members: [], pinned: null, live: [], captions: null, media: {}, typing: {}, uploads: [], mine: [], notes: [], noteLocks: {}, tasks: [], boardRev: this.state.boardRev + 1, pending: false, label: undefined, threads: [], threadMsgs: {} });
   }
 
   async leave() {

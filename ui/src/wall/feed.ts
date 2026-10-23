@@ -39,7 +39,21 @@ export interface Post {
    * shown by older clients and agents.
    */
   system?: SystemNotice;
+  /**
+   * Live caption, transcribed on the host's device (opt-in by the host) from
+   * the audio of live stream `sid`; `by` is the speaker. Only the host makes
+   * them. `en`: Whisper translated it to English. The text keeps a 🎙️ prefix
+   * so older clients and agents still see it as a caption.
+   */
+  caption?: { sid: string; en?: true };
 }
+
+/** Host-announced live captions setting (participants show an indicator). */
+export interface CaptionMode {
+  /** Translate speech to English (Whisper only translates into English). */
+  en: boolean;
+}
+export const CAPTION_PREFIX = "🎙️ ";
 
 export type SystemNotice = "exported";
 export const SYSTEM_TEXT: Record<SystemNotice, string> = { exported: "📦 L'hôte a exporté le mur. / The host exported the wall." };
@@ -290,6 +304,11 @@ export function cleanPost(p: unknown, cleanItem: (m: unknown) => ItemMeta | null
     if (o.system !== "exported" || o.kind !== "msg" || o.by !== "host") return null;
     post.system = o.system;
   }
+  if (o.caption !== undefined) {
+    const c = o.caption as Record<string, unknown>;
+    if (o.kind !== "msg" || !c || typeof c !== "object" || typeof c.sid !== "string" || c.sid.length > 40 || (c.en !== undefined && c.en !== true)) return null;
+    post.caption = { sid: c.sid, ...(c.en ? { en: true as const } : {}) };
+  }
   if (o.kind === "msg") {
     if (!isStr(o.text, MAX_MSG_CHARS + 16)) return null;
     post.text = cleanMessage(o.text);
@@ -318,6 +337,7 @@ export type WallEvent =
   | { type: "leave"; member: Member }
   | { type: "members"; members: Member[] }
   | { type: "pin"; id: string | null }
+  | { type: "captions"; mode: CaptionMode | null }
   | { type: "live"; streams: LiveInfo[] }
   | { type: "typing"; label: string }
   | { type: "burst"; label: string; kind: BurstKind }
