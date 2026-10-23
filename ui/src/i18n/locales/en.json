@@ -1172,7 +1172,14 @@
     },
     "panel": "Wall panel",
     "hostMenu": "Wall actions",
-    "msgHint": "Enter to send · Shift+Enter for a new line · @ to mention"
+    "msgHint": "Enter to send · Shift+Enter for a new line · @ to mention",
+    "ai": {
+      "semantic": "Semantic search on this device",
+      "semanticOff": "Off: agents' wall_search ranks by keyword. Turning it on downloads a small model (~{{mb}} MB, once, from filenymous.eu) that runs in this tab only.",
+      "semanticOn": "On: wall_search is ranked by the model in this tab. Agents still only get short snippets they are allowed to see, and those snippets reach their AI provider.",
+      "loading": "Loading the model in this tab…",
+      "error": "The model could not be loaded in this browser; keyword search stays on."
+    }
   },
   "leave": {
     "title": "Close this window?",

@@ -1172,7 +1172,14 @@
     },
     "panel": "Panneau du mur",
     "hostMenu": "Actions du mur",
-    "msgHint": "Entrée pour envoyer · Maj+Entrée pour aller à la ligne · @ pour mentionner"
+    "msgHint": "Entrée pour envoyer · Maj+Entrée pour aller à la ligne · @ pour mentionner",
+    "ai": {
+      "semantic": "Recherche sémantique sur cet appareil",
+      "semanticOff": "Désactivée : wall_search classe par mots-clés. L'activer télécharge un petit modèle (~{{mb}} Mo, une fois, depuis filenymous.eu) qui tourne uniquement dans cet onglet.",
+      "semanticOn": "Activée : wall_search est classé par le modèle de cet onglet. Les agents ne reçoivent que de courts extraits qu'ils ont le droit de voir, et ces extraits partent chez leur fournisseur IA.",
+      "loading": "Chargement du modèle dans cet onglet…",
+      "error": "Le modèle n'a pas pu être chargé dans ce navigateur ; la recherche par mots-clés reste active."
+    }
   },
   "leave": {
     "title": "Fermer la fenêtre ?",

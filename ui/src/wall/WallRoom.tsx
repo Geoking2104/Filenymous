@@ -133,6 +133,8 @@ export interface RoomProps {
   exportNote?: string;
   testId: string;
   statusTestId: string;
+  /** Host only: on-device AI tools (search model, captions), shown under the agents toggle. */
+  hostTools?: ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -197,7 +199,7 @@ function Avatar({ m, size = 36 }: { m: Pick<Member, "label" | "name" | "agent">;
 
 // ---------------------------------------------------------------------------
 
-export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onExport, exportBlocked, exportNote, testId, statusTestId }: RoomProps) {
+export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onExport, exportBlocked, exportNote, testId, statusTestId, hostTools }: RoomProps) {
   const { t, i18n } = useTranslation();
   const blobs = useBlobUrls();
   const [opened, setOpened] = useState<Map<string, Fetched>>(new Map());
@@ -549,6 +551,7 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
             />
           )}
           {sideTab === "members" && isHost && api.setAgents && <AgentsToggle on={s.agents} onChange={api.setAgents} onOpenGuide={() => setAgentsGuideOpen(true)} />}
+          {sideTab === "members" && isHost && hostTools}
           {sideTab === "members" && <section className="sw2-section">
             <h3 className="sw2-h">{t("wall.membersCount", { count: s.members.length })}</h3>
             <ul className="sw2-members" data-testid="wall-members">

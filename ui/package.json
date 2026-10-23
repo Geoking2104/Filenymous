@@ -21,6 +21,7 @@
     "@excalidraw/excalidraw": "^0.18.1",
     "@holo-host/web-conductor-client": "^0.1.0",
     "@holochain/client": "^0.20.5",
+    "@huggingface/transformers": "^3.8.1",
     "@raptorqr/core": "0.1.1",
     "@raptorqr/fast-qr-wasm": "0.1.1",
     "@raptorqr/raptorq-wasm": "0.1.1",

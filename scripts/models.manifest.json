@@ -1,0 +1,123 @@
+{
+ "models": [
+  {
+   "repo": "Xenova/all-MiniLM-L6-v2",
+   "rev": "751bff37182d3f1213fa05d7196b954e230abad9",
+   "file": "config.json",
+   "size": 650,
+   "sha256": "7135149f7cffa1a573466c6e4d8423ed73b62fd2332c575bf738a0d033f70df7"
+  },
+  {
+   "repo": "Xenova/all-MiniLM-L6-v2",
+   "rev": "751bff37182d3f1213fa05d7196b954e230abad9",
+   "file": "tokenizer.json",
+   "size": 711661,
+   "sha256": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0"
+  },
+  {
+   "repo": "Xenova/all-MiniLM-L6-v2",
+   "rev": "751bff37182d3f1213fa05d7196b954e230abad9",
+   "file": "tokenizer_config.json",
+   "size": 366,
+   "sha256": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3"
+  },
+  {
+   "repo": "Xenova/all-MiniLM-L6-v2",
+   "rev": "751bff37182d3f1213fa05d7196b954e230abad9",
+   "file": "special_tokens_map.json",
+   "size": 125,
+   "sha256": "b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3"
+  },
+  {
+   "repo": "Xenova/all-MiniLM-L6-v2",
+   "rev": "751bff37182d3f1213fa05d7196b954e230abad9",
+   "file": "onnx/model_quantized.onnx",
+   "size": 22972370,
+   "sha256": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "config.json",
+   "size": 2248,
+   "sha256": "2b2e4e519084e0ea028b19b153f95202735a971870d6844aa26e559edd292e94"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "generation_config.json",
+   "size": 3716,
+   "sha256": "68ac791fcb4999461a313472125042934656240ba1cba7d1c2627fcbb19ac24c"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "preprocessor_config.json",
+   "size": 339,
+   "sha256": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "tokenizer.json",
+   "size": 2480466,
+   "sha256": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "tokenizer_config.json",
+   "size": 282683,
+   "sha256": "2a4c4281cf9f51ac6ccc406fdc711a087afe6530f671fa7b80953edc498275ce"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "special_tokens_map.json",
+   "size": 2194,
+   "sha256": "e67ae3a0aaa99abcd9f187138e12db1f65c16a14761c50ef10eef2c174a7a691"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "added_tokens.json",
+   "size": 2082,
+   "sha256": "ce949fe720c14311cb6c446e69cfe340dc669d7b006077a6feed6ae571dd7e88"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "vocab.json",
+   "size": 1036584,
+   "sha256": "50d6a919f0a0601d56a04eb583c780d18553aa388254ba3158eb6a00f13e2c1a"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "merges.txt",
+   "size": 493869,
+   "sha256": "2df2990a395e35e8dfbc7511e08c12d56018d8d04691e0133e5d63b21e154dc6"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "normalizer.json",
+   "size": 52666,
+   "sha256": "bf1c507dc8724ca9cf9903640dacfb69dae2f00edee4f21ceba106a7392f26dd"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "onnx/encoder_model_quantized.onnx",
+   "size": 10124910,
+   "sha256": "fd9d995b9dcb0520f0dbf6cf68651af639fc385f594d9d876e69ca2802dc438e"
+  },
+  {
+   "repo": "Xenova/whisper-tiny",
+   "rev": "5332fcc35e32a33b86612b9a57a89be7906102b1",
+   "file": "onnx/decoder_model_merged_quantized.onnx",
+   "size": 30727765,
+   "sha256": "6c0c125986b007d2e3734bec84c18bda0152071b90b87fadac6d7764499927a0"
+  }
+ ]
+}
