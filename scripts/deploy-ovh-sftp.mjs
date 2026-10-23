@@ -46,6 +46,7 @@ function arg(name, def) {
 const dist = arg("--dist");
 const remote = arg("--remote");
 const merge = args.includes("--merge");
+const noBackup = args.includes("--no-backup"); // merge without per-file backups (tight quota)
 const host = arg("--host", "ftp.cluster129.hosting.ovh.net");
 const port = Number(arg("--port", "22"));
 const user = arg("--user", "filenyb");
@@ -86,7 +87,7 @@ if (!files.length) {
 }
 
 console.log(`Deploy ${dist} -> ${user}@${host}:${remote}`);
-console.log(`Files: ${files.length}  Mode: ${merge ? "merge (per-file backup)" : "dir swap"}`);
+console.log(`Files: ${files.length}  Mode: ${merge ? (noBackup ? "merge (no backup)" : "merge (per-file backup)") : "dir swap"}`);
 
 const client = new SftpClient("filenymous-deploy");
 try {
@@ -107,7 +108,7 @@ try {
   let done = 0;
   for (const [rel, abs] of files) {
     const target = posix.join(remote, rel);
-    if (merge) {
+    if (merge && !noBackup) {
       // Back up the existing file (if any) before overwriting.
       try {
         const existing = await client.get(target);
@@ -125,7 +126,7 @@ try {
   }
 
   const list = await client.list(remote);
-  console.log(`Done. ${list.length} entries at ${remote}. Backup: ${backupDir}`);
+  console.log(`Done. ${list.length} entries at ${remote}. Backup: ${merge && noBackup ? "none" : backupDir}`);
 } finally {
   await client.end().catch(() => {});
 }
