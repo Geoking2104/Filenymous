@@ -317,3 +317,84 @@ describe("delegated task states (A2A-style)", () => {
     expect(parseWallMessage({ t: "welcome", label: "peer:1", expiresAt: 0, burn: false, hostLeave: false, agents: true, media: false, feat: 3 })).toMatchObject({ feat: 3 });
   });
 });
+
+describe("WallHost: scoped wall search", () => {
+  const hits = (sent: WallMessage[], rid: number) => {
+    const r = sent.find((m) => (m.t === "search-res" || m.t === "search-fail") && m.rid === rid) as { t: string; hits?: Array<{ snippet: string; kind: string }>; reason?: string };
+    return r;
+  };
+  it("limited agents search only their view; the search scope widens it; secrets stay masked", async () => {
+    const { host, join, flush } = await makeHost();
+    host.say("budget deadline is friday");
+    host.addText("deadline token sk-xyz", "deadline key");
+    const a = join("Bot", true, 4);
+    host.approveAgent(a.label, { ...SCOPE_DEFAULT, limited: true });
+    await flush();
+    await a.send({ t: "search", rid: 1, q: "deadline" });
+    await flush();
+    expect(hits(a.sent, 1).hits).toEqual([]);
+    host.setAgentScope(a.label, { ...SCOPE_DEFAULT, limited: true, search: true });
+    await a.send({ t: "search", rid: 2, q: "deadline" });
+    await flush();
+    const r = hits(a.sent, 2);
+    expect(r.hits!.map((h) => h.snippet).join(" ")).toContain("friday");
+    expect(JSON.stringify(r)).not.toContain("sk-xyz");
+    expect(a.sent.some((m) => m.t === "post" && (m as { post: { text?: string } }).post.text?.includes("friday"))).toBe(false);
+  });
+  it("rate-limits searches", async () => {
+    const { host, join, flush } = await makeHost();
+    const a = join("Bot", true, 4);
+    host.approveAgent(a.label, { ...SCOPE_DEFAULT });
+    await flush();
+    for (let i = 1; i <= 8; i++) await a.send({ t: "search", rid: i, q: "x y" });
+    await flush();
+    expect(a.sent.some((m) => m.t === "search-fail" && m.reason === "rate-limited")).toBe(true);
+  });
+});
+
+describe("WallHost: private agent threads", () => {
+  it("host approves, routes only to the two agents, sees everything and can close", async () => {
+    const { host, join, flush } = await makeHost();
+    const a = join("A", true, 4);
+    const b = join("B", true, 4);
+    const h = join("Human", false, 4);
+    const old = join("Old", true, 2);
+    for (const x of [a, b, old]) host.approveAgent(x.label, { ...SCOPE_DEFAULT });
+    await flush();
+    await a.send({ t: "thread-open", to: old.label, goal: "x" });
+    await flush();
+    expect(a.sent.some((m) => m.t === "notice" && m.code === "thread-denied")).toBe(true);
+    await a.send({ t: "thread-open", to: b.label, goal: "Agree on a plan" });
+    await flush();
+    const th = host.state.threads[0]!;
+    expect(th).toMatchObject({ a: a.label, b: b.label, state: "pending", goal: "Agree on a plan" });
+    await a.send({ t: "thread-say", id: th.id, text: "too early" });
+    await flush();
+    expect(host.state.threadMsgs[th.id]).toEqual([]);
+    host.approveThread(th.id);
+    await a.send({ t: "thread-say", id: th.id, text: "I take part 1" });
+    await b.send({ t: "thread-say", id: th.id, text: "ok, part 2 for me" });
+    await flush();
+    expect(host.state.threadMsgs[th.id]!.map((m) => m.text)).toEqual(["I take part 1", "ok, part 2 for me"]);
+    for (const x of [a, b]) expect(x.sent.filter((m) => m.t === "thread-msg")).toHaveLength(2);
+    expect(h.sent.some((m) => m.t.startsWith("thread"))).toBe(false);
+    expect(old.sent.some((m) => m.t.startsWith("thread"))).toBe(false);
+    expect(host.state.posts).toHaveLength(0);
+    // A third party cannot write into it.
+    await h.send({ t: "thread-say", id: th.id, text: "hi" });
+    await flush();
+    expect(host.state.threadMsgs[th.id]).toHaveLength(2);
+    host.closeThread(th.id);
+    await flush();
+    expect(host.state.threads[0]!.state).toBe("closed");
+    await a.send({ t: "thread-say", id: th.id, text: "after close" });
+    await flush();
+    expect(host.state.threadMsgs[th.id]).toHaveLength(2);
+  });
+  it("parses thread messages strictly", () => {
+    expect(parseWallMessage({ t: "thread-open", to: "evil" })).toBeNull();
+    expect(parseWallMessage({ t: "thread-say", id: "th-0123456789abcdef", text: "  " })).toBeNull();
+    expect(parseWallMessage({ t: "thread-close", id: "nope" })).toBeNull();
+    expect(parseWallMessage({ t: "thread-open", to: "peer:2", goal: "g" })).toEqual({ t: "thread-open", to: "peer:2", goal: "g" });
+  });
+});

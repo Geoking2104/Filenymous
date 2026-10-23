@@ -1,3 +1,5 @@
+import { AgentThreads } from "./AgentThreads";
+import { LocalAiTools } from "./LocalAiTools";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { p2pSupported } from "../p2p/config";
@@ -249,6 +251,7 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
 
   const room: RoomState = {
     role: "host",
+    captions: state.captions,
     status: state.status,
     statusText,
     online: true,
@@ -285,6 +288,14 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
       invite={{ link }}
       testId="wall-host"
       statusTestId="wall-host-status"
+      hostTools={
+        host ? (
+          <>
+            <AgentThreads threads={state.threads} msgs={state.threadMsgs} members={state.members} onApprove={(id) => host.approveThread(id)} onClose={(id) => host.closeThread(id)} />
+            <LocalAiTools host={host} media={state.media} canCaption={mediaSupported()} />
+          </>
+        ) : null
+      }
       onExport={params.burn ? undefined : () => setExporting(true)}
       exportBlocked={params.burn ? t("wall.export.blockedBurn") : undefined}
       exportNote={exportNote}
@@ -441,6 +452,7 @@ function PeerView({ params }: { params: WallParams }) {
 
   const room: RoomState = {
     role: "peer",
+    captions: s?.captions ?? null,
     status: s?.status ?? "connecting",
     statusText,
     online: s?.status === "online",

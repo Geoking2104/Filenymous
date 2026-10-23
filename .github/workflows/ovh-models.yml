@@ -1,0 +1,38 @@
+name: Upload on-device models → OVH (filenymous.eu/app/models)
+
+# Manual only. Fetches the pinned, sha256-checked models of
+# scripts/models.manifest.json (MiniLM q8 for wall search, whisper-tiny q8 for
+# captions) and uploads them to /home/filenyb/www/app/models over SFTP
+# (--merge: new files only; a changed file is backed up first). The asset
+# prune never touches app/models.
+on:
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: "Only fetch + verify, do not upload"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-ovh-ui
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Fetch and verify models
+        run: node scripts/fetch-models.mjs --out models-dist && du -sh models-dist
+      - name: Install deploy dependencies
+        if: ${{ !inputs.dry }}
+        working-directory: scripts
+        run: npm ci --no-audit --no-fund
+      - name: Upload models (--merge)
+        if: ${{ !inputs.dry }}
+        env:
+          OVH_SFTP_PASS: ${{ secrets.OVH_SFTP_PASS }}
+        run: node scripts/deploy-ovh-sftp.mjs --dist models-dist --remote /home/filenyb/www/app/models --merge

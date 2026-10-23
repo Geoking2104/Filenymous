@@ -188,5 +188,5 @@ test("help mentions the wall commands and the provider caveat", async () => {
   assert.match(r.stdout, /sent to its model provider/);
   assert.match(r.stdout, /--title <wall name>/);
   assert.match(r.stdout, /no lifetime by default/);
-  assert.match(readFileSync(new URL("../package.json", import.meta.url), "utf8"), /"version": "0\.6\.0"/);
+  assert.match(readFileSync(new URL("../package.json", import.meta.url), "utf8"), /"version": "0\.7\.0"/);
 });

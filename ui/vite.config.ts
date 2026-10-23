@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import filenymousSeo from "./seo/vite-plugin.mjs";
 
 export default defineConfig({
+  worker: { format: "es" },
   plugins: [react(), filenymousSeo()],
   // libsodium-wrappers importe ./libsodium.mjs en relatif — Vite ne peut pas
   // le résoudre via son système de modules. On exclut du pre-bundling et on

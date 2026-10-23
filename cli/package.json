@@ -1,6 +1,6 @@
 {
   "name": "filenymous",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "mcpName": "io.github.Geoking2104/filenymous",
   "description": "End-to-end encrypted peer-to-peer file sharing from the terminal or CI (WebRTC, AES-256-GCM, no account, no server storage). Interoperates with https://filenymous.eu/app/",
   "license": "MIT",

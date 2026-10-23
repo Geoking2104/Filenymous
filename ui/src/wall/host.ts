@@ -4,8 +4,10 @@ import { iceCandidateInit, type SignalPayload } from "../p2p/signal";
 import { holdUnloadGuard, releaseUnloadGuard } from "../p2p/unloadGuardCore";
 import { SealedPipe, WALL_PROTOCOL_VERSION, checkProof, deriveWallKeys, parseHandshake, sealProof, wallBaseMaterial } from "./crypto";
 import {
+  CAPTION_PREFIX,
   LIMITS,
   MAX_LIVE,
+  MAX_MSG_CHARS,
   MAX_POSTS,
   RateLimiter,
   castVote,
@@ -17,6 +19,7 @@ import {
   randomPostId,
   toggleReaction,
   type BurstKind,
+  type CaptionMode,
   type LiveInfo,
   type LiveKind,
   type Member,
@@ -54,6 +57,8 @@ import {
   type WallMessage,
 } from "./model";
 import { WallSignalClient, type WallJoin } from "./signal";
+import { THREAD_KEEP, ThreadBoard, type Thread, type ThreadMsg } from "./threads";
+import { SEARCH_K_DEFAULT, rankDocs, type SearchDoc, type SemanticRanker } from "./wallsearch";
 
 export const MAX_PEERS = 8;
 export const HOST_LABEL = "host";
@@ -68,6 +73,8 @@ export interface HostState {
   members: Member[];
   pinned: string | null;
   live: LiveInfo[];
+  /** Live captions announced to everyone (null = off). Opt-in by the host. */
+  captions: CaptionMode | null;
   /** sid → stream shown in this tab (own capture or forwarded from a publisher). */
   media: Record<string, MediaStream>;
   /** label → last "typing" signal (ms). */
@@ -88,6 +95,10 @@ export interface HostState {
   pendingAgents: Array<{ label: string; name: string }>;
   /** Context packs: agent label → ids (posts, notes, tasks) the host shared with it. */
   packs: Record<string, string[]>;
+  /** Private agent-to-agent threads (the host routes and sees them). */
+  threads: Thread[];
+  /** thread id → messages (last THREAD_KEEP). */
+  threadMsgs: Record<string, ThreadMsg[]>;
   error?: string;
   notice?: { code: string; at: number; retryMs?: number };
 }
@@ -157,6 +168,10 @@ export interface WallHostOptions {
    */
   autoApproveAgents?: boolean;
   agentScope?: AgentScope;
+  /** Local semantic ranker for agents' wall_search (browser: on-device embeddings). Keyword ranking otherwise. */
+  ranker?: SemanticRanker | null;
+  /** Open agent-to-agent threads without asking (CLI host). Browser hosts approve each one. */
+  autoApproveThreads?: boolean;
 }
 
 /**
@@ -184,6 +199,9 @@ export class WallHost {
   private wb = new BoardStore();
   private boardLimit: RateLimiter;
   private packs = new Map<string, Set<string>>();
+  private searchLimit = new RateLimiter(6, 1 / 5);
+  private threads = new ThreadBoard();
+  private threadLimit = new RateLimiter(LIMITS.chat.capacity, LIMITS.chat.perSecond);
   private self: Member;
   state: HostState;
 
@@ -208,6 +226,7 @@ export class WallHost {
       members: [this.self],
       pinned: null,
       live: [],
+      captions: null,
       media: {},
       typing: {},
       agents: !!opts.allowAgents,
@@ -215,6 +234,8 @@ export class WallHost {
       boardRev: 0,
       pendingAgents: [],
       packs: {},
+      threads: [],
+      threadMsgs: {},
     };
   }
 
@@ -387,6 +408,152 @@ export class WallHost {
     }
   }
 
+  /** Swaps the semantic ranker (the host enabled / disabled the local model). */
+  private liveMsg(streams: LiveInfo[]): WallMessage {
+    return { t: "live", streams, ...(this.state.captions ? { captions: this.state.captions } : {}) };
+  }
+
+  /**
+   * Turns live captions on/off. Participants are told (they show an
+   * indicator) before any caption is posted. Transcription itself runs in the
+   * host tab (see ai/transcriber.ts) and calls postCaption.
+   */
+  setCaptions(mode: CaptionMode | null) {
+    if (JSON.stringify(mode) === JSON.stringify(this.state.captions)) return;
+    this.update({ captions: mode });
+    this.broadcast(this.liveMsg(this.state.live));
+    this.emit({ type: "captions", mode });
+  }
+
+  /** Posts one caption chunk for live stream `sid` (attributed to its speaker). */
+  postCaption(sid: string, text: string): Post | null {
+    const mode = this.state.captions;
+    const live = this.state.live.find((l) => l.sid === sid);
+    const clean = cleanMessage(text.slice(0, MAX_MSG_CHARS - 8));
+    if (!mode || !live || !clean) return null;
+    const post: Post = { id: randomPostId("m"), kind: "msg", by: live.by, at: Date.now(), text: CAPTION_PREFIX + clean, caption: { sid, ...(mode.en ? { en: true as const } : {}) }, reactions: {} };
+    this.upsert(post);
+    return post;
+  }
+
+  setRanker(r: SemanticRanker | null) {
+    this.opts.ranker = r;
+  }
+
+  /**
+   * What a member may search: everything it sees, plus — for agents in limited
+   * view with the "search" scope — the rest of the wall, minus masked notes.
+   * Masked notes are searchable only with the "secrets" scope and visibility.
+   */
+  searchDocs(p: Peer | null): SearchDoc[] {
+    const m = p?.member;
+    const wide = !m?.agent || !m.scope?.limited || !!m.scope.search;
+    const ok = (e: { id: string; by: string; mentions?: string[]; replyTo?: string; owner?: string | null }) => !p || this.sees(p, e) || wide;
+    const docs: SearchDoc[] = [];
+    for (const post of this.state.posts) {
+      if (post.kind === "note") {
+        if (p && m?.agent && !(scopeAllows(m.scope, "secrets") && this.sees(p, post))) continue;
+        if (post.text) docs.push({ id: post.id, kind: "note", by: post.by, at: post.at, text: post.text });
+        continue;
+      }
+      if (!ok(post)) continue;
+      const text = post.kind === "file" ? [post.item?.name, post.text].filter(Boolean).join(" — ") : post.kind === "poll" ? [post.poll?.question, ...(post.poll?.options ?? [])].join(" · ") : post.text ?? "";
+      if (text) docs.push({ id: post.id, kind: post.kind, by: post.by, at: post.at, text });
+    }
+    for (const n of this.board.list()) if (ok(n)) docs.push({ id: n.id, kind: "note", by: n.by, at: n.at, text: [n.title, n.text].filter(Boolean).join("\n") });
+    for (const t of this.taskBoard.list()) if (ok(t)) docs.push({ id: t.id, kind: t.kind, by: t.by, at: t.at, text: [t.text, t.note].filter(Boolean).join(" — ") });
+    return docs;
+  }
+
+  // ---- private agent-to-agent threads ----
+
+  /** Agents that can be in a thread: approved agent members, plus the host when it is an agent itself. */
+  private threadPeer(label: string): Peer | "self" | null {
+    if (label === HOST_LABEL) return this.self.agent ? "self" : null;
+    const p = this.peerByLabel(label)?.[1];
+    return p?.member?.agent && p.feat >= 4 ? p : null;
+  }
+
+  private publishThread(t: Thread) {
+    this.update({ threads: [...this.threads.list()] });
+    for (const l of [t.a, t.b]) {
+      const p = this.threadPeer(l);
+      if (p && p !== "self") void this.sendControl(p, { t: "thread", thread: t });
+    }
+    this.emit({ type: "thread", thread: t });
+  }
+
+  private threadOpen(by: string, to: string, goal?: string, task?: string) {
+    if (this.done) return;
+    const me = this.threadPeer(by);
+    const peer = by === HOST_LABEL ? null : this.peerByLabel(by)?.[1] ?? null;
+    if (!me) return void (peer && this.notify(peer, "thread-denied"));
+    if (!this.threadPeer(to)) return void (peer ? this.notify(peer, "thread-denied") : this.update({ notice: { code: "thread-denied", at: Date.now() } }));
+    if (task && !this.taskBoard.list().some((x) => x.id === task)) task = undefined;
+    const t = this.threads.open(by, to, goal, task);
+    if (typeof t === "string") return void (peer ? this.notify(peer, t === "limit" ? "thread-limit" : "thread-denied") : undefined);
+    this.update({ threadMsgs: { ...this.state.threadMsgs, [t.id]: [] } });
+    this.publishThread(t);
+    if (this.opts.autoApproveThreads) this.approveThread(t.id);
+  }
+
+  private threadSay(by: string, id: string, text: string) {
+    const peer = by === HOST_LABEL ? null : this.peerByLabel(by)?.[1] ?? null;
+    if (peer && !this.threadLimit.take(by)) return void this.notify(peer, "rate-limited", this.threadLimit.retryIn(by));
+    const r = this.threads.say(id, by, text);
+    if (!r) return void (peer && this.notify(peer, "thread-denied"));
+    const list = [...(this.state.threadMsgs[id] ?? []), r.msg].slice(-THREAD_KEEP);
+    this.update({ threads: [...this.threads.list()], threadMsgs: { ...this.state.threadMsgs, [id]: list } });
+    for (const l of [r.thread.a, r.thread.b]) {
+      const p = this.threadPeer(l);
+      if (p && p !== "self") void this.sendControl(p, { t: "thread-msg", id, msg: r.msg });
+    }
+    this.emit({ type: "thread-msg", id, msg: r.msg });
+  }
+
+  private threadClose(by: string, id: string) {
+    const t = this.threads.get(id);
+    if (!t || (by !== HOST_LABEL && !this.threads.involves(t, by))) return;
+    const next = this.threads.setState(id, "closed", by);
+    if (next) this.publishThread(next);
+  }
+
+  /** Host: lets a pending thread start (both agents then exchange through this tab). */
+  approveThread(id: string) {
+    const t = this.threads.get(id);
+    if (!t || t.state !== "pending" || !this.threadPeer(t.a) || !this.threadPeer(t.b)) return;
+    const next = this.threads.setState(id, "open");
+    if (next) this.publishThread(next);
+  }
+
+  /** Host: closes (or refuses) a thread. */
+  closeThread(id: string) {
+    this.threadClose(HOST_LABEL, id);
+  }
+
+  /** The host's own agent side (CLI host that is an agent): open / write in its threads. */
+  openThreadAsHost(to: string, goal?: string, task?: string): Thread | null {
+    const before = new Set(this.threads.list().map((t) => t.id));
+    this.threadOpen(HOST_LABEL, to, goal, task);
+    return this.threads.list().find((t) => !before.has(t.id)) ?? null;
+  }
+  sayInThreadAsHost(id: string, text: string) {
+    this.threadSay(HOST_LABEL, id, text);
+  }
+
+  /** The host's own search over everything on the wall (never leaves this process/tab). */
+  searchLocal(q: string, k = SEARCH_K_DEFAULT) {
+    return rankDocs(q, this.searchDocs(null), k, this.opts.ranker);
+  }
+
+  private async search(peer: Peer, rid: number, q: string, k = SEARCH_K_DEFAULT) {
+    const label = peer.label!;
+    if (!this.searchLimit.take(label)) return void this.sendControl(peer, { t: "search-fail", rid, reason: "rate-limited" });
+    const { mode, hits } = await rankDocs(q, this.searchDocs(peer), k, this.opts.ranker);
+    if (this.done || ![...this.peers.values()].includes(peer)) return;
+    void this.sendControl(peer, { t: "search-res", rid, mode, hits });
+  }
+
   /** Re-sends what an agent may now see and retracts what it may no longer see. */
   private resync(p: Peer) {
     if (!p.member?.agent) return;
@@ -416,6 +583,9 @@ export class WallHost {
       this.burstLimit.forget(peer.label);
       this.noteLimit.forget(peer.label);
       this.boardLimit.forget(peer.label);
+      this.searchLimit.forget(peer.label);
+      this.threadLimit.forget(peer.label);
+      for (const t of this.threads.closeAllOf(peer.label)) this.publishThread(t);
       for (const id of this.board.releaseAll(peer.label)) this.publishLock(id, null);
     }
     try { peer.pc.close(); } catch { /* ignore */ }
@@ -595,7 +765,7 @@ export class WallHost {
     }
     for (const task of this.taskBoard.list()) this.deliver(peer, { t: "task", task });
     for (const els of boardBatches(this.wb.list())) this.deliver(peer, { t: "board", els });
-    void this.sendControl(peer, { t: "live", streams: this.state.live });
+    void this.sendControl(peer, this.liveMsg(this.state.live));
     this.refreshMembers();
     if (member.media) for (const pub of this.pubs.values()) if (pub.announced) void this.openDown(peer, pub);
   }
@@ -642,6 +812,7 @@ export class WallHost {
       case "snote-new": case "snote-edit": case "snote-del": case "snote-lock":
       case "task-new": case "task-set": case "task-del":
       case "hand": case "burst": case "live-start": case "board-op":
+      case "thread-open": case "thread-say": case "thread-close":
         return "post";
       case "get": {
         const post = this.findPost(msg.id);
@@ -679,6 +850,17 @@ export class WallHost {
     if (peer.pending || !peer.member) return;
     if (!this.agentMay(peer, msg)) return;
     switch (msg.t) {
+      case "search":
+        return void this.search(peer, msg.rid, msg.q, msg.k);
+      case "thread-open":
+        return this.threadOpen(label, msg.to, msg.goal, msg.task);
+      case "thread-say":
+        return this.threadSay(label, msg.id, msg.text);
+      case "thread-close":
+        return this.threadClose(label, msg.id);
+      case "thread":
+      case "thread-msg":
+        return;
       case "put": {
         if (!this.chatLimit.take(label)) {
           this.notify(peer, "rate-limited", this.chatLimit.retryIn(label));
@@ -1067,7 +1249,7 @@ export class WallHost {
     pub.stream = stream;
     const live = [...this.state.live, { sid: pub.sid, by: pub.by, kind: pub.kind }];
     this.update({ live, media: { ...this.state.media, [pub.sid]: stream } });
-    this.broadcast({ t: "live", streams: live });
+    this.broadcast(this.liveMsg(live));
     this.emit({ type: "live", streams: live });
     for (const [, p] of this.members()) if (p.member!.media && p.label !== pub.by) void this.openDown(p, pub);
   }
@@ -1106,7 +1288,7 @@ export class WallHost {
     const live = this.state.live.filter((l) => l.sid !== sid);
     this.update({ live, media });
     if (pub.announced) {
-      this.broadcast({ t: "live", streams: live });
+      this.broadcast(this.liveMsg(live));
       this.emit({ type: "live", streams: live });
     }
   }

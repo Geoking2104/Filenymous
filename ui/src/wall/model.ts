@@ -20,10 +20,14 @@ import {
   isPostId,
   type BurstKind,
   type LiveInfo,
+  type CaptionMode,
   type LiveKind,
   type Member,
   type Post,
 } from "./feed";
+
+import { parseSearchMessage, type SearchRequest, type SearchResponse } from "./wallsearch";
+import { parseThreadMessage, type ThreadRequest, type ThreadUpdate } from "./threads";
 
 export type ItemKind = "file" | "text";
 
@@ -82,7 +86,7 @@ export type WallMessage =
   | { t: "post"; post: Post }
   | { t: "unpost"; id: string }
   | { t: "pin"; id: string | null }
-  | { t: "live"; streams: LiveInfo[] }
+  | { t: "live"; streams: LiveInfo[]; captions?: CaptionMode }
   | { t: "live-ok"; sid: string }
   | { t: "live-fail"; reason: string }
   | { t: "typing-by"; label: string }
@@ -101,7 +105,11 @@ export type WallMessage =
   | { t: "snote-lock-by"; id: string; label: string | null; until: number }
   | { t: "task"; task: Task }
   | { t: "task-gone"; id: string }
-  | { t: "board"; els: BoardElement[] };
+  | { t: "board"; els: BoardElement[] }
+  | SearchRequest
+  | ThreadRequest
+  | ThreadUpdate
+  | SearchResponse;
 
 export interface RtcMessage {
   t: "rtc";
@@ -292,7 +300,10 @@ export function parseWallMessage(m: unknown): WallMessage | null {
     case "live": {
       if (!Array.isArray(o.streams) || o.streams.length > MAX_LIVE) return null;
       const streams = o.streams.map(cleanLive);
-      return streams.every(Boolean) ? { t: "live", streams: streams as LiveInfo[] } : null;
+      if (!streams.every(Boolean)) return null;
+      const c = o.captions as Record<string, unknown> | undefined;
+      if (c !== undefined && (!c || typeof c !== "object" || typeof c.en !== "boolean")) return null;
+      return { t: "live", streams: streams as LiveInfo[], ...(c ? { captions: { en: c.en as boolean } } : {}) };
     }
     case "live-fail":
     case "notice":
@@ -321,7 +332,7 @@ export function parseWallMessage(m: unknown): WallMessage | null {
     case "destroy":
       return ["destroyed", "expired", "host-left"].includes(o.reason as string) ? { t: "destroy", reason: o.reason as DestroyReason } : null;
     default:
-      return null;
+      return String(o.t).startsWith("thread") ? parseThreadMessage(o) : parseSearchMessage(o);
   }
 }
 

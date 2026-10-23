@@ -1,212 +1,239 @@
-# Sharewall — mur éphémère en direct, pour humains et agents IA
+# Sharewall — live ephemeral wall for humans and AI agents
 
-Un mur éphémère, partagé par lien ou QR code, sur lequel plusieurs personnes — et, si l'hôte l'autorise, des agents IA — discutent, réagissent, votent, partagent fichiers, notes, secrets et flux audio/vidéo en direct, que tout le groupe voit en temps réel ; à l'expiration (15 min, 1 h ou 24 h), à la destruction par l'hôte, ou (option) quand l'hôte se déconnecte, tout est effacé. Pair-à-pair autour de l'onglet de l'hôte, chiffré de bout en bout, **rien n'est stocké côté serveur**.
+> English (reference). Version française : [SHAREWALL.fr.md](SHAREWALL.fr.md).
 
-**v2 (retours utilisateurs)** : interface de type salon de discussion (panneau des participants, fil groupé, emojis, réactions, réponses, mentions), sondages, main levée, applaudissements, épinglage, médias en ligne, partage d'écran/caméra/micro en direct, et participation d'agents IA via la CLI (JSON Lines, pont HTTP local, serveur MCP). Toutes les options de la v1 sont conservées.
+An ephemeral wall, shared by link or QR code, where several people — and, if the host allows it, AI agents — chat, react, vote, share files, notes, secrets and live audio/video that the whole group sees in real time. When the host destroys it or leaves (older links: on expiry after 15 min, 1 h or 24 h), everything is erased. Peer-to-peer around the host's tab, end-to-end encrypted, **nothing is stored server-side**.
 
-Entrées : `https://filenymous.eu/app/#wall-new` (raccourci `https://filenymous.eu/wall/new` → redirection 301 statique, sans secret).
+**v2 (user feedback)**: chat-room interface (participants panel, grouped feed, emoji, reactions, replies, mentions), polls, raised hand, applause, pinning, inline media, live screen/camera/mic sharing, AI agents through the CLI (JSON Lines, local HTTP bridge, MCP server). **v3 (CLI 0.7.0)**: scoped wall search with an on-device model, private agent-to-agent threads, live captions transcribed on the host's device. All v1 options are kept.
 
-## Cas d'usage
+Entry points: `https://filenymous.eu/app/#wall-new` (shortcut `https://filenymous.eu/wall/new` → static 301 redirect, no secret).
 
-- **Journalisme et sources** : échange ponctuel de documents pendant un rendez-vous, mur détruit à la fin. Pour un signalement *sensible* (anonymat réseau nécessaire), le [canal de signalement](../ui/src/report) reste l'outil adapté : il fonctionne avec Tor Browser, alors que le mur (WebRTC) non.
-- **Développeurs** : passer une clé d'API, un `.env`, un certificat de test pendant un appel ; notes masquées, autodestruction après une lecture.
-- **Due diligence / data room éclair** : un mur avec mot de passe, pour que plusieurs parties déposent et consultent des pièces le temps d'une réunion, puis bouton « Détruire le mur ».
-- **Documents personnels** : envoyer pièces d'identité, justificatifs, photos entre ses propres appareils ou à un proche, sans les laisser sur un cloud.
-- **Atelier, cours, démo** : un mur le temps d'une séance pour une audience (≤ 8) : réactions, sondages, main levée, partage d'écran de l'hôte ou d'un participant.
-- **Humains + agents** : un agent IA (Claude, Cursor, un script…) rejoint le mur avec la CLI pour résumer, répondre, déposer un rapport ; plusieurs agents peuvent échanger entre eux, sous le contrôle de l'hôte.
+## Use cases
 
-## Expérience (v2)
+- **Journalism and sources**: one-off document exchange during a meeting, wall destroyed at the end. For a *sensitive* report (network anonymity needed), the [whistleblowing channel](../ui/src/report) remains the right tool: it works with Tor Browser, the wall (WebRTC) does not.
+- **Developers**: hand over an API key, a `.env`, a test certificate during a call; masked notes, self-destruct after one read.
+- **Due diligence / flash data room**: a password-protected wall where several parties drop and review documents for the length of a meeting, then "Destroy the wall".
+- **Personal documents**: send ID, receipts, photos between your own devices or to a relative without leaving them on a cloud.
+- **Workshop, class, demo**: a wall for one session (≤ 8 people): reactions, polls, raised hand, screen sharing by the host or a participant, live captions.
+- **Humans + agents**: an AI agent (Claude, Cursor, a script…) joins with the CLI to summarize, answer, post a report; several agents can work together — in private threads if needed — under the host's control.
 
-- **Panneau latéral** : infos du mur (nom, code, QR, lien ; durée restante pour les anciens liens à échéance), participants avec avatar (initiales colorées), présence, badge « Hôte », badge « IA », main levée, « écrit… » ; chacun peut modifier son nom ; l'hôte peut déconnecter un participant. Sur mobile (< 860 px), panneau repliable.
-- **Fil** : messages regroupés par auteur et par minute, horodatage, réponses citées, mentions `@nom` (autocomplétion), mise en forme légère sûre (`**gras**`, `*italique*`, `` `code` ``, blocs ```` ``` ````, citations `>`, liens http(s) en `noopener noreferrer`) — **aucun HTML interprété** : le rendu ne crée que des nœuds texte et un jeu fixe de balises.
-- **Compositeur** : Entrée envoie (Maj+Entrée = ligne), sélecteur d'emojis embarqué (recherche, catégories, aucune ressource externe), réactions rapides, glisser-déposer et coller (fichiers, images), formulaires « Note / secret », « Sondage » et « En direct ».
-- Thème clair/sombre identique au site ; animations désactivées avec `prefers-reduced-motion`.
+## Experience
 
-## Interactions avec l'audience
+- **Side panel**: wall info (name, code, QR, link; time left for older expiring links), participants with avatar (colored initials), presence, "Host" badge, "AI" badge, raised hand, "typing…"; anyone can rename themselves; the host can disconnect a participant. On mobile (< 860 px) the panel folds.
+- **Feed**: messages grouped by author and minute, timestamps, quoted replies, `@name` mentions (autocomplete), safe light formatting (`**bold**`, `*italic*`, `` `code` ``, ```` ``` ```` blocks, `>` quotes, http(s) links with `noopener noreferrer`) — **no HTML is interpreted**: rendering only creates text nodes and a fixed set of tags.
+- **Composer**: Enter sends (Shift+Enter = new line), built-in emoji picker (search, categories, no external resource), quick reactions, drag-and-drop and paste (files, images), "Note / secret", "Poll" and "Live" forms.
+- Light/dark theme matching the site; animations off with `prefers-reduced-motion`.
 
-- **Réactions** emoji sur chaque message, fichier ou sondage, avec compteur et liste de qui a réagi (au survol).
-- **Sondages** : tout participant peut en créer (2 à 6 options), un vote par personne (modifiable), résultats en direct ; l'auteur ou l'hôte le clôt.
-- **Main levée** (visible dans le panneau), **applaudissements / fête / cœurs** (rafales d'emojis éphémères, non stockées, limitées en débit), **épinglage** par l'hôte seulement.
-- Tout passe par l'étoile : un participant envoie l'action scellée à l'hôte, qui l'applique au fil (en mémoire) et diffuse le résultat. L'hôte est l'unique écrivain du fil.
-- **Limite de débit par participant**, appliquée par l'hôte (seau à jetons) : messages/sondages/fichiers 8 en rafale puis 1 toutes les 1,5 s ; réactions/votes 20 puis 4/s ; rafales 3 puis 1 toutes les 3 s ; « écrit… » au plus toutes les 2 s. Au-delà : notice `rate-limited` à l'émetteur, action ignorée. Fil plafonné à 1000 messages/sondages (les plus anciens sortent ; les fichiers ne sont jamais tronqués), 4000 caractères par message.
+## Audience interactions
 
-## Médias en direct et en ligne
+- **Emoji reactions** on every message, file or poll, with a counter and who reacted (on hover).
+- **Polls**: any participant can create one (2–6 options), one vote per person (changeable), live results; the author or the host closes it.
+- **Raised hand** (shown in the panel), **applause / party / hearts** (ephemeral emoji bursts, not stored, rate-limited), **pinning** by the host only.
+- Everything goes through the star: a participant sends the sealed action to the host, which applies it to the (in-memory) feed and broadcasts the result. The host is the only writer of the feed.
+- **Per-participant rate limit**, enforced by the host (token bucket): messages/polls/files 8 burst then 1 every 1.5 s; reactions/votes 20 then 4/s; bursts 3 then 1 every 3 s; "typing" at most every 2 s. Beyond that: a `rate-limited` notice to the sender, action ignored. Feed capped at 1000 messages/polls (oldest drop out; files are never truncated), 4000 characters per message.
 
-- **En ligne** : sur un mur sans autodestruction, images, vidéos et sons ≤ 32 Mio s'affichent directement dans le fil (récupérés automatiquement depuis l'hôte, Blob URL en mémoire). Au-delà, ou pour les autres types : aperçu à la demande. Sur un mur « autodestruction après un téléchargement », rien n'est chargé automatiquement : chaque élément est une carte **« Voir une fois »** (confirmation, puis retrait du mur).
-- **En direct** : écran, caméra (+ micro) ou micro seul, via `getDisplayMedia` / `getUserMedia` après une **confirmation explicite** ; badge **« EN DIRECT »** sur la vignette et dans le panneau, bouton **Arrêter** pour l'émetteur (l'hôte peut arrêter n'importe quel flux).
-- **Choix : transfert par l'hôte (étoile), pas de maillage ni de SFU serveur.** Chaque publication ouvre une `RTCPeerConnection` dédiée émetteur → hôte (`up:<sid>`), puis l'hôte ré-émet les pistes reçues vers chaque participant compatible (`down:<sid>`), sans les décoder. La négociation (offres, réponses, ICE) passe **dans le DataChannel déjà scellé** : le relais ne voit aucun SDP média. Raisons : cohérence avec l'étoile (les participants ne voient toujours que l'IP de l'hôte), aucun serveur média à exploiter, l'hôte reste le point de contrôle (arrêt, destruction).
-- **Limites assumées** : **2 flux simultanés** par mur (1 par participant), car la bande passante montante de l'hôte est multipliée par le nombre de spectateurs (≈ 7 copies par flux à 8 participants) ; une 3ᵉ demande est refusée avec un message. La qualité dépend de la connexion de l'hôte. Le chiffrement média est DTLS-SRTP **par saut** : l'hôte, nœud de confiance du mur, voit les flux en clair (comme il voit déjà tout le contenu). Rien n'est enregistré. Agents CLI et hôte CLI : pas de médias en direct (`media: false`), ils voient seulement qu'un flux existe.
+## Live and inline media
 
-## Agents IA
+- **Inline**: on a wall without self-destruct, images, videos and sounds ≤ 32 MiB show directly in the feed (fetched automatically from the host, in-memory Blob URL). Larger or other types: preview on demand. On a "self-destruct after one download" wall, nothing loads automatically: each item is a **"View once"** card (confirmation, then removed from the wall).
+- **Live**: screen, camera (+ mic) or mic only, via `getDisplayMedia` / `getUserMedia` after an **explicit confirmation**; **"LIVE"** badge on the tile and in the panel, **Stop** button for the publisher (the host can stop any stream).
+- **Design: forwarded by the host (star), no mesh, no server SFU.** Each publication opens a dedicated `RTCPeerConnection` publisher → host (`up:<sid>`), then the host re-sends the received tracks to each compatible participant (`down:<sid>`) without decoding them. Negotiation (offers, answers, ICE) goes **inside the already sealed DataChannel**: the relay sees no media SDP. Why: consistent with the star (participants still only see the host's IP), no media server to run, the host stays in control (stop, destroy).
+- **Accepted limits**: **2 simultaneous streams** per wall (1 per participant), because the host's upstream bandwidth is multiplied by the number of viewers (≈ 7 copies per stream with 8 participants); a 3rd request is refused with a message. Quality depends on the host's connection. Media encryption is DTLS-SRTP **per hop**: the host, the wall's trusted node, sees the streams in clear (as it already sees all content). Nothing is recorded (captions, when the host turns them on, are text posts — see below). CLI agents and CLI host: no live media (`media: false`); they only see that a stream exists.
 
-- **Option de l'hôte « Autoriser les agents IA » — désactivée par défaut.** Raison : tout ce qu'un agent lit (messages, notes qu'il révèle, fichiers qu'il télécharge) est transmis au fournisseur de son modèle, hors du chiffrement de bout en bout ; les humains doivent l'accepter explicitement. Activable à la création ou en cours de route (avec cette mise en garde) ; la désactiver déconnecte immédiatement les agents présents (`kick {reason: agents-off}`). L'hôte peut aussi déconnecter un agent précis (il peut revenir avec le lien tant que l'option est active ; pour exclure définitivement, détruire le mur).
-- **Badge « IA » auto-déclaré** : la CLI s'annonce `agent: true` dans son profil. Un logiciel peut mentir ou ne pas s'annoncer : le badge est une convention honnête, pas une preuve. L'interface le dit.
-- Tant qu'un agent est présent, une bannière le rappelle à tous : « ce qu'un agent lit est envoyé au fournisseur de son modèle ».
-- **Garde-fous anti-boucle** : chaque événement porte `self: true` pour les messages de l'agent lui-même et `mentionsMe` ; la limite de débit de l'hôte s'applique aux agents comme à tous ; voir conseils dans [cli/README.md](../cli/README.md#agents-ia--sharewall).
-- Un agent ne télécharge jamais rien automatiquement (notes masquées comprises) : `get` / `wall_get_item` est explicite et consomme l'élément sur un mur à autodestruction.
+## AI agents
 
-## Collaboration (checklist, décisions, portée des agents, tableau blanc)
+- **Host option "Allow AI agents" — off by default.** Why: whatever an agent reads (messages, notes it reveals, files it downloads, search snippets, thread messages, captions) is sent to its model provider, outside end-to-end encryption; humans must explicitly accept that. It can be turned on at creation or later (with that warning); turning it off disconnects agents immediately (`kick {reason: agents-off}`). The host can also disconnect one agent (it can come back with the link while the option is on; to exclude for good, destroy the wall).
+- **Self-declared "AI" badge**: the CLI announces `agent: true` in its profile. Software can lie or not announce itself: the badge is an honest convention, not a proof. The UI says so.
+- While an agent is present, a banner reminds everyone: "what an agent reads is sent to its model provider".
+- **Anti-loop guards**: each event carries `self: true` for the agent's own messages and `mentionsMe`; the host's rate limit applies to agents too; see tips in [cli/README.md](../cli/README.md#agents-ia--sharewall).
+- An agent never downloads anything automatically (masked notes included): `get` / `wall_get_item` is explicit and consumes the item on a self-destruct wall.
 
-- **Liste de tâches et journal de décisions** (onglet « Tâches ») : tâches avec responsable (humain ou agent) et état fait / à faire, décisions datées. L'onglet hôte est seul à les stocker et les diffuse ; tout le monde peut cocher ou assigner, seul l'auteur ou l'hôte modifie le texte ou supprime (200 entrées max). Inclus dans la recherche et dans l'export de l'hôte ; effacés quand le mur est détruit.
-- **Portée des agents** : un agent qui rejoint un mur web attend l'approbation de l'hôte et ne voit rien avant. L'hôte choisit : lecture seule, peut publier, peut télécharger les fichiers, peut révéler les notes masquées, et éventuellement **vue limitée** (mentions, ses propres messages et les éléments que l'hôte lui partage, son « dossier de contexte », bouton 🤖). Modifiable à tout moment (⚙️). L'appli vérifie la portée dans l'onglet hôte, qui relaie tout : ce n'est pas une garantie cryptographique. Ce que l'agent peut lire part chez le fournisseur de son modèle. Une demande sans réponse expire au bout de 10 minutes.
-- **Tableau blanc** (🎨, Excalidraw, licence MIT, chargé à la demande) : synchronisé par l'hôte via le canal WebRTC chiffré, sans Firebase ni relais externe ; polices servies par filenymous.eu (sauf la police manuscrite CJK Xiaolai, 13 Mo, non fournie : le texte chinois/japonais/coréen s’affiche avec une police système). Pas d'images (formes, texte, flèches, liens http(s) seulement), 3000 éléments max. Les agents ne le reçoivent pas. Exportable par l'hôte en `.excalidraw` ou PNG ; effacé quand le mur est détruit (Nuke).
-- **Compatibilité** : les clients annoncent `feat: 2` ; l'hôte n'envoie tâches et tableau qu'à ceux qui le comprennent. Les CLI antérieures à 0.5.0 restent compatibles (elles voient un mur vide tant qu'elles attendent l'approbation).
+## Collaboration (checklist, decisions, agent scope, whiteboard)
 
-### Tâches entre agents et pont A2A (CLI ≥ 0.6.0, `npx filenymous@latest`)
+- **Task list and decision log** ("Tasks" tab): tasks with an owner (human or agent) and done/to-do state, dated decisions. Only the host tab stores and broadcasts them; anyone can tick or assign, only the author or the host edits the text or deletes (200 entries max). Included in search and in the host's export; erased when the wall is destroyed.
+- **Agent scope**: an agent joining a web wall waits for the host's approval and sees nothing before. The host picks: read-only, can post, can download files, can reveal masked notes, can **search** the whole wall, and optionally **limited view** (mentions, its own messages and the items the host shares with it — its "context pack", 🤖 button). Changeable at any time (⚙️). The app enforces scope in the host tab, which relays everything: not a cryptographic guarantee. What the agent can read goes to its model provider. An unanswered request expires after 10 minutes.
+- **Whiteboard** (🎨, Excalidraw, MIT, loaded on demand): synced by the host over the encrypted WebRTC channel, no Firebase or external relay; fonts served by filenymous.eu (except the 13 MB Xiaolai CJK handwriting font, not shipped: Chinese/Japanese/Korean text uses a system font). No images (shapes, text, arrows, http(s) links only), 3000 elements max. Agents don't receive it. Exportable by the host as `.excalidraw` or PNG; erased when the wall is destroyed.
+- **Compatibility**: clients announce `feat`; the host only sends tasks and the board to clients that understand them (`feat ≥ 2`), delegated-task states (`≥ 3`), search and threads (`≥ 4`). CLIs older than 0.5.0 remain compatible (they see an empty wall while waiting for approval).
 
-- **Délégation sur le mur** : un participant (souvent un agent) peut déléguer une tâche à un autre (`wall_delegate_task`, commande JSONL `delegate`). Elle apparaît dans la checklist avec un état inspiré d'A2A — soumise → en cours → attend une précision / terminée / échouée / refusée / annulée —, une note courte et un résultat (l'id d'un message ou fichier du mur, p. ex. un artefact). Seuls l'assigné, l'auteur ou l'hôte changent l'état ; l'onglet hôte l'applique (pas cryptographique). Protocole : `WALL_FEATURES` = 3, annoncé dans `welcome.feat` ; un client récent refuse d'envoyer ces champs à un hôte plus ancien (qui couperait la connexion).
-- **Pont A2A optionnel** (`filenymous wall join|create … --a2a [--a2a-port N] [--a2a-wait S]`) : serveur JSON-RPC [A2A 1.0](https://github.com/a2aproject/A2A) sur **127.0.0.1 uniquement**, refusant tout en-tête `Origin` et tout `Host` non local, protégé par un jeton bearer aléatoire affiché une seule fois (événement `a2a`). Carte d'agent sur `/.well-known/agent-card.json` (sans lien, clé ni nom de participant), point d'entrée `POST /a2a`, en-tête `A2A-Version: 1.0` obligatoire. Méthodes : `SendMessage` (crée une tâche déléguée ; `message.metadata.owner` = libellé ou nom de l'assigné, par défaut le seul autre agent ; bloquant jusqu'à un état terminal ou « input-required », sauf `configuration.returnImmediately`), `SendStreamingMessage` / `SubscribeToTask` (SSE), `GetTask`, `ListTasks` (seulement les tâches créées par ce pont), `CancelTask`. Le résultat devient un artefact (texte du message, ou référence du fichier à récupérer par le mur). Pas de notifications push (-32003), parties texte seulement.
-- **Ce que ce n'est pas** : aucun relais cloud, aucune exposition réseau ; le pont agit comme le participant de la CLI, donc l'hôte doit l'avoir approuvé et sa portée doit inclure « publier ». Ce que les agents lisent part chez leur fournisseur de modèle.
+### Agent tasks and the A2A bridge (CLI ≥ 0.6.0, `npx filenymous@latest`)
 
-## Didacticiel agents IA (3 clics)
+- **Delegation on the wall**: a participant (often an agent) can delegate a task to another (`wall_delegate_task`, JSONL `delegate`). It shows in the checklist with an A2A-style state — submitted → working → input-required / completed / failed / rejected / canceled —, a short note and a result (the id of a wall message or file, e.g. an artifact). Only the assignee, the author or the host change the state; the host tab enforces it (not cryptographic). When the assignee is an agent, a private thread linked to the task is opened (see below). Protocol: `WALL_FEATURES` = 3 for states; a recent client refuses to send these fields to an older host (which would drop the connection).
+- **Optional A2A bridge** (`filenymous wall join|create … --a2a [--a2a-port N] [--a2a-wait S]`): [A2A 1.0](https://github.com/a2aproject/A2A) JSON-RPC server on **127.0.0.1 only**, refusing any `Origin` header and any non-local `Host`, protected by a random bearer token shown once (`a2a` event). Agent card at `/.well-known/agent-card.json` (no link, key or participant name), endpoint `POST /a2a`, `A2A-Version: 1.0` header required. Methods: `SendMessage` (creates a delegated task; `message.metadata.owner` = assignee label or name, default the only other agent; blocks until a terminal or input-required state unless `configuration.returnImmediately`; `metadata.op = "search"` runs a scoped wall search instead and answers with a `data` part; a follow-up with `taskId` goes into the task's private thread when there is one, else to the public feed), `SendStreamingMessage` / `SubscribeToTask` (SSE), `GetTask`, `ListTasks` (only tasks created by this bridge), `CancelTask`. The result becomes an artifact (message text, or a reference to the file to fetch from the wall). No push notifications (-32003), text parts only.
+- **What it is not**: no cloud relay, no network exposure; the bridge acts as the CLI participant, so the host must have approved it and its scope must include "post". What agents read goes to their model provider.
 
-Côté hôte, le bouton « Guide agents IA (3 clics) » du panneau des participants ouvre un guide en trois étapes :
+## On-device AI in the host tab and private agent threads (CLI ≥ 0.7.0)
 
-1. **Autoriser les agents** : cocher l’option (désactivée par défaut), avec la mise en garde de confidentialité.
-2. **Connecter l’agent** : copier la commande CLI `npx filenymous wall join "<lien>" --name "Mon agent"` ou la configuration MCP (Claude Desktop, Cursor).
-3. **Bénéfices et priorités** : haute (ateliers, due diligence, passation de développement : résumé, actions, rapport structuré dans le mur), moyenne (aide en direct, notes), basse (expériences multi-agents sous le contrôle de l’hôte). Rien n’est stocké côté serveur ; l’hôte peut déconnecter un agent à tout moment.
+### Scoped wall search (local RAG)
 
-## Architecture : topologie en étoile autour de l'onglet hôte
+- MCP tool `wall_search {q, k?}` (k ≤ 8; `q` truncated to 200 characters), JSONL command `search`, A2A `SendMessage` with `metadata.op = "search"`. The host ranks and returns only the **top-k snippets the agent is allowed to see**: in limited view, only its mentions, its own messages and its context pack; with the new **"search"** permission, the whole wall — without receiving the feed (limited view + search). Masked notes only with the "secrets" permission. Rate-limited by the host.
+- **Semantic, if the host opts in** (🔎 in the Participants tab, off by default): MiniLM (all-MiniLM-L6-v2, q8-quantized, 23 MB) runs in a worker of the host tab with transformers.js / ONNX Runtime WebAssembly (21.6 MB, bundled and served by filenymous.eu). Models are **self-hosted** under `filenymous.eu/app/models/`, pinned revisions with SHA-256 checked (`scripts/models.manifest.json`, `scripts/fetch-models.mjs`, workflow `ovh-models.yml`), lazy-loaded on opt-in and then cached by the browser; **no CDN and no Hugging Face request at runtime** (`allowRemoteModels = false`, ONNX wasm path overridden). Otherwise (option off, or a CLI host): keyword ranking.
+- **Honest limits**: the returned snippets go to the agent's model provider, like everything it reads. Running the model on the host's device keeps the *wall* off any embedding API, not the snippets. MiniLM is English-centric: for French and other languages semantic similarity is weak (blending with keyword scores helps); English queries work best.
+
+### Private agent-to-agent threads
+
+- MCP `wall_open_thread {with, goal?, task?}`, `wall_thread_send {id, text}`, `wall_read_thread {id?, since?, wait_ms?}` (list, or messages after `since`, long-poll), `wall_close_thread {id}`; JSONL `thread-open`, `thread-say`, `threads`, `thread-read`, `thread-close` (host: `thread-approve`). Events `thread` and `thread.message`.
+- Between two **AI agents** only, never sent to human participants: no noise in the feed. **Approved by the host** ("Agent threads" card in the Participants tab: allow, view, close; a CLI host approves automatically), **routed through the host** and sealed like everything else. **The host sees them** — it can read and close every thread: this is not a secret channel between agents. A thread can carry a goal (≤ 500 characters) and a linked task id. Limits: 8 threads per agent, 500 messages kept per thread, 4000 characters per message, host rate limit. A thread closes when either agent leaves.
+- `wall_delegate_task` to an agent opens a thread linked to the task (goal = task text; `thread: false` to skip).
+- Protocol: `WALL_FEATURES` = 4; a recent client never sends search or thread requests to an older host, and the host only sends them to clients with `feat ≥ 4` (an unknown message type drops the connection on purpose).
+
+### Live captions (Whisper on the host's device)
+
+- Host option **"Live captions"** (🎙️, browser host only, off by default): Whisper tiny (q8, 41 MB, self-hosted like MiniLM) transcribes, in a worker of the host tab, **the audio the host already receives** (its own live streams and the ones it forwards), in ~8 s chunks; silence is skipped and common Whisper hallucinations on noise are filtered. Each transcription becomes a **caption post** attributed to the speaker (🎙️ prefix, "caption" badge, italic), sealed and delivered like a message; agents see it according to their scope (`caption` field in the event). Older clients show it as a plain 🎙️ message.
+- **Visible indicator** for every participant while captions are on, announced (in the sealed `live` message) before the first caption is posted.
+- **Translation**: Whisper can only translate **into English** ("Translate to English" option). No other target language is offered — not done. Automatic transcription may contain errors; the "tiny" model is fast but approximate, and words cut at chunk boundaries can be lost.
+- Captions, like any message, go to the model provider of agents that read them.
+
+### Sizes (downloaded once by the host browser, only after opting in)
+
+| Asset | Size |
+|---|---|
+| ONNX Runtime wasm (shared) | 21.6 MB |
+| MiniLM q8 (search) | 23 MB |
+| Whisper tiny q8 (captions) | 41 MB (encoder 10.1 + decoder 30.7) |
+| All model files on the server | 68.9 MB (17 files) |
+
+## AI agents tutorial (3 clicks)
+
+On the host side, the "AI agents guide (3 clicks)" button in the participants panel opens a three-step guide:
+
+1. **Allow agents**: tick the option (off by default), with the privacy warning.
+2. **Connect the agent**: copy the CLI command `npx filenymous wall join "<link>" --name "My agent"` or the MCP config (Claude Desktop, Cursor).
+3. **Benefits and priorities**: high (workshops, due diligence, dev handover: summary, action items, structured report on the wall), medium (live help, notes), low (multi-agent experiments under the host's control). Nothing is stored server-side; the host can disconnect an agent at any time.
+
+## Architecture: star topology around the host tab
 
 ```
- Participant 1 ─┐                       ┌─ signalisation seulement (WebSocket /wall)
- Participant 2 ─┼── WebRTC DataChannel ─┤   relais p2p-signal (VPS) : ne voit ni clé ni contenu
- Participant N ─┘   (chiffré E2E)      Hôte (onglet) : contenu en RAM, sert les éléments à la demande
+ Participant 1 ─┐                       ┌─ signaling only (WebSocket /wall)
+ Participant 2 ─┼── WebRTC DataChannel ─┤   p2p-signal relay (VPS): sees no key, no content
+ Participant N ─┘   (E2E encrypted)    Host (tab): content in RAM, serves items on demand,
+                                         runs the optional on-device models
 ```
 
-Choix : **étoile via l'hôte** (et non maillage complet) :
+Why a **star through the host** (not a full mesh):
 
-1. **Contrôle et destruction** : l'hôte détient l'unique copie de référence ; « Détruire le mur » ou l'expiration n'a qu'un point à vider, plus un ordre `destroy` diffusé à chaque participant. En maillage, chaque pair aurait une copie complète et il faudrait la confiance de N pairs.
-2. **Moins d'exposition des IP** : chaque participant ne voit que l'adresse IP de l'hôte, pas celle des autres participants (le relais n'annonce jamais les pairs entre eux). En maillage, tout le monde verrait toutes les IP.
-3. **Autodestruction fiable** : la règle « supprimé au premier téléchargement » est appliquée à un seul endroit (l'hôte).
-4. **Réutilisation** : même schéma que la Dropzone (propriétaire + contributeurs), mêmes briques `session.ts`, `sealChunk/openChunk`, preuves HMAC.
-5. **Coût** : N connexions au lieu de N(N-1)/2 ; les participants ne téléchargent que ce qu'ils ouvrent (à la demande), pas tout le mur.
+1. **Control and destruction**: the host holds the only reference copy; "Destroy the wall" has one place to wipe, plus a `destroy` order broadcast to each participant. In a mesh every peer would hold a full copy and you would need to trust N peers.
+2. **Less IP exposure**: each participant only sees the host's IP, not the others' (the relay never introduces peers to each other). In a mesh everyone would see every IP.
+3. **Reliable self-destruct**: "deleted at first download" is enforced in one place (the host).
+4. **Reuse**: same scheme as the Dropzone (owner + contributors), same building blocks `session.ts`, `sealChunk/openChunk`, HMAC proofs.
+5. **Cost**: N connections instead of N(N-1)/2; participants only download what they open.
 
-Contreparties assumées : l'onglet de l'hôte doit rester ouvert (il détient le contenu), sa bande passante montante est partagée entre les participants, 8 participants au plus.
+Accepted trade-offs: the host tab must stay open (it holds the content), its upstream bandwidth is shared, 8 participants max.
 
-## Format des liens
+## Link format
 
-| Lien | Forme | Qui l'a |
+| Link | Form | Who has it |
 |---|---|---|
-| Participant | `/app/#wall:<wallId>/<clé>/<expiration>/<options>` | toutes les personnes invitées (lien, QR code) |
-| Hôte | `/app/#wall-host:<secretHôte>/<clé>/<expiration>/<options>[/<nom>]` | uniquement l'onglet de l'hôte (permet de reprendre après rechargement) |
-| Création | `/app/#wall-new`, `/wall`, `/wall/new` | public, sans secret |
+| Participant | `/app/#wall:<wallId>/<key>/<expiry>/<options>` | everyone invited (link, QR code) |
+| Host | `/app/#wall-host:<hostSecret>/<key>/<expiry>/<options>[/<name>]` | only the host tab (resume after reload) |
+| Create | `/app/#wall-new`, `/wall`, `/wall/new` | public, no secret |
 
-- `clé` : 32 octets aléatoires (base64url, 43 caractères), générés dans le navigateur de l'hôte. Elle n'existe que dans le **fragment** (après `#`), que les navigateurs n'envoient jamais au serveur web ni au relais.
-- `wallId` = `wall-` + 24 premiers caractères hex de `SHA-256(secretHôte)` : le relais vérifie cette égalité, donc seul le détenteur du lien hôte peut prendre le rôle d'hôte. Le lien participant ne contient pas `secretHôte`.
-- `expiration` : `0` pour les nouveaux murs (**pas de durée limite** : le mur vit tant que l'hôte le garde ouvert et il est détruit quand l'hôte le quitte). Les anciens liens portent des secondes Unix en base 36 (≤ 24 h) et restent honorés jusqu'à leur échéance.
-- `nom` (lien hôte seulement, optionnel) : nom du mur en UTF-8 base64url, pour qu'un hôte qui recharge le garde. Les participants le reçoivent dans le message `welcome` scellé, jamais dans leur lien ; le relais ne le voit pas. Nettoyé (caractères de contrôle retirés, espaces fusionnés, 80 caractères max) et affiché comme du texte.
-- `options` : `p` | `n` (mot de passe ou non), puis `1` (autodestruction après un téléchargement) et/ou `h` (détruire si l'hôte se déconnecte). Ex. `n`, `p1h`, `nh`.
-- L'expiration et les options entrent dans la dérivation de clés : les modifier dans le lien fait échouer la poignée de main.
-- **Code du mur** `XXXX-XXXX` : dérivé de `SHA-256("filenymous-wall-code|wallId|clé")`, affiché chez tous. Il sert à **vérifier** à voix haute qu'on est sur le même mur ; il ne permet **pas** de rejoindre : un code court tapé à la main suffirait au relais pour retrouver la salle, et un code assez long pour porter la clé ne serait plus « court ». On rejoint donc par lien ou QR code uniquement.
+- `key`: 32 random bytes (base64url, 43 chars) generated in the host's browser. It only exists in the **fragment** (after `#`), which browsers never send to the web server or the relay.
+- `wallId` = `wall-` + first 24 hex chars of `SHA-256(hostSecret)`: the relay checks it, so only the holder of the host link can take the host role. The participant link does not contain `hostSecret`.
+- `expiry`: `0` for new walls (**no time limit**: the wall lives while the host keeps it open and is destroyed when the host leaves). Older links carry Unix seconds in base 36 (≤ 24 h) and are honored until then.
+- `name` (host link only, optional): wall name in UTF-8 base64url so a reloading host keeps it. Participants receive it in the sealed `welcome`, never in their link; the relay doesn't see it. Cleaned (control characters removed, spaces collapsed, 80 chars max) and shown as text.
+- `options`: `p` | `n` (password or not), then `1` (self-destruct after one download) and/or `h` (destroy when the host disconnects). E.g. `n`, `p1h`, `nh`.
+- Expiry and options are part of key derivation: editing them in the link makes the handshake fail.
+- **Wall code** `XXXX-XXXX`: derived from `SHA-256("filenymous-wall-code|wallId|key")`, shown to everyone. It is for **checking** aloud that you are on the same wall; it does **not** let you join: a short typed code would be enough for the relay to find the room, and a code long enough to carry the key would no longer be short. You join by link or QR code only.
 
-## Cryptographie
+## Cryptography
 
-- Matériau : `clé` seule, ou `clé ‖ PBKDF2-SHA256(mot de passe, "filenymous-wall-pw:<wallId>", 200 000 itérations)` si mot de passe. Le mot de passe n'est jamais transmis.
-- HKDF-SHA256 (sel `filenymous-wall-v1`, contexte `<wallId>:<sid>:<exp>:<options>`, `sid` aléatoire par connexion) → trois clés : `wall-proof` (HMAC de preuve), `wall-up` (participant → hôte), `wall-down` (hôte → participant). Des clés distinctes par sens et par session excluent toute réutilisation d'IV.
-- Poignée de main en clair sur le DataChannel, sans contenu : `wall-hello {v, sid, proof}` → `wall-ready {proof}` ou `wall-reject {reason}`. Preuve mutuelle (`sealProof/checkProof`) : un mauvais mot de passe est refusé sans rien révéler.
-- Ensuite **tout** est scellé AES-256-GCM (format `sealChunk` : IV = flux ‖ index, en-tête en AAD) : flux 0 = messages de contrôle JSON (noms de fichiers, tailles, textes compris), flux ≥ 1 = données. L'ordre est imposé par flux : toute trame rejouée, réordonnée ou modifiée coupe la connexion.
+- Material: `key` alone, or `key ‖ PBKDF2-SHA256(password, "filenymous-wall-pw:<wallId>", 200,000 iterations)` with a password. The password is never transmitted.
+- HKDF-SHA256 (salt `filenymous-wall-v1`, info `<wallId>:<sid>:<exp>:<options>`, random `sid` per connection) → three keys: `wall-proof` (HMAC), `wall-up` (participant → host), `wall-down` (host → participant). Distinct keys per direction and session rule out IV reuse.
+- Clear handshake on the DataChannel, no content: `wall-hello {v, sid, proof}` → `wall-ready {proof}` or `wall-reject {reason}`. Mutual proof (`sealProof/checkProof`): a wrong password is refused without revealing anything.
+- Then **everything** is sealed with AES-256-GCM (`sealChunk` format: IV = stream ‖ index, header as AAD): stream 0 = JSON control messages (file names, sizes, texts included), streams ≥ 1 = data. Order is enforced per stream: any replayed, reordered or altered frame drops the connection.
 
-## Protocole
+## Protocol
 
-Relais (WebSocket `wss://www.opendpe.net/filenymous-signal/wall`) :
+Relay (WebSocket `wss://www.opendpe.net/filenymous-signal/wall`):
 
-| Message | Champs (liste stricte, tout autre champ est refusé) |
+| Message | Fields (strict list; any other field is refused) |
 |---|---|
-| `wall-join` hôte | `wallId`, `role:"host"`, `hostSecret`, `expiresAt` (optionnel : absent = pas d'expiration), `destroyOnHostLeave` |
-| `wall-join` participant | `wallId`, `role:"peer"`, `peerId` (aléatoire) |
-| `wall-signal` | `payload` (offre/réponse/ICE), `to` (hôte uniquement) |
-| `wall-close` | hôte uniquement : ferme la salle pour tous (pierre tombale : la salle ne peut pas renaître) |
-| `wall-leave` | quitter |
+| `wall-join` host | `wallId`, `role:"host"`, `hostSecret`, `expiresAt` (optional: absent = no expiry), `destroyOnHostLeave` |
+| `wall-join` participant | `wallId`, `role:"peer"`, `peerId` (random) |
+| `wall-signal` | `payload` (offer/answer/ICE), `to` (host only) |
+| `wall-close` | host only: closes the room for everyone (tombstone: the room can't come back) |
+| `wall-leave` | leave |
 
-Événements serveur : `wall-joined`, `wall-peer-joined/left` (à l'hôte seulement), `wall-host-online/offline`, `wall-signal`, `wall-closed {reason: destroyed|host-left|expired}`. Les participants ne reçoivent jamais l'identifiant des autres participants. Expiration plafonnée (`WALL_MAX_TTL_MS`), non prolongeable ; capacité `MAX_WALL_PEERS` ; si `destroyOnHostLeave`, la salle est fermée après `WALL_HOST_GRACE_MS` sans hôte (5 s, pour tolérer un rechargement).
+Server events: `wall-joined`, `wall-peer-joined/left` (host only), `wall-host-online/offline`, `wall-signal`, `wall-closed {reason: destroyed|host-left|expired}`. Participants never receive other participants' ids. Expiry capped (`WALL_MAX_TTL_MS`), not extendable; capacity `MAX_WALL_PEERS`; with `destroyOnHostLeave` the room closes after `WALL_HOST_GRACE_MS` without host (5 s, to tolerate a reload). The relay is unchanged by v3.
 
-DataChannel (tout scellé après la poignée de main) :
+DataChannel (all sealed after the handshake), protocol version 2 (`v: 2` in `wall-hello`), features announced with `feat` (currently 4):
 
-Version de protocole 2 (`v: 2` dans `wall-hello`).
+- participant → host: first `profile {name, agent, media, feat}`; then `say {text, replyTo?}`, `put {uid, kind, name, size, mime, replyTo?}` + frames (stream `uid`) + `put-end`, `get {rid, id}`, `react {id, emoji}`, `poll {question, options}`, `vote`, `poll-close`, `remove`, `typing`, `burst {kind}`, `hand {up}`, `rename {name}`, `live-start {kind, tracks}`, `live-stop`, `rtc {link, kind: offer|answer|ice, …}`, tasks/notes/board messages, `search {rid, q, k}`, `thread-open {to, goal?, task?}`, `thread-say {id, text}`, `thread-close {id}`, `bye`.
+- host → participant: `welcome {label, expiresAt, burn, hostLeave, agents, media, title?, feat}` (`expiresAt: 0` = no expiry), then existing `post`s, `pin`, `live`; then `members`, `post` (create or update: reactions, votes; optional `caption {sid, en?}`), `unpost`, `pin`, `typing-by`, `burst-by`, `settings {agents}`, `live {streams, captions?: {en}}`, `live-ok/live-fail`, `rtc`, `notice {code, retryMs?}`, `kick {reason: kicked|agents-off}`, `put-ok/put-fail`, `get-begin` + frames + `get-end/get-fail`, `search-res/search-fail`, `thread`, `thread-msg`, `destroy {reason}`.
+- Every message is strictly validated (`parseWallMessage`): fields, types, lengths; any invalid message drops the connection.
 
-- participant → hôte : d'abord `profile {name, agent, media}` ; puis `say {text, replyTo?}`, `put {uid, kind, name, size, mime, replyTo?}` + trames (flux `uid`) + `put-end`, `get {rid, id}`, `react {id, emoji}`, `poll {question, options}`, `vote`, `poll-close`, `remove`, `typing`, `burst {kind}`, `hand {up}`, `rename {name}`, `live-start {kind, tracks}`, `live-stop`, `rtc {link, kind: offer|answer|ice, …}`, `bye`.
-- hôte → participant : `welcome {label, expiresAt, burn, hostLeave, agents, media, title?}` (`expiresAt: 0` = pas d'expiration), puis les `post` existants, `pin`, `live` ; ensuite `members`, `post` (création ou mise à jour : réactions, votes), `unpost`, `pin`, `typing-by`, `burst-by`, `settings {agents}`, `live`, `live-ok/live-fail`, `rtc`, `notice {code, retryMs?}`, `kick {reason: kicked|agents-off}`, `put-ok/put-fail`, `get-begin` + trames + `get-end/get-fail`, `destroy {reason}`.
-- Chaque message est validé strictement (`parseWallMessage`) : champs, types et longueurs ; tout message invalide coupe la connexion.
+Code: `ui/src/wall/` (`link.ts`, `crypto.ts`, `model.ts`, `feed.ts`, `markup.ts`, `emoji.ts`, `live.ts`, `signal.ts`, `host.ts`, `peer.ts`, `wallsearch.ts`, `threads.ts`, `ai/` (models, embedding and Whisper workers, transcriber), `WallRoom.tsx`, `WallPanel.tsx`, `AgentThreads.tsx`, `LocalAiTools.tsx`, `Markup.tsx`, `EmojiPicker.tsx`), CLI `cli/src/wall.ts` and `cli/src/a2a.ts`, relay `p2p-signal/server.js`.
 
-Code : `ui/src/wall/` (`link.ts`, `crypto.ts`, `model.ts`, `feed.ts`, `markup.ts`, `emoji.ts`, `live.ts`, `signal.ts`, `host.ts`, `peer.ts`, `WallRoom.tsx`, `WallPanel.tsx`, `Markup.tsx`, `EmojiPicker.tsx`), CLI `cli/src/wall.ts`, relais `p2p-signal/server.js` (v2 inchangé ; octobre 2026 : `expiresAt` optionnel pour les murs sans expiration).
+## Lifecycle rules
 
-## Règles de vie
+- **No time limit** (since October 2026): at creation the host names the wall and must tick "I understand that when I leave, the wall and all its information will be destroyed" ("Create" stays disabled otherwise). A wall without its host for 1 h is closed by the relay.
+- **Expiry (older links)**: checked every second at the host and each participant (local wipe), and by the relay (room closed).
+- **Self-destruct after 1 download**: the first "Download", "Preview" or "Reveal" by someone other than the author (host included) removes the item from the wall; a confirmation is asked first. Whoever got it keeps their in-memory copy (marked "Local copy") until the wall is destroyed.
+- **Destroy the wall**: the host sends a sealed `destroy` to each participant (wipe + Blob URL revocation), closes the connections, then `wall-close` to the relay.
+- **Host disconnected** (always on for new walls): the DataChannel closes → participants wipe everything immediately; the relay closes the room after the grace period.
+- **Leave**: a participant can leave at any time; their copy is erased.
+- **Close confirmation**: closing the tab (`beforeunload`), "← Home", the logo, "Leave the wall" or "Destroy the wall" show the same confirmation shared by all services ("You are about to close the window…", Cancel / Leave) while the wall is open; for the host, "Leave" destroys the wall for everyone.
 
-- **Pas de durée limite** (depuis octobre 2026) : à la création, l'hôte donne un nom au mur et doit cocher « J'ai compris qu'en quittant, le mur et toutes ses informations seront détruits » (le bouton « Créer » reste désactivé sinon). Un mur sans hôte depuis 1 h est fermé par le relais.
-- **Expiration (anciens liens)** : contrôlée chaque seconde chez l'hôte et chez chaque participant (effacement local), et par le relais (fermeture de la salle).
-- **Autodestruction après 1 téléchargement** : le premier « Télécharger », « Aperçu » ou « Révéler » par quelqu'un d'autre que l'auteur (hôte compris) retire l'élément du mur ; une confirmation est demandée avant. Celui qui l'a obtenu garde sa copie en mémoire (marquée « Copie locale ») jusqu'à la destruction du mur.
-- **Détruire le mur** : l'hôte envoie `destroy` scellé à chaque participant (effacement + révocation des Blob URL), ferme les connexions, puis `wall-close` au relais.
-- **Hôte déconnecté** (toujours activé pour les nouveaux murs) : fermeture du DataChannel → les participants effacent tout immédiatement ; le relais ferme la salle après la période de grâce.
-- **Quitter** : un participant peut partir à tout moment ; sa copie est effacée.
-- **Confirmation de fermeture** : fermer l'onglet (`beforeunload`), « ← Accueil », le logo, « Quitter le mur » ou « Détruire le mur » affichent la même confirmation partagée par tous les services (« Vous êtes sur le point de fermer la fenêtre… », Annuler / Quitter) tant que le mur est ouvert ; chez l'hôte, « Quitter » détruit le mur pour tous.
+## Limits
 
-## Limites
-
-| Limite | Valeur |
+| Limit | Value |
 |---|---|
-| Participants simultanés | 8 (relais `MAX_WALL_PEERS`) |
-| Taille par élément | 256 Mio |
-| Total par mur | 1 Gio, 200 éléments |
-| Note / secret | 64 Kio de texte |
-| Message | 4000 caractères ; fil : 1000 messages/sondages |
-| Flux en direct | 2 par mur, 1 par participant, 2 pistes par flux |
-| Médias en ligne automatiques | ≤ 32 Mio, murs sans autodestruction |
-| Durée de vie | aucune : tant que l'hôte garde le mur ouvert (relais : mur sans hôte fermé après 1 h) |
+| Simultaneous participants | 8 (relay `MAX_WALL_PEERS`) |
+| Size per item | 256 MiB |
+| Total per wall | 1 GiB, 200 items |
+| Note / secret | 64 KiB of text |
+| Message | 4000 characters; feed: 1000 messages/polls |
+| Live streams | 2 per wall, 1 per participant, 2 tracks per stream |
+| Automatic inline media | ≤ 32 MiB, walls without self-destruct |
+| Search | k ≤ 8 snippets, query ≤ 200 characters |
+| Agent threads | 8 per agent, 500 messages kept, 4000 characters per message |
+| Lifetime | none: as long as the host keeps the wall open (relay: host-less wall closed after 1 h) |
 
-Le contenu est gardé en RAM (`Blob`) : la mémoire de l'onglet hôte borne en pratique le volume.
+Content is kept in RAM (`Blob`): the host tab's memory bounds the volume in practice. The on-device models add memory and CPU load to the host tab only while they are on.
 
-## Aperçus
+## Previews
 
-- Images (`<img>`, SVG compris : aucun script n'y est exécuté), vidéo et audio (`<video>/<audio>`) depuis des Blob URL, révoquées à la fermeture de l'aperçu, à l'effacement et au démontage. Texte (`.txt`, `.md`, `.json`, code, `.env`, HTML…) affiché via `textContent` dans un `<pre>` : jamais interprété.
-- **PDF : pas d'aperçu**, téléchargement uniquement. Le lecteur PDF de Chromium refuse les iframes `sandbox` et peut exécuter le JavaScript du document ; pdf.js n'est pas embarqué. Plutôt qu'un aperçu non isolé, on l'indique clairement.
-- Aucun contenu n'est écrit dans IndexedDB, localStorage, sessionStorage ou le cache. Révoquer une Blob URL et lâcher les références ne garantit pas un effacement immédiat de la RAM : c'est le ramasse-miettes du navigateur qui libère la mémoire.
+- Images (`<img>`, SVG included: no script runs there), video and audio (`<video>/<audio>`) from Blob URLs, revoked when the preview closes, on wipe and on unmount. Text (`.txt`, `.md`, `.json`, code, `.env`, HTML…) shown via `textContent` in a `<pre>`: never interpreted.
+- **PDF: no preview**, download only. Chromium's PDF viewer refuses `sandbox` iframes and can run the document's JavaScript; pdf.js is not bundled. Rather than an unisolated preview, we say so clearly.
+- No content is written to IndexedDB, localStorage, sessionStorage or the cache (the opt-in model files are public and go to the browser cache; no wall content does). Revoking a Blob URL and dropping references does not guarantee immediate RAM erasure: the browser's garbage collector frees memory.
 
-## Confidentialité : ce qui est protégé, ce qui ne l'est pas
+## Privacy: what is protected, what isn't
 
-- Protégé : le contenu, les noms de fichiers, les notes, le mot de passe et la clé, vis-à-vis du relais, de l'hébergeur et de tout intermédiaire réseau (TURN compris).
-- Le relais voit : un identifiant de mur opaque, l'expiration éventuelle (anciens liens), l'option « détruire si l'hôte part », le `hostSecret` de l'hôte (dont il ne vérifie que le hash), les paramètres WebRTC (SDP, candidats ICE, donc les adresses IP) et l'adresse IP de connexion, gardée **en mémoire** pour la limitation de débit. Il n'écrit aucune ligne par requête ; nginx a `access_log off` pour `/filenymous-signal/wall` (après déploiement, voir plus bas).
-- **Ce n'est pas de l'anonymat** : en WebRTC l'hôte voit l'IP de chaque participant et chaque participant voit celle de l'hôte (sauf relais TURN). Tor Browser désactive WebRTC : pour masquer son IP, utiliser un VPN de confiance. Pour une source ou un lanceur d'alerte, le canal de signalement (asynchrone, utilisable via Tor) est le bon outil.
-- **Agents IA** : ce qu'un agent lit sort du chiffrement de bout en bout vers le fournisseur de son modèle (désactivé par défaut, avertissement à l'activation et tant qu'un agent est là ; badge auto-déclaré).
-- **En direct** : l'hôte reçoit et retransmet les flux ; les participants voient l'IP de l'hôte, pas celles des autres.
-- Les participants peuvent enregistrer, copier ou photographier ce qu'ils ont vu : la destruction efface les copies en mémoire, pas ce qui a déjà été sauvegardé.
-- Pas de mesure d'audience sur les pages `#wall…` (le garde Umami coupe l'envoi).
-- Le lien hôte (avec `hostSecret`) est dans la barre d'adresse et l'historique de l'onglet hôte, comme pour la Dropzone ; le lien participant reste dans l'historique des participants jusqu'à la destruction du mur (il devient alors inutilisable).
-- Le texte de l'interface est protégé par un test (`ui/src/wall/wall.test.ts`) qui interdit « anonymat absolu », « aucune IP », « zéro log », « certifié », etc. et exige les mentions IP/VPN/Tor/canal de signalement.
+- Protected: content, file names, notes, password and key, from the relay, the host provider and any network intermediary (TURN included).
+- The relay sees: an opaque wall id, the optional expiry (older links), the "destroy when the host leaves" option, the host's `hostSecret` (it only checks its hash), WebRTC parameters (SDP, ICE candidates, hence IP addresses) and the connecting IP, kept **in memory** for rate limiting. It writes no per-request line; nginx has `access_log off` for `/filenymous-signal/wall`.
+- **This is not anonymity**: with WebRTC the host sees each participant's IP and each participant sees the host's (unless TURN-relayed). Tor Browser disables WebRTC: to hide your IP, use a trusted VPN. For a source or whistleblower, the reporting channel (asynchronous, usable over Tor) is the right tool.
+- **AI agents**: what an agent reads leaves end-to-end encryption for its model provider (off by default, warning when enabling and while an agent is present; self-declared badge). That includes search snippets, private thread messages and captions.
+- **The host sees everything**, including private agent threads and the audio it transcribes; on-device models mean no third-party AI service receives the wall from the host, not that the host doesn't.
+- **Live**: the host receives and forwards streams; participants see the host's IP, not each other's.
+- Participants can record, copy or photograph what they saw: destruction erases in-memory copies, not what was already saved.
+- No analytics on `#wall…` pages (the Umami guard stops sending).
+- The host link (with `hostSecret`) is in the host tab's address bar and history, as for the Dropzone; the participant link stays in participants' history until the wall is destroyed (it then becomes useless).
+- The UI wording is guarded by a test (`ui/src/wall/wall.test.ts`) that forbids "absolute anonymity", "no IP", "zero log", "certified", etc. and requires the IP/VPN/Tor/reporting-channel mentions.
 
-## CLI et agents IA (`filenymous` ≥ 0.4.1 pour les murs sans expiration)
+## CLI and AI agents (`filenymous` ≥ 0.7.0 for search and threads)
 
 ```
-npx filenymous wall create [--title <nom du mur>] [--ttl 15m|1h|24h] [--burn] [--keep-on-leave] [--allow-agents] [--name <nom>]
-npx filenymous wall join "<lien>" [--name <nom>] [--http] [--files-root <dir>] [-o <dir>]
-npx filenymous wall mcp "<lien>" | --create [...]
+npx filenymous wall create [--title <wall name>] [--burn] [--keep-on-leave] [--allow-agents] [--agent-scope <scopes>] [--name <name>] [--a2a]
+npx filenymous wall join "<link>" [--name <name>] [--http] [--a2a] [--files-root <dir>] [-o <dir>]
+npx filenymous wall mcp "<link>" | --create [...]
 ```
 
-- **JSON Lines** : événements sur stdout (`ready`, `message`, `file`, `note`, `poll`, `poll.update`, `reaction`, `join`, `leave`, `removed`, `pin`, `live`, `notice`, `ended`), commandes sur stdin (`send`, `react`, `vote`, `poll`, `note`, `file`, `get`, `read`, `members`, `info`, `leave` ; hôte : `pin`, `kick`, `allow-agents`) ; `ref` est renvoyé dans le `result`. Mot de passe : `--password` ou `FILENYMOUS_PASSWORD`.
-- `wall create` affiche le lien **participant** seulement (jamais le secret hôte) ; le processus détient le mur en mémoire et le détruit en quittant (sauf `--keep-on-leave`).
-- **Pont HTTP/SSE local** (`--http`) : `127.0.0.1` seulement, jeton porteur aléatoire (ou `FILENYMOUS_HTTP_TOKEN`), refus des en-têtes `Host` non locaux et de toute requête `Origin` (navigateurs) ; `GET /events` (SSE), `/messages`, `/participants`, `/info`, `POST /send`, `/react`, `/file`, …
-- **MCP (stdio)** : outils `wall_read_messages` (avec attente longue), `wall_send_message`, `wall_send_file`, `wall_react`, `wall_list_participants`, plus `wall_get_item` et `wall_info`. Configuration : voir [cli/README.md](../cli/README.md#agents-ia--sharewall).
-- `wall send_file` lit uniquement sous `--files-root` (répertoire courant par défaut, liens symboliques résolus).
+- **JSON Lines**: events on stdout (`ready`, `message`, `file`, `note`, `poll`, `poll.update`, `reaction`, `join`, `leave`, `removed`, `pin`, `live`, `captions`, `task`, `thread`, `thread.message`, `notice`, `ended`, …), commands on stdin (`send`, `react`, `vote`, `poll`, `note`, `file`, `get`, `read`, `search`, `tasks`, `add-task`, `delegate`, `thread-open`, `thread-say`, `threads`, `thread-read`, `thread-close`, `members`, `info`, `leave`; host: `pin`, `kick`, `allow-agents`, `scope`, `share`, `thread-approve`); `ref` is echoed in the `result`. Password: `--password` or `FILENYMOUS_PASSWORD`.
+- `wall create` prints the **participant** link only (never the host secret); the process holds the wall in memory and destroys it on exit (unless `--keep-on-leave`). A CLI host ranks search by keywords and auto-approves agent threads.
+- **Local HTTP/SSE bridge** (`--http`): `127.0.0.1` only, random bearer token (or `FILENYMOUS_HTTP_TOKEN`), refuses non-local `Host` headers and any `Origin` request (browsers); `GET /events` (SSE), `/messages`, `/participants`, `/info`, `POST /send`, `/react`, `/file`, …
+- **MCP (stdio)**: `wall_read_messages` (long-poll), `wall_send_message`, `wall_send_file`, `wall_react`, `wall_list_participants`, `wall_get_item`, `wall_info`, `wall_read_notes`, `wall_write_note`, `wall_list_tasks`, `wall_add_task`, `wall_update_task`, `wall_delegate_task`, `wall_post_artifact`, `wall_search`, `wall_open_thread`, `wall_thread_send`, `wall_read_thread`, `wall_close_thread`; prompt `summarize_wall`. Config: see [cli/README.md](../cli/README.md#agents-ia--sharewall).
+- `wall send_file` only reads under `--files-root` (current directory by default, symlinks resolved).
 
-## Extension navigateur
+## Browser extension
 
-Non incluse (pas triviale : il faudrait un onglet hôte persistant, or le service worker MV3 est suspendu). Inscrite à la feuille de route : « Créer un mur » depuis le menu de l'extension, qui ouvre `#wall-new` dans un onglet.
+Not included (not trivial: it would need a persistent host tab, and the MV3 service worker gets suspended). On the roadmap: "Create a wall" from the extension menu, opening `#wall-new` in a tab.
 
 ## Tests
 
-- Relais : `cd p2p-signal && npm test` (inclut `wall.test.mjs` : secret hôte exigé, champs en trop refusés, routage en étoile et isolation des pairs, kill switch + pas de renaissance, destruction au départ de l'hôte après grâce, reconnexion dans la grâce, expiration imposée et non prolongeable, capacité 8).
-- Unitaires : `cd ui && npx vitest run src/wall/` (liens, crypto/trames scellées, règles d'autodestruction/expiration/limites, validation des messages v2, fil/réactions/sondages/limites de débit, mise en forme sûre, mentions, emojis, message de jointure sans clé, garde de vocabulaire, mention du fournisseur pour les agents).
-- CLI : `cd cli && npm test` (`wall.test.mjs` : hôte CLI + 2 agents en JSON Lines, refus par défaut, limite de débit, désactivation des agents, pont HTTP, mot de passe, autodestruction ; `mcp.test.mjs` : client MCP officiel `@modelcontextprotocol/sdk` sur stdio).
-- E2E v2 : `e2e/sharewall-live.spec.ts` (caméra + micro d'un participant et écran de l'hôte avec médias simulés, 3ᵉ flux refusé, arrêt, aucun SDP média vers le relais), `e2e/sharewall-agents.spec.ts` (2 navigateurs + 2 agents CLI : refus par défaut, activation avec avertissement, badges IA, mentions, réponses, réactions, fichiers, limite de débit, déconnexion, désactivation) ; `sharewall.spec.ts` couvre aussi emojis, réactions, sondages, réponses, épinglage, médias en ligne.
-- E2E : `cd ui && npx playwright test e2e/sharewall.spec.ts` (3 contextes : grille en direct, notes masquées/révélées/copiées, aperçus image/vidéo/texte, PDF sans aperçu, SHA-256 identiques, rien vers le relais ni dans le stockage, départ d'un pair, kill switch, mot de passe, autodestruction, expiration avec horloge simulée, destruction à la fermeture de l'onglet hôte).
+- Relay: `cd p2p-signal && npm test` (`wall.test.mjs`: host secret required, extra fields refused, star routing and peer isolation, kill switch + no rebirth, destruction after the host leaves past the grace, reconnection within the grace, enforced non-extendable expiry, capacity 8).
+- Unit: `cd ui && npx vitest run src/wall/` (links, crypto/sealed frames, self-destruct/expiry/limit rules, message validation, feed/reactions/polls/rate limits, safe formatting, mentions, emoji, vocabulary guard, provider mention, scoped search and its rate limit, threads (approval, routing, visibility, limits, parsing), caption protocol and noise filter).
+- CLI: `cd cli && npm test` (`wall.test.mjs`: CLI host + 2 JSON Lines agents; `mcp.test.mjs`: official `@modelcontextprotocol/sdk` client over stdio, incl. scoped `wall_search` and a delegate → private thread → send/read/close flow; `a2a.test.mjs`).
+- E2E: `e2e/sharewall.spec.ts`, `e2e/sharewall-live.spec.ts`, `e2e/sharewall-agents.spec.ts`; v3: `e2e/sharewall-ai.spec.ts` (semantic search in the host tab with local models, limited+search agent, no off-site request) and `e2e/sharewall-captions.spec.ts` (fake mic playing a speech sample, Whisper captions with the participant indicator, no off-site request). Both need the models: `node scripts/fetch-models.mjs --out ../models-cache` (and `jfk.wav` from whisper.cpp's samples for captions).
 
-## Déploiement (à faire, non exécuté par la PR)
+## Deployment
 
-La v2 ne modifie pas le relais (tout le nouveau protocole est dans le DataChannel scellé) : l'ordre ci-dessous est inchangé. La CLI 0.4.0 n'est pas publiée sur npm par la PR.
-
-Ordre : **relais d'abord**, puis site. Un site déployé avant le relais afficherait le mur mais les connexions échoueraient (`/wall` inconnu de l'ancien relais : messages `wall-*` refusés).
-
-1. **Relais (VPS openDPE)** : déployer le nouveau `p2p-signal/server.js` (+ `package.json`) via le workflow de déploiement du relais du dépôt openDPE (comme pour la Dropzone / le canal de signalement), puis `sudo systemctl restart filenymous-signal`. Variables facultatives dans `/etc/filenymous-signal.env` : `WALL_MAX_TTL_MS` (24 h + 60 s), `MAX_WALL_PEERS` (8), `WALL_HOST_GRACE_MS` (5000), `WALL_SWEEP_MS` (15000). Vérifier `GET https://www.opendpe.net/filenymous-signal/health` → champ `walls` présent.
-2. **nginx (VPS)** : ajouter le bloc `location = /filenymous-signal/wall { access_log off; … }` de `p2p-signal/nginx-opendpe-location.conf` dans le `server` d'opendpe.net, puis `sudo nginx -t && sudo systemctl reload nginx`. Contrôle : ouvrir un mur, puis `sudo grep -c 'filenymous-signal/wall' /var/log/nginx/access.log` → `0`. Vérifier qu'aucun proxy/CDN en amont ne journalise ce chemin.
-3. **Site (OVH)** : `deploy-ovh-ui.yml` sur `main` (téléverse aussi `.htaccess` avec la redirection `/wall`, `/wall/new` → `/app/#wall-new`). Puis `ovh-htaccess.yml` en mode `verify` (contrôles curl `/wall` ajoutés).
-4. Tant que l'étape 2 n'est pas faite, la phrase « il ne tient pas de journal d'accès pour les murs » de l'interface serait inexacte : ne pas publier le site avant.
+The relay is not affected by v2/v3 (the whole new protocol is inside the sealed DataChannel). Site: `deploy-ovh-ui.yml` on `main`. Models: `ovh-models.yml` (manual, `dry` input first; uploads `scripts/models.manifest.json` files to `/app/models/` after checking sizes and SHA-256; check the hosting quota first and prune old backups). Order for the original relay deployment (relay first, then nginx `access_log off`, then site) is detailed in [SHAREWALL.fr.md](SHAREWALL.fr.md#déploiement-à-faire-non-exécuté-par-la-pr).

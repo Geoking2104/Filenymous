@@ -59,6 +59,13 @@ export function agentCard(url: string, version: string): J {
         tags: ["sharewall", "delegation", "tasks"],
         examples: ["Summarise the PDF shared on the wall"],
       },
+      {
+        id: "wall-search",
+        name: "Search the wall",
+        description: "SendMessage with metadata.op = \"search\" (optional metadata.k, 1-8): the host ranks locally and returns top-k snippets this participant may see, as a JSON data part (no task is created).",
+        tags: ["sharewall", "search", "rag"],
+        examples: ["deadline for the report"],
+      },
     ],
   };
 }
@@ -135,7 +142,11 @@ export async function startA2aBridge(
     if (msg.taskId !== undefined) {
       const t = find(msg.taskId);
       if (TERMINAL.has(wallState(t))) throw new RpcError(A2A_ERR.unsupported, "task is in a terminal state");
-      await agent.send(`↪ ${t.text.slice(0, 80)}: ${text}`);
+      // Follow-ups go to the task's private agent thread when there is one
+      // (routed through and visible to the host), else to the public feed.
+      const th = agent.threadForTask(t.id);
+      if (th) await agent.threadSend(th, text.slice(0, 4000));
+      else await agent.send(`↪ ${t.text.slice(0, 80)}: ${text}`);
       if (wallState(t) === "input-required") await agent.updateTask(t.id, { state: "working" });
       return { id: t.id, blocking };
     }
@@ -154,6 +165,19 @@ export async function startA2aBridge(
   const rpc = async (method: string, p: J): Promise<unknown> => {
     switch (method) {
       case "SendMessage": {
+        const m = p.message as J | undefined;
+        const md = (m?.metadata ?? {}) as J;
+        if (m && typeof m === "object" && md.op === "search") {
+          const q = textOf(m);
+          if (!q) throw new RpcError(A2A_ERR.params, "empty query");
+          let r;
+          try {
+            r = await agent.search(q, md.k === undefined ? undefined : Number(md.k));
+          } catch (e) {
+            throw new RpcError(A2A_ERR.params, (e as Error).message);
+          }
+          return { message: { role: "ROLE_AGENT", messageId: randomUUID(), contextId, parts: [{ data: { mode: r.mode, hits: r.hits }, mediaType: "application/json" }] } };
+        }
         const { id, blocking } = await send(p);
         const t = blocking ? await until(id, stopped, waitMs) : agent.getTask(id);
         if (!t) throw new RpcError(A2A_ERR.notFound, "task disappeared from the wall");

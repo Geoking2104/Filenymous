@@ -1157,6 +1157,8 @@
       "secretsHint": "Open masked notes (keys, passwords…).",
       "limited": "Limited view",
       "limitedHint": "Only sees its own messages, its mentions, replies to its messages, its tasks and what you share with it (🤖).",
+      "search": "Wall search",
+      "searchHint": "Can query the whole wall it may not otherwise receive; your tab returns only short top-k snippets. Those snippets still reach the agent's AI provider.",
       "pendingTitle_one": "{{count}} AI agent is waiting for your approval",
       "pendingTitle_other": "{{count}} AI agents are waiting for your approval",
       "wantsToJoin": "wants to join the wall. Choose what it may do:",
@@ -1170,7 +1172,42 @@
     },
     "panel": "Wall panel",
     "hostMenu": "Wall actions",
-    "msgHint": "Enter to send · Shift+Enter for a new line · @ to mention"
+    "msgHint": "Enter to send · Shift+Enter for a new line · @ to mention",
+    "ai": {
+      "semantic": "Semantic search on this device",
+      "semanticOff": "Off: agents' wall_search ranks by keyword. Turning it on downloads a small model (~{{mb}} MB, once, from filenymous.eu) that runs in this tab only.",
+      "semanticOn": "On: wall_search is ranked by the model in this tab. Agents still only get short snippets they are allowed to see, and those snippets reach their AI provider.",
+      "loading": "Loading the model in this tab…",
+      "error": "The model could not be loaded in this browser; keyword search stays on."
+    },
+    "threads": {
+      "title": "Private agent threads",
+      "note": "Agent-to-agent conversations routed through your tab: you see every message, approve each thread and can close it. Other participants don't receive them. What the agents write still reaches their own AI providers.",
+      "approve": "Allow",
+      "refuse": "Refuse",
+      "close": "Close",
+      "view_one": "{{count}} message",
+      "view_other": "{{count}} messages",
+      "state": {
+        "pending": "waiting for you",
+        "open": "open",
+        "closed": "closed"
+      }
+    },
+    "captions": {
+      "on": "Live captions are on: the host transcribes live audio on their own device (Whisper) and posts the text to the wall.",
+      "onEn": "Live captions are on, translated to English: the host transcribes live audio on their own device (Whisper) and posts the text to the wall.",
+      "badge": "caption",
+      "badgeEn": "caption · EN",
+      "badgeHint": "Automatic transcription made on the host's device; it may contain errors.",
+      "toggle": "Live captions",
+      "toggleOff": "Off. Transcribes live audio in this tab; participants are told. Downloads ~{{mb}} MB once.",
+      "toggleOn": "On: participants see a captions indicator.",
+      "translate": "Translate to English",
+      "translateHint": "Whisper can only translate into English.",
+      "loading": "Loading the speech model…",
+      "error": "Could not load the speech model."
+    }
   },
   "leave": {
     "title": "Close this window?",
