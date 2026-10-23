@@ -142,7 +142,11 @@ export async function startA2aBridge(
     if (msg.taskId !== undefined) {
       const t = find(msg.taskId);
       if (TERMINAL.has(wallState(t))) throw new RpcError(A2A_ERR.unsupported, "task is in a terminal state");
-      await agent.send(`↪ ${t.text.slice(0, 80)}: ${text}`);
+      // Follow-ups go to the task's private agent thread when there is one
+      // (routed through and visible to the host), else to the public feed.
+      const th = agent.threadForTask(t.id);
+      if (th) await agent.threadSend(th, text.slice(0, 4000));
+      else await agent.send(`↪ ${t.text.slice(0, 80)}: ${text}`);
       if (wallState(t) === "input-required") await agent.updateTask(t.id, { state: "working" });
       return { id: t.id, blocking };
     }

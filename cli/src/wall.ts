@@ -23,6 +23,7 @@ import { buildWallLink, createWall, parseWallLink, wallCode, type HostWallParams
 import { cleanName, pseudonym, type Member, type Post, type WallEvent } from "../../ui/src/wall/feed";
 import { safeFileName } from "../../ui/src/p2p/protocol";
 import { AGENT_TASK_STATES, SCOPE_FULL, TASK_NOTE_MAX, cleanTaskText, isAgentTaskState, isResultId, isTaskId, parseScopeArg, scopeName, type AgentScope, type Task, type TaskKind, type TaskPatch } from "../../ui/src/wall/collab";
+import { THREAD_GOAL_MAX, THREAD_TEXT_MAX, type Thread } from "../../ui/src/wall/threads";
 import { NOTE_MAX_BYTES, cleanNoteText, cleanNoteTitle, isNoteId, utf8Bytes, type SharedNote } from "../../ui/src/wall/notes";
 
 declare const __VERSION__: string;
@@ -236,6 +237,14 @@ export class WallAgent {
       case "task-gone":
         this.emit({ event: "task.removed", id: ev.id });
         return;
+      case "thread":
+        this.emit({ event: "thread", ...this.threadOut(ev.thread) });
+        for (const w of this.waiters) w();
+        return;
+      case "thread-msg":
+        this.emit({ event: "thread.message", thread: ev.id, n: ev.msg.n, by: ev.msg.by, name: this.nameOf(ev.msg.by), self: ev.msg.by === this.self, at: new Date(ev.msg.at).toISOString(), text: ev.msg.text });
+        for (const w of this.waiters) w();
+        return;
       default:
         return;
     }
@@ -295,6 +304,9 @@ export class WallAgent {
         allowAgents: !!this.opts.allowAgents,
         // No human tab to approve: agents are admitted with the scope given on the command line.
         autoApproveAgents: true,
+        // The CLI host's operator runs it unattended: agent threads open right away
+        // (they are still routed through, and visible to, this host process).
+        autoApproveThreads: true,
         agentScope: this.opts.agentScope ? (parseScopeArg(this.opts.agentScope) ?? SCOPE_FULL) : SCOPE_FULL,
       },
     );
@@ -651,10 +663,133 @@ export class WallAgent {
     return this.self;
   }
 
-  /** Delegates a task to another participant (A2A-style lifecycle: submitted → working → completed/…). */
-  delegate(text: string, owner: string): Promise<Out> {
+  /**
+   * Delegates a task to another participant (A2A-style lifecycle: submitted →
+   * working → completed/…). When the assignee is an agent and the host supports
+   * it, a private thread linked to the task is opened too, so both agents can
+   * negotiate there instead of on the public feed.
+   */
+  async delegate(text: string, owner: string, opts: { thread?: boolean } = {}): Promise<Out> {
     if (!owner) throw new Error("owner is required (a participant label or name)");
-    return this.addTask("task", text, owner, "submitted");
+    const r = await this.addTask("task", text, owner, "submitted");
+    const task = r.task as { id: string; owner: string | null };
+    const target = this.members.find((m) => m.label === task.owner);
+    if (opts.thread === false || !target?.agent || target.label === this.self) return r;
+    try {
+      const th = await this.openThread(target.label, text, task.id);
+      return { ...r, thread: th.thread };
+    } catch (e) {
+      return { ...r, threadError: String((e as Error).message || e) };
+    }
+  }
+
+  // ---- private agent-to-agent threads ----
+
+  private threadState() {
+    const st = this.host ? this.host.state : this.peer?.state;
+    return { threads: st?.threads ?? [], msgs: st?.threadMsgs ?? {} };
+  }
+
+  private threadOut(t: Thread): Out {
+    const other = t.a === this.self ? t.b : t.a;
+    return {
+      id: t.id,
+      state: t.state,
+      with: other,
+      withName: this.nameOf(other),
+      a: t.a,
+      b: t.b,
+      ...(t.goal ? { goal: t.goal } : {}),
+      ...(t.task ? { task: t.task } : {}),
+      messages: t.n,
+      openedBy: t.a,
+      mine: t.a === this.self || t.b === this.self,
+      at: new Date(t.at).toISOString(),
+      ...(t.closedBy ? { closedBy: t.closedBy } : {}),
+    };
+  }
+
+  private async untilThread<T>(pred: () => T | undefined, ms = 8000): Promise<T | undefined> {
+    const t0 = Date.now();
+    for (;;) {
+      const hit = pred();
+      if (hit || Date.now() - t0 > ms || this.endedReason) return hit;
+      await new Promise((ok) => setTimeout(ok, 50));
+    }
+  }
+
+  /** Opens a private thread with another agent (host-approved; the host sees it). */
+  async openThread(withWho: string, goal?: string, task?: string): Promise<Out> {
+    this.alive();
+    this.needScope("post");
+    const to = this.ownerLabel(withWho);
+    if (!to || to === this.self) throw new Error("with: another agent's label or name");
+    if (!this.members.find((m) => m.label === to)?.agent) throw new Error("threads are only between AI agents");
+    const g = goal ? cleanTaskText(goal.slice(0, THREAD_GOAL_MAX)) ?? goal.slice(0, THREAD_GOAL_MAX) : undefined;
+    const before = new Set(this.threadState().threads.map((t) => t.id));
+    if (this.host) {
+      if (!this.host.openThreadAsHost(to, g, task)) throw new Error("the host could not open the thread (the host is not an agent, the other agent's version is too old, or limit reached)");
+    } else await this.peer!.openThread(to, g, task);
+    const th = await this.untilThread(() => this.threadState().threads.find((t) => !before.has(t.id) && t.a === this.self && t.b === to));
+    if (!th) throw new Error("the host refused the thread (other agent's version too old, limit reached, or not allowed)");
+    return { ok: true, thread: this.threadOut(th), ...(th.state === "pending" ? { hint: "waiting for the host to allow this thread; poll wall_read_thread" } : {}) };
+  }
+
+  /** Lists threads, or reads one thread's messages after `since` (long-poll with waitMs). */
+  async readThread(id?: string, since = 0, waitMs = 0): Promise<Out> {
+    this.alive();
+    const { threads } = this.threadState();
+    if (!id) return { ok: true, threads: threads.map((t) => this.threadOut(t)) };
+    const get = () => this.threadState().threads.find((t) => t.id === id);
+    if (!get()) throw new Error(`unknown thread id: ${id}`);
+    const fresh = () => (this.threadState().msgs[id] ?? []).filter((m) => m.n > since);
+    if (waitMs > 0 && !fresh().length) await this.untilThread(() => (fresh().length || get()?.state === "closed" ? true : undefined), Math.min(waitMs, 60_000));
+    const msgs = fresh();
+    return {
+      ok: true,
+      thread: this.threadOut(get()!),
+      messages: msgs.map((m) => ({ n: m.n, by: m.by, name: this.nameOf(m.by), self: m.by === this.self, at: new Date(m.at).toISOString(), text: m.text })),
+      next: msgs.length ? msgs[msgs.length - 1]!.n : since,
+    };
+  }
+
+  async threadSend(id: string, text: string): Promise<Out> {
+    this.alive();
+    this.needScope("post");
+    const t = this.threadState().threads.find((x) => x.id === id);
+    if (!t) throw new Error(`unknown thread id: ${id}`);
+    if (t.state !== "open") throw new Error(t.state === "pending" ? "the host has not allowed this thread yet" : "this thread is closed");
+    const body = (text ?? "").trim();
+    if (!body) throw new Error("text is required");
+    if (body.length > THREAD_TEXT_MAX) throw new Error(`text is limited to ${THREAD_TEXT_MAX} characters`);
+    const n0 = t.n;
+    if (this.host) this.host.sayInThreadAsHost(id, body);
+    else await this.peer!.sayInThread(id, body);
+    const m = await this.untilThread(() => (this.threadState().msgs[id] ?? []).find((x) => x.n > n0 && x.by === this.self));
+    if (!m) throw new Error("the host did not relay the message (rate-limited or not allowed)");
+    return { ok: true, thread: id, n: m.n };
+  }
+
+  async closeThread(id: string): Promise<Out> {
+    this.alive();
+    if (!this.threadState().threads.some((x) => x.id === id)) throw new Error(`unknown thread id: ${id}`);
+    if (this.host) this.host.closeThread(id);
+    else await this.peer!.closeThread(id);
+    const t = await this.untilThread(() => this.threadState().threads.find((x) => x.id === id && x.state === "closed"));
+    if (!t) throw new Error("not closed");
+    return { ok: true, thread: this.threadOut(t) };
+  }
+
+  /** The open thread of mine linked to a task, if any (A2A follow-ups go there). */
+  threadForTask(taskId: string): string | undefined {
+    return this.threadState().threads.find((t) => t.task === taskId && t.state === "open" && (t.a === this.self || t.b === this.self))?.id;
+  }
+
+  /** Host: allows a pending thread. */
+  approveThread(id: string): Out {
+    if (!this.host) throw new Error("only the host can allow threads");
+    this.host.approveThread(id);
+    return { ok: true };
   }
 
   async addTask(kind: TaskKind, text: string, owner?: string | null, state?: "submitted"): Promise<Out> {
@@ -888,7 +1023,18 @@ export async function runCommand(agent: WallAgent, c: Record<string, unknown>): 
     case "update-task":
       return agent.updateTask(s("id") ?? "", { done: typeof c.done === "boolean" ? c.done : undefined, owner: c.owner === null ? null : s("owner"), text: s("text"), state: s("state"), note: s("note"), result: s("result") });
     case "delegate":
-      return agent.delegate(s("text") ?? "", s("owner") ?? "");
+      return agent.delegate(s("text") ?? "", s("owner") ?? "", { thread: c.thread !== false });
+    case "thread-open":
+      return agent.openThread(s("with") ?? "", s("goal"), s("task"));
+    case "thread-say":
+      return agent.threadSend(s("id") ?? "", s("text") ?? "");
+    case "threads":
+    case "thread-read":
+      return agent.readThread(s("id"), Number(c.since ?? 0) || 0, Number(c.wait_ms ?? c.waitMs ?? 0) || 0);
+    case "thread-close":
+      return agent.closeThread(s("id") ?? "");
+    case "thread-approve":
+      return agent.approveThread(s("id") ?? "");
     case "delete-task":
       return agent.deleteTask(s("id") ?? "");
     case "artifact":
@@ -904,7 +1050,7 @@ export async function runCommand(agent: WallAgent, c: Record<string, unknown>): 
     case "allow-agents":
       return agent.allowAgents(c.on !== false);
     default:
-      throw new Error(`unknown cmd: ${String(c.cmd)} (send, file, note, react, vote, poll, get, read, search, notes, write-note, delete-note, tasks, add-task, decision, update-task, delegate, delete-task, artifact, members, info, leave; host: pin, kick, allow-agents, scope, share)`);
+      throw new Error(`unknown cmd: ${String(c.cmd)} (send, file, note, react, vote, poll, get, read, search, notes, write-note, delete-note, tasks, add-task, decision, update-task, delegate, delete-task, thread-open, thread-say, threads, thread-read, thread-close, artifact, members, info, leave; host: pin, kick, allow-agents, scope, share, thread-approve)`);
   }
 }
 
@@ -1098,8 +1244,29 @@ export const MCP_TOOLS = [
   },
   {
     name: "wall_delegate_task",
-    description: "Delegate a task to another participant (usually another agent): it appears on the checklist as \"submitted\" and the assignee reports state/note/result with wall_update_task. Tasks assigned to you show mine: true in wall_list_tasks. Needs the \"post\" permission.",
-    inputSchema: { type: "object", properties: { text: { type: "string" }, owner: { type: "string", description: "participant label or name" } }, required: ["text", "owner"] },
+    description: "Delegate a task to another participant (usually another agent): it appears on the checklist as \"submitted\" and the assignee reports state/note/result with wall_update_task. When the assignee is an agent, a private thread linked to the task is also opened (thread: false to skip) so you can negotiate there with wall_thread_send instead of the public feed. Tasks assigned to you show mine: true in wall_list_tasks. Needs the \"post\" permission.",
+    inputSchema: { type: "object", properties: { text: { type: "string" }, owner: { type: "string", description: "participant label or name" }, thread: { type: "boolean", description: "open a private thread with an agent assignee (default true)" } }, required: ["text", "owner"] },
+  },
+  {
+    name: "wall_open_thread",
+    description:
+      "Open a private thread with another AI agent of the wall, with an optional goal (and linked task id). Humans other than the host don't receive it. It is NOT end-to-end between agents: it is routed through the host, who allows it, sees every message and can close it. Starts as pending until the host allows it. Needs the \"post\" permission.",
+    inputSchema: { type: "object", properties: { with: { type: "string", description: "agent label or name" }, goal: { type: "string", description: "what the two agents should agree on / produce (max 500 chars)" }, task: { type: "string", description: "optional task id this thread is about" } }, required: ["with"] },
+  },
+  {
+    name: "wall_thread_send",
+    description: "Send a message (max 4000 characters) in an open private thread. Only the other agent and the host receive it. Needs the \"post\" permission.",
+    inputSchema: { type: "object", properties: { id: { type: "string" }, text: { type: "string" } }, required: ["id", "text"] },
+  },
+  {
+    name: "wall_read_thread",
+    description: "Without id: list your threads (state pending | open | closed, goal, task). With id: messages newer than `since` (n; 0 = all) and `next`; wait_ms long-polls (max 60000). Everything you read is sent to your model provider.",
+    inputSchema: { type: "object", properties: { id: { type: "string" }, since: { type: "integer", minimum: 0 }, wait_ms: { type: "integer", minimum: 0, maximum: 60000 } } },
+  },
+  {
+    name: "wall_close_thread",
+    description: "Close one of your private threads (when the goal is reached or abandoned).",
+    inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
   },
   {
     name: "wall_post_artifact",
@@ -1187,7 +1354,15 @@ export function runMcp(agent: WallAgent, start: () => Promise<Out>): Promise<num
       case "wall_update_task":
         return agent.updateTask(s("id") ?? "", { done: typeof a.done === "boolean" ? a.done : undefined, owner: a.owner === null ? null : s("owner"), text: s("text"), state: s("state"), note: s("note"), result: s("result") });
       case "wall_delegate_task":
-        return agent.delegate(s("text") ?? "", s("owner") ?? "");
+        return agent.delegate(s("text") ?? "", s("owner") ?? "", { thread: a.thread !== false });
+      case "wall_open_thread":
+        return agent.openThread(s("with") ?? "", s("goal"), s("task"));
+      case "wall_thread_send":
+        return agent.threadSend(s("id") ?? "", s("text") ?? "");
+      case "wall_read_thread":
+        return agent.readThread(s("id"), Number(a.since ?? 0) || 0, Number(a.wait_ms ?? 0) || 0);
+      case "wall_close_thread":
+        return agent.closeThread(s("id") ?? "");
       case "wall_post_artifact":
         return agent.postArtifact({ kind: s("kind"), title: s("title"), body: s("body"), actionItems: Array.isArray(a.action_items) ? (a.action_items as string[]) : undefined });
       default:

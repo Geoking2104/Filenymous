@@ -32,7 +32,7 @@ test("MCP: tools list, read/send/react/participants/file/get between a CLI host 
   assert.equal(client.getServerVersion().name, "filenymous-wall");
   assert.match(client.getInstructions() ?? "", /model provider/);
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["wall_add_task", "wall_delegate_task", "wall_get_item", "wall_info", "wall_list_participants", "wall_list_tasks", "wall_post_artifact", "wall_react", "wall_read_messages", "wall_read_notes", "wall_search", "wall_send_file", "wall_send_message", "wall_update_task", "wall_write_note"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["wall_add_task", "wall_close_thread", "wall_delegate_task", "wall_get_item", "wall_info", "wall_list_participants", "wall_list_tasks", "wall_open_thread", "wall_post_artifact", "wall_react", "wall_read_messages", "wall_read_notes", "wall_read_thread", "wall_search", "wall_send_file", "wall_send_message", "wall_thread_send", "wall_update_task", "wall_write_note"]);
 
   const info = await call(client, "wall_info");
   assert.equal(info.json.role, "peer");
@@ -233,5 +233,47 @@ test("MCP: tasks, decisions, artifacts, summarize prompt; scope set by the host 
   assert.equal(refused.isError, true);
   assert.match(refused.text, /permissions/);
   await client.close();
+  host.send({ cmd: "leave" });
+});
+
+test("MCP: delegate opens a private agent thread routed through (and visible to) the host", { timeout: 90_000 }, async () => {
+  const host = wallCli(["create", "--allow-agents", "--agent-scope", "post", "--name", "Hôte", "--quiet", ...common()]);
+  const ready = await host.wait((l) => l.event === "ready");
+  const a = await mcpClient([ready.link, "--name", "Planif"]);
+  const b = await mcpClient([ready.link, "--name", "Exec"]);
+  let bLabel;
+  for (let i = 0; i < 60 && !bLabel; i++) {
+    bLabel = (await call(a, "wall_list_participants")).json.participants.find((p) => p.name === "Exec")?.label;
+    if (!bLabel) await new Promise((r) => setTimeout(r, 100));
+  }
+  assert.ok(bLabel);
+  const d = await call(a, "wall_delegate_task", { text: "Draft the release notes", owner: bLabel });
+  assert.equal(d.isError, false, d.text);
+  assert.ok(d.json.thread, d.text);
+  assert.equal(d.json.thread.task, d.json.task.id);
+  assert.equal(d.json.thread.goal, "Draft the release notes");
+  const id = d.json.thread.id;
+  // The CLI host auto-approves; the host process sees the thread.
+  await host.wait((l) => l.event === "thread" && l.id === id && l.state === "open");
+  let open;
+  for (let i = 0; i < 60 && !open; i++) {
+    open = (await call(b, "wall_read_thread")).json.threads.find((t) => t.id === id && t.state === "open");
+    if (!open) await new Promise((r) => setTimeout(r, 100));
+  }
+  assert.ok(open, "assignee sees the thread");
+  const s = await call(a, "wall_thread_send", { id, text: "Need anything from me?" });
+  assert.equal(s.isError, false, s.text);
+  const r = await call(b, "wall_read_thread", { id, since: 0, wait_ms: 8000 });
+  assert.equal(r.json.messages[0].text, "Need anything from me?");
+  await host.wait((l) => l.event === "thread.message" && l.thread === id);
+  // Not on the public feed.
+  const feed = await call(b, "wall_read_messages", { since: 0 });
+  assert.ok(!feed.json.messages.some((m) => m.text?.includes("Need anything")));
+  const c = await call(b, "wall_close_thread", { id });
+  assert.equal(c.json.thread.state, "closed");
+  const late = await call(a, "wall_thread_send", { id, text: "still there?" });
+  assert.equal(late.isError, true);
+  await a.close();
+  await b.close();
   host.send({ cmd: "leave" });
 });
