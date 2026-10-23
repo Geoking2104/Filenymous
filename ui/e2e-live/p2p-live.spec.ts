@@ -60,8 +60,8 @@ test("live p2p", async ({ browser }) => {
   await prep(s, "S");
   await s.goto(BASE);
   await s.locator('input[type="file"]').first().setInputFiles({ name: "x.bin", mimeType: "application/octet-stream", buffer: data });
-  await s.getByTestId("path-direct").click();
-  await s.getByRole("button", { name: /Démarrer le transfert direct|Start direct transfer/ }).click();
+  // Current send flow: a single "Start" button (direct transfer by default).
+  await s.getByRole("button", { name: /^(Démarrer|Start)$/ }).click();
   const link = await s.getByTestId("p2p-link").inputValue();
   const r = await (await browser.newContext({ acceptDownloads: true })).newPage();
   await prep(r, "R", true);
