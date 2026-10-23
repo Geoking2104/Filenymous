@@ -1157,6 +1157,8 @@
       "secretsHint": "Ouvrir les notes masquées (clés, mots de passe…).",
       "limited": "Vue limitée",
       "limitedHint": "Ne voit que ses messages, ses mentions, les réponses à ses messages, ses tâches et ce que vous lui partagez (🤖).",
+      "search": "Recherche du mur",
+      "searchHint": "Peut interroger tout le mur même sans le recevoir ; votre onglet ne renvoie que quelques extraits courts. Ces extraits partent quand même chez le fournisseur IA de l'agent.",
       "pendingTitle_one": "{{count}} agent IA attend votre accord",
       "pendingTitle_other": "{{count}} agents IA attendent votre accord",
       "wantsToJoin": "veut rejoindre le mur. Choisissez ce qu'il peut faire :",

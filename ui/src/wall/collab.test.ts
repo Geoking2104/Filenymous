@@ -317,3 +317,37 @@ describe("delegated task states (A2A-style)", () => {
     expect(parseWallMessage({ t: "welcome", label: "peer:1", expiresAt: 0, burn: false, hostLeave: false, agents: true, media: false, feat: 3 })).toMatchObject({ feat: 3 });
   });
 });
+
+describe("WallHost: scoped wall search", () => {
+  const hits = (sent: WallMessage[], rid: number) => {
+    const r = sent.find((m) => (m.t === "search-res" || m.t === "search-fail") && m.rid === rid) as { t: string; hits?: Array<{ snippet: string; kind: string }>; reason?: string };
+    return r;
+  };
+  it("limited agents search only their view; the search scope widens it; secrets stay masked", async () => {
+    const { host, join, flush } = await makeHost();
+    host.say("budget deadline is friday");
+    host.addText("deadline token sk-xyz", "deadline key");
+    const a = join("Bot", true, 4);
+    host.approveAgent(a.label, { ...SCOPE_DEFAULT, limited: true });
+    await flush();
+    await a.send({ t: "search", rid: 1, q: "deadline" });
+    await flush();
+    expect(hits(a.sent, 1).hits).toEqual([]);
+    host.setAgentScope(a.label, { ...SCOPE_DEFAULT, limited: true, search: true });
+    await a.send({ t: "search", rid: 2, q: "deadline" });
+    await flush();
+    const r = hits(a.sent, 2);
+    expect(r.hits!.map((h) => h.snippet).join(" ")).toContain("friday");
+    expect(JSON.stringify(r)).not.toContain("sk-xyz");
+    expect(a.sent.some((m) => m.t === "post" && (m as { post: { text?: string } }).post.text?.includes("friday"))).toBe(false);
+  });
+  it("rate-limits searches", async () => {
+    const { host, join, flush } = await makeHost();
+    const a = join("Bot", true, 4);
+    host.approveAgent(a.label, { ...SCOPE_DEFAULT });
+    await flush();
+    for (let i = 1; i <= 8; i++) await a.send({ t: "search", rid: i, q: "x y" });
+    await flush();
+    expect(a.sent.some((m) => m.t === "search-fail" && m.reason === "rate-limited")).toBe(true);
+  });
+});

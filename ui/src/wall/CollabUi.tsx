@@ -168,14 +168,14 @@ export function ScopeEditor({ value, onChange }: { value: AgentScope; onChange: 
   const { t } = useTranslation();
   const box = (k: keyof AgentScope) => (
     <label className="sw-check sw-scope-opt" key={k}>
-      <input type="checkbox" data-testid={`wall-scope-${k}`} checked={value[k]} onChange={(e) => onChange({ ...value, [k]: e.target.checked })} />
+      <input type="checkbox" data-testid={`wall-scope-${k}`} checked={!!value[k]} onChange={(e) => onChange({ ...value, [k]: e.target.checked })} />
       <span>
         <strong>{t(`wall.scope.${k}`)}</strong>
         <small>{t(`wall.scope.${k}Hint`)}</small>
       </span>
     </label>
   );
-  return <div className="sw-scope-editor" data-testid="wall-scope-editor">{(["post", "files", "secrets", "limited"] as const).map(box)}</div>;
+  return <div className="sw-scope-editor" data-testid="wall-scope-editor">{(["post", "files", "secrets", "limited", "search"] as const).map(box)}</div>;
 }
 
 export function PendingAgents({ pending, onApprove, onRefuse }: { pending: Array<{ label: string; name: string }>; onApprove: (label: string, s: AgentScope) => void; onRefuse: (label: string) => void }) {

@@ -1157,6 +1157,8 @@
       "secretsHint": "Open masked notes (keys, passwords…).",
       "limited": "Limited view",
       "limitedHint": "Only sees its own messages, its mentions, replies to its messages, its tasks and what you share with it (🤖).",
+      "search": "Wall search",
+      "searchHint": "Can query the whole wall it may not otherwise receive; your tab returns only short top-k snippets. Those snippets still reach the agent's AI provider.",
       "pendingTitle_one": "{{count}} AI agent is waiting for your approval",
       "pendingTitle_other": "{{count}} AI agents are waiting for your approval",
       "wantsToJoin": "wants to join the wall. Choose what it may do:",
