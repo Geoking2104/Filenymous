@@ -14,6 +14,27 @@ export const WHISPER_MODEL = { id: "Xenova/whisper-tiny", dtype: "q8", approxMB:
 /** ONNX Runtime WebAssembly (shared by both models, downloaded once). */
 export const ORT_APPROX_MB = 21;
 
+import manifest from "../../../../scripts/models.manifest.json";
+
+/**
+ * Checks that a model's files are really on this site (right size), so a
+ * toggle can say "unavailable" instead of starting a broken download.
+ */
+export async function modelAvailable(repo: string): Promise<boolean> {
+  const files = (manifest as { models: { repo: string; file: string; size: number }[] }).models.filter((f) => f.repo === repo && f.size > 1_000_000);
+  try {
+    const ok = await Promise.all(
+      files.map(async (f) => {
+        const r = await fetch(`${MODEL_BASE}${repo}/${f.file}`, { method: "HEAD", cache: "no-store" });
+        return r.ok && Number(r.headers.get("content-length")) === f.size;
+      }),
+    );
+    return files.length > 0 && ok.every(Boolean);
+  } catch {
+    return false;
+  }
+}
+
 type TF = typeof import("@huggingface/transformers");
 let tf: Promise<TF> | null = null;
 
