@@ -129,7 +129,7 @@ export async function rankDocs(q: string, docs: readonly SearchDoc[], k: number,
   const kw = keywordScores(q, docs);
   const sem = ranker && docs.length ? await ranker.scores(q, docs).catch(() => null) : null;
   if (sem && sem.length === docs.length) {
-    const blended = sem.map((s, i) => (s >= SEMANTIC_MIN || kw[i] > 0 ? s + 0.15 * Math.min(1, kw[i]) : 0));
+    const blended = sem.map((s, i) => { const w = kw[i] ?? 0; return s >= SEMANTIC_MIN || w > 0 ? s + 0.15 * Math.min(1, w) : 0; });
     return { mode: "semantic", hits: topHits(q, docs, blended, k, 0) };
   }
   return { mode: "keyword", hits: topHits(q, docs, kw, k, 0) };

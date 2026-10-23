@@ -271,7 +271,7 @@ export class WallAgent {
 
   /** Hosts a new wall (the agent's process holds it in memory). */
   async create(): Promise<Out> {
-    if (this.opts.agentScope && !parseScopeArg(this.opts.agentScope)) throw new Error("--agent-scope: read-only | post | full | comma list of post,files,secrets,limited");
+    if (this.opts.agentScope && !parseScopeArg(this.opts.agentScope)) throw new Error("--agent-scope: read-only | post | full | comma list of post,files,secrets,limited,search");
     const name = cleanName(this.opts.name) || `Agent ${pseudonym("en")}`;
     const params: HostWallParams = await createWall({ ttl: wallTtl(this.opts.ttl), title: this.opts.title, password: !!this.opts.password, burn: !!this.opts.burn, hostLeave: !this.opts.keepOnLeave });
     this.params = params;
@@ -754,11 +754,25 @@ export class WallAgent {
     return { ok: true, ...posted, ...(tasks.length ? { tasks } : {}) };
   }
 
+  /**
+   * Scoped wall search: the host ranks locally and returns only top-k snippets
+   * this participant may see (scope / context pack). Snippets you get are still
+   * sent to your model provider.
+   */
+  async search(q: string, k?: number): Promise<Out> {
+    this.alive();
+    const query = (q ?? "").trim();
+    if (!query) throw new Error("q is required");
+    if (k !== undefined) k = Number.isInteger(k) ? Math.max(1, Math.min(8, k)) : undefined;
+    const r = this.host ? await this.host.searchLocal(query, k) : await this.peer!.search(query, k);
+    return { ok: true, mode: r.mode, hits: r.hits };
+  }
+
   /** Host: changes an agent's permissions. */
   setScope(label: string, raw: string): Out {
     if (!this.host) throw new Error("only the host can change permissions");
     const sc = parseScopeArg(raw);
-    if (!sc) throw new Error("scope: read-only | post | full | comma list of post,files,secrets,limited");
+    if (!sc) throw new Error("scope: read-only | post | full | comma list of post,files,secrets,limited,search");
     this.host.setAgentScope(label, sc);
     return { ok: true };
   }
@@ -864,6 +878,8 @@ export async function runCommand(agent: WallAgent, c: Record<string, unknown>): 
       return { ok: true, ...agent.info() };
     case "tasks":
       return agent.tasks();
+    case "search":
+      return agent.search(s("q") ?? "", c.k === undefined ? undefined : Number(c.k));
     case "task":
     case "add-task":
       return agent.addTask((s("kind") as TaskKind) ?? "task", s("text") ?? "", s("owner"));
@@ -888,7 +904,7 @@ export async function runCommand(agent: WallAgent, c: Record<string, unknown>): 
     case "allow-agents":
       return agent.allowAgents(c.on !== false);
     default:
-      throw new Error(`unknown cmd: ${String(c.cmd)} (send, file, note, react, vote, poll, get, read, notes, write-note, delete-note, tasks, add-task, decision, update-task, delegate, delete-task, artifact, members, info, leave; host: pin, kick, allow-agents, scope, share)`);
+      throw new Error(`unknown cmd: ${String(c.cmd)} (send, file, note, react, vote, poll, get, read, search, notes, write-note, delete-note, tasks, add-task, decision, update-task, delegate, delete-task, artifact, members, info, leave; host: pin, kick, allow-agents, scope, share)`);
   }
 }
 
@@ -1052,6 +1068,12 @@ export const MCP_TOOLS = [
     inputSchema: { type: "object", properties: {} },
   },
   {
+    name: "wall_search",
+    description:
+      "Search the wall (messages, files by name, polls, notes, tasks) without reading the whole feed. The host ranks locally (semantic in a browser host that enabled the on-device model, keyword otherwise) and returns only the top-k short snippets your permissions allow; with the \"search\" permission a limited-view agent can query beyond its view. Snippets you receive are still sent to your model provider.",
+    inputSchema: { type: "object", properties: { q: { type: "string", description: "query, max 200 characters" }, k: { type: "integer", minimum: 1, maximum: 8 } }, required: ["q"] },
+  },
+  {
     name: "wall_list_tasks",
     description: "Read the wall's shared checklist (tasks with owner and done state) and decisions log. In limited view you only see tasks you own or that the host shared with you. Everything you read is sent to your model provider.",
     inputSchema: { type: "object", properties: {} },
@@ -1158,6 +1180,8 @@ export function runMcp(agent: WallAgent, start: () => Promise<Out>): Promise<num
         return agent.writeNote({ id: s("id"), title: s("title"), text: s("text") });
       case "wall_list_tasks":
         return agent.tasks();
+      case "wall_search":
+        return agent.search(s("q") ?? "", a.k === undefined ? undefined : Number(a.k));
       case "wall_add_task":
         return agent.addTask(s("kind") === "decision" ? "decision" : "task", s("text") ?? "", s("owner"));
       case "wall_update_task":

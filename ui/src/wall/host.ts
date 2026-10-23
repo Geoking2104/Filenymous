@@ -421,6 +421,11 @@ export class WallHost {
     return docs;
   }
 
+  /** The host's own search over everything on the wall (never leaves this process/tab). */
+  searchLocal(q: string, k = SEARCH_K_DEFAULT) {
+    return rankDocs(q, this.searchDocs(null), k, this.opts.ranker);
+  }
+
   private async search(peer: Peer, rid: number, q: string, k = SEARCH_K_DEFAULT) {
     const label = peer.label!;
     if (!this.searchLimit.take(label)) return void this.sendControl(peer, { t: "search-fail", rid, reason: "rate-limited" });
@@ -458,6 +463,7 @@ export class WallHost {
       this.burstLimit.forget(peer.label);
       this.noteLimit.forget(peer.label);
       this.boardLimit.forget(peer.label);
+      this.searchLimit.forget(peer.label);
       for (const id of this.board.releaseAll(peer.label)) this.publishLock(id, null);
     }
     try { peer.pc.close(); } catch { /* ignore */ }

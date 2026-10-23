@@ -32,7 +32,7 @@ test("MCP: tools list, read/send/react/participants/file/get between a CLI host 
   assert.equal(client.getServerVersion().name, "filenymous-wall");
   assert.match(client.getInstructions() ?? "", /model provider/);
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["wall_add_task", "wall_delegate_task", "wall_get_item", "wall_info", "wall_list_participants", "wall_list_tasks", "wall_post_artifact", "wall_react", "wall_read_messages", "wall_read_notes", "wall_send_file", "wall_send_message", "wall_update_task", "wall_write_note"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["wall_add_task", "wall_delegate_task", "wall_get_item", "wall_info", "wall_list_participants", "wall_list_tasks", "wall_post_artifact", "wall_react", "wall_read_messages", "wall_read_notes", "wall_search", "wall_send_file", "wall_send_message", "wall_update_task", "wall_write_note"]);
 
   const info = await call(client, "wall_info");
   assert.equal(info.json.role, "peer");
@@ -198,6 +198,16 @@ test("MCP: tasks, decisions, artifacts, summarize prompt; scope set by the host 
   const list = await call(client, "wall_list_tasks");
   assert.deepEqual(list.json.tasks.map((t) => t.text), ["Envoyer le compte rendu"], "limited view: only its own tasks");
   assert.equal(list.json.decisions.length, 1);
+  // Scoped search: limited view finds only what it may see, the search permission widens it.
+  const s1 = await call(client, "wall_search", { q: "humains" });
+  assert.equal(s1.isError, false, s1.text);
+  assert.deepEqual(s1.json.hits, [], "limited view: no hit outside its view");
+  host.send({ cmd: "scope", label: me.label, scope: "post,limited,search", ref: "ss" });
+  await host.wait((l) => l.ref === "ss");
+  await new Promise((r) => setTimeout(r, 200));
+  const s2 = await call(client, "wall_search", { q: "humains", k: 3 });
+  assert.equal(s2.json.mode, "keyword");
+  assert.ok(s2.json.hits.some((h) => h.snippet.includes("humains")), s2.text);
   // Artifact: summary + action items become checklist tasks.
   const art = await call(client, "wall_post_artifact", { kind: "summary", title: "Point du jour", body: "- Décision : publier vendredi", action_items: ["Relire la doc"] });
   assert.equal(art.isError, false, art.text);
