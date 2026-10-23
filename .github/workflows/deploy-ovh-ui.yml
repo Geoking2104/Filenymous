@@ -10,6 +10,10 @@ on:
         description: "Git ref to deploy"
         default: "main"
         required: true
+      backup:
+        description: "per-file backups of overwritten app files (disable on a tight quota; roll back by redeploying the previous SHA)"
+        type: boolean
+        default: true
 
 concurrency:
   group: deploy-ovh-ui
@@ -37,7 +41,7 @@ jobs:
       - name: Upload to OVH over SFTP (--merge backup)
         env:
           OVH_SFTP_PASS: ${{ secrets.OVH_SFTP_PASS }}
-        run: node scripts/deploy-ovh-sftp.mjs --dist ui/dist --remote /home/filenyb/www/app --merge
+        run: node scripts/deploy-ovh-sftp.mjs --dist ui/dist --remote /home/filenyb/www/app --merge ${{ inputs.backup == false && '--no-backup' || '' }}
       - name: Prune stale assets (keeps this build + files changed in the last 7 days)
         # Merge deploys never delete, so old hashed chunks pile up and fill the quota.
         # Aborts without deleting if the live pages reference anything not in this build.
