@@ -3,6 +3,7 @@ import { sortNotes, type NoteLock, type SharedNote } from "./notes";
 import { CONNECT_TIMEOUT_MS, LOW_WATER, addRemoteCandidate, waitForDrain } from "../p2p/session";
 import { iceCandidateInit, type SignalPayload } from "../p2p/signal";
 import { b64urlEncode } from "../p2p/protocol";
+import type { SearchHit, SearchMode } from "./wallsearch";
 import { WALL_FEATURES, mergeScene, sortTasks, type BoardElement, type Task, type TaskKind, type TaskPatch } from "./collab";
 import { SealedPipe, WALL_PROTOCOL_VERSION, checkProof, deriveWallKeys, parseHandshake, sealProof, wallBaseMaterial } from "./crypto";
 import { MAX_POSTS, diffMembers, type BurstKind, type LiveInfo, type LiveKind, type Member, type Post, type WallEvent } from "./feed";
@@ -111,6 +112,7 @@ export class WallPeer {
   /** Password of the start in progress or done (React effects can call start() twice on mount). */
   private started: string | null = null;
   private gets = new Map<number, Pending>();
+  private searches = new Map<number, { resolve: (r: { mode: SearchMode; hits: SearchHit[] }) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
   private puts = new Map<number, (ok: { id?: string; reason?: string }) => void>();
   private out: Promise<void> = Promise.resolve();
   private uploadChain: Promise<void> = Promise.resolve();
@@ -470,6 +472,16 @@ export class WallPeer {
       case "burst-by":
         this.emit({ type: "burst", label: msg.label, kind: msg.kind });
         return;
+      case "search-res":
+      case "search-fail": {
+        const q = this.searches.get(msg.rid);
+        if (!q) return;
+        this.searches.delete(msg.rid);
+        clearTimeout(q.timer);
+        if (msg.t === "search-res") q.resolve({ mode: msg.mode, hits: msg.hits });
+        else q.reject(new Error(msg.reason));
+        return;
+      }
       case "notice":
         this.update({ notice: { code: msg.code, at: Date.now(), ...(msg.retryMs !== undefined ? { retryMs: msg.retryMs } : {}) } });
         this.emit({ type: "notice", code: msg.code, ...(msg.retryMs !== undefined ? { retryMs: msg.retryMs } : {}) });
@@ -715,6 +727,24 @@ export class WallPeer {
   }
   lockNote(id: string, on: boolean) {
     void this.sendControl({ t: "snote-lock", id, on }).catch(() => undefined);
+  }
+
+  /** Asks the host tab to search the wall (feature 4); resolves with top-k snippets. */
+  search(q: string, k?: number): Promise<{ mode: SearchMode; hits: SearchHit[] }> {
+    if (this.state.hostFeat < 4) return Promise.reject(new Error("this wall's host does not support wall search (older version)"));
+    const rid = ++this.rid;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.searches.delete(rid);
+        reject(new Error("timeout"));
+      }, 60_000);
+      this.searches.set(rid, { resolve, reject, timer });
+      this.sendControl({ t: "search", rid, q, ...(k ? { k } : {}) }).catch((e) => {
+        clearTimeout(timer);
+        this.searches.delete(rid);
+        reject(e);
+      });
+    });
   }
 
   addTask(kind: TaskKind, text: string, owner: string | null = null, state?: "submitted"): Promise<void> {

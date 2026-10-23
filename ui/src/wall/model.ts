@@ -25,6 +25,8 @@ import {
   type Post,
 } from "./feed";
 
+import { parseSearchMessage, type SearchRequest, type SearchResponse } from "./wallsearch";
+
 export type ItemKind = "file" | "text";
 
 export interface ItemMeta {
@@ -101,7 +103,9 @@ export type WallMessage =
   | { t: "snote-lock-by"; id: string; label: string | null; until: number }
   | { t: "task"; task: Task }
   | { t: "task-gone"; id: string }
-  | { t: "board"; els: BoardElement[] };
+  | { t: "board"; els: BoardElement[] }
+  | SearchRequest
+  | SearchResponse;
 
 export interface RtcMessage {
   t: "rtc";
@@ -321,7 +325,7 @@ export function parseWallMessage(m: unknown): WallMessage | null {
     case "destroy":
       return ["destroyed", "expired", "host-left"].includes(o.reason as string) ? { t: "destroy", reason: o.reason as DestroyReason } : null;
     default:
-      return null;
+      return parseSearchMessage(o);
   }
 }
 

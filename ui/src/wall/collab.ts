@@ -10,7 +10,7 @@
 
 /** Protocol feature level of this build, announced in the sealed profile. Peers
  * below 2 (older tabs and CLIs) never receive task/board messages they could not parse. */
-export const WALL_FEATURES = 3;
+export const WALL_FEATURES = 4;
 
 const LABEL_RE = /^(host|peer:\d{1,6})$/;
 const isLabel = (v: unknown): v is string => typeof v === "string" && LABEL_RE.test(v);
@@ -28,6 +28,12 @@ export interface AgentScope {
   secrets: boolean;
   /** Limited view: only its own posts, @mentions of it, replies to it, tasks it owns, and items the host shares with it. */
   limited: boolean;
+  /**
+   * Scoped search (feature 4): with `limited`, the agent may also ask the host
+   * tab to search the rest of the wall and gets back only short snippets of
+   * the top matches (masked notes never). Optional on the wire.
+   */
+  search?: boolean;
 }
 
 export const SCOPE_READ_ONLY: AgentScope = { post: false, files: false, secrets: false, limited: false };
@@ -39,7 +45,8 @@ export function cleanScope(v: unknown): AgentScope | null {
   const o = v as Record<string, unknown>;
   if (!o || typeof o !== "object") return null;
   if (![o.post, o.files, o.secrets, o.limited].every((x) => typeof x === "boolean")) return null;
-  return { post: o.post as boolean, files: o.files as boolean, secrets: o.secrets as boolean, limited: o.limited as boolean };
+  if (o.search !== undefined && typeof o.search !== "boolean") return null;
+  return { post: o.post as boolean, files: o.files as boolean, secrets: o.secrets as boolean, limited: o.limited as boolean, ...(o.search ? { search: true } : {}) };
 }
 
 export function scopeName(s: AgentScope): "read-only" | "post" | "full" | "custom" {
@@ -57,8 +64,8 @@ export function parseScopeArg(raw: string | undefined): AgentScope | null {
   if (v === "post") return { ...SCOPE_DEFAULT };
   if (v === "full") return { ...SCOPE_FULL };
   const parts = v.split(",").map((x) => x.trim()).filter(Boolean);
-  if (!parts.length || parts.some((p) => !["post", "files", "secrets", "limited", "read-only"].includes(p))) return null;
-  return { post: parts.includes("post"), files: parts.includes("files"), secrets: parts.includes("secrets"), limited: parts.includes("limited") };
+  if (!parts.length || parts.some((p) => !["post", "files", "secrets", "limited", "search", "read-only"].includes(p))) return null;
+  return { post: parts.includes("post"), files: parts.includes("files"), secrets: parts.includes("secrets"), limited: parts.includes("limited"), ...(parts.includes("search") ? { search: true } : {}) };
 }
 
 /** What an action needs from an agent's scope (null = always allowed). */

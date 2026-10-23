@@ -54,6 +54,7 @@ import {
   type WallMessage,
 } from "./model";
 import { WallSignalClient, type WallJoin } from "./signal";
+import { SEARCH_K_DEFAULT, rankDocs, type SearchDoc, type SemanticRanker } from "./wallsearch";
 
 export const MAX_PEERS = 8;
 export const HOST_LABEL = "host";
@@ -157,6 +158,8 @@ export interface WallHostOptions {
    */
   autoApproveAgents?: boolean;
   agentScope?: AgentScope;
+  /** Local semantic ranker for agents' wall_search (browser: on-device embeddings). Keyword ranking otherwise. */
+  ranker?: SemanticRanker | null;
 }
 
 /**
@@ -184,6 +187,7 @@ export class WallHost {
   private wb = new BoardStore();
   private boardLimit: RateLimiter;
   private packs = new Map<string, Set<string>>();
+  private searchLimit = new RateLimiter(6, 1 / 5);
   private self: Member;
   state: HostState;
 
@@ -385,6 +389,44 @@ export class WallHost {
       default:
         return void this.sendControl(p, msg);
     }
+  }
+
+  /** Swaps the semantic ranker (the host enabled / disabled the local model). */
+  setRanker(r: SemanticRanker | null) {
+    this.opts.ranker = r;
+  }
+
+  /**
+   * What a member may search: everything it sees, plus — for agents in limited
+   * view with the "search" scope — the rest of the wall, minus masked notes.
+   * Masked notes are searchable only with the "secrets" scope and visibility.
+   */
+  searchDocs(p: Peer | null): SearchDoc[] {
+    const m = p?.member;
+    const wide = !m?.agent || !m.scope?.limited || !!m.scope.search;
+    const ok = (e: { id: string; by: string; mentions?: string[]; replyTo?: string; owner?: string | null }) => !p || this.sees(p, e) || wide;
+    const docs: SearchDoc[] = [];
+    for (const post of this.state.posts) {
+      if (post.kind === "note") {
+        if (p && m?.agent && !(scopeAllows(m.scope, "secrets") && this.sees(p, post))) continue;
+        if (post.text) docs.push({ id: post.id, kind: "note", by: post.by, at: post.at, text: post.text });
+        continue;
+      }
+      if (!ok(post)) continue;
+      const text = post.kind === "file" ? [post.item?.name, post.text].filter(Boolean).join(" — ") : post.kind === "poll" ? [post.poll?.question, ...(post.poll?.options ?? [])].join(" · ") : post.text ?? "";
+      if (text) docs.push({ id: post.id, kind: post.kind, by: post.by, at: post.at, text });
+    }
+    for (const n of this.board.list()) if (ok(n)) docs.push({ id: n.id, kind: "note", by: n.by, at: n.at, text: [n.title, n.text].filter(Boolean).join("\n") });
+    for (const t of this.taskBoard.list()) if (ok(t)) docs.push({ id: t.id, kind: t.kind, by: t.by, at: t.at, text: [t.text, t.note].filter(Boolean).join(" — ") });
+    return docs;
+  }
+
+  private async search(peer: Peer, rid: number, q: string, k = SEARCH_K_DEFAULT) {
+    const label = peer.label!;
+    if (!this.searchLimit.take(label)) return void this.sendControl(peer, { t: "search-fail", rid, reason: "rate-limited" });
+    const { mode, hits } = await rankDocs(q, this.searchDocs(peer), k, this.opts.ranker);
+    if (this.done || ![...this.peers.values()].includes(peer)) return;
+    void this.sendControl(peer, { t: "search-res", rid, mode, hits });
   }
 
   /** Re-sends what an agent may now see and retracts what it may no longer see. */
@@ -679,6 +721,8 @@ export class WallHost {
     if (peer.pending || !peer.member) return;
     if (!this.agentMay(peer, msg)) return;
     switch (msg.t) {
+      case "search":
+        return void this.search(peer, msg.rid, msg.q, msg.k);
       case "put": {
         if (!this.chatLimit.take(label)) {
           this.notify(peer, "rate-limited", this.chatLimit.retryIn(label));
