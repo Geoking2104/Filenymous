@@ -1,15 +1,36 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import filenymousSeo from "./seo/vite-plugin.mjs";
+import { readdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// The vault uses sqlite-wasm's opfs-sahpool VFS only. The package also emits a
+// "worker1" wrapper and the SharedArrayBuffer-based OPFS proxy (needs COEP,
+// which the site doesn't send): never loaded, so drop them to save ~255 KB.
+const dropUnusedSqliteWorkers = (): Plugin => ({
+  name: "fny-drop-unused-sqlite-workers",
+  apply: "build",
+  closeBundle() {
+    const dir = fileURLToPath(new URL("./dist/assets", import.meta.url));
+    try {
+      for (const f of readdirSync(dir)) {
+        if (/^sqlite3-(worker1|opfs-async-proxy)-.*\.js$/.test(f)) rmSync(join(dir, f));
+      }
+    } catch {
+      /* no dist yet */
+    }
+  },
+});
 
 export default defineConfig({
   worker: { format: "es" },
-  plugins: [react(), filenymousSeo()],
+  plugins: [react(), filenymousSeo(), dropUnusedSqliteWorkers()],
   // libsodium-wrappers importe ./libsodium.mjs en relatif — Vite ne peut pas
   // le résoudre via son système de modules. On exclut du pre-bundling et on
   // force le resolve vers la version CJS qui n'a pas ce problème.
   optimizeDeps: {
-    exclude: ["libsodium-wrappers"],
+    exclude: ["libsodium-wrappers", "@sqlite.org/sqlite-wasm"],
   },
   server: {
     port: 5173,

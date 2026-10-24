@@ -646,6 +646,17 @@
       "b3": "Un clic pour tout détruire",
       "b3d": "Chaque participant efface sa copie et la salle est fermée.",
       "cta": "Créer un mur"
+    },
+    "safe": {
+      "title": "Coffre-fort",
+      "lead": "Votre coffre-fort personnel de mots de passe, clés d'API, notes et fichiers : chiffré dans votre navigateur, partagé de pair à pair.",
+      "b1": "Zéro connaissance",
+      "b1d": "Tout est chiffré sur votre appareil ; aucun serveur ne stocke votre coffre.",
+      "b2": "Recherche ⌘K instantanée",
+      "b2d": "Plein texte local, et recherche sémantique par une IA qui tourne dans votre navigateur (option).",
+      "b3": "Partage P2P signé",
+      "b3d": "Un élément part chiffré, directement vers le coffre d'un contact, avec un rôle et une expiration.",
+      "cta": "Ouvrir mon coffre-fort"
     }
   },
   "stream": {
@@ -1217,5 +1228,395 @@
     "confirm": "Quitter",
     "cancel": "Annuler",
     "wallHost": "Le mur sera détruit pour tous les participants."
+  },
+  "safe": {
+    "loading": "Ouverture du coffre…",
+    "busy": "Le coffre-fort est déjà ouvert dans un autre onglet de ce navigateur. Fermez-le (ou utilisez-le) puis rechargez cette page.",
+    "unsupported": "Ce navigateur ne permet pas de stocker le coffre-fort localement (stockage privé OPFS indisponible, par exemple en navigation privée). Essayez une fenêtre normale d'un navigateur récent.",
+    "back": "Retour",
+    "next": "Continuer",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "later": "Plus tard",
+    "save": "Enregistrer",
+    "saving": "Chiffrement…",
+    "saved": "Enregistré et chiffré.",
+    "edit": "Modifier",
+    "copy": "Copier",
+    "reveal": "Afficher",
+    "hide": "Masquer",
+    "show": "Afficher",
+    "open": "Ouvrir",
+    "new": "Nouveau",
+    "lock": "Verrouiller",
+    "lockNow": "Verrouiller maintenant",
+    "searchCta": "Rechercher dans le coffre…",
+    "leaveEditor": "Vos modifications non enregistrées seront perdues.",
+    "leavePhrase": "Votre phrase de récupération ne sera plus jamais affichée.",
+    "tabs": {
+      "items": "Éléments",
+      "contacts": "Contacts",
+      "security": "Sécurité",
+      "settings": "Réglages"
+    },
+    "cat": {
+      "all": "Tout",
+      "login": "Identifiant",
+      "note": "Note",
+      "api_key": "Clé d'API",
+      "file": "Fichier",
+      "shared": "Partagés"
+    },
+    "role": {
+      "reader": "Lecteur",
+      "editor": "Éditeur",
+      "admin": "Admin",
+      "readerHint": "Peut voir et copier. Ne peut pas modifier ni repartager.",
+      "editorHint": "Peut modifier ; ses modifications vous reviennent (et les conflits sont détectés).",
+      "adminHint": "Peut modifier et repartager à ses propres contacts."
+    },
+    "onb": {
+      "title": "Créez votre coffre-fort",
+      "lead": "Un coffre local-first : vos secrets sont chiffrés dans ce navigateur avant d'être enregistrés, et ne le quittent que chiffrés, vers les contacts que vous choisissez.",
+      "points": {
+        "local": {
+          "t": "Stocké chez vous",
+          "d": "Dans le stockage privé de ce navigateur (SQLite chiffré), pas sur un serveur."
+        },
+        "zero": {
+          "t": "Zéro connaissance",
+          "d": "Argon2id + AES-256-GCM. Sans votre mot de passe (ou votre phrase), personne ne peut l'ouvrir, pas même nous."
+        },
+        "p2p": {
+          "t": "Partage de pair à pair",
+          "d": "WebRTC chiffré et signé (X25519 + Ed25519), directement vers le coffre de votre contact."
+        },
+        "search": {
+          "t": "Retrouvez tout en ⌘K",
+          "d": "Recherche plein texte locale, et sémantique en option avec une petite IA qui tourne dans l'onglet."
+        }
+      },
+      "localWarn": "Important : le coffre vit dans ce navigateur. Effacer les données du site le supprime. Exportez régulièrement une sauvegarde chiffrée (Réglages).",
+      "start": "Commencer",
+      "import": "Restaurer une sauvegarde",
+      "methodTitle": "Comment voulez-vous déverrouiller votre coffre ?",
+      "usePassword": "Mot de passe maître",
+      "usePasskey": "Passkey (biométrie)",
+      "password": "Mot de passe maître",
+      "confirm": "Confirmez le mot de passe",
+      "tooWeak": "Trop faible : visez au moins {{bits}} bits (une phrase de 4 à 5 mots au hasard fonctionne très bien).",
+      "mismatch": "Les deux mots de passe ne correspondent pas.",
+      "passwordHint": "Il n'est jamais envoyé ni stocké. Personne ne pourra le réinitialiser : seule votre phrase de récupération le remplace.",
+      "passkeyLead": "Votre appareil (Touch ID, Windows Hello, clé de sécurité…) dérive une clé secrète grâce à l'extension WebAuthn PRF. Vous pourrez ajouter un mot de passe plus tard.",
+      "passkeyLabel": "Coffre-fort Filenymous",
+      "kdf": "Votre mot de passe est étiré avec Argon2id (64 Mo de mémoire, 3 passes) : cela prend une seconde ou deux, et rend chaque essai coûteux pour un attaquant.",
+      "create": "Créer le coffre",
+      "creating": "Dérivation de la clé…",
+      "phraseTitle": "Votre phrase de récupération",
+      "phraseLead": "Ces 24 mots permettent de rouvrir le coffre si vous oubliez votre mot de passe. Cliquez sur un mot pour le dévoiler et notez-les dans l'ordre, sur papier, hors ligne.",
+      "noReset": "Il n'existe aucune réinitialisation. Sans votre mot de passe ni cette phrase, le contenu du coffre est définitivement perdu. Ne la photographiez pas, ne la collez dans aucun service en ligne.",
+      "revealWord": "Afficher le mot {{n}}",
+      "revealAll": "Tout afficher",
+      "hideAll": "Tout masquer",
+      "ack": "J'ai noté les 24 mots, dans l'ordre, hors ligne",
+      "ackHint": "Cette phrase ne sera plus jamais affichée.",
+      "checkTitle": "Vérifions votre phrase",
+      "checkLead": "Saisissez les mots demandés pour confirmer que votre copie est correcte.",
+      "wordN": "Mot n° {{n}}",
+      "checkErr": "Un des mots ne correspond pas. Vérifiez votre copie.",
+      "seeAgain": "Revoir la phrase",
+      "finish": "Terminer"
+    },
+    "unlock": {
+      "title": "Coffre-fort verrouillé",
+      "password": "Mot de passe maître",
+      "cta": "Déverrouiller",
+      "deriving": "Dérivation de la clé…",
+      "passkey": "Déverrouiller avec une passkey",
+      "passkeyUnsupported": "Ce coffre se déverrouille par passkey, mais ce navigateur ne prend pas en charge l'extension PRF. Utilisez votre phrase de récupération ou un autre navigateur.",
+      "badPassword": "Mot de passe incorrect.",
+      "badPasskey": "Cette passkey n'ouvre pas ce coffre.",
+      "badPhrase": "Phrase invalide ou incorrecte.",
+      "forgot": "Mot de passe oublié ? Utiliser la phrase de récupération",
+      "phraseLead": "Saisissez vos 24 mots, séparés par des espaces. Vous choisirez ensuite un nouveau mot de passe.",
+      "phrase": "Phrase de récupération",
+      "words": "{{n}} / 24 mots",
+      "recover": "Récupérer le coffre",
+      "other": "Autres options"
+    },
+    "recovered": {
+      "title": "Coffre récupéré",
+      "lead": "Choisissez un nouveau mot de passe maître. L'ancien ne fonctionnera plus.",
+      "cta": "Définir le nouveau mot de passe"
+    },
+    "strength": {
+      "empty": "Saisissez un mot de passe",
+      "l0": "Très faible",
+      "l1": "Faible",
+      "l2": "Moyen",
+      "l3": "Fort",
+      "l4": "Excellent",
+      "bits": "≈ {{bits}} bits"
+    },
+    "clip": {
+      "copied": "{{what}} copié — presse-papiers effacé dans 30 s",
+      "clearNow": "Effacer maintenant",
+      "failed": "Copie refusée par le navigateur."
+    },
+    "list": {
+      "filter": "Filtrer",
+      "empty": "Votre coffre est vide. Ajoutez un premier élément avec « Nouveau ».",
+      "noneInFilter": "Aucun élément dans cette catégorie."
+    },
+    "pane": {
+      "pick": "Sélectionnez un élément, ou cherchez-le.",
+      "first": "Ajoutez votre premier identifiant, note, clé d'API ou fichier.",
+      "kbd": "Astuce : {{k}} ouvre la recherche partout dans le coffre."
+    },
+    "badge": {
+      "received": "Reçu d'un contact",
+      "shared": "Partagé",
+      "receivedFrom": "Partagé par {{who}} · rôle {{role}}"
+    },
+    "f": {
+      "title": "Titre",
+      "username": "Identifiant",
+      "password": "Mot de passe",
+      "url": "Site web",
+      "notes": "Notes",
+      "apiKey": "Clé d'API",
+      "service": "Service",
+      "file": "Fichier",
+      "tags": "Étiquettes",
+      "tagsHint": "perso, banque, travail",
+      "download": "Télécharger",
+      "merkle": "racine Merkle",
+      "merkleHint": "Empreinte des morceaux chiffrés, vérifiée à chaque lecture."
+    },
+    "editor": {
+      "edit": "Modifier l'élément",
+      "new": {
+        "login": "Nouvel identifiant",
+        "note": "Nouvelle note",
+        "api_key": "Nouvelle clé d'API",
+        "file": "Nouveau fichier"
+      },
+      "generate": "Générer un mot de passe fort",
+      "fileHint": "Chiffré par morceaux de 1 Mo, chacun avec son propre IV, et scellé par une racine Merkle. 64 Mo max.",
+      "tooBig": "Fichier trop volumineux (max 64 Mo)."
+    },
+    "discard": {
+      "title": "Abandonner les modifications ?",
+      "message": "Vos changements non enregistrés seront perdus.",
+      "confirm": "Abandonner"
+    },
+    "del": {
+      "cta": "Supprimer",
+      "title": "Supprimer cet élément ?",
+      "message": "« {{title}} » et tout son historique seront supprimés de ce coffre.",
+      "sharedNote": "Les contacts avec qui vous l'avez partagé gardent leur copie.",
+      "confirm": "Supprimer",
+      "done": "Élément supprimé."
+    },
+    "history": {
+      "title": "Historique",
+      "current": "actuelle",
+      "view": "Voir",
+      "restore": "Restaurer",
+      "restored": "Version {{v}} restaurée (en tant que nouvelle version).",
+      "masked": "masqué"
+    },
+    "conflict": {
+      "banner": "{{count}} versions concurrentes détectées",
+      "resolve": "Résoudre",
+      "title": "{{count}} versions concurrentes détectées",
+      "lead": "Cet élément a été modifié en même temps de deux côtés. Rien n'a été écrasé : choisissez la version à garder, ou fusionnez champ par champ.",
+      "mine": "ma version",
+      "keepA": "Garder A",
+      "keepB": "Garder B",
+      "manual": "Fusion manuelle",
+      "saveMerge": "Enregistrer la fusion",
+      "resolved": "Conflit résolu.",
+      "none": "Plus aucun conflit sur cet élément.",
+      "revealSecrets": "Afficher les secrets (10 s)"
+    },
+    "share": {
+      "cta": "Partager",
+      "title": "Partager « {{title}} »",
+      "to": "Avec",
+      "role": "Rôle",
+      "expiry": "Expiration",
+      "exp": {
+        "none": "Jamais",
+        "1h": "1 heure",
+        "1d": "24 heures",
+        "7d": "7 jours",
+        "30d": "30 jours"
+      },
+      "addFirst": "Ajoutez d'abord le contact : demandez-lui sa carte de contact (Coffre-fort → Contacts) et collez-la ici.",
+      "honestCrypto": "L'élément est chiffré pour la seule clé de ce contact (X25519), signé avec la vôtre (Ed25519) et vérifié morceau par morceau (racine Merkle).",
+      "honestRights": "Les rôles et l'expiration sont appliqués par l'application du destinataire, pas par la cryptographie : un destinataire peut toujours recopier ce qu'il a vu. Ne partagez qu'avec des personnes de confiance.",
+      "honestOnline": "Pair à pair : le coffre du destinataire doit être ouvert au même moment (pas de boîte aux lettres hors ligne pour l'instant).",
+      "send": "Envoyer",
+      "sharedWith": "Partagé avec",
+      "expiresOn": "expire le {{date}}",
+      "phase": {
+        "connecting": "Connexion au relais…",
+        "waiting": "En attente du coffre du destinataire (il doit être ouvert)…",
+        "sending": "Envoi direct chiffré…"
+      },
+      "delivered": "Livré à {{who}}.",
+      "pendingAccept": "Livré : {{who}} doit accepter votre premier partage.",
+      "conflictThere": "Livré à {{who}} (conflit détecté de son côté).",
+      "offline": "{{who}} n'a pas son coffre ouvert. Réessayez quand il sera en ligne.",
+      "rejected": "Refusé par le coffre de {{who}} ({{reason}}).",
+      "failed": "Échec de la connexion directe avec {{who}}.",
+      "leave": "Un partage est en cours d'envoi."
+    },
+    "contacts": {
+      "title": "Mes contacts",
+      "empty": "Aucun contact pour l'instant.",
+      "addTitle": "Ajouter un contact",
+      "card": "Carte de contact",
+      "alias": "Nom (pour vous)",
+      "add": "Ajouter le contact",
+      "added": "{{who}} ajouté à vos contacts.",
+      "myHandle": "Mon identifiant",
+      "myCard": "Ma carte de contact",
+      "myCardHint": "Envoyez cette carte (clés publiques uniquement) aux personnes avec qui vous voulez partager. Vérifiez l'identifiant de vos contacts par un autre canal.",
+      "cardCopied": "Carte copiée.",
+      "remove": "Retirer",
+      "removeTitle": "Retirer ce contact ?",
+      "removeMsg": "{{who}} ne pourra plus vous envoyer de mises à jour."
+    },
+    "pending": {
+      "msg": "Nouveau partage « {{title}} » de",
+      "verify": "Expéditeur inconnu : vérifiez son identifiant avec lui avant d'accepter.",
+      "accept": "Accepter et ajouter le contact",
+      "decline": "Refuser",
+      "accepted": "Partage accepté."
+    },
+    "inbox": {
+      "new": "{{who}} a partagé « {{title}} » avec vous.",
+      "updated": "{{who}} a mis à jour « {{title}} ».",
+      "conflict": "« {{title}} » : modification concurrente détectée.",
+      "state": {
+        "online": "Réception active",
+        "connecting": "Connexion…",
+        "offline": "Réception hors ligne",
+        "busy": "Ouvert ailleurs",
+        "onlineHint": "Vos contacts peuvent vous envoyer des éléments tant que le coffre est ouvert.",
+        "connectingHint": "Connexion au relais de signalisation.",
+        "offlineHint": "Impossible de joindre le relais : vous ne recevrez pas de partages pour l'instant.",
+        "busyHint": "Ce coffre reçoit déjà les partages dans une autre fenêtre."
+      }
+    },
+    "sync": {
+      "done": "Modification envoyée à {{n}} contact(s).",
+      "partial": "Modification envoyée à {{n}} / {{total}} contact(s).",
+      "failed": "Pas encore synchronisé avec : {{who}} (coffre fermé).",
+      "retry": "Réessayer"
+    },
+    "palette": {
+      "label": "Recherche dans le coffre",
+      "placeholder": "Rechercher un site, un identifiant, une note…",
+      "recent": "Récents",
+      "noResult": "Aucun résultat.",
+      "nothing": "Rien à copier pour cet élément.",
+      "kCopy": "copier",
+      "kUser": "copier l'identifiant",
+      "kReveal": "afficher 10 s",
+      "kOpen": "ouvrir",
+      "semantic": {
+        "off": "Recherche sémantique",
+        "loading": "Chargement de l'IA…",
+        "on": "Sémantique activée",
+        "unavailable": "IA indisponible"
+      },
+      "semanticSize": "~44 Mo, une fois",
+      "semanticHint": "Recherche par le sens (MiniLM) exécutée dans votre navigateur : aucune donnée n'est envoyée. Les vecteurs sont chiffrés dans le coffre.",
+      "semanticHit": "Correspondance sémantique"
+    },
+    "sec": {
+      "scoreLabel": "Santé des mots de passe",
+      "summary": "{{logins}} identifiant(s) analysé(s) localement · {{issues}} point(s) d'attention",
+      "weak": "Mots de passe faibles",
+      "reused": "Mots de passe réutilisés",
+      "old": "Inchangés depuis plus d'un an",
+      "noneWeak": "Aucun mot de passe faible.",
+      "noneReused": "Aucune réutilisation.",
+      "noneOld": "Rien de trop ancien.",
+      "days": "{{n}} jours",
+      "hibpTitle": "Fuites connues (Have I Been Pwned)",
+      "hibpExplain": "Uniquement si vous cliquez : pour chaque mot de passe, seuls les 5 premiers caractères de son empreinte SHA-1 sont envoyés à api.pwnedpasswords.com (k-anonymat, avec remplissage). Le mot de passe et son empreinte complète ne quittent jamais l'appareil.",
+      "hibpCta": "Vérifier les fuites",
+      "hibpRunning": "Vérification {{n}} / {{total}}…",
+      "hibpClean": "Aucun des {{n}} mots de passe n'apparaît dans les fuites connues.",
+      "hibpSeen": "vu {{n}} fois dans des fuites",
+      "hibpError": "Service HIBP injoignable."
+    },
+    "settings": {
+      "lockTitle": "Verrouillage",
+      "autoLock": "Verrouillage automatique après inactivité",
+      "minutes": "{{n}} min",
+      "memoryNote": "Au verrouillage, les clés et le contenu déchiffré sont effacés de la mémoire de l'onglet au mieux : JavaScript ne garantit pas l'effacement de toutes les copies. Verrouillez (ou fermez l'onglet) sur un appareil partagé.",
+      "unlockTitle": "Moyens de déverrouillage",
+      "changePw": "Changer le mot de passe maître",
+      "pwChanged": "Mot de passe maître changé.",
+      "passkeyOn": "Passkey active",
+      "passkeyAdd": "Ajouter une passkey",
+      "passkeyAdded": "Passkey ajoutée.",
+      "passkeyRemove": "Retirer la passkey",
+      "passkeyUnsupported": "Passkey : ce navigateur ne prend pas en charge l'extension WebAuthn PRF nécessaire.",
+      "phraseNote": "Votre phrase de récupération de 24 mots reste valable dans tous les cas.",
+      "danger": "Zone sensible",
+      "destroy": "Supprimer définitivement ce coffre",
+      "destroyTitle": "Supprimer le coffre-fort ?",
+      "destroyMsg": "Le coffre et tout son contenu seront effacés de ce navigateur. Sans sauvegarde exportée, c'est irréversible."
+    },
+    "backup": {
+      "title": "Sauvegarde",
+      "clearWarning": "Effacer les données de navigation de ce site (ou désinstaller le navigateur) supprime le coffre. Gardez une sauvegarde à jour.",
+      "explain": "La sauvegarde est le fichier du coffre tel quel : uniquement des données chiffrées et vos clés enveloppées. Elle se rouvre avec votre mot de passe ou votre phrase de récupération, sur n'importe quel navigateur.",
+      "export": "Exporter une sauvegarde chiffrée",
+      "exported": "Sauvegarde exportée.",
+      "import": "Importer une sauvegarde",
+      "imported": "Sauvegarde restaurée. Déverrouillez-la avec son mot de passe ou sa phrase.",
+      "importTitle": "Restaurer une sauvegarde",
+      "importLead": "Choisissez un fichier .fnyvault exporté depuis Filenymous. Il remplacera le coffre de ce navigateur.",
+      "chooseFile": "Choisir le fichier…",
+      "replaceTitle": "Remplacer le coffre actuel ?",
+      "replaceMsg": "Le coffre de ce navigateur sera remplacé par la sauvegarde.",
+      "replace": "Remplacer",
+      "persisted": "Stockage persistant accordé",
+      "notPersisted": "Stockage non persistant (le navigateur peut l'effacer en cas de manque d'espace)",
+      "persist": "Demander le stockage persistant",
+      "persistOk": "Stockage persistant accordé.",
+      "persistNo": "Le navigateur a refusé (souvent accordé après ajout à l'écran d'accueil ou en favori).",
+      "usage": "{{mb}} Mo utilisés par le site"
+    },
+    "privacy": {
+      "title": "Comment c'est protégé (et les limites)",
+      "local": "Le coffre est une base SQLite dans le stockage privé (OPFS) de ce navigateur ; seuls des blocs chiffrés y sont écrits (AES-256-GCM). L'index de recherche n'existe qu'en mémoire, pendant que le coffre est ouvert.",
+      "keys": "Une clé aléatoire chiffre le coffre ; elle est enveloppée par votre mot de passe (Argon2id), votre passkey (PRF) et votre phrase de récupération (BIP-39).",
+      "p2p": "Les partages passent en WebRTC direct ; le relais de signalisation ne voit qu'un identifiant de boîte opaque et des adresses IP, jamais le contenu.",
+      "rights": "Rôles et expirations sont respectés par l'application Filenymous du destinataire, pas garantis cryptographiquement.",
+      "memory": "Le verrouillage efface les clés de la mémoire au mieux ; un appareil compromis (malware, extension malveillante) peut tout lire pendant que le coffre est ouvert.",
+      "storage": "Effacer les données du site supprime le coffre : exportez des sauvegardes."
+    },
+    "err": {
+      "generic": "Une erreur est survenue.",
+      "read-only": "Lecture seule : votre rôle ne permet pas de modifier.",
+      "forbidden": "Votre rôle ne permet pas cette action.",
+      "unknown-peer": "Contact inconnu.",
+      "bad-card": "Carte de contact invalide (elle commence par « fny1. »).",
+      "self": "C'est votre propre carte.",
+      "not-found": "Élément introuvable.",
+      "bad-backup": "Ce fichier n'est pas une sauvegarde de coffre-fort Filenymous valide.",
+      "busy": "Le coffre est ouvert dans un autre onglet.",
+      "no-password": "Aucun mot de passe défini.",
+      "prf-unavailable": "Cette passkey ou cet appareil ne prend pas en charge l'extension PRF.",
+      "cancelled": "Opération annulée."
+    }
   }
 }

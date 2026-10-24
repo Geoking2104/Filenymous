@@ -8,7 +8,7 @@ import { carouselKeyTarget, nearestSlide } from "./Carousel";
 describe("home service cards copy", () => {
   it("each service has a title, a lead and exactly 3 benefits in FR and EN", () => {
     for (const loc of [fr, en] as Array<{ home: Record<string, Record<string, string> | string> }>) {
-      for (const svc of ["send", "drop", "wall", "secret", "whistle", "cli", "pro", "stream"]) {
+      for (const svc of ["send", "drop", "wall", "safe", "secret", "whistle", "cli", "pro", "stream"]) {
         const c = loc.home[svc] as Record<string, string>;
         expect(c.title?.trim()).toBeTruthy();
         expect(c.lead?.trim()).toBeTruthy();
@@ -27,6 +27,8 @@ describe("service routes", () => {
   it("maps hashes to the shell routes", () => {
     expect(serviceRoute("")).toBe("home");
     expect(serviceRoute("#secret-new")).toBe("secret-new");
+    expect(serviceRoute("#safe")).toBe("safe");
+    expect(serviceRoute("#coffre")).toBe("safe");
     expect(serviceRoute(`#s:${"A".repeat(22)}/${"k".repeat(43)}`)).toBe("secret-reveal");
     expect(serviceRoute("#drop-new")).toBe("drop-owner");
     expect(serviceRoute(`#drop:drop-${"a".repeat(24)}/${"s".repeat(22)}/0/n`)).toBe("drop-contrib");
