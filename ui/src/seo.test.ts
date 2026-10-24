@@ -46,7 +46,7 @@ describe("SEO / agent discoverability output", () => {
       for (const m of html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)) expect(() => JSON.parse(m[1])).not.toThrow();
       for (const u of urlsIn(html)) {
         const hash = u.split("#")[1]?.replace(/[.,;:]+$/, "");
-        if (hash !== undefined) expect(["drop-new", "secret-new", "report-new", "wall-new"]).toContain(hash);
+        if (hash !== undefined) expect(["drop-new", "secret-new", "report-new", "wall-new", "safe"]).toContain(hash);
       }
       expect(html).not.toMatch(/file\.?pizza/i);
     }

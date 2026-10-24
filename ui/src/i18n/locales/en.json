@@ -646,6 +646,17 @@
       "b3": "One click destroys it all",
       "b3d": "Every participant wipes its copy and the room is closed.",
       "cta": "Create a wall"
+    },
+    "safe": {
+      "title": "Vault",
+      "lead": "Your personal vault for passwords, API keys, notes and files: encrypted in your browser, shared peer to peer.",
+      "b1": "Zero knowledge",
+      "b1d": "Everything is encrypted on your device; no server stores your vault.",
+      "b2": "Instant ⌘K search",
+      "b2d": "Local full-text search, plus optional semantic search by an AI running in your browser.",
+      "b3": "Signed P2P sharing",
+      "b3d": "An item travels encrypted, straight to a contact's vault, with a role and an expiry.",
+      "cta": "Open my vault"
     }
   },
   "stream": {
@@ -1217,5 +1228,395 @@
     "confirm": "Leave",
     "cancel": "Cancel",
     "wallHost": "The wall will be destroyed for every participant."
+  },
+  "safe": {
+    "loading": "Opening the vault…",
+    "busy": "The vault is already open in another tab of this browser. Close it (or use it) and reload this page.",
+    "unsupported": "This browser can't store the vault locally (private OPFS storage unavailable, e.g. in private browsing). Try a normal window of a recent browser.",
+    "back": "Back",
+    "next": "Continue",
+    "cancel": "Cancel",
+    "close": "Close",
+    "later": "Later",
+    "save": "Save",
+    "saving": "Encrypting…",
+    "saved": "Saved and encrypted.",
+    "edit": "Edit",
+    "copy": "Copy",
+    "reveal": "Reveal",
+    "hide": "Hide",
+    "show": "Show",
+    "open": "Open",
+    "new": "New",
+    "lock": "Lock",
+    "lockNow": "Lock now",
+    "searchCta": "Search the vault…",
+    "leaveEditor": "Your unsaved changes will be lost.",
+    "leavePhrase": "Your recovery phrase will never be shown again.",
+    "tabs": {
+      "items": "Items",
+      "contacts": "Contacts",
+      "security": "Security",
+      "settings": "Settings"
+    },
+    "cat": {
+      "all": "All",
+      "login": "Login",
+      "note": "Note",
+      "api_key": "API key",
+      "file": "File",
+      "shared": "Shared"
+    },
+    "role": {
+      "reader": "Reader",
+      "editor": "Editor",
+      "admin": "Admin",
+      "readerHint": "Can view and copy. Can't edit or reshare.",
+      "editorHint": "Can edit; their changes come back to you (and conflicts are detected).",
+      "adminHint": "Can edit and reshare with their own contacts."
+    },
+    "onb": {
+      "title": "Create your vault",
+      "lead": "A local-first vault: your secrets are encrypted in this browser before being saved, and only ever leave it encrypted, to the contacts you choose.",
+      "points": {
+        "local": {
+          "t": "Stored on your side",
+          "d": "In this browser's private storage (encrypted SQLite), not on a server."
+        },
+        "zero": {
+          "t": "Zero knowledge",
+          "d": "Argon2id + AES-256-GCM. Without your password (or phrase), nobody can open it, not even us."
+        },
+        "p2p": {
+          "t": "Peer-to-peer sharing",
+          "d": "Encrypted, signed WebRTC (X25519 + Ed25519), straight to your contact's vault."
+        },
+        "search": {
+          "t": "Find anything with ⌘K",
+          "d": "Local full-text search, plus optional semantic search with a small AI running in the tab."
+        }
+      },
+      "localWarn": "Important: the vault lives in this browser. Clearing the site's data deletes it. Export an encrypted backup regularly (Settings).",
+      "start": "Get started",
+      "import": "Restore a backup",
+      "methodTitle": "How do you want to unlock your vault?",
+      "usePassword": "Master password",
+      "usePasskey": "Passkey (biometrics)",
+      "password": "Master password",
+      "confirm": "Confirm the password",
+      "tooWeak": "Too weak: aim for at least {{bits}} bits (4 to 5 random words work great).",
+      "mismatch": "The two passwords don't match.",
+      "passwordHint": "It is never sent or stored. Nobody can reset it: only your recovery phrase replaces it.",
+      "passkeyLead": "Your device (Touch ID, Windows Hello, a security key…) derives a secret key through the WebAuthn PRF extension. You can add a password later.",
+      "passkeyLabel": "Filenymous Vault",
+      "kdf": "Your password is stretched with Argon2id (64 MB of memory, 3 passes): it takes a second or two, and makes every guess expensive for an attacker.",
+      "create": "Create the vault",
+      "creating": "Deriving the key…",
+      "phraseTitle": "Your recovery phrase",
+      "phraseLead": "These 24 words reopen the vault if you forget your password. Click a word to reveal it and write them down in order, on paper, offline.",
+      "noReset": "There is no reset. Without your password or this phrase, the vault's content is lost for good. Don't photograph it or paste it into any online service.",
+      "revealWord": "Reveal word {{n}}",
+      "revealAll": "Reveal all",
+      "hideAll": "Hide all",
+      "ack": "I wrote down the 24 words, in order, offline",
+      "ackHint": "This phrase will never be shown again.",
+      "checkTitle": "Let's check your phrase",
+      "checkLead": "Type the requested words to confirm your copy is right.",
+      "wordN": "Word #{{n}}",
+      "checkErr": "One of the words doesn't match. Check your copy.",
+      "seeAgain": "See the phrase again",
+      "finish": "Finish"
+    },
+    "unlock": {
+      "title": "Vault locked",
+      "password": "Master password",
+      "cta": "Unlock",
+      "deriving": "Deriving the key…",
+      "passkey": "Unlock with a passkey",
+      "passkeyUnsupported": "This vault unlocks with a passkey, but this browser doesn't support the PRF extension. Use your recovery phrase or another browser.",
+      "badPassword": "Wrong password.",
+      "badPasskey": "This passkey doesn't open this vault.",
+      "badPhrase": "Invalid or wrong phrase.",
+      "forgot": "Forgot your password? Use the recovery phrase",
+      "phraseLead": "Type your 24 words, separated by spaces. You'll then choose a new password.",
+      "phrase": "Recovery phrase",
+      "words": "{{n}} / 24 words",
+      "recover": "Recover the vault",
+      "other": "Other options"
+    },
+    "recovered": {
+      "title": "Vault recovered",
+      "lead": "Choose a new master password. The old one will stop working.",
+      "cta": "Set the new password"
+    },
+    "strength": {
+      "empty": "Type a password",
+      "l0": "Very weak",
+      "l1": "Weak",
+      "l2": "Fair",
+      "l3": "Strong",
+      "l4": "Excellent",
+      "bits": "≈ {{bits}} bits"
+    },
+    "clip": {
+      "copied": "{{what}} copied — clipboard cleared in 30 s",
+      "clearNow": "Clear now",
+      "failed": "The browser refused the copy."
+    },
+    "list": {
+      "filter": "Filter",
+      "empty": "Your vault is empty. Add a first item with “New”.",
+      "noneInFilter": "No item in this category."
+    },
+    "pane": {
+      "pick": "Select an item, or search for it.",
+      "first": "Add your first login, note, API key or file.",
+      "kbd": "Tip: {{k}} opens search anywhere in the vault."
+    },
+    "badge": {
+      "received": "Received from a contact",
+      "shared": "Shared",
+      "receivedFrom": "Shared by {{who}} · role {{role}}"
+    },
+    "f": {
+      "title": "Title",
+      "username": "Username",
+      "password": "Password",
+      "url": "Website",
+      "notes": "Notes",
+      "apiKey": "API key",
+      "service": "Service",
+      "file": "File",
+      "tags": "Tags",
+      "tagsHint": "personal, bank, work",
+      "download": "Download",
+      "merkle": "Merkle root",
+      "merkleHint": "Fingerprint of the encrypted chunks, checked on every read."
+    },
+    "editor": {
+      "edit": "Edit item",
+      "new": {
+        "login": "New login",
+        "note": "New note",
+        "api_key": "New API key",
+        "file": "New file"
+      },
+      "generate": "Generate a strong password",
+      "fileHint": "Encrypted in 1 MB chunks, each with its own IV, sealed by a Merkle root. 64 MB max.",
+      "tooBig": "File too large (max 64 MB)."
+    },
+    "discard": {
+      "title": "Discard changes?",
+      "message": "Your unsaved changes will be lost.",
+      "confirm": "Discard"
+    },
+    "del": {
+      "cta": "Delete",
+      "title": "Delete this item?",
+      "message": "“{{title}}” and its whole history will be deleted from this vault.",
+      "sharedNote": "Contacts you shared it with keep their copy.",
+      "confirm": "Delete",
+      "done": "Item deleted."
+    },
+    "history": {
+      "title": "History",
+      "current": "current",
+      "view": "View",
+      "restore": "Restore",
+      "restored": "Version {{v}} restored (as a new version).",
+      "masked": "hidden"
+    },
+    "conflict": {
+      "banner": "{{count}} concurrent versions detected",
+      "resolve": "Resolve",
+      "title": "{{count}} concurrent versions detected",
+      "lead": "This item was edited on both sides at the same time. Nothing was overwritten: pick the version to keep, or merge field by field.",
+      "mine": "my version",
+      "keepA": "Keep A",
+      "keepB": "Keep B",
+      "manual": "Manual merge",
+      "saveMerge": "Save the merge",
+      "resolved": "Conflict resolved.",
+      "none": "No more conflicts on this item.",
+      "revealSecrets": "Reveal secrets (10 s)"
+    },
+    "share": {
+      "cta": "Share",
+      "title": "Share “{{title}}”",
+      "to": "With",
+      "role": "Role",
+      "expiry": "Expiry",
+      "exp": {
+        "none": "Never",
+        "1h": "1 hour",
+        "1d": "24 hours",
+        "7d": "7 days",
+        "30d": "30 days"
+      },
+      "addFirst": "Add the contact first: ask them for their contact card (Vault → Contacts) and paste it here.",
+      "honestCrypto": "The item is encrypted for this contact's key only (X25519), signed with yours (Ed25519) and verified chunk by chunk (Merkle root).",
+      "honestRights": "Roles and expiry are enforced by the recipient's app, not by cryptography: a recipient can always copy what they've seen. Only share with people you trust.",
+      "honestOnline": "Peer to peer: the recipient's vault must be open at the same time (no offline mailbox yet).",
+      "send": "Send",
+      "sharedWith": "Shared with",
+      "expiresOn": "expires on {{date}}",
+      "phase": {
+        "connecting": "Connecting to the relay…",
+        "waiting": "Waiting for the recipient's vault (it must be open)…",
+        "sending": "Sending directly, encrypted…"
+      },
+      "delivered": "Delivered to {{who}}.",
+      "pendingAccept": "Delivered: {{who}} must accept your first share.",
+      "conflictThere": "Delivered to {{who}} (conflict detected on their side).",
+      "offline": "{{who}} doesn't have their vault open. Try again when they're online.",
+      "rejected": "Refused by {{who}}'s vault ({{reason}}).",
+      "failed": "The direct connection with {{who}} failed.",
+      "leave": "A share is being sent."
+    },
+    "contacts": {
+      "title": "My contacts",
+      "empty": "No contacts yet.",
+      "addTitle": "Add a contact",
+      "card": "Contact card",
+      "alias": "Name (for you)",
+      "add": "Add contact",
+      "added": "{{who}} added to your contacts.",
+      "myHandle": "My handle",
+      "myCard": "My contact card",
+      "myCardHint": "Send this card (public keys only) to the people you want to share with. Check your contacts' handles over another channel.",
+      "cardCopied": "Card copied.",
+      "remove": "Remove",
+      "removeTitle": "Remove this contact?",
+      "removeMsg": "{{who}} won't be able to send you updates anymore."
+    },
+    "pending": {
+      "msg": "New share “{{title}}” from",
+      "verify": "Unknown sender: check their handle with them before accepting.",
+      "accept": "Accept and add contact",
+      "decline": "Decline",
+      "accepted": "Share accepted."
+    },
+    "inbox": {
+      "new": "{{who}} shared “{{title}}” with you.",
+      "updated": "{{who}} updated “{{title}}”.",
+      "conflict": "“{{title}}”: concurrent edit detected.",
+      "state": {
+        "online": "Receiving",
+        "connecting": "Connecting…",
+        "offline": "Not receiving",
+        "busy": "Open elsewhere",
+        "onlineHint": "Your contacts can send you items while the vault is open.",
+        "connectingHint": "Connecting to the signaling relay.",
+        "offlineHint": "Can't reach the relay: you won't receive shares for now.",
+        "busyHint": "This vault is already receiving shares in another window."
+      }
+    },
+    "sync": {
+      "done": "Change sent to {{n}} contact(s).",
+      "partial": "Change sent to {{n}} / {{total}} contact(s).",
+      "failed": "Not synced yet with: {{who}} (vault closed).",
+      "retry": "Retry"
+    },
+    "palette": {
+      "label": "Vault search",
+      "placeholder": "Search a site, a username, a note…",
+      "recent": "Recent",
+      "noResult": "No results.",
+      "nothing": "Nothing to copy for this item.",
+      "kCopy": "copy",
+      "kUser": "copy username",
+      "kReveal": "reveal 10 s",
+      "kOpen": "open",
+      "semantic": {
+        "off": "Semantic search",
+        "loading": "Loading the AI…",
+        "on": "Semantic on",
+        "unavailable": "AI unavailable"
+      },
+      "semanticSize": "~44 MB, once",
+      "semanticHint": "Meaning-based search (MiniLM) running in your browser: no data is sent. Vectors are encrypted in the vault.",
+      "semanticHit": "Semantic match"
+    },
+    "sec": {
+      "scoreLabel": "Password health",
+      "summary": "{{logins}} login(s) analysed locally · {{issues}} issue(s)",
+      "weak": "Weak passwords",
+      "reused": "Reused passwords",
+      "old": "Unchanged for over a year",
+      "noneWeak": "No weak passwords.",
+      "noneReused": "No reuse.",
+      "noneOld": "Nothing too old.",
+      "days": "{{n}} days",
+      "hibpTitle": "Known breaches (Have I Been Pwned)",
+      "hibpExplain": "Only when you click: for each password, only the first 5 characters of its SHA-1 hash are sent to api.pwnedpasswords.com (k-anonymity, with padding). The password and its full hash never leave the device.",
+      "hibpCta": "Check for breaches",
+      "hibpRunning": "Checking {{n}} / {{total}}…",
+      "hibpClean": "None of the {{n}} passwords appears in known breaches.",
+      "hibpSeen": "seen {{n}} times in breaches",
+      "hibpError": "HIBP service unreachable."
+    },
+    "settings": {
+      "lockTitle": "Locking",
+      "autoLock": "Auto-lock after inactivity",
+      "minutes": "{{n}} min",
+      "memoryNote": "On lock, keys and decrypted content are wiped from the tab's memory on a best-effort basis: JavaScript can't guarantee every copy is erased. Lock (or close the tab) on a shared device.",
+      "unlockTitle": "Unlock methods",
+      "changePw": "Change master password",
+      "pwChanged": "Master password changed.",
+      "passkeyOn": "Passkey enabled",
+      "passkeyAdd": "Add a passkey",
+      "passkeyAdded": "Passkey added.",
+      "passkeyRemove": "Remove passkey",
+      "passkeyUnsupported": "Passkey: this browser doesn't support the required WebAuthn PRF extension.",
+      "phraseNote": "Your 24-word recovery phrase stays valid in every case.",
+      "danger": "Danger zone",
+      "destroy": "Permanently delete this vault",
+      "destroyTitle": "Delete the vault?",
+      "destroyMsg": "The vault and all its content will be erased from this browser. Without an exported backup, this can't be undone."
+    },
+    "backup": {
+      "title": "Backup",
+      "clearWarning": "Clearing this site's browsing data (or uninstalling the browser) deletes the vault. Keep an up-to-date backup.",
+      "explain": "The backup is the vault file as is: only encrypted data and your wrapped keys. It reopens with your password or recovery phrase, in any browser.",
+      "export": "Export an encrypted backup",
+      "exported": "Backup exported.",
+      "import": "Import a backup",
+      "imported": "Backup restored. Unlock it with its password or phrase.",
+      "importTitle": "Restore a backup",
+      "importLead": "Choose a .fnyvault file exported from Filenymous. It will replace this browser's vault.",
+      "chooseFile": "Choose the file…",
+      "replaceTitle": "Replace the current vault?",
+      "replaceMsg": "This browser's vault will be replaced by the backup.",
+      "replace": "Replace",
+      "persisted": "Persistent storage granted",
+      "notPersisted": "Storage not persistent (the browser may evict it when space runs low)",
+      "persist": "Request persistent storage",
+      "persistOk": "Persistent storage granted.",
+      "persistNo": "The browser declined (often granted once the site is installed or bookmarked).",
+      "usage": "{{mb}} MB used by the site"
+    },
+    "privacy": {
+      "title": "How it's protected (and the limits)",
+      "local": "The vault is a SQLite database in this browser's private storage (OPFS); only encrypted blobs are written to it (AES-256-GCM). The search index only exists in memory, while the vault is open.",
+      "keys": "A random key encrypts the vault; it is wrapped by your password (Argon2id), your passkey (PRF) and your recovery phrase (BIP-39).",
+      "p2p": "Shares travel over direct WebRTC; the signaling relay only sees an opaque inbox id and IP addresses, never the content.",
+      "rights": "Roles and expiry are honoured by the recipient's Filenymous app, not guaranteed cryptographically.",
+      "memory": "Locking wipes keys from memory on a best-effort basis; a compromised device (malware, malicious extension) can read everything while the vault is open.",
+      "storage": "Clearing the site's data deletes the vault: export backups."
+    },
+    "err": {
+      "generic": "Something went wrong.",
+      "read-only": "Read-only: your role doesn't allow editing.",
+      "forbidden": "Your role doesn't allow this.",
+      "unknown-peer": "Unknown contact.",
+      "bad-card": "Invalid contact card (it starts with “fny1.”).",
+      "self": "That's your own card.",
+      "not-found": "Item not found.",
+      "bad-backup": "This file isn't a valid Filenymous vault backup.",
+      "busy": "The vault is open in another tab.",
+      "no-password": "No password set.",
+      "prf-unavailable": "This passkey or device doesn't support the PRF extension.",
+      "cancelled": "Cancelled."
+    }
   }
 }

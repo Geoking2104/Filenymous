@@ -8,7 +8,7 @@ describe("service → icon map (single source of truth)", () => {
     const cases: [Route, string][] = [
       ["drop-owner", "drop"], ["drop-contrib", "drop"], ["wall-host", "wall"], ["wall-peer", "wall"],
       ["secret-new", "secret"], ["secret-reveal", "secret"], ["report-new", "report"], ["report-submit", "report"],
-      ["report-inbox", "report"], ["report-follow", "report"], ["home", "send"],
+      ["report-inbox", "report"], ["report-follow", "report"], ["safe", "safe"], ["home", "send"],
     ];
     for (const [route, svc] of cases) expect(serviceForScreen(route, base), route).toBe(svc);
   });
@@ -18,6 +18,6 @@ describe("service → icon map (single source of truth)", () => {
     expect(serviceForScreen("drop-contrib", { receiving: false, stream: false, via: "pro" })).toBe("drop");
   });
   it("defines a glyph and a title for every card", () => {
-    expect(Object.keys(SERVICES).sort()).toEqual(["cli", "drop", "pro", "report", "secret", "send", "stream", "wall"]);
+    expect(Object.keys(SERVICES).sort()).toEqual(["cli", "drop", "pro", "report", "safe", "secret", "send", "stream", "wall"]);
   });
 });

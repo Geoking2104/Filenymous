@@ -5,7 +5,7 @@
  */
 import { Carousel } from "./Carousel";
 import { mediaKind } from "../p2p/media";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import P2PSendPanel from "../p2p/P2PSendPanel";
 import P2PReceivePanel from "../p2p/P2PReceivePanel";
@@ -31,6 +31,9 @@ import "../report/report.css";
 import { WallHostPanel, WallPeerPanel } from "../wall/WallPanel";
 import { ConfirmDialogHost, confirmLeave } from "./confirmLeave";
 import "./home.css";
+
+// Coffre-fort (SQLite WASM + crypto) is loaded only when opened.
+const SafePanel = lazy(() => import("../safe/SafePanel"));
 import { dragHasFiles, mergeFiles, removeFileAt, totalBytes } from "./files";
 
 function Logo() {
@@ -162,6 +165,12 @@ export default function HomeApp({ hash }: { hash: string }) {
     body = <WallHostPanel hash={hash} />;
   } else if (route === "wall-peer") {
     body = <WallPeerPanel hash={hash} />;
+  } else if (route === "safe") {
+    body = (
+      <Suspense fallback={<div className="v3-result sw" data-testid="cf-loading">…</div>}>
+        <SafePanel />
+      </Suspense>
+    );
   } else if (route === "secret-reveal") {
     body = <VaultRevealPanel hash={hash} />;
   } else if (route === "secret-new") {
@@ -353,6 +362,16 @@ export default function HomeApp({ hash }: { hash: string }) {
             <Benefits prefix="home.wall" />
             <a className="pz-btn pz-btn-block" href="#wall-new" data-testid="wall-entry">{t("home.wall.cta")}</a>
           </article>
+          <article className="pz-service pz-service--safe" data-service="safe" aria-labelledby="svc-safe" data-testid="safe-card">
+            <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
+            <div className="pz-service-head">
+              <ServiceIcon service="safe" />
+              <h2 id="svc-safe">{t("home.safe.title")}</h2>
+            </div>
+            <p className="pz-service-lead">{t("home.safe.lead")}</p>
+            <Benefits prefix="home.safe" />
+            <a className="pz-btn pz-btn-block" href="#safe" data-testid="safe-entry">{t("home.safe.cta")}</a>
+          </article>
           <article className="pz-service pz-service--secret" data-service="secret" aria-labelledby="svc-secret">
             <div className="pz-service-head">
               <ServiceIcon service="secret" />
@@ -450,7 +469,7 @@ export default function HomeApp({ hash }: { hash: string }) {
         </a>
         <LangSwitch />
       </header>
-      <main className={`pz-main${isHome || route === "wall-host" || route === "wall-peer" ? " is-wide" : ""}`} key={isHome ? "home" : route}>
+      <main className={`pz-main${isHome || route === "wall-host" || route === "wall-peer" || route === "safe" ? " is-wide" : ""}`} key={isHome ? "home" : route}>
         {!isHome && (
           <a className="pz-back" href={location.pathname} onClick={(e) => { e.preventDefault(); void reset(); }} data-testid="back-home">
             ← {t("home.back")}
