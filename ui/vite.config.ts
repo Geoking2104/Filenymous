@@ -1,21 +1,25 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import filenymousSeo from "./seo/vite-plugin.mjs";
-import { readdirSync, rmSync } from "node:fs";
+import { readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // The vault uses sqlite-wasm's opfs-sahpool VFS only. The package also emits a
 // "worker1" wrapper and the SharedArrayBuffer-based OPFS proxy (needs COEP,
 // which the site doesn't send): never loaded, so drop them to save ~255 KB.
+// sqlite-wasm references its Worker1 API and OPFS async-proxy workers via
+// new URL(), but the vault only uses the opfs-sahpool VFS. Replace those
+// ~255 KB of never-loaded files with tiny stubs: the URLs stay valid (the
+// OVH prune step checks every live reference) while the upload stays small.
 const dropUnusedSqliteWorkers = (): Plugin => ({
-  name: "fny-drop-unused-sqlite-workers",
+  name: "fny-stub-unused-sqlite-workers",
   apply: "build",
   closeBundle() {
     const dir = fileURLToPath(new URL("./dist/assets", import.meta.url));
     try {
       for (const f of readdirSync(dir)) {
-        if (/^sqlite3-(worker1|opfs-async-proxy)-.*\.js$/.test(f)) rmSync(join(dir, f));
+        if (/^sqlite3-(worker1|opfs-async-proxy)-.*\.js$/.test(f)) writeFileSync(join(dir, f), "throw new Error(\"unused sqlite worker\");\n");
       }
     } catch {
       /* no dist yet */
