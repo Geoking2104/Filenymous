@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useModal } from "../home/useModal";
 import {
   useNotifications,
   type AppNotification,
@@ -66,6 +67,8 @@ export default function NotificationCenter() {
   const setPushEnabled = useNotifications((s) => s.setPushEnabled);
   const pushEnabled = useNotifications((s) => s.pushEnabled);
   const [pushBusy, setPushBusy] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
+  useModal(panel, () => setPanelOpen(false), { open: panelOpen, trap: false });
   const hasVapid = Boolean(
     (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_VAPID_PUBLIC_KEY,
   );
@@ -131,7 +134,7 @@ export default function NotificationCenter() {
             aria-label="Fermer"
             onClick={() => setPanelOpen(false)}
           />
-          <div className="notify-panel" role="dialog" aria-label="Centre de notifications">
+          <div ref={panel} className="notify-panel" role="dialog" aria-label="Centre de notifications">
             <div className="notify-panel-head">
               <strong>Notifications</strong>
               <div className="notify-panel-actions">

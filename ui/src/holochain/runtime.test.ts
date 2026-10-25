@@ -4,6 +4,7 @@ import {
   canWrite,
   createHoloWebRuntime,
   createRuntimeDetector,
+  localNodeAllowed,
   resetClientForTests,
   setClientForTests,
 } from "./client";
@@ -70,6 +71,38 @@ describe("createRuntimeDetector", () => {
     const client = await detector();
 
     expect(client.mode).toBe("local-only");
+  });
+});
+
+describe("local node opt-in", () => {
+  const mem = () => {
+    const m = new Map<string, string>();
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };
+  };
+
+  it("never probes the local websocket when the local node is not allowed", async () => {
+    let probed = false;
+    const detector = createRuntimeDetector(
+      {
+        createHoloWebClient: async () => { throw new Error("missing HWC"); },
+        createWebsocketClient: async () => { probed = true; return { mode: "websocket" as const }; },
+        createWebBridgeClient: async () => ({ mode: "web-bridge" as const }),
+        createLocalOnlyClient: () => ({ mode: "local-only" as const }),
+      },
+      () => false,
+    );
+    expect((await detector()).mode).toBe("web-bridge");
+    expect(probed).toBe(false);
+  });
+
+  it("is off on the public site and opt-in via ?node=local (remembered, ?node=off resets)", () => {
+    const s = mem();
+    expect(localNodeAllowed({ hostname: "filenymous.eu", search: "" }, s, undefined)).toBe(false);
+    expect(localNodeAllowed({ hostname: "filenymous.eu", search: "?node=local" }, s, undefined)).toBe(true);
+    expect(localNodeAllowed({ hostname: "filenymous.eu", search: "" }, s, undefined)).toBe(true);
+    expect(localNodeAllowed({ hostname: "filenymous.eu", search: "?node=off" }, s, undefined)).toBe(false);
+    expect(localNodeAllowed({ hostname: "localhost", search: "" }, s, undefined)).toBe(true);
+    expect(localNodeAllowed({ hostname: "filenymous.eu", search: "" }, s, "1")).toBe(true);
   });
 });
 

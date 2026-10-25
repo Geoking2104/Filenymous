@@ -13,20 +13,48 @@ import ExpiryCountdown from "./ExpiryCountdown";
 import { canPlayInBrowser, mediaKind } from "./media";
 import { streamingAvailable, type StreamReader } from "./stream";
 
+/** How long we wait for a sender before explaining what may be wrong (the session keeps waiting). */
+export const NO_SENDER_HINT_MS = 25_000;
+
+/** Statuses during which no sender has shown up yet. */
+export function isWaitingForSender(status: ReceiverState["status"]): boolean {
+  return status === "connecting" || status === "waiting-sender";
+}
+
+/** Back to the home code field, so the user can type another code. */
+export function goEnterAnotherCode(): void {
+  history.replaceState(null, "", location.pathname + location.search);
+  window.dispatchEvent(new HashChangeEvent("hashchange"));
+  // The home screen renders on the next frame(s).
+  let tries = 0;
+  const focus = () => {
+    const el = document.getElementById("pz-home-code");
+    if (el) {
+      el.scrollIntoView({ block: "center" });
+      (el as HTMLInputElement).focus();
+    } else if (++tries < 20) setTimeout(focus, 50);
+  };
+  setTimeout(focus, 0);
+}
+
 interface Props {
   hash: string;
+  /** Override for tests. */
+  noSenderHintMs?: number;
   /** Sender chose streaming mode (manifest): the shell then shows the streaming icon. */
   onStreamable?: (streamable: boolean) => void;
 }
 
 /** Recipient landing for `#p2p:CODE/SECRET`: connects automatically. */
-export default function P2PReceivePanel({ hash, onStreamable }: Props) {
+export default function P2PReceivePanel({ hash, onStreamable, noSenderHintMs }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<ReceiverState>({ status: "connecting", files: [], receivedBytes: 0, totalBytes: 0, speed: 0 });
   const receiverRef = useRef<P2PReceiver | null>(null);
   const [reader, setReader] = useState<StreamReader | null>(null);
   const [noSw, setNoSw] = useState(false);
   const parsed = parseShareInput(hash);
+  const [noSender, setNoSender] = useState(false);
+  const waiting = isWaitingForSender(state.status);
 
   useEffect(() => {
     if (!parsed || !p2pSupported()) return;
@@ -40,6 +68,17 @@ export default function P2PReceivePanel({ hash, onStreamable }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsed?.code, parsed?.secret, parsed?.expires]);
+
+  // Nobody answers on this code after a while: say why it may be, and offer a way out.
+  useEffect(() => {
+    if (!waiting) {
+      setNoSender(false);
+      return;
+    }
+    const testMs = Number((window as { __FILENYMOUS_TEST_NO_SENDER_MS__?: number }).__FILENYMOUS_TEST_NO_SENDER_MS__) || 0;
+    const id = setTimeout(() => setNoSender(true), noSenderHintMs ?? (testMs || NO_SENDER_HINT_MS));
+    return () => clearTimeout(id);
+  }, [waiting, noSenderHintMs]);
 
   useEffect(() => {
     onStreamable?.(!!state.streamable);
@@ -129,6 +168,20 @@ export default function P2PReceivePanel({ hash, onStreamable }: Props) {
         <span className="v3-pulse" />
         {statusText}
       </div>
+      {noSender && waiting && (
+        <div className="v3-warn pz-no-sender" role="alert" data-testid="p2p-no-sender">
+          <strong>{t("p2p.noSenderTitle")}</strong>
+          <p>{t("p2p.noSenderBody")}</p>
+          <div className="pz-actions">
+            <button type="button" className="pz-btn-ghost" data-testid="p2p-no-sender-retry" onClick={() => location.reload()}>
+              {t("p2p.retry")}
+            </button>
+            <button type="button" className="pz-btn" data-testid="p2p-other-code" onClick={goEnterAnotherCode}>
+              {t("p2p.otherCode")}
+            </button>
+          </div>
+        </div>
+      )}
       {(state.status === "receiving" || state.status === "complete") && (
         <>
           <PigeonFlight pct={state.status === "complete" ? 100 : pct} self="to" from={state.peerDevice} to={describeDevice()} done={state.status === "complete"} />
@@ -161,9 +214,14 @@ export default function P2PReceivePanel({ hash, onStreamable }: Props) {
         </form>
       )}
       {state.status === "error" && state.error !== "expired" && (
-        <button type="button" className="v3-btn-ghost" onClick={() => location.reload()}>
-          {t("p2p.retry")}
-        </button>
+        <div className="pz-actions">
+          <button type="button" className="v3-btn-ghost" data-testid="p2p-retry" onClick={() => location.reload()}>
+            {t("p2p.retry")}
+          </button>
+          <button type="button" className="v3-btn-ghost" data-testid="p2p-error-other-code" onClick={goEnterAnotherCode}>
+            {t("p2p.otherCode")}
+          </button>
+        </div>
       )}
       {state.status === "streaming" && reader && (
         <StreamPlayer reader={reader} files={state.files} playable={playable} receivedBytes={state.receivedBytes} onUnavailable={() => setNoSw(true)} />

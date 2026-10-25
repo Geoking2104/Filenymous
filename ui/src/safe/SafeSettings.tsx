@@ -6,6 +6,7 @@ import type { SafeClient } from "./client";
 import { createPasskey, passkeyPrfSupported } from "./passkey";
 import { NewPasswordFields } from "./SafeGate";
 import { errKey, useSafe } from "./ui";
+import { requestPersistence } from "./persist";
 
 const LOCK_CHOICES = [1, 5, 15, 30, 60];
 
@@ -18,6 +19,8 @@ export async function exportBackupFile(client: SafeClient): Promise<void> {
   a.download = `filenymous-coffre-${stamp}.fnyvault`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  // Remembered inside the vault (encrypted), to show "last backup" and stop the reminder.
+  await client.setSettings({ lastBackupAt: Date.now() });
 }
 
 /** File picker + confirmation; replaces the local vault with the backup. */
@@ -56,7 +59,7 @@ export function ImportBackup({ client, hasVault, onDone, label }: { client: Safe
 }
 
 export function Settings({ onReset }: { onReset: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { client, status, refresh, toast, lock } = useSafe();
   const [prfOk, setPrfOk] = useState(false);
   const [persisted, setPersisted] = useState<boolean | null>(null);
@@ -73,7 +76,7 @@ export function Settings({ onReset }: { onReset: () => void }) {
   }, [client]);
 
   const persist = async () => {
-    const ok = (await navigator.storage?.persist?.()) ?? false;
+    const ok = await requestPersistence();
     setPersisted(ok);
     toast(ok ? t("safe.backup.persistOk") : t("safe.backup.persistNo"), ok ? "ok" : "warn");
   };
@@ -132,11 +135,16 @@ export function Settings({ onReset }: { onReset: () => void }) {
         <p className="v3-warn cf-callout" data-testid="cf-clear-warning">⚠️ {t("safe.backup.clearWarning")}</p>
         <p className="sw-small">{t("safe.backup.explain")}</p>
         <div className="cf-row">
-          <button type="button" className="pz-btn" onClick={async () => { await exportBackupFile(client); toast(t("safe.backup.exported"), "ok"); }} data-testid="cf-export">
+          <button type="button" className="pz-btn" onClick={async () => { await exportBackupFile(client); await refresh(); toast(t("safe.backup.exported"), "ok"); }} data-testid="cf-export">
             ⬇︎ {t("safe.backup.export")}
           </button>
           <ImportBackup client={client} hasVault onDone={() => { toast(t("safe.backup.imported"), "ok"); onReset(); }} />
         </div>
+        <p className="sw-small" data-testid="cf-last-backup" data-has-backup={String(!!status.settings.lastBackupAt)}>
+          {status.settings.lastBackupAt
+            ? t("safe.backup.lastAt", { date: new Date(status.settings.lastBackupAt).toLocaleString(i18n.language, { dateStyle: "medium", timeStyle: "short" }) })
+            : t("safe.backup.never")}
+        </p>
         <div className="cf-row cf-mt">
           <span className="sw-chip" data-testid="cf-persisted" data-persisted={String(persisted)}>
             {persisted ? `✓ ${t("safe.backup.persisted")}` : t("safe.backup.notPersisted")}

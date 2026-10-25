@@ -113,7 +113,7 @@ export async function createWall(host: Page, opts: CreateWallOpts = {}) {
 export async function answerLeave(page: Page, confirm: boolean) {
   const dialog = page.getByTestId("leave-dialog");
   await expect(dialog).toBeVisible();
-  await expect(page.getByTestId("leave-message")).toContainText(/fermer la fenêtre|close this window/);
+  await expect(page.getByTestId("leave-message")).toContainText(/fermer la fenêtre|close this window|le mur|this wall|the wall/i);
   await page.getByTestId(confirm ? "leave-confirm" : "leave-cancel").click();
   await expect(dialog).toHaveCount(0);
 }

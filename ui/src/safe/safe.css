@@ -130,7 +130,7 @@
 
 /* Clipboard pill + toasts */
 .cf-clip { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60; display: flex; gap: 10px; align-items: center; padding: 8px 14px 8px 8px; border-radius: 999px; background: var(--fy-surface-solid); border: 1px solid var(--fy-border-strong); box-shadow: var(--fy-shadow-hover); font-size: .86rem; max-width: calc(100vw - 32px); }
-.cf-toasts { position: fixed; right: 16px; top: 16px; z-index: 61; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+.cf-toasts { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 61; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 32px)); pointer-events: none; }
 .cf-toast { pointer-events: auto; padding: 10px 14px; border-radius: var(--fy-radius-sm); background: var(--fy-surface-solid); border: 1px solid var(--fy-border-strong); border-left: 4px solid var(--fy-accent); box-shadow: var(--fy-shadow); font-size: .88rem; animation: cf-in .2s var(--fy-ease); }
 .cf-toast.is-ok { border-left-color: var(--fy-success); }
 .cf-toast.is-err { border-left-color: var(--fy-danger); }
@@ -145,8 +145,8 @@
 .cf-pal-list { list-style: none; margin: 0; padding: 6px; overflow: auto; flex: 1; }
 .cf-pal-list > li[role="option"] { display: flex; gap: 10px; align-items: center; padding: 9px 10px; border-radius: var(--fy-radius-sm); cursor: pointer; }
 .cf-pal-list > li.is-on { background: color-mix(in srgb, var(--fy-accent) 13%, transparent); }
-.cf-pal-acts { display: none; gap: 4px; }
-.cf-pal-list > li.is-on .cf-pal-acts { display: flex; }
+.cf-pal-acts { display: flex; gap: 6px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--fy-border); font-size: .8rem; color: var(--fy-text-2); }
+.cf-pal-acts-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cf-pal-section { padding: 8px 10px 4px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--fy-text-3); }
 .cf-pal-empty { padding: 24px; text-align: center; color: var(--fy-text-3); }
 .cf-pal-reveal { font-family: ui-monospace, monospace; color: var(--fy-text); background: var(--fy-surface-2); padding: 1px 6px; border-radius: 6px; }
@@ -240,11 +240,18 @@
   .cf-words { grid-template-columns: repeat(3, 1fr); }
   .cf-search kbd { display: none; }
   .cf-pal-foot span { display: none; }
+  /* One scrollable row instead of wrapping tabs/filters onto several lines. */
+  .cf-tabs, .cf-filters { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .cf-tabs::-webkit-scrollbar, .cf-filters::-webkit-scrollbar { display: none; }
+  .cf-tabs > *, .cf-filters > * { flex: none; white-space: nowrap; }
 }
 @media (max-width: 520px) {
   .cf-words { grid-template-columns: repeat(2, 1fr); }
   .cf-check-grid { grid-template-columns: 1fr; }
-  .cf-top-actions { width: 100%; justify-content: space-between; }
+  .cf-top-actions { width: 100%; justify-content: space-between; flex-wrap: nowrap; }
+  .cf-lock-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .cf-top-actions > [data-testid="cf-lock"] { flex: none; padding-inline: 12px; }
+  .cf-toasts { left: 12px; right: 12px; max-width: none; align-items: center; }
   .cf-diff tbody th { width: 70px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -254,3 +261,12 @@
 /* The host layout centres text; the vault reads left-aligned. */
 .cf, .cf-modal, .cf-pal, .cf-toasts { text-align: left; }
 .cf-modal-title, .cf-unlock, .cf-detail--empty { text-align: center; }
+.cf-backup-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin: 10px 0; text-align: left; }
+.cf-backup-banner > span:first-child { flex: 1 1 260px; }
+.cf-invite { margin: 0 0 16px; padding: 14px 16px; border: 1px solid var(--fy-border-strong, #cbd5e1); border-radius: 14px; background: var(--fy-surface, #fff); }
+.cf-invite .cf-h3 { margin-top: 0; }
+.cf-invite-link { margin-top: 10px; }
+.cf-invite-link .v3-qr-wrap { margin: 8px 0; }
+.cf-card-raw { margin-top: 10px; }
+.cf-card-raw summary { cursor: pointer; font-size: .85rem; color: var(--fy-text-2, #475569); }
+.cf-invite-wait { margin: 0 0 10px; }

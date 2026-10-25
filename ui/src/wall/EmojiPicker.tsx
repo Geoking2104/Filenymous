@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EMOJI_GROUPS, searchEmoji } from "./emoji";
+import { useModal } from "../home/useModal";
 
 /** Bundled emoji picker (no network). */
 export function EmojiPicker({ onPick, onClose, title }: { onPick: (e: string) => void; onClose: () => void; title?: string }) {
@@ -10,16 +11,13 @@ export function EmojiPicker({ onPick, onClose, title }: { onPick: (e: string) =>
   const ref = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
 
+  useModal(ref, onClose, { trap: false, initialFocus: input });
   useEffect(() => {
-    input.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     const onDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as HTMLElement).closest?.("[data-emoji-trigger]")) onClose();
     };
-    window.addEventListener("keydown", onKey);
     window.addEventListener("mousedown", onDown);
     return () => {
-      window.removeEventListener("keydown", onKey);
       window.removeEventListener("mousedown", onDown);
     };
   }, [onClose]);

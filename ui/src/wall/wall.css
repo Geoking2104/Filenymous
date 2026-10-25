@@ -540,3 +540,20 @@ mark.sw2-hl { background: rgba(250, 204, 21, .55); color: inherit; border-radius
 .sw-thread-log { margin: .4rem 0 0; padding-left: 1.1rem; max-height: 14rem; overflow: auto; overflow-wrap: anywhere; }
 .sw-thread-log li { margin: .15rem 0; }
 
+
+/* Search with no hit: say so and offer a way back. */
+.sw2-search-empty { margin: var(--sw-s3, 12px) auto; max-width: 420px; text-align: center; padding: var(--sw-s3, 12px); border: 1px dashed var(--sw-line); border-radius: 12px; color: var(--fy-text-2); }
+.sw2-search-empty p { margin: 0 0 6px; }
+.sw2-search-empty .pz-btn { margin-top: 6px; }
+
+/* Mobile sheet: once someone has joined, the tabs come first and the wall
+   details (code, invite) move below the tab content. */
+@media (max-width: 860px) {
+  .sw2-side > .sw2-info.is-joined { order: 1; border-top: 1px solid var(--sw-line); padding-top: var(--sw-s3, 12px); }
+  .sw2-side > .sw-privacy { order: 2; }
+}
+@media (max-width: 640px) {
+  .sw2-reactions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .sw2-reactions::-webkit-scrollbar { display: none; }
+  .sw2-reactions > * { flex: none; }
+}

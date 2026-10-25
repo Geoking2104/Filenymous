@@ -164,6 +164,11 @@ export class VaultRepo {
   setSettings(s: Partial<VaultSettings>): VaultSettings {
     const next = { ...this.settings(), ...s };
     next.autoLockMin = Math.min(120, Math.max(1, Math.round(Number(next.autoLockMin) || DEFAULT_SETTINGS.autoLockMin)));
+    if (next.lastBackupAt !== undefined) {
+      const at = Math.round(Number(next.lastBackupAt));
+      if (Number.isFinite(at) && at > 0) next.lastBackupAt = at;
+      else delete next.lastBackupAt;
+    }
     this.setMeta("settings", JSON.stringify(next));
     return next;
   }

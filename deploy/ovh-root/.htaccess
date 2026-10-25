@@ -54,3 +54,10 @@
 <IfModule mod_headers.c>
   Header always set Strict-Transport-Security "max-age=31536000" "expr=%{SERVER_PORT} == '443'"
 </IfModule>
+
+# WebAssembly must be served as application/wasm so browsers can stream-
+# compile it (WebAssembly.instantiateStreaming rejects other MIME types).
+# Applies to /app/ and below.
+<IfModule mod_mime.c>
+  AddType application/wasm .wasm
+</IfModule>

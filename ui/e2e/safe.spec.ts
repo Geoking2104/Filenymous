@@ -217,8 +217,9 @@ test.describe("coffre-fort", () => {
       await b.getByTestId("cf-pending-accept").click();
       await expect(b.getByTestId("cf-detail-title")).toHaveText("Serveur staging (démo)");
       await expect(b.getByTestId("cf-received-note")).toContainText("Alice");
+      // Escape closes the share dialog (shared modal behaviour).
       await a.keyboard.press("Escape");
-      await a.getByTestId("cf-share-dialog").getByRole("button", { name: /Fermer|Close/ }).click().catch(() => undefined);
+      await expect(a.getByTestId("cf-share-dialog")).toHaveCount(0);
 
       // Bob closes his vault; both edit the same item → concurrent versions.
       await b.getByTestId("cf-lock").click();
@@ -265,5 +266,48 @@ test.describe("coffre-fort", () => {
     await page.goto(`${BASE}#secret-new`);
     await expect(page.getByTestId("service-head")).toHaveAttribute("data-service", "secret");
     await page.context().close();
+  });
+
+  test("contact invite link: public card only, verified handle, add in one step, backup reminder", async ({ browser }) => {
+    test.skip(LIVE, "creates two throwaway vaults; local only");
+    const a = await newVaultPage(browser);
+    const b = await newVaultPage(browser);
+    await onboard(a, PW_A);
+    await onboard(b, PW_B);
+    // Fresh vault: last backup "never" shown in settings; reminder appears once there is data.
+    await expect(a.getByTestId("cf-backup-banner")).toHaveCount(0);
+    await addLogin(a, { title: "Démo invitation", username: "demo", password: "demo-Invite-1234" });
+    await expect(a.getByTestId("cf-backup-banner")).toBeVisible();
+    await a.getByTestId("cf-backup-banner-later").click();
+    await expect(a.getByTestId("cf-backup-banner")).toHaveCount(0);
+
+    await a.getByTestId("cf-tab-contacts").click();
+    const handleA = (await a.getByTestId("cf-my-handle").textContent())!.trim();
+    await a.getByTestId("cf-invite-open").click();
+    const url = await a.getByTestId("cf-invite-out-url").inputValue();
+    expect(url).toMatch(/#safe-contact:fny1\.[A-Za-z0-9_-]+$/);
+    await expect(a.getByTestId("cf-invite-out")).toBeVisible();
+
+    // Bob opens the link (vault unlocked): he sees Alice's handle and adds her.
+    await b.goto(url);
+    await expect(b.getByTestId("cf-invite")).toBeVisible({ timeout: 15_000 });
+    await expect(b.getByTestId("cf-invite-handle")).toHaveText(handleA);
+    await expect(b.getByTestId("cf-invite-verify")).toBeVisible();
+    expect(b.url()).not.toContain("safe-contact");
+    await b.getByTestId("cf-invite-alias").fill("Alice");
+    await b.getByTestId("cf-invite-accept").click();
+    await expect(b.getByTestId("cf-invite-added")).toBeVisible();
+    await expect(b.getByTestId("cf-contacts")).toContainText("Alice");
+    // He can send his own link back.
+    await expect(b.getByTestId("cf-invite-reply-url")).toHaveValue(/\/r$/);
+
+    // Opening his own link only says it is his.
+    await b.getByTestId("cf-invite-close").click();
+    await b.getByTestId("cf-invite-open").click();
+    const own = await b.getByTestId("cf-invite-out-url").inputValue();
+    await b.goto(own);
+    await expect(b.getByTestId("cf-invite-self")).toBeVisible({ timeout: 15_000 });
+    await a.context().close();
+    await b.context().close();
   });
 });

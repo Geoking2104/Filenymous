@@ -433,7 +433,7 @@ export default function HomeApp({ hash }: { hash: string }) {
           }}
         >
           <span className="pz-code-label">{t("home.codeLabel")}</span>
-          <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("home.codePlaceholder")} aria-label={t("pz.codeLabel")} autoComplete="off" />
+          <input id="pz-home-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("home.codePlaceholder")} aria-label={t("pz.codeLabel")} autoComplete="off" />
           <button type="submit" className="pz-btn-ghost">{t("pz.codeOpen")}</button>
         </form>
         {err && <p className="pz-err" role="alert">{err}</p>}
@@ -478,7 +478,7 @@ export default function HomeApp({ hash }: { hash: string }) {
         {!isHome && (
           <div className="pz-screen-head" data-testid="service-head" data-service={screenService}>
             <ServiceIcon service={screenService} />
-            <h1>{t(receiving && route === "home" && screenService === "send" ? "receive.title" : SERVICES[screenService].titleKey)}</h1>
+            <h1>{t(SERVICES[screenService].titleKey)}</h1>
           </div>
         )}
         {body}

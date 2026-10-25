@@ -244,3 +244,8 @@
   color: var(--muted);
   font-size: 0.88rem;
 }
+
+/* Phones: toasts centred at the bottom, full width, never off-screen. */
+@media (max-width: 640px) {
+  .toast-stack { left: max(0.75rem, var(--safe-left, 0px)); right: max(0.75rem, var(--safe-right)); width: auto; }
+}

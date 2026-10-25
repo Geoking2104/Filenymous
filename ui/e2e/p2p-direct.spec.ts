@@ -84,6 +84,9 @@ test("streams two files sender → receiver over WebRTC with a short link", asyn
   const link = await linkInput.inputValue();
   expect(link).toMatch(/#p2p:\d{3}-\d{3}-[A-Z]{3}\/[A-Za-z0-9_-]{16,}$/);
   await expect(sender.locator('[data-testid="p2p-send-panel"] svg')).toBeVisible(); // QR code
+  // While waiting: one line telling the sender what to do, and a labelled link field.
+  await expect(sender.getByTestId("p2p-share-hint")).toBeVisible();
+  await expect(linkInput).toHaveAttribute("aria-label", /.+/);
 
   const receiverCtx = await browser.newContext({ acceptDownloads: true });
   const receiver = await receiverCtx.newPage();
@@ -108,6 +111,7 @@ test("streams two files sender → receiver over WebRTC with a short link", asyn
   await expect(sender.getByTestId("p2p-send-status")).toContainText(/Téléchargement terminé par le destinataire|Download completed by the recipient/);
   await expect(sender.locator('[data-testid="p2p-send-log"] li[data-result="complete"]')).toHaveCount(1);
   await expect(sender.locator('[data-testid="p2p-send-files"] li[data-file-state="delivered"]')).toHaveCount(2);
+  await expect(sender.getByTestId("p2p-share-hint")).toHaveCount(0);
   await expect(receiver.getByTestId("p2p-recv-bytes")).toBeVisible();
   // Pigeon landed on both sides, peers' browser/OS exchanged over the channel.
   await expect(receiver.getByTestId("pigeon-pct")).toHaveText("100 %");
