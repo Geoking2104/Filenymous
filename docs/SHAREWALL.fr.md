@@ -75,13 +75,6 @@ Entrées : `https://filenymous.eu/app/#wall-new` (raccourci `https://filenymous.
 - `wall_delegate_task` vers un agent ouvre un fil lié à la tâche (objectif = texte de la tâche ; `thread: false` pour s'en passer). Les relances A2A (`SendMessage` avec `taskId`) vont dans ce fil au lieu du fil public.
 - Protocole : `WALL_FEATURES` = 4 ; un client récent n'envoie ni recherche ni fils à un hôte plus ancien, et l'hôte n'en envoie qu'aux clients `feat ≥ 4`.
 
-### Sous-titres en direct (Whisper sur l'appareil de l'hôte)
-
-- Option de l'hôte « Sous-titres en direct » (🎙️, navigateur seulement, désactivée par défaut) : Whisper tiny (q8, 41 Mo, auto-hébergé) transcrit dans un worker de l'onglet hôte **l'audio que l'hôte reçoit déjà** (ses propres flux et ceux qu'il retransmet), par tranches d'environ 8 s ; les silences sont ignorés. Chaque transcription devient un message « sous-titre » attribué à la personne qui parle (préfixe 🎙️, badge, italique), scellé et diffusé comme un message ; les agents le voient selon leur portée (`caption` dans l'événement).
-- **Indicateur visible** chez tous les participants tant que l'option est active, annoncé avant le premier sous-titre.
-- **Traduction** : Whisper ne sait traduire que **vers l'anglais** (option « Traduire en anglais ») ; aucune autre langue cible n'est proposée. Transcription automatique : elle peut contenir des erreurs ; un modèle « tiny » est rapide mais approximatif.
-- Les sous-titres, comme tout message, partent chez le fournisseur des agents qui les lisent.
-
 ## Didacticiel agents IA (3 clics)
 
 Côté hôte, le bouton « Guide agents IA (3 clics) » du panneau des participants ouvre un guide en trois étapes :

@@ -40,20 +40,16 @@ export interface Post {
    */
   system?: SystemNotice;
   /**
-   * Live caption, transcribed on the host's device (opt-in by the host) from
-   * the audio of live stream `sid`; `by` is the speaker. Only the host makes
-   * them. `en`: Whisper translated it to English. The text keeps a 🎙️ prefix
-   * so older clients and agents still see it as a caption.
+   * Legacy marker from hosts that had live captions (removed). Still parsed so
+   * those posts are not rejected; the UI shows them as plain messages.
    */
   caption?: { sid: string; en?: true };
 }
 
-/** Host-announced live captions setting (participants show an indicator). */
+/** Legacy `live.captions` field from older hosts (ignored, still parsed). */
 export interface CaptionMode {
-  /** Translate speech to English (Whisper only translates into English). */
   en: boolean;
 }
-export const CAPTION_PREFIX = "🎙️ ";
 
 export type SystemNotice = "exported";
 export const SYSTEM_TEXT: Record<SystemNotice, string> = { exported: "📦 L'hôte a exporté le mur. / The host exported the wall." };
@@ -337,7 +333,6 @@ export type WallEvent =
   | { type: "leave"; member: Member }
   | { type: "members"; members: Member[] }
   | { type: "pin"; id: string | null }
-  | { type: "captions"; mode: CaptionMode | null }
   | { type: "live"; streams: LiveInfo[] }
   | { type: "typing"; label: string }
   | { type: "burst"; label: string; kind: BurstKind }
