@@ -2,7 +2,7 @@
  * PendingNotices — Boîte de réception des fichiers entrants.
  *
  * Affiche les parcels en attente pour le contact de l'utilisateur courant.
- * Requiert un conducteur Holochain local (lecture DHT + ECIES decrypt).
+ * Requiert un nœud local local (lecture DHT + ECIES decrypt).
  *
  * Flow :
  *   1. Charger le contact_hash depuis le keystore local
@@ -74,9 +74,9 @@ export default function PendingNotices() {
       const aesRawBytes = await decryptAesKeyFromBlob(eciesBlob, privKey);
       const aesKey      = await importAesKey(aesRawBytes);
 
-      setStep("Récupération des chunks DHT…");
+      setStep("Récupération des morceaux chiffrés…");
       const fileResult = await fileStorageZome.getFile(p.manifest.file_hash);
-      if (!fileResult) throw new Error("Fichier introuvable sur le DHT.");
+      if (!fileResult) throw new Error("Fichier introuvable sur le réseau.");
 
       setStep("Déchiffrement AES-256-GCM…");
       const blob = await decryptChunks(fileResult.chunks, aesKey, "application/octet-stream", {
@@ -85,7 +85,7 @@ export default function PendingNotices() {
 
       saveBlob(blob, p.manifest.file_name);
 
-      // Confirmer le téléchargement sur le DHT
+      // Confirmer le téléchargement sur le réseau pair-à-pair
       await parcelZome.confirmDownload(p.parcel_eh);
 
       // Retirer de la liste locale
@@ -103,7 +103,7 @@ export default function PendingNotices() {
       <div style={{ fontSize:"2.5rem", marginBottom:".8rem" }}>🌐</div>
       <div style={{ fontSize:"1rem", fontWeight:700, marginBottom:".4rem" }}>Mode Web Bridge actif</div>
       <div style={{ fontSize:".87rem", color:"var(--muted)" }}>
-        La boîte de réception requiert <strong>Holochain Launcher</strong>.<br/>
+        La boîte de réception requiert <strong>un nœud local</strong>.<br/>
         Pour recevoir un fichier via lien, utilisez directement l'URL partagée par l'expéditeur.
       </div>
     </div>
@@ -120,7 +120,7 @@ export default function PendingNotices() {
 
       {!contactHash && (
         <div className="warn-box">
-          ⚠ Aucun contact enregistré. Rendez-vous dans <strong>Identité</strong> pour publier votre email ou téléphone sur le DHT.
+          ⚠ Aucun contact enregistré. Rendez-vous dans <strong>Identité</strong> pour publier votre email ou téléphone sur le réseau pair-à-pair.
         </div>
       )}
 

@@ -52,7 +52,7 @@ export default function IdentityPanel() {
     try {
       await identityZome.publishX25519Key(x25519Pub);
       setPublished(true);
-    } catch (e) { alert("Publication impossible — verifiez la connexion au conducteur Holochain : " + String(e)); }
+    } catch (e) { alert("Publication impossible — verifiez la connexion au nœud local : " + String(e)); }
     finally { setKeyBusy(false); }
   };
 
@@ -77,7 +77,7 @@ export default function IdentityPanel() {
       await importKeyPairBackup(data.publicKey, data.privateKey);
       setX25519Pub(data.publicKey);
       setPublished(false);
-      alert("Cles importees. Pensez a republier votre cle publique sur le DHT si necessaire.");
+      alert("Cles importees. Pensez a republier votre cle publique sur le réseau pair-à-pair si necessaire.");
     } catch (e) { alert("Import impossible : " + String(e)); }
   };
 
@@ -133,7 +133,7 @@ export default function IdentityPanel() {
     <div>
       {/* Clé publique Holochain */}
       <div className="card">
-        <div className="card-label">Ma clé publique (agent Holochain)</div>
+        <div className="card-label">Ma clé publique (réseau pair-à-pair)</div>
         <div style={{ display:"flex",alignItems:"center",gap:".8rem" }}>
           <div style={{ width:"38px",height:"38px",borderRadius:"50%",background:"var(--grad)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".95rem",color:"#fff",fontWeight:700,flexShrink:0 }}>
             {(contacts[0]?.contact ?? "?")[0].toUpperCase()}
@@ -174,11 +174,11 @@ export default function IdentityPanel() {
             {keyBusy && !x25519Pub ? <span className="spin" /> : "Générer ma clé X25519"}
           </button>
           <button className="btn-primary" disabled={keyBusy || !x25519Pub || published} onClick={publishKey}>
-            {published ? "✓ Publiée sur le DHT" : keyBusy && x25519Pub ? <span className="spin" /> : "Publier sur le DHT"}
+            {published ? "✓ Publiée sur le réseau pair-à-pair" : keyBusy && x25519Pub ? <span className="spin" /> : "Publier sur le réseau pair-à-pair"}
           </button>
         </div>
         <p style={{ fontSize:".74rem", color:"var(--muted)", marginTop:".5rem" }}>
-          Votre clé privée ne quitte jamais ce navigateur (IndexedDB). Seule la clé publique est publiée sur Holochain.
+          Votre clé privée ne quitte jamais ce navigateur (IndexedDB). Seule la clé publique est publiée sur le réseau pair-à-pair.
         </p>
       </div>
 
@@ -205,7 +205,7 @@ export default function IdentityPanel() {
       {/* Contacts liés */}
       <div className="card">
         <div className="card-label">Contacts liés</div>
-        <div className="info-box">📡 Votre email ou téléphone n'est <strong>jamais publié en clair</strong> — seul son hash SHA-256 est sur le DHT.</div>
+        <div className="info-box">📡 Votre email ou téléphone n'est <strong>jamais publié en clair</strong> — seul son hash SHA-256 est sur le réseau pair-à-pair.</div>
 
         {contacts.map((c) => (
           <div key={c.hash} style={{ display:"flex",alignItems:"center",gap:".85rem",padding:".85rem 1rem",background:"rgba(255,255,255,.05)",border:"1px solid var(--border)",borderRadius:"14px",marginBottom:".55rem",boxShadow:"var(--shadow)" }}>
@@ -215,7 +215,7 @@ export default function IdentityPanel() {
             <div style={{ flex:1,minWidth:0 }}>
               <div style={{ fontSize:".88rem",fontWeight:500 }}>{c.contact}</div>
               <div style={{ fontSize:".7rem",color:"var(--muted)",fontFamily:"monospace",marginTop:".1rem",wordBreak:"break-all" }}>SHA-256 : {c.hash}</div>
-              <div style={{ fontSize:".72rem",color:"var(--ok)",marginTop:".1rem" }}>✓ Vérifié OTP · Publié sur le DHT</div>
+              <div style={{ fontSize:".72rem",color:"var(--ok)",marginTop:".1rem" }}>✓ Vérifié OTP · Publié sur le réseau pair-à-pair</div>
             </div>
             <button className="btn-danger btn-sm" onClick={() => revokeContact(c.hash, c.contact)}>Révoquer</button>
           </div>

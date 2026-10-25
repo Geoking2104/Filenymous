@@ -120,7 +120,7 @@ jobs:
         run: npm run build -- --base=/app/
         working-directory: ui
       - name: Wall, home and SEO unit tests
-        run: npx vitest run src/wall/ src/home/ src/safe/ src/seo.test.ts src/p2p/ src/holochain/runtime.test.ts
+        run: npx vitest run src/wall/ src/home/ src/safe/ src/i18n/copy.test.ts src/seo.test.ts src/p2p/ src/holochain/runtime.test.ts
         working-directory: ui
 
   cli-tests:

@@ -66,7 +66,7 @@ function IncomingInvite({ invite, onDone }: { invite: ContactInvite; onDone: () 
   const known = peers.find((p) => p.card === invite.card);
   return (
     <section className="cf-invite" data-testid="cf-invite" aria-labelledby="cf-invite-title">
-      <h3 id="cf-invite-title" className="cf-h3">👤 {t("safe.invite.incomingTitle")}</h3>
+      <h2 id="cf-invite-title" className="cf-h3">👤 {t("safe.invite.incomingTitle")}</h2>
       {self ? (
         <p className="sw-small" data-testid="cf-invite-self">{t("safe.invite.self")}</p>
       ) : added || known ? (
@@ -193,7 +193,7 @@ export function Contacts({ invite, onInviteDone }: { invite?: ContactInvite | nu
     <div className="cf-pane" data-testid="cf-contacts">
       {invite && <IncomingInvite invite={invite} onDone={() => onInviteDone?.()} />}
       <MyCard />
-      <h3 className="cf-h3">{t("safe.contacts.title")}</h3>
+      <h2 className="cf-h3">{t("safe.contacts.title")}</h2>
       {peers.length === 0 ? (
         <div className="sw-empty">{t("safe.contacts.empty")}</div>
       ) : (
@@ -220,7 +220,7 @@ export function Contacts({ invite, onInviteDone }: { invite?: ContactInvite | nu
           ))}
         </ul>
       )}
-      <h3 className="cf-h3">{t("safe.contacts.addTitle")}</h3>
+      <h2 className="cf-h3">{t("safe.contacts.addTitle")}</h2>
       <AddContact onAdded={() => undefined} />
     </div>
   );

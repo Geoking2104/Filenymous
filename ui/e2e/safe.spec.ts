@@ -287,6 +287,9 @@ test.describe("coffre-fort", () => {
     const url = await a.getByTestId("cf-invite-out-url").inputValue();
     expect(url).toMatch(/#safe-contact:fny1\.[A-Za-z0-9_-]+$/);
     await expect(a.getByTestId("cf-invite-out")).toBeVisible();
+    // Heading order: section titles sit directly under the page h1 (no h1 → h3 jump).
+    await expect(a.getByTestId("cf-contacts").getByRole("heading", { level: 2, name: /contacts/i }).first()).toBeVisible();
+    await expect(a.getByTestId("cf-contacts").locator("h3")).toHaveCount(0);
 
     // Bob opens the link (vault unlocked): he sees Alice's handle and adds her.
     await b.goto(url);

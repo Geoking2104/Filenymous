@@ -1,4 +1,7 @@
+import { useTranslation } from "react-i18next";
+
 export default function PrivacyPanel() {
+  const { t } = useTranslation();
   return (
     <div>
       {/* Hero */}
@@ -51,17 +54,14 @@ export default function PrivacyPanel() {
 
       {/* Piliers */}
       <div style={{ fontSize:"1rem",fontWeight:700,color:"var(--text)",margin:"1.6rem 0 .8rem",display:"flex",alignItems:"center",gap:".5rem" }}>
-        🛡 Les piliers de sécurité du réseau Holochain
+        🛡 {t("privacyPanel.pillarsTitle")}
       </div>
       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:".75rem",marginBottom:"1.5rem" }}>
-        {[
-          ["🔑","Identité cryptographique","Chaque participant est une paire de clés Ed25519 générée localement. Aucune autorité centrale ne délivre d'identité. Vos actions sont signées par votre clé privée, qui ne quitte jamais votre appareil."],
-          ["🧩","Fragmentation chiffrée","Les fichiers sont découpés en chunks de 256 Ko, chiffrés individuellement avec AES-256-GCM, et distribués sur des nœuds différents. Aucun nœud ne possède un fichier complet ni la clé pour le déchiffrer."],
-          ["🌐","DHT sans coordinateur","La Distributed Hash Table Holochain stocke les données sans serveur maître. Pas de point unique d'attaque, de saisie ou de censure. Couper un nœud ne compromet pas les données."],
-          ["📜","Source chain immuable","Chaque agent tient un journal local signé et chaîné de toutes ses actions. La falsification est détectable par le réseau sans blockchain ni consensus global coûteux."],
-          ["⏱","Expiration garantie","L'expiration publie une DeleteAction sur le DHT. Les nœuds sont obligés par la DNA (contrat applicatif) de supprimer les chunks. Ce n'est pas une promesse — c'est une règle cryptographiquement validée."],
-          ["🕵️","Contacts pseudonymisés","Votre email ou téléphone n'est jamais publié sur le réseau. Seul son hash SHA-256 est stocké, associé à votre clé publique. Un observateur ne peut pas reconstituer votre adresse depuis ce hash."],
-        ].map(([ico, title, text]) => (
+        {(["keys", "chunks", "direct", "wall", "stop", "fragment"] as const).map((k) => [
+          { keys: "🔑", chunks: "🧩", direct: "🌐", wall: "🏠", stop: "⏱", fragment: "🕵️" }[k],
+          t(`privacyPanel.${k}Title`),
+          t(`privacyPanel.${k}`),
+        ]).map(([ico, title, text]) => (
           <div key={title as string} style={{ background:"rgba(255,255,255,.05)",border:"1px solid var(--border)",borderRadius:"14px",padding:"1.1rem 1.2rem",boxShadow:"var(--shadow)" }}>
             <div style={{ fontSize:"1.4rem",marginBottom:".45rem" }}>{ico}</div>
             <div style={{ fontSize:".85rem",fontWeight:700,marginBottom:".3rem" }}>{title as string}</div>
@@ -73,12 +73,7 @@ export default function PrivacyPanel() {
       {/* Mentions légales */}
       <div style={{ fontSize:"1rem",fontWeight:700,margin:"1.6rem 0 .8rem" }}>📋 Mentions légales & RGPD</div>
       <div style={{ background:"var(--bg)",border:"1px solid var(--border)",borderRadius:"10px",padding:"1rem 1.2rem",fontSize:".8rem",color:"var(--muted)",lineHeight:1.65 }}>
-        {[
-          ["Responsable de traitement","Filenymous est un protocole décentralisé open-source. En l'absence de base de données centrale, il n'existe pas de responsable de traitement au sens classique du RGPD pour les fichiers transférés. Chaque utilisateur est responsable des données qu'il publie sur le DHT."],
-          ["Données collectées","Le bridge de notification reçoit temporairement l'adresse de destination et le lien de transfert. Ces données ne sont pas persistées au-delà de l'envoi (TTL : 0). Aucun cookie de traçage, aucune publicité ; mesure d'audience anonyme et auto-hébergée (Umami), sans fragment d'URL ni paramètres."],
-          ["Droit à l'effacement","L'expéditeur peut révoquer un transfert depuis l'onglet Historique. La révocation publie une suppression cryptographique sur le DHT. Les chunks sont effacés dans un délai de 24h maximum."],
-          ["Hébergement","Les chunks chiffrés sont distribués sur les nœuds actifs du réseau. Aucun chunk n'est localisé sur un serveur géré par l'éditeur. La localisation géographique des nœuds est inconnue par conception."],
-        ].map(([h, p]) => (
+        {(["controller", "data", "erasure", "hosting"] as const).map((k) => [t(`pz.legal.${k}Title`), t(`pz.legal.${k}`)]).map(([h, p]) => (
           <div key={h as string} style={{ marginBottom:".9rem" }}>
             <strong style={{ color:"var(--text)",fontSize:".83rem" }}>{h as string}</strong><br/>
             {p as string}

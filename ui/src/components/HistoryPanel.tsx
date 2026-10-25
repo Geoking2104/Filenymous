@@ -69,7 +69,7 @@ export default function HistoryPanel() {
 
   const statusLabel: Record<string, string> = { pending:"En attente", downloaded:"Téléchargé", revoked:"Révoqué", expired:"Expiré" };
   const statusClass: Record<string, string> = { pending:"badge-pending", downloaded:"badge-done", revoked:"badge-revoked", expired:"badge-expired" };
-  const modeLabel: Record<string, string>   = { agent:"Via DHT agent", link:"Via lien one-time" };
+  const modeLabel: Record<string, string>   = { agent:"Via le réseau pair-à-pair", link:"Via lien one-time" };
 
   return (
     <div>
