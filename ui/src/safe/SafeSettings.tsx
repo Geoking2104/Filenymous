@@ -84,7 +84,7 @@ export function Settings({ onReset }: { onReset: () => void }) {
   return (
     <div className="cf-pane cf-settings" data-testid="cf-settings">
       <section className="cf-sec">
-        <h3 className="cf-h3">{t("safe.settings.lockTitle")}</h3>
+        <h2 className="cf-h3">{t("safe.settings.lockTitle")}</h2>
         <label className="v3-field sw-field">
           <span>{t("safe.settings.autoLock")}</span>
           <select className="cf-select" value={status.settings.autoLockMin} onChange={async (e) => { await client.setSettings({ autoLockMin: Number(e.target.value) }); await refresh(); }} data-testid="cf-autolock">
@@ -98,7 +98,7 @@ export function Settings({ onReset }: { onReset: () => void }) {
       </section>
 
       <section className="cf-sec">
-        <h3 className="cf-h3">{t("safe.settings.unlockTitle")}</h3>
+        <h2 className="cf-h3">{t("safe.settings.unlockTitle")}</h2>
         {hasPw && !changing && <button type="button" className="pz-btn pz-btn-ghost" onClick={() => setChanging(true)}>{t("safe.settings.changePw")}</button>}
         {changing && (
           <form onSubmit={async (e) => { e.preventDefault(); if (!newPw) return; await client.setPassword(newPw); setChanging(false); setHasPw(true); toast(t("safe.settings.pwChanged"), "ok"); }}>
@@ -131,7 +131,7 @@ export function Settings({ onReset }: { onReset: () => void }) {
       </section>
 
       <section className="cf-sec" data-testid="cf-backup">
-        <h3 className="cf-h3">{t("safe.backup.title")}</h3>
+        <h2 className="cf-h3">{t("safe.backup.title")}</h2>
         <p className="v3-warn cf-callout" data-testid="cf-clear-warning">⚠️ {t("safe.backup.clearWarning")}</p>
         <p className="sw-small">{t("safe.backup.explain")}</p>
         <div className="cf-row">
@@ -155,7 +155,7 @@ export function Settings({ onReset }: { onReset: () => void }) {
       </section>
 
       <section className="cf-sec">
-        <h3 className="cf-h3">{t("safe.settings.danger")}</h3>
+        <h2 className="cf-h3">{t("safe.settings.danger")}</h2>
         <button
           type="button"
           className="cf-link cf-danger-link"

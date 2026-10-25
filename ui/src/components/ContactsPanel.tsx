@@ -94,7 +94,7 @@ export default function ContactsPanel() {
         <div className="card-label">Mes contacts</div>
         <div className="info-box">
           🔐 Ajoutez les personnes a qui envoyer des fichiers directement. Si le contact a publie
-          sa cle X25519 sur le DHT, la cle AES est chiffree de bout en bout (ECIES) — sans lien magique.
+          sa cle X25519 sur le réseau pair-à-pair, la cle AES est chiffree de bout en bout (ECIES) — sans lien magique.
         </div>
 
         <div style={{ display: "flex", gap: ".6rem", marginBottom: "1rem" }}>
@@ -132,9 +132,9 @@ export default function ContactsPanel() {
               {c.x25519Key ? (
                 <div style={{ fontSize: ".72rem", color: "var(--ok)", marginTop: ".1rem" }}>✓ Cle de chiffrement disponible — transfert E2E pret</div>
               ) : c.resolvedAgent ? (
-                <div style={{ fontSize: ".72rem", color: "var(--warn)", marginTop: ".1rem" }}>Resolu sur le DHT — aucune cle X25519 publiee</div>
+                <div style={{ fontSize: ".72rem", color: "var(--warn)", marginTop: ".1rem" }}>Trouve sur le reseau pair-a-pair — aucune cle X25519 publiee</div>
               ) : (
-                <div style={{ fontSize: ".72rem", color: "var(--muted)", marginTop: ".1rem" }}>Pas encore resolu sur le DHT</div>
+                <div style={{ fontSize: ".72rem", color: "var(--muted)", marginTop: ".1rem" }}>Pas encore trouve sur le reseau pair-a-pair</div>
               )}
             </div>
             <button className="btn-ghost btn-sm" disabled={refreshing === c.hash} onClick={() => handleRefresh(c.contact, c.hash)}>
@@ -146,7 +146,7 @@ export default function ContactsPanel() {
         ))}
 
         <p style={{ fontSize: ".74rem", color: "var(--muted)", marginTop: ".6rem" }}>
-          Les contacts sont stockes localement. « Retirer » ne revoque aucun ContactClaim sur le DHT.
+          Les contacts sont stockes localement. « Retirer » ne revoque aucun ContactClaim sur le réseau pair-à-pair.
         </p>
       </div>
     </div>

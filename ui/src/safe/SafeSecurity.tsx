@@ -75,7 +75,7 @@ export function Security({ onOpen }: { onOpen: (id: string) => void }) {
         ))}
       </Section>
       <div className="cf-hibp">
-        <h3 className="cf-h3">{t("safe.sec.hibpTitle")}</h3>
+        <h2 className="cf-h3">{t("safe.sec.hibpTitle")}</h2>
         <p className="sw-small">{t("safe.sec.hibpExplain")}</p>
         <button type="button" className="pz-btn pz-btn-ghost" onClick={() => void runHibp()} disabled={hibp.state === "running" || rep.logins === 0} data-testid="cf-hibp">
           {hibp.state === "running" ? t("safe.sec.hibpRunning", { n: hibp.checked, total: rep.logins }) : t("safe.sec.hibpCta")}
@@ -99,7 +99,7 @@ export function Security({ onOpen }: { onOpen: (id: string) => void }) {
 function Section({ title, empty, children, testId }: { title: string; empty: string; children: React.ReactNode[]; testId: string }) {
   return (
     <section className="cf-sec" data-testid={testId}>
-      <h3 className="cf-h3">{title} <span className="cf-count">{children.length}</span></h3>
+      <h2 className="cf-h3">{title} <span className="cf-count">{children.length}</span></h2>
       {children.length ? <ul className="cf-sec-list">{children}</ul> : <p className="sw-small cf-ok">✓ {empty}</p>}
     </section>
   );
