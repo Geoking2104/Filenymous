@@ -25,6 +25,32 @@ export interface RuntimeFactories<
   createLocalOnlyClient(): TLocalOnly;
 }
 
+const LOCAL_NODE_KEY = "filenymous.localNode";
+
+/**
+ * A local node (desktop conductor on ws://localhost) is opt-in: probing
+ * localhost from a public page makes browsers ask for local-network access.
+ * Allowed on a localhost origin (dev), with a VITE_LOCAL_NODE=1 build, or once
+ * the user opened the app with `?node=local` (remembered; `?node=off` resets).
+ */
+export function localNodeAllowed(
+  loc: Pick<Location, "hostname" | "search"> | undefined = typeof location !== "undefined" ? location : undefined,
+  storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | undefined = typeof localStorage !== "undefined" ? localStorage : undefined,
+  buildFlag: string | undefined = import.meta.env?.VITE_LOCAL_NODE,
+): boolean {
+  if (buildFlag === "1") return true;
+  if (!loc) return false;
+  if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(loc.hostname)) return true;
+  const param = new URLSearchParams(loc.search).get("node");
+  try {
+    if (param === "local") storage?.setItem(LOCAL_NODE_KEY, "1");
+    if (param === "off") storage?.removeItem(LOCAL_NODE_KEY);
+    return storage?.getItem(LOCAL_NODE_KEY) === "1";
+  } catch {
+    return param === "local";
+  }
+}
+
 export function createRuntimeDetector<
   THoloWeb extends MinimalRuntime,
   TWebsocket extends MinimalRuntime,
@@ -32,12 +58,14 @@ export function createRuntimeDetector<
   TLocalOnly extends MinimalRuntime,
 >(
   factories: RuntimeFactories<THoloWeb, TWebsocket, TWebBridge, TLocalOnly>,
+  allowLocalNode: () => boolean = () => true,
 ): () => Promise<THoloWeb | TWebsocket | TWebBridge | TLocalOnly> {
   return async () => {
     try {
       return await factories.createHoloWebClient();
     } catch {
       try {
+        if (!allowLocalNode()) throw new Error("local node disabled");
         return await factories.createWebsocketClient();
       } catch {
         try {
@@ -124,7 +152,7 @@ export async function initClient(): Promise<ClientMode> {
       createWebsocketClient: createWebsocketRuntime,
       createWebBridgeClient: async () => createWebBridgeRuntime(),
       createLocalOnlyClient: createLocalOnlyRuntime,
-    });
+    }, () => localNodeAllowed());
     _client = await detectRuntime();
     _mode = _client.mode;
   })();

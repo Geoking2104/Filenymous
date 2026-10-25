@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
+import { useModal } from "./useModal";
 import { clearUnloadGuards, holdUnloadGuard, releaseUnloadGuard, unloadGuardActive } from "../p2p/unloadGuardCore";
 
 export interface ConfirmRequest {
@@ -40,9 +41,18 @@ export function confirmDialog(req: ConfirmRequest): Promise<boolean> {
   return new Promise((resolve) => setPending({ ...req, resolve }));
 }
 
+/** i18n keys replacing the generic "close this window?" copy for one service. */
+export interface LeaveCopy {
+  title: string;
+  message: string;
+  confirm: string;
+  cancel?: string;
+}
+
 interface LeaveEntry {
   onLeave?: () => void;
   detail?: string;
+  copy?: LeaveCopy;
 }
 const entries = new Map<string, LeaveEntry>();
 let seq = 0;
@@ -60,13 +70,18 @@ export function leaveWouldLoseData(): boolean {
 export async function confirmLeave(opts: { force?: boolean } = {}): Promise<boolean> {
   if (!opts.force && !leaveWouldLoseData()) return true;
   const t = i18n.t.bind(i18n);
-  const details = Array.from(new Set(Array.from(entries.values()).map((e) => e.detail).filter((d): d is string => !!d)));
+  const all = Array.from(entries.values());
+  const details = Array.from(new Set(all.map((e) => e.detail).filter((d): d is string => !!d)));
+  // A single guard with its own wording (e.g. "Fermer le mur pour tout le monde ?")
+  // says exactly what will happen; several guards fall back to the generic copy.
+  const copies = all.map((e) => e.copy).filter((c): c is LeaveCopy => !!c);
+  const copy = copies.length === 1 && all.length === 1 ? copies[0] : undefined;
   const ok = await confirmDialog({
-    title: t("leave.title"),
-    message: t("leave.message"),
+    title: t(copy?.title ?? "leave.title"),
+    message: t(copy?.message ?? "leave.message"),
     detail: details.map((d) => t(d)).join(" ") || undefined,
-    confirmLabel: t("leave.confirm"),
-    cancelLabel: t("leave.cancel"),
+    confirmLabel: t(copy?.confirm ?? "leave.confirm"),
+    cancelLabel: t(copy?.cancel ?? "leave.cancel"),
     danger: true,
   });
   if (!ok) return false;
@@ -89,7 +104,7 @@ export async function confirmLeave(opts: { force?: boolean } = {}): Promise<bool
  * leaving through the in-app dialog; `detail` is an i18n key appended to the
  * dialog message (e.g. "the wall will be destroyed for everyone").
  */
-export function useLeaveGuard(active: boolean, opts: { onLeave?: () => void; detail?: string } = {}): void {
+export function useLeaveGuard(active: boolean, opts: { onLeave?: () => void; detail?: string; copy?: LeaveCopy } = {}): void {
   const ref = useRef(opts);
   ref.current = opts;
   useEffect(() => {
@@ -101,6 +116,9 @@ export function useLeaveGuard(active: boolean, opts: { onLeave?: () => void; det
       },
       get detail() {
         return ref.current.detail;
+      },
+      get copy() {
+        return ref.current.copy;
       },
     });
     holdUnloadGuard(id);
@@ -116,22 +134,14 @@ export function ConfirmDialogHost() {
   const { t } = useTranslation();
   const [req, setReq] = useState<Pending | null>(pending);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, () => answer(false), { open: !!req, initialFocus: cancelRef });
   useEffect(() => {
     listeners.add(setReq);
     return () => {
       listeners.delete(setReq);
     };
   }, []);
-  useEffect(() => {
-    if (!req) return;
-    cancelRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") answer(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [req]);
   if (!req) return null;
   function answer(ok: boolean) {
     const r = pending;
@@ -141,6 +151,7 @@ export function ConfirmDialogHost() {
   return (
     <div className="pz-modal-backdrop" onClick={() => answer(false)}>
       <div
+        ref={box}
         className="pz-modal pz-confirm"
         role="alertdialog"
         aria-modal="true"

@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { QRCodeSVG } from "qrcode.react";
 import { formatBytes } from "../ux-v3/types";
 import { EmojiPicker } from "./EmojiPicker";
+import { useModal } from "../home/useModal";
 import { AgentsGuide } from "./AgentsGuide";
 import { Hl, Markup } from "./Markup";
 import { normalizeQuery, searchNotes, searchPosts, searchTasks } from "./search-annotations";
@@ -191,7 +192,7 @@ function postPreview(t: T, p: Post): string {
 function Avatar({ m, size = 36 }: { m: Pick<Member, "label" | "name" | "agent">; size?: number }) {
   const hue = avatarHue(m.label);
   return (
-    <span className="sw2-avatar" aria-hidden="true" style={{ width: size, height: size, background: `hsl(${hue} 38% 40%)`, fontSize: size * 0.38 }}>
+    <span className="sw2-avatar" aria-hidden="true" style={{ width: size, height: size, background: `hsl(${hue} 38% 33%)`, fontSize: size * 0.38 }}>
       {m.agent ? "🤖" : initials(m.name)}
     </span>
   );
@@ -477,7 +478,7 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
             </button>
           )}
         </div>
-        <button type="button" className={`sw2-iconbtn sw-board-btn${boardOpen ? " is-on" : ""}`} data-testid="wall-board-toggle" aria-pressed={boardOpen} title={t("wall.board.toggle")} onClick={() => setBoardOpen((o) => !o)}>
+        <button type="button" className={`sw2-iconbtn sw-board-btn${boardOpen ? " is-on" : ""}`} data-testid="wall-board-toggle" aria-pressed={boardOpen} title={t("wall.board.toggle")} onClick={() => { setBoardOpen((o) => !o); setDrawer(false); }}>
           🎨 <span className="sw-board-btn-label">{t("wall.board.title")}</span>
         </button>
         {s.expiresAt > 0 && (
@@ -574,7 +575,7 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
         </aside>
         {drawer && <div className="sw2-scrim" onClick={() => setDrawer(false)} aria-hidden="true" />}
 
-        <main
+        <div
           className="sw2-main"
           onDragOver={(e) => {
             if (e.dataTransfer.types.includes("Files")) e.preventDefault();
@@ -651,6 +652,15 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
             <p className="sw2-search-count" data-testid="wall-search-count" data-count={shown.length + noteHits.length + taskHits.length} aria-live="polite">
               {t("wall.search.count", { count: shown.length + noteHits.length + taskHits.length })}
             </p>
+          )}
+          {searching && shown.length + noteHits.length + taskHits.length === 0 && (
+            <div className="sw2-search-empty" data-testid="wall-search-empty">
+              <p>{t("wall.search.empty", { q: query.trim() })}</p>
+              <p className="sw-small">{t("wall.search.emptyHint")}</p>
+              <button type="button" className="pz-btn" data-testid="wall-search-empty-clear" onClick={() => { setQuery(""); searchRef.current?.focus(); }}>
+                {t("wall.search.clear")}
+              </button>
+            </div>
           )}
           {searching && <NoteSearchHits notes={noteHits} query={query} onOpen={openNoteById} />}
           {searching && <TaskSearchHits tasks={taskHits} query={query} onOpen={() => { setSideTab("tasks"); setDrawer(true); }} />}
@@ -730,7 +740,7 @@ export function WallRoom({ state: s, api, code, invite, onDestroy, onLeave, onEx
               </span>
             ))}
           </div>
-        </main>
+        </div>
       </div>
       {preview && <Previewer {...preview} onClose={closePreview} />}
       <AgentsGuide open={agentsGuideOpen} onClose={() => setAgentsGuideOpen(false)} inviteLink={invite?.link} agentsAllowed={s.agents} />
@@ -782,7 +792,7 @@ function WallInfo({ s, code, invite }: { s: RoomState; code: string; invite?: { 
     }
   };
   return (
-    <section className="sw2-section sw2-info">
+    <section className={`sw2-section sw2-info${s.members.length > 1 ? " is-joined" : ""}`} data-joined={s.members.length > 1 ? "1" : undefined}>
       <h2 className="sw2-wallname" data-testid="wall-info-title">{s.title || t("wall.untitled")}</h2>
       <div className="sw-flags">
         <span className="sw-flag">🔐 {t("wall.flagE2ee")}</span>
@@ -1018,7 +1028,7 @@ function Feed(props: FeedProps) {
         stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
       }}
     >
-      {!posts.length && (
+      {!posts.length && props.highlight === undefined && (
         <p className="sw-empty" data-testid="wall-empty">
           {t("wall.empty")}
         </p>
@@ -1689,15 +1699,12 @@ function Uploads({ uploads }: { uploads: PeerUpload[] }) {
 export function Previewer({ meta, url, text, onClose }: { meta: ItemMeta; url?: string; text?: string; onClose: () => void }) {
   const { t } = useTranslation();
   const kind = previewKind(meta);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onClose);
   // Portal into the app root (theme variables) but outside the card, whose
   // backdrop-filter would otherwise trap the fixed overlay.
   return createPortal(
-    <div className="sw-modal" role="dialog" aria-modal="true" aria-label={meta.name} data-testid="wall-previewer" data-kind={kind ?? "none"} onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div ref={box} className="sw-modal" role="dialog" aria-modal="true" aria-label={meta.name} data-testid="wall-previewer" data-kind={kind ?? "none"} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sw-modal-card">
         <div className="sw-modal-head">
           <strong>{meta.kind === "text" ? t("wall.snippet") : meta.name}</strong>

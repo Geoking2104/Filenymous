@@ -16,7 +16,9 @@ import { Onboarding, SetNewPassword, Unlock } from "./SafeGate";
 import { ItemDetail, ItemEditor, ItemList } from "./SafeItems";
 import { Palette } from "./SafePalette";
 import { Security } from "./SafeSecurity";
-import { ImportBackup, Settings } from "./SafeSettings";
+import { ImportBackup, Settings, exportBackupFile } from "./SafeSettings";
+import { needsBackupReminder } from "./persist";
+import { parseContactInvite, type ContactInvite } from "./invite";
 import { Contacts, PendingShares, ShareDialog, deliveryText } from "./SafeShare";
 import { SafeInbox, deliver, type DeliveryResult, type InboxState } from "./transport";
 import { CAT_ICON, ClipboardPill, Ctx, overlayRoot, type SafeCtx, type Toast } from "./ui";
@@ -41,6 +43,21 @@ export default function SafePanel() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [status, setStatus] = useState<VaultStatus | null>(null);
   const [error, setError] = useState("");
+  // A contact invite (#safe-contact:<public card>) is read once, then the URL goes back to #safe.
+  const [invite, setInvite] = useState<ContactInvite | null>(() => parseContactInvite(location.hash));
+  useEffect(() => {
+    if (invite && location.hash !== "#safe") history.replaceState(null, "", `${location.pathname}${location.search}#safe`);
+    const onHash = () => {
+      const inv = parseContactInvite(location.hash);
+      if (inv) {
+        setInvite(inv);
+        history.replaceState(null, "", `${location.pathname}${location.search}#safe`);
+      }
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const c = new SafeClient();
@@ -82,7 +99,16 @@ export default function SafePanel() {
       </div>
     );
 
-  if (phase === "onboard") return <Onboarding client={client} onDone={() => void reload()} onImport={() => setPhase("import")} />;
+  const inviteNote = invite && (
+    <p className="v3-warn cf-invite-wait" role="status" data-testid="cf-invite-pending">👤 {t("safe.invite.pendingUnlock")}</p>
+  );
+  if (phase === "onboard")
+    return (
+      <>
+        {inviteNote}
+        <Onboarding client={client} onDone={() => void reload()} onImport={() => setPhase("import")} />
+      </>
+    );
   if (phase === "import")
     return (
       <div className="v3-result sw cf-onb" data-testid="cf-import-screen">
@@ -96,6 +122,8 @@ export default function SafePanel() {
     );
   if (phase === "locked")
     return (
+      <>
+      {inviteNote}
       <Unlock
         client={client}
         status={status!}
@@ -107,12 +135,13 @@ export default function SafePanel() {
           await reload();
         }}
       />
+      </>
     );
   if (phase === "newpw") return <SetNewPassword client={client} onDone={() => void reload()} />;
-  return <OpenVault client={client} status={status!} onLocked={() => void reload()} setStatus={setStatus} />;
+  return <OpenVault client={client} status={status!} onLocked={() => void reload()} setStatus={setStatus} invite={invite} onInviteDone={() => setInvite(null)} />;
 }
 
-function OpenVault({ client, status, onLocked: onLockedProp, setStatus: setStatusProp }: { client: SafeClient; status: VaultStatus; onLocked: () => void; setStatus: (s: VaultStatus) => void }) {
+function OpenVault({ client, status, onLocked: onLockedProp, setStatus: setStatusProp, invite, onInviteDone }: { client: SafeClient; status: VaultStatus; onLocked: () => void; setStatus: (s: VaultStatus) => void; invite: ContactInvite | null; onInviteDone: () => void }) {
   const { t } = useTranslation();
   // Parent callbacks may change identity on every render: keep stable wrappers so
   // effects (initial load, inbox) don't re-run in a loop.
@@ -122,10 +151,16 @@ function OpenVault({ client, status, onLocked: onLockedProp, setStatus: setStatu
   const setStatus = useCallback((s: VaultStatus) => parentRef.current.setStatus(s), []);
   const [items, setItems] = useState<ItemSummary[]>([]);
   const [peers, setPeers] = useState<Peer[]>([]);
-  const [tab, setTab] = useState<Tab>("items");
+  const [tab, setTab] = useState<Tab>(invite ? "contacts" : "items");
+  // An invite opened while the vault is already open: show it in Contacts.
+  useEffect(() => {
+    if (invite) setTab("contacts");
+  }, [invite]);
   const [pane, setPane] = useState<Pane>({ mode: "empty" });
   const [filter, setFilter] = useState<Category | "all" | "shared">("all");
   const [palette, setPalette] = useState(false);
+  /** "Plus tard" hides the backup reminder for this session only. */
+  const [backupDismissed, setBackupDismissed] = useState(false);
   const [shareId, setShareId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [pending, setPending] = useState<{ pendingId: string; from: string; title: string; card: string }[]>([]);
@@ -364,11 +399,33 @@ function OpenVault({ client, status, onLocked: onLockedProp, setStatus: setStatu
                 ))}
               </div>
             </details>
-            <button type="button" className="pz-btn pz-btn-ghost" onClick={lock} data-testid="cf-lock">
-              🔒 {t("safe.lock")}
+            <button type="button" className="pz-btn pz-btn-ghost" onClick={lock} data-testid="cf-lock" aria-label={t("safe.lock")} title={t("safe.lock")}>
+              <span aria-hidden="true">🔒</span> <span className="cf-lock-label">{t("safe.lock")}</span>
             </button>
           </div>
         </div>
+        {needsBackupReminder(items.length, status.settings.lastBackupAt, backupDismissed) && (
+          <div className="v3-warn cf-backup-banner" role="status" data-testid="cf-backup-banner">
+            <span>💾 {t("safe.backup.banner")}</span>
+            <span className="cf-row">
+              <button
+                type="button"
+                className="pz-btn"
+                data-testid="cf-backup-banner-export"
+                onClick={async () => {
+                  await exportBackupFile(client);
+                  await refresh();
+                  toast(t("safe.backup.exported"), "ok");
+                }}
+              >
+                ⬇︎ {t("safe.backup.export")}
+              </button>
+              <button type="button" className="cf-link" data-testid="cf-backup-banner-later" onClick={() => setBackupDismissed(true)}>
+                {t("safe.backup.later")}
+              </button>
+            </span>
+          </div>
+        )}
         <PendingShares list={pending} onDone={async (id) => { setPending(await client.pendingShares()); if (id) open(id); }} />
         <nav className="cf-tabs" role="tablist">
           {(["items", "contacts", "security", "settings"] as const).map((x) => (
@@ -384,7 +441,7 @@ function OpenVault({ client, status, onLocked: onLockedProp, setStatus: setStatu
             {paneEl}
           </div>
         )}
-        {tab === "contacts" && <Contacts />}
+        {tab === "contacts" && <Contacts invite={invite} onInviteDone={onInviteDone} />}
         {tab === "security" && <Security onOpen={open} />}
         {tab === "settings" && <Settings onReset={onLocked} />}
         <details className="sw-privacy cf-privacy">

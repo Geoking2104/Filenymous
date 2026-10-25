@@ -1,7 +1,10 @@
 import { createPortal } from "react-dom";
 import type { TFunction } from "i18next";
 /** P2P sharing: share dialog, contact book, incoming share requests. */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { buildContactInvite, handleOfCard, type ContactInvite } from "./invite";
+import { useModal } from "../home/useModal";
 import { useTranslation } from "react-i18next";
 import { confirmDialog, useLeaveGuard } from "../home/confirmLeave";
 import { deliver, type DeliveryResult } from "./transport";
@@ -9,6 +12,111 @@ import { errKey, fmtRelative, overlayRoot, useSafe } from "./ui";
 import { ROLES, type ItemSummary, type Role } from "./types";
 
 const EXPIRY = [0, 3600_000, 86_400_000, 7 * 86_400_000, 30 * 86_400_000];
+
+const inviteBase = () => `${location.origin}${location.pathname}`;
+
+/** Link + QR carrying only your public contact card. */
+function InviteLink({ card, handle, reply, testId }: { card: string; handle?: string; reply?: boolean; testId: string }) {
+  const { t } = useTranslation();
+  const { toast } = useSafe();
+  const link = buildContactInvite(inviteBase(), card, reply);
+  return (
+    <div className="cf-invite-link" data-testid={testId}>
+      <p className="sw-small">{t("safe.invite.linkHonest", { handle: handle ?? "" })}</p>
+      <div className="v3-qr-wrap">
+        <div className="v3-qr">
+          <QRCodeSVG value={link} size={168} level="M" marginSize={2} bgColor="#ffffff" fgColor="#0f172a" title={t("safe.invite.qrTitle")} />
+        </div>
+      </div>
+      <div className="v3-link-row cf-card-row">
+        <input readOnly value={link} onFocus={(e) => e.currentTarget.select()} aria-label={t("safe.invite.linkLabel")} data-testid={`${testId}-url`} />
+        <button
+          type="button"
+          className="pz-btn pz-btn-ghost"
+          onClick={async () => {
+            await navigator.clipboard.writeText(link).catch(() => undefined);
+            toast(t("safe.invite.copied"), "ok");
+          }}
+          data-testid={`${testId}-copy`}
+        >
+          {t("safe.copy")}
+        </button>
+        {typeof navigator.share === "function" && (
+          <button type="button" className="pz-btn pz-btn-ghost" onClick={() => void navigator.share({ title: "Filenymous", url: link }).catch(() => undefined)}>
+            {t("p2p.shareNative")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Someone opened your vault with their invite link: verify, name, add, then offer yours back. */
+function IncomingInvite({ invite, onDone }: { invite: ContactInvite; onDone: () => void }) {
+  const { t } = useTranslation();
+  const { client, status, peers, toast, reloadPeers } = useSafe();
+  const [handle, setHandle] = useState<string | null>(null);
+  const [alias, setAlias] = useState("");
+  const [added, setAdded] = useState<string | null>(null);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    void handleOfCard(invite.card).then(setHandle);
+  }, [invite.card]);
+  const self = invite.card === status.card;
+  const known = peers.find((p) => p.card === invite.card);
+  return (
+    <section className="cf-invite" data-testid="cf-invite" aria-labelledby="cf-invite-title">
+      <h3 id="cf-invite-title" className="cf-h3">👤 {t("safe.invite.incomingTitle")}</h3>
+      {self ? (
+        <p className="sw-small" data-testid="cf-invite-self">{t("safe.invite.self")}</p>
+      ) : added || known ? (
+        <>
+          <p data-testid="cf-invite-added">{t("safe.invite.added", { who: added ?? known!.alias })}</p>
+          {!invite.reply && status.card && (
+            <>
+              <p className="sw-small">{t("safe.invite.replyLead")}</p>
+              <InviteLink card={status.card} handle={status.handle} reply testId="cf-invite-reply" />
+            </>
+          )}
+        </>
+      ) : (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setErr("");
+            try {
+              const p = await client.addPeer(invite.card, alias.trim());
+              await reloadPeers();
+              toast(t("safe.contacts.added", { who: p.alias }), "ok");
+              setAdded(p.alias);
+            } catch (ex) {
+              setErr(t(errKey(ex)));
+            }
+          }}
+        >
+          <p className="sw-small">{t("safe.invite.incomingLead")}</p>
+          <p>
+            <span className="cf-field-label">{t("safe.invite.theirHandle")}</span>{" "}
+            <strong className="cf-handle" data-testid="cf-invite-handle">{handle ?? "…"}</strong>
+          </p>
+          <p className="v3-warn cf-callout" data-testid="cf-invite-verify">{t("safe.invite.verify")}</p>
+          <label className="v3-field sw-field">
+            <span>{t("safe.contacts.alias")}</span>
+            <input value={alias} onChange={(e) => setAlias(e.target.value)} maxLength={60} autoFocus data-testid="cf-invite-alias" />
+          </label>
+          {err && <p className="pz-err" role="alert">{err}</p>}
+          <div className="cf-row">
+            <button type="submit" className="pz-btn" data-testid="cf-invite-accept">{t("safe.invite.accept")}</button>
+            <button type="button" className="cf-link" onClick={onDone} data-testid="cf-invite-ignore">{t("safe.invite.ignore")}</button>
+          </div>
+        </form>
+      )}
+      {(self || added || known) && (
+        <button type="button" className="cf-link" onClick={onDone} data-testid="cf-invite-close">{t("common.close")}</button>
+      )}
+    </section>
+  );
+}
 
 function AddContact({ onAdded, compact }: { onAdded: (peerId: string) => void; compact?: boolean }) {
   const { t } = useTranslation();
@@ -53,6 +161,7 @@ function AddContact({ onAdded, compact }: { onAdded: (peerId: string) => void; c
 export function MyCard() {
   const { t } = useTranslation();
   const { status, toast } = useSafe();
+  const [inviting, setInviting] = useState(false);
   return (
     <div className="cf-mycard" data-testid="cf-mycard">
       <div>
@@ -60,21 +169,29 @@ export function MyCard() {
         <strong className="cf-handle" data-testid="cf-my-handle">{status.handle}</strong>
       </div>
       <p className="sw-small">{t("safe.contacts.myCardHint")}</p>
+      <button type="button" className="pz-btn" aria-expanded={inviting} onClick={() => setInviting((v) => !v)} data-testid="cf-invite-open">
+        👤 {t("safe.invite.cta")}
+      </button>
+      {inviting && status.card && <InviteLink card={status.card} handle={status.handle} testId="cf-invite-out" />}
+      <details className="cf-card-raw">
+        <summary>{t("safe.invite.rawCard")}</summary>
       <div className="v3-link-row cf-card-row">
         <input readOnly value={status.card ?? ""} onFocus={(e) => e.currentTarget.select()} aria-label={t("safe.contacts.myCard")} data-testid="cf-my-card" />
         <button type="button" className="pz-btn pz-btn-ghost" onClick={async () => { await navigator.clipboard.writeText(status.card ?? "").catch(() => undefined); toast(t("safe.contacts.cardCopied"), "ok"); }} data-testid="cf-copy-card">
           {t("safe.copy")}
         </button>
       </div>
+      </details>
     </div>
   );
 }
 
-export function Contacts() {
+export function Contacts({ invite, onInviteDone }: { invite?: ContactInvite | null; onInviteDone?: () => void } = {}) {
   const { t, i18n } = useTranslation();
   const { client, peers, reloadPeers } = useSafe();
   return (
     <div className="cf-pane" data-testid="cf-contacts">
+      {invite && <IncomingInvite invite={invite} onDone={() => onInviteDone?.()} />}
       <MyCard />
       <h3 className="cf-h3">{t("safe.contacts.title")}</h3>
       {peers.length === 0 ? (
@@ -139,6 +256,8 @@ export function ShareDialog({ item, onClose }: { item: ItemSummary; onClose: () 
   const [adding, setAdding] = useState(peers.length === 0);
   const busy = phase !== "form" && phase !== "done";
   useLeaveGuard(busy, { detail: "safe.share.leave" });
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onClose, { canClose: !busy });
 
   const send = async () => {
     const peer = peers.find((p) => p.peerId === peerId);
@@ -164,7 +283,7 @@ export function ShareDialog({ item, onClose }: { item: ItemSummary; onClose: () 
 
   return createPortal(
     <div className="pz-modal-backdrop" onClick={() => !busy && onClose()}>
-      <div className="pz-modal cf-modal" role="dialog" aria-modal="true" aria-labelledby="cf-share-title" onClick={(e) => e.stopPropagation()} data-testid="cf-share-dialog">
+      <div ref={box} className="pz-modal cf-modal" role="dialog" aria-modal="true" aria-labelledby="cf-share-title" onClick={(e) => e.stopPropagation()} data-testid="cf-share-dialog">
         <h2 id="cf-share-title" className="cf-modal-title">↗︎ {t("safe.share.title", { title: item.title })}</h2>
         {adding ? (
           <>

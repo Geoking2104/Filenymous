@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 /** Cmd/Ctrl+K command palette: hybrid search (FTS5 + local MiniLM), copy, reveal, open. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useModal } from "../home/useModal";
 import { copySecret } from "./clipboard";
 import type { SafeEmbedder } from "./embed";
 import { REVEAL_MS } from "./SafeItems";
@@ -26,9 +27,8 @@ export function Palette({ items, onClose, onOpen, embedder, semanticReady, onTog
   const input = useRef<HTMLInputElement>(null);
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
 
-  useEffect(() => {
-    input.current?.focus();
-  }, []);
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onClose, { initialFocus: input });
 
   useEffect(() => {
     const query = q.trim();
@@ -97,7 +97,7 @@ export function Palette({ items, onClose, onOpen, embedder, semanticReady, onTog
 
   return createPortal(
     <div className="cf-pal-backdrop" onMouseDown={onClose} data-testid="cf-palette">
-      <div className="cf-pal" role="dialog" aria-modal="true" aria-label={t("safe.palette.label")} onMouseDown={(e) => e.stopPropagation()} onKeyDown={onKey}>
+      <div ref={box} className="cf-pal" role="dialog" aria-modal="true" aria-label={t("safe.palette.label")} onMouseDown={(e) => e.stopPropagation()} onKeyDown={onKey}>
         <div className="cf-pal-input">
           <span aria-hidden="true">⌕</span>
           <input ref={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("safe.palette.placeholder")} aria-label={t("safe.palette.placeholder")} spellCheck={false} autoComplete="off" data-testid="cf-pal-input" role="combobox" aria-expanded="true" aria-controls="cf-pal-list" aria-activedescendant={cur ? `cf-pal-${cur.id}` : undefined} />
@@ -115,13 +115,16 @@ export function Palette({ items, onClose, onOpen, embedder, semanticReady, onTog
               </span>
               {reveal?.id === it.id && <Ring until={reveal.until} total={REVEAL_MS} size={20} />}
               {semantic && <span className="cf-badge cf-badge--ai" title={t("safe.palette.semanticHit")}>≈</span>}
-              <span className="cf-pal-acts">
-                <button type="button" className="cf-chip-btn" onClick={(e) => { e.stopPropagation(); void doReveal(it); }} tabIndex={-1}>{t("safe.reveal")}</button>
-                <button type="button" className="cf-chip-btn" onClick={(e) => { e.stopPropagation(); onOpen(it.id); }} tabIndex={-1}>{t("safe.open")}</button>
-              </span>
             </li>
           ))}
         </ul>
+        {cur && (
+          <div className="cf-pal-acts" role="toolbar" aria-label={cur.title} data-testid="cf-pal-acts">
+            <span className="cf-pal-acts-title">{cur.title}</span>
+            <button type="button" className="cf-chip-btn" onClick={() => void doReveal(cur)}>{t("safe.reveal")}</button>
+            <button type="button" className="cf-chip-btn" onClick={() => onOpen(cur.id)}>{t("safe.open")}</button>
+          </div>
+        )}
         <div className="cf-pal-foot">
           <span><kbd>↵</kbd> {t("safe.palette.kCopy")}</span>
           <span><kbd>⇧↵</kbd> {t("safe.palette.kUser")}</span>

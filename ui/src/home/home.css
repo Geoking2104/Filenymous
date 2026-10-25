@@ -11,7 +11,7 @@
   --fy-border-strong: rgba(15, 23, 42, .18);
   --fy-text: #0b1220;
   --fy-text-2: #475569;
-  --fy-text-3: #64748b;
+  --fy-text-3: #556377;
   --fy-accent: #6366f1;
   --fy-accent-2: #0ea5e9;
   --fy-accent-ink: #4338ca;
@@ -114,6 +114,7 @@
 .pz-service-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; color: #fff; flex: none; box-shadow: 0 8px 18px -8px currentColor; }
 .pz-service-icon[data-service-icon="send"] { background: linear-gradient(135deg, #6366f1, #0ea5e9); }
 .pz-service-icon[data-service-icon="drop"] { background: linear-gradient(135deg, #10b981, #0ea5e9); }
+.pz-service-icon[data-service-icon="receive"] { background: linear-gradient(135deg, #0ea5e9, #14b8a6); }
 .pz-service-icon[data-service-icon="secret"] { background: linear-gradient(135deg, #f43f5e, #a855f7); }
 .pz-service-lead { margin: 0; color: var(--fy-text-2); font-size: .95rem; }
 .pz-benefits { list-style: none; margin: 0; padding: 0; display: grid; gap: .65rem; }
@@ -357,3 +358,7 @@
 .pz-confirm-actions .pz-btn { min-width: 7.5rem; }
 .pz-btn.pz-btn-danger { background: #dc2626 !important; border-color: #dc2626 !important; color: #fff !important; }
 .pz-btn.pz-btn-danger:hover { background: #b91c1c !important; }
+.pz-share-hint { margin: .2rem auto .6rem; max-width: 46ch; font-size: .9rem; color: var(--fy-text-2); }
+.pz-no-sender { text-align: left; }
+.pz-no-sender p { margin: .35rem 0 0; }
+.pz-no-sender .pz-actions { justify-content: flex-start; margin-top: .7rem; }

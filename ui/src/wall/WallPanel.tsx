@@ -13,6 +13,13 @@ import { ENDED, WallPeer, type PeerState } from "./peer";
 import { PrivacyNote, WallRoom, reasonText, type RoomApi, type RoomState } from "./WallRoom";
 import { ExportBlockedError, buildSnapshot, buildTranscript, downloadBlob, snapshotBlob, snapshotFilename } from "./snapshot";
 import "./wall.css";
+import { useModal } from "../home/useModal";
+import type { LeaveCopy } from "../home/confirmLeave";
+
+/** Host closing: says plainly that the wall ends for everyone. */
+export const HOST_CLOSE_COPY: LeaveCopy = { title: "leave.wallHostTitle", message: "leave.wallHostMessage", confirm: "leave.wallHostConfirm", cancel: "leave.wallStay" };
+/** Guest leaving: the wall stays open for the others. */
+export const GUEST_LEAVE_COPY: LeaveCopy = { title: "leave.wallGuestTitle", message: "leave.wallGuestMessage", confirm: "leave.wallGuestConfirm", cancel: "leave.wallStay" };
 
 const baseUrl = () => `${location.origin}${location.pathname}`;
 const wallUrl = () => (window as { __FILENYMOUS_WALL_URL__?: string }).__FILENYMOUS_WALL_URL__;
@@ -236,7 +243,7 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
   const live = !!state && state.status !== "destroyed" && state.status !== "expired";
   // Closing the window destroys the wall for everyone: same confirmation as
   // every service; on "Quitter" the wall is killed right away.
-  useLeaveGuard(live, { onLeave: () => hostRef.current?.destroyNow(), detail: "leave.wallHost" });
+  useLeaveGuard(live, { onLeave: () => hostRef.current?.destroyNow(), detail: "leave.wallHost", copy: HOST_CLOSE_COPY });
 
   if (state && (state.status === "destroyed" || state.status === "expired")) return <Ended status={state.status} host />;
   if (!state || !api) return null;
@@ -300,11 +307,11 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
       exportNote={exportNote}
       onDestroy={() =>
         void confirmDialog({
-          title: t("leave.title"),
-          message: t("leave.message"),
+          title: t(HOST_CLOSE_COPY.title),
+          message: t(HOST_CLOSE_COPY.message),
           detail: t("leave.wallHost"),
-          confirmLabel: t("leave.confirm"),
-          cancelLabel: t("leave.cancel"),
+          confirmLabel: t(HOST_CLOSE_COPY.confirm),
+          cancelLabel: t(HOST_CLOSE_COPY.cancel!),
           danger: true,
         }).then((ok) => ok && void hostRef.current?.destroy("destroyed"))
       }
@@ -320,15 +327,11 @@ function ExportDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm
   const { t } = useTranslation();
   const [format, setFormat] = useState<ExportFormat>("json");
   const cancelRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    cancelRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onCancel, { initialFocus: cancelRef });
   return (
     <div className="pz-modal-backdrop" onClick={onCancel}>
-      <div className="pz-modal pz-confirm" role="alertdialog" aria-modal="true" aria-labelledby="sw-export-title" aria-describedby="sw-export-warn" data-testid="wall-export-dialog" onClick={(e) => e.stopPropagation()}>
+      <div ref={box} className="pz-modal pz-confirm" role="alertdialog" aria-modal="true" aria-labelledby="sw-export-title" aria-describedby="sw-export-warn" data-testid="wall-export-dialog" onClick={(e) => e.stopPropagation()}>
         <h2 id="sw-export-title">📦 {t("wall.export.title")}</h2>
         <p id="sw-export-warn" data-testid="wall-export-warning">⚠️ {t("wall.export.warning")}</p>
         <p className="pz-confirm-detail" lang={t("wall.export.warningEn").startsWith("Export") ? "en" : "fr"}>{t("wall.export.warningEn")}</p>
@@ -388,7 +391,7 @@ function PeerView({ params }: { params: WallParams }) {
   }, [password, peer]);
 
   // Leaving drops everything this tab shows (the wall itself stays for others).
-  useLeaveGuard(state?.status === "online", { onLeave: () => void peerRef.current?.leave() });
+  useLeaveGuard(state?.status === "online", { onLeave: () => void peerRef.current?.leave(), copy: GUEST_LEAVE_COPY });
 
   const api = useMemo<RoomApi | null>(
     () =>

@@ -6,6 +6,7 @@ import { useLeaveGuard } from "../home/confirmLeave";
 import { createPasskey, passkeyPrfSupported, passkeySecret } from "./passkey";
 import { MASTER_MIN_BITS, estimateBits } from "./strength";
 import { StrengthMeter, errKey } from "./ui";
+import { requestPersistence } from "./persist";
 import type { VaultStatus } from "./types";
 
 function randomPositions(n = 3, total = 24): number[] {
@@ -89,6 +90,8 @@ export function Onboarding({ client, onDone, onImport }: { client: SafeClient; o
         if (!pw) return;
         res = await client.create({ password: pw });
       }
+      // Ask right away for persistent storage, so the browser does not evict the new vault.
+      void requestPersistence();
       setPhrase(res.phrase.split(" "));
       setStep("phrase");
     } catch (ex) {

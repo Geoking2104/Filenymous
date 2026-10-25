@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useModal } from "../../home/useModal";
 import type { DrawerId } from "../types";
 import ContactsPanel from "../../components/ContactsPanel";
 import IdentityPanel from "../../components/IdentityPanel";
@@ -13,6 +15,8 @@ interface Props {
 
 export default function SecondaryDrawer({ open, onClose }: Props) {
   const { t } = useTranslation();
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onClose, { open: !!open });
   if (!open) return null;
 
   return (
@@ -23,7 +27,7 @@ export default function SecondaryDrawer({ open, onClose }: Props) {
         aria-label={t("ux.drawerClose")}
         onClick={onClose}
       />
-      <div className="v3-drawer-panel" role="dialog" aria-modal="true">
+      <div ref={box} className="v3-drawer-panel" role="dialog" aria-modal="true" aria-label={t("ux.drawerClose")}>
         <div className="v3-drawer-handle" />
         <div className="v3-legacy-panel">
           {open === "contacts" && <ContactsPanel />}

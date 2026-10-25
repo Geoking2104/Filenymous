@@ -71,7 +71,12 @@ async function expectIcon(page: Page, service: string, shot: string, title?: Reg
   await expect(head).toHaveAttribute("data-service", service);
   const icon = head.locator("[data-service-icon]");
   await expect(icon).toHaveAttribute("data-service-icon", service);
-  expect(await icon.evaluate((el) => el.outerHTML), `${shot}: same icon markup as the ${service} card`).toBe(icons[service]);
+  // "receive" has no home card (you reach it from a link or a code): own icon, distinct from "send".
+  if (service === "receive") {
+    const html = await icon.evaluate((el) => el.outerHTML);
+    expect(html).toContain("<svg");
+    expect(html.replace(/data-service-icon="[a-z]+"/, "")).not.toBe(icons.send?.replace(/data-service-icon="[a-z]+"/, ""));
+  } else expect(await icon.evaluate((el) => el.outerHTML), `${shot}: same icon markup as the ${service} card`).toBe(icons[service]);
   if (title) await expect(head.locator("h1")).toHaveText(title);
   // Next to the title, same row, card-size tile.
   const [ib, hb] = [await icon.boundingBox(), await head.locator("h1").boundingBox()];
@@ -90,7 +95,7 @@ test("each card's icon is shown on every screen of its service (desktop, light)"
   test.setTimeout(180_000);
   const home = await open(browser);
   icons = await cardIcons(home);
-  expect(Object.keys(icons).sort()).toEqual(["cli", "drop", "pro", "report", "secret", "send", "stream", "wall"]);
+  expect(Object.keys(icons).sort()).toEqual(["cli", "drop", "pro", "report", "safe", "secret", "send", "stream", "wall"]);
   if (SHOTS) await home.screenshot({ path: `${SHOTS}/00-home-cards.png` });
 
   // Direct transfer: review → sending → recipient (by link).
@@ -101,7 +106,7 @@ test("each card's icon is shown on every screen of its service (desktop, light)"
   await expectIcon(home, "send", "02-send-waiting");
   const rx = await open(browser);
   await rx.goto(local(await home.getByTestId("p2p-link").inputValue()));
-  await expectIcon(rx, "send", "03-send-recipient", /Recevoir un fichier/);
+  await expectIcon(rx, "receive", "03-send-recipient", /Recevoir un fichier/);
 
   // Streaming: card picker → review (stream mode) → sending → recipient sees the streaming icon.
   const st = await open(browser);
@@ -121,7 +126,7 @@ test("each card's icon is shown on every screen of its service (desktop, light)"
   const dz = await open(browser);
   await dz.goto("/");
   await dz.getByTestId("dropzone-entry").click();
-  await expectIcon(dz, "drop", "07-drop-create", /Recevoir des fichiers/);
+  await expectIcon(dz, "drop", "07-drop-create", /Dropzone/);
   await dz.getByTestId("drop-create-submit").click();
   const dropLink = await dz.getByTestId("drop-link").inputValue();
   await expectIcon(dz, "drop", "08-drop-owner");

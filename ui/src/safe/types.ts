@@ -81,6 +81,8 @@ export interface VaultStatus {
 export interface VaultSettings {
   autoLockMin: number;
   semantic: boolean;
+  /** When an encrypted backup file was last exported (ms epoch). */
+  lastBackupAt?: number;
 }
 
 export const DEFAULT_SETTINGS: VaultSettings = { autoLockMin: 5, semantic: false };

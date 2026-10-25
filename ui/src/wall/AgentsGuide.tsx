@@ -3,8 +3,9 @@
  * Helps users understand how to connect agents (CLI / MCP) and what benefits to expect.
  * Opened from the side panel or create form. Content is fully i18n.
  */
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useModal } from "../home/useModal";
 
 interface AgentsGuideProps {
   open: boolean;
@@ -20,6 +21,8 @@ export function AgentsGuide({ open, onClose, inviteLink, agentsAllowed }: Agents
   const [step, setStep] = useState(1);
   const [copied, setCopied] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onClose, { open });
 
   if (!open) return null;
 
@@ -114,7 +117,7 @@ export function AgentsGuide({ open, onClose, inviteLink, agentsAllowed }: Agents
   const current = steps[step - 1];
 
   return (
-    <div className="sw-modal" role="dialog" aria-modal="true" aria-labelledby="agents-guide-title" data-testid="wall-agents-guide" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div ref={box} className="sw-modal" role="dialog" aria-modal="true" aria-labelledby="agents-guide-title" data-testid="wall-agents-guide" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sw-modal-card sw-guide">
         <div className="sw-modal-head">
           <strong id="agents-guide-title">🤖 {t("wall.agents.guide.title")} — {step}/3</strong>

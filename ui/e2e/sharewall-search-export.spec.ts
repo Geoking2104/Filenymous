@@ -39,6 +39,15 @@ test("search filters the feed for host and peer, highlights and clears", async (
     await expect(p.getByText("Rapport-Été.txt").first()).toBeVisible();
     await expect(msg(p, "Le café est prêt")).toHaveCount(0);
   }
+  // No hit: say so (not "the wall is empty") and offer to clear.
+  await peer.page.getByTestId("wall-search").fill("introuvable-xyz");
+  await expect(peer.page.getByTestId("wall-search-empty")).toBeVisible();
+  await expect(peer.page.getByTestId("wall-search-empty")).toContainText("introuvable-xyz");
+  await expect(peer.page.getByTestId("wall-empty")).toHaveCount(0);
+  await peer.page.getByTestId("wall-search-empty-clear").click();
+  await expect(peer.page.getByTestId("wall-search")).toHaveValue("");
+  await expect(peer.page.getByTestId("wall-search-empty")).toHaveCount(0);
+  await peer.page.getByTestId("wall-search").fill("ete");
   await host.page.getByTestId("wall-search").fill("café");
   await shot(host.page, "local-search-host");
   await peer.page.getByTestId("wall-search-clear").click();

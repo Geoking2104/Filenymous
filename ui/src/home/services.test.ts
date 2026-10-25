@@ -17,7 +17,13 @@ describe("service → icon map (single source of truth)", () => {
     expect(serviceForScreen("drop-owner", { receiving: false, stream: false, via: "pro" })).toBe("pro");
     expect(serviceForScreen("drop-contrib", { receiving: false, stream: false, via: "pro" })).toBe("drop");
   });
+  it("a direct-link recipient gets the receive identity, not the sender's nor Dropzone's", () => {
+    expect(serviceForScreen("home", { receiving: true, stream: false })).toBe("receive");
+    expect(SERVICES.receive.titleKey).toBe("receive.title");
+    expect(SERVICES.receive.glyph).not.toEqual(SERVICES.drop.glyph);
+    expect(SERVICES.receive.glyph).not.toEqual(SERVICES.send.glyph);
+  });
   it("defines a glyph and a title for every card", () => {
-    expect(Object.keys(SERVICES).sort()).toEqual(["cli", "drop", "pro", "report", "safe", "secret", "send", "stream", "wall"]);
+    expect(Object.keys(SERVICES).sort()).toEqual(["cli", "drop", "pro", "receive", "report", "safe", "secret", "send", "stream", "wall"]);
   });
 });

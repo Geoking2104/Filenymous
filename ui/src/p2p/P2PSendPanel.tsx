@@ -144,6 +144,17 @@ export default function P2PSendPanel({ files, message, password, stream, expires
       {state && (
         <>
           <div className="v3-code" data-testid="p2p-code">{state.code}</div>
+          {/* Status first: it is what the sender watches (waiting → connected → sending). */}
+          <div className="v3-status" data-testid="p2p-send-status" data-status={state.status} aria-live="polite" style={{ margin: ".6rem 0" }}>
+            <span className="v3-pulse" />
+            {statusText}
+          </div>
+          {state.peerDevice && (state.status === "connected" || state.status === "transferring" || state.status === "complete") && (
+            <p className="pz-peer" data-testid="p2p-peer-device">{t("pz.peerDevice", { device: state.peerDevice })}</p>
+          )}
+          {(state.status === "starting" || state.status === "waiting" || state.status === "reconnecting") && (
+            <p className="pz-share-hint" data-testid="p2p-share-hint">{t("p2p.shareHint")}</p>
+          )}
           <div className="v3-qr-wrap">
             <div className="v3-qr">
               <QRCodeSVG value={link} size={200} level="M" marginSize={2} bgColor="#ffffff" fgColor="#0f172a" title={t("p2p.qrTitle")} />
@@ -151,7 +162,7 @@ export default function P2PSendPanel({ files, message, password, stream, expires
             <p className="v3-qr-caption">{t("p2p.qrCaption")}</p>
           </div>
           <div className="v3-link-row">
-            <input readOnly data-testid="p2p-link" value={link} onFocus={(e) => e.currentTarget.select()} />
+            <input readOnly data-testid="p2p-link" aria-label={t("p2p.linkLabel")} value={link} onFocus={(e) => e.currentTarget.select()} />
             <button type="button" className="v3-copy-btn" onClick={copy}>
               {copied ? `✓ ${t("common.copied")}` : t("common.copy")}
             </button>
@@ -162,6 +173,12 @@ export default function P2PSendPanel({ files, message, password, stream, expires
             </button>
           )}
         </>
+      )}
+      {!state && (
+        <div className="v3-status" data-testid="p2p-send-status" data-status="starting" aria-live="polite" style={{ margin: ".6rem 0" }}>
+          <span className="v3-pulse" />
+          {statusText}
+        </div>
       )}
       {state?.protected && (
         <p className="pz-peer" data-testid="p2p-send-protected">
@@ -187,13 +204,6 @@ export default function P2PSendPanel({ files, message, password, stream, expires
           {state.protected && state.expires ? " · " : ""}
           {state.expires ? `⏳ ${t("protect.expiryOn")}` : ""}
         </p>
-      )}
-      <div className="v3-status" data-testid="p2p-send-status" data-status={state?.status ?? "starting"} style={{ margin: ".6rem 0" }}>
-        <span className="v3-pulse" />
-        {statusText}
-      </div>
-      {state?.peerDevice && (state.status === "connected" || state.status === "transferring" || state.status === "complete") && (
-        <p className="pz-peer" data-testid="p2p-peer-device">{t("pz.peerDevice", { device: state.peerDevice })}</p>
       )}
       {(state?.status === "transferring" || state?.status === "complete") && (
         <>

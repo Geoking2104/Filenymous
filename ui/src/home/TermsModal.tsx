@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useModal } from "./useModal";
 import { useTranslation } from "react-i18next";
 
 export const OPEN_TERMS_EVENT = "filenymous:open-terms";
@@ -15,15 +16,11 @@ const CARDS = [
 export default function TermsModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const btn = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    btn.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onClose, { initialFocus: btn });
   return (
     <div className="pz-modal-backdrop" onClick={onClose}>
-      <div className="pz-modal" role="dialog" aria-modal="true" aria-labelledby="pz-terms-title" data-testid="terms-modal" onClick={(e) => e.stopPropagation()}>
+      <div ref={box} className="pz-modal" role="dialog" aria-modal="true" aria-labelledby="pz-terms-title" data-testid="terms-modal" onClick={(e) => e.stopPropagation()}>
         <h2 id="pz-terms-title">{t("terms.title")}</h2>
         <div className="pz-terms-grid">
           {CARDS.map((c) => (
