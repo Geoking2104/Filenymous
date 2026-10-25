@@ -9,6 +9,7 @@
  * removes the unused Xiaolai (CJK) Excalidraw font folder (dropped from the
  * build in #58; only partial uploads remain) in apply mode.
  *   node scripts/ovh-cleanup-backups.mjs --mode inspect|apply [--keep 2] [--prune-xiaolai]
+ *   --only <app|www>.bak-<ts>  delete exactly that one backup dir (ignores --keep)
  */
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
@@ -18,6 +19,8 @@ const { Client } = require("ssh2");
 const arg = (n, d) => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : d; };
 const mode = arg("--mode", "inspect");
 const keep = Number(arg("--keep", "2"));
+const only = arg("--only", "");
+if (only && !/^(app|www)\.bak-\d{14}$/.test(only)) { console.error("--only must be app.bak-<14 digits> or www.bak-<14 digits>"); process.exit(1); }
 const cfg = { host: "ftp.cluster129.hosting.ovh.net", port: 22, username: "filenyb", password: process.env.OVH_SFTP_PASS };
 if (!cfg.password) { console.error("OVH_SFTP_PASS missing"); process.exit(1); }
 if (!["inspect", "apply"].includes(mode)) { console.error("mode must be inspect|apply"); process.exit(1); }
@@ -66,7 +69,7 @@ for (const k of KINDS) {
     const names = new Set((await sftp.list(path)).map((x) => x.name));
     const size = await du(path);
     const complete = k.complete(names);
-    const action = complete && kept < keep ? "KEEP" : "DELETE";
+    const action = only ? (e.name === only ? "DELETE" : "KEEP") : complete && kept < keep ? "KEEP" : "DELETE";
     if (action === "KEEP") kept++;
     console.log(`${action.padEnd(6)} ${e.name}  ${mb(size.bytes)}  ${size.files} files  ${complete ? "complete" : "partial"}`);
     if (action === "DELETE") plan.push({ path, bytes: size.bytes });
@@ -84,6 +87,7 @@ if (process.argv.includes("--prune-xiaolai") && (await sftp.exists(XIAOLAI)) ===
   console.log(`DELETE ${XIAOLAI}  ${mb(size.bytes)}  ${size.files} files (unused since #58)`);
   plan.push({ path: XIAOLAI, bytes: size.bytes });
 }
+if (only && !plan.some((p) => p.path.endsWith(`/${only}`))) console.log(`\n--only ${only}: not found`);
 console.log(`\nTo delete: ${plan.length} dirs, ${mb(plan.reduce((s, p) => s + p.bytes, 0))}`);
 if (mode === "apply") {
   for (const p of plan) {

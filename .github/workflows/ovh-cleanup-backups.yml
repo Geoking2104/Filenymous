@@ -19,6 +19,10 @@ on:
         description: "also delete the unused app/excalidraw-assets/fonts/Xiaolai folder (apply only)"
         type: boolean
         default: false
+      only:
+        description: "delete exactly this backup dir name (e.g. www.bak-20261025101316) instead of the keep-N plan"
+        required: false
+        default: ""
 
 concurrency:
   group: deploy-ovh-ui
@@ -41,4 +45,5 @@ jobs:
           MODE: ${{ inputs.mode }}
           KEEP: ${{ inputs.keep }}
           PRUNE: ${{ inputs.prune_xiaolai && '--prune-xiaolai' || '' }}
-        run: node scripts/ovh-cleanup-backups.mjs --mode "$MODE" --keep "$KEEP" $PRUNE
+          ONLY: ${{ inputs.only }}
+        run: node scripts/ovh-cleanup-backups.mjs --mode "$MODE" --keep "$KEEP" $PRUNE ${ONLY:+--only "$ONLY"}
