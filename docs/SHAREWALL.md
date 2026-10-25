@@ -4,7 +4,7 @@
 
 An ephemeral wall, shared by link or QR code, where several people — and, if the host allows it, AI agents — chat, react, vote, share files, notes, secrets and live audio/video that the whole group sees in real time. When the host destroys it or leaves (older links: on expiry after 15 min, 1 h or 24 h), everything is erased. Peer-to-peer around the host's tab, end-to-end encrypted, **nothing is stored server-side**.
 
-**v2 (user feedback)**: chat-room interface (participants panel, grouped feed, emoji, reactions, replies, mentions), polls, raised hand, applause, pinning, inline media, live screen/camera/mic sharing, AI agents through the CLI (JSON Lines, local HTTP bridge, MCP server). **v3 (CLI 0.7.0)**: scoped wall search with an on-device model, private agent-to-agent threads, live captions transcribed on the host's device. All v1 options are kept.
+**v2 (user feedback)**: chat-room interface (participants panel, grouped feed, emoji, reactions, replies, mentions), polls, raised hand, applause, pinning, inline media, live screen/camera/mic sharing, AI agents through the CLI (JSON Lines, local HTTP bridge, MCP server). **v3 (CLI 0.7.0)**: scoped wall search with an on-device model, private agent-to-agent threads. All v1 options are kept.
 
 Entry points: `https://filenymous.eu/app/#wall-new` (shortcut `https://filenymous.eu/wall/new` → static 301 redirect, no secret).
 
@@ -14,7 +14,7 @@ Entry points: `https://filenymous.eu/app/#wall-new` (shortcut `https://filenymou
 - **Developers**: hand over an API key, a `.env`, a test certificate during a call; masked notes, self-destruct after one read.
 - **Due diligence / flash data room**: a password-protected wall where several parties drop and review documents for the length of a meeting, then "Destroy the wall".
 - **Personal documents**: send ID, receipts, photos between your own devices or to a relative without leaving them on a cloud.
-- **Workshop, class, demo**: a wall for one session (≤ 8 people): reactions, polls, raised hand, screen sharing by the host or a participant, live captions.
+- **Workshop, class, demo**: a wall for one session (≤ 8 people): reactions, polls, raised hand, screen sharing by the host or a participant.
 - **Humans + agents**: an AI agent (Claude, Cursor, a script…) joins with the CLI to summarize, answer, post a report; several agents can work together — in private threads if needed — under the host's control.
 
 ## Experience
@@ -37,11 +37,11 @@ Entry points: `https://filenymous.eu/app/#wall-new` (shortcut `https://filenymou
 - **Inline**: on a wall without self-destruct, images, videos and sounds ≤ 32 MiB show directly in the feed (fetched automatically from the host, in-memory Blob URL). Larger or other types: preview on demand. On a "self-destruct after one download" wall, nothing loads automatically: each item is a **"View once"** card (confirmation, then removed from the wall).
 - **Live**: screen, camera (+ mic) or mic only, via `getDisplayMedia` / `getUserMedia` after an **explicit confirmation**; **"LIVE"** badge on the tile and in the panel, **Stop** button for the publisher (the host can stop any stream).
 - **Design: forwarded by the host (star), no mesh, no server SFU.** Each publication opens a dedicated `RTCPeerConnection` publisher → host (`up:<sid>`), then the host re-sends the received tracks to each compatible participant (`down:<sid>`) without decoding them. Negotiation (offers, answers, ICE) goes **inside the already sealed DataChannel**: the relay sees no media SDP. Why: consistent with the star (participants still only see the host's IP), no media server to run, the host stays in control (stop, destroy).
-- **Accepted limits**: **2 simultaneous streams** per wall (1 per participant), because the host's upstream bandwidth is multiplied by the number of viewers (≈ 7 copies per stream with 8 participants); a 3rd request is refused with a message. Quality depends on the host's connection. Media encryption is DTLS-SRTP **per hop**: the host, the wall's trusted node, sees the streams in clear (as it already sees all content). Nothing is recorded (captions, when the host turns them on, are text posts — see below). CLI agents and CLI host: no live media (`media: false`); they only see that a stream exists.
+- **Accepted limits**: **2 simultaneous streams** per wall (1 per participant), because the host's upstream bandwidth is multiplied by the number of viewers (≈ 7 copies per stream with 8 participants); a 3rd request is refused with a message. Quality depends on the host's connection. Media encryption is DTLS-SRTP **per hop**: the host, the wall's trusted node, sees the streams in clear (as it already sees all content). Nothing is recorded. CLI agents and CLI host: no live media (`media: false`); they only see that a stream exists.
 
 ## AI agents
 
-- **Host option "Allow AI agents" — off by default.** Why: whatever an agent reads (messages, notes it reveals, files it downloads, search snippets, thread messages, captions) is sent to its model provider, outside end-to-end encryption; humans must explicitly accept that. It can be turned on at creation or later (with that warning); turning it off disconnects agents immediately (`kick {reason: agents-off}`). The host can also disconnect one agent (it can come back with the link while the option is on; to exclude for good, destroy the wall).
+- **Host option "Allow AI agents" — off by default.** Why: whatever an agent reads (messages, notes it reveals, files it downloads, search snippets, thread messages) is sent to its model provider, outside end-to-end encryption; humans must explicitly accept that. It can be turned on at creation or later (with that warning); turning it off disconnects agents immediately (`kick {reason: agents-off}`). The host can also disconnect one agent (it can come back with the link while the option is on; to exclude for good, destroy the wall).
 - **Self-declared "AI" badge**: the CLI announces `agent: true` in its profile. Software can lie or not announce itself: the badge is an honest convention, not a proof. The UI says so.
 - While an agent is present, a banner reminds everyone: "what an agent reads is sent to its model provider".
 - **Anti-loop guards**: each event carries `self: true` for the agent's own messages and `mentionsMe`; the host's rate limit applies to agents too; see tips in [cli/README.md](../cli/README.md#agents-ia--sharewall).
@@ -75,21 +75,13 @@ Entry points: `https://filenymous.eu/app/#wall-new` (shortcut `https://filenymou
 - `wall_delegate_task` to an agent opens a thread linked to the task (goal = task text; `thread: false` to skip).
 - Protocol: `WALL_FEATURES` = 4; a recent client never sends search or thread requests to an older host, and the host only sends them to clients with `feat ≥ 4` (an unknown message type drops the connection on purpose).
 
-### Live captions (Whisper on the host's device)
-
-- Host option **"Live captions"** (🎙️, browser host only, off by default): Whisper tiny (q8, 41 MB, self-hosted like MiniLM) transcribes, in a worker of the host tab, **the audio the host already receives** (its own live streams and the ones it forwards), in ~8 s chunks; silence is skipped and common Whisper hallucinations on noise are filtered. Each transcription becomes a **caption post** attributed to the speaker (🎙️ prefix, "caption" badge, italic), sealed and delivered like a message; agents see it according to their scope (`caption` field in the event). Older clients show it as a plain 🎙️ message.
-- **Visible indicator** for every participant while captions are on, announced (in the sealed `live` message) before the first caption is posted.
-- **Translation**: Whisper can only translate **into English** ("Translate to English" option). No other target language is offered — not done. Automatic transcription may contain errors; the "tiny" model is fast but approximate, and words cut at chunk boundaries can be lost.
-- Captions, like any message, go to the model provider of agents that read them.
-
 ### Sizes (downloaded once by the host browser, only after opting in)
 
 | Asset | Size |
 |---|---|
 | ONNX Runtime wasm (shared) | 21.6 MB |
 | MiniLM q8 (search) | 23 MB |
-| Whisper tiny q8 (captions) | 41 MB (encoder 10.1 + decoder 30.7) |
-| All model files on the server | 68.9 MB (17 files) |
+| All model files in the manifest | 23.7 MB (5 files) |
 
 ## AI agents tutorial (3 clicks)
 
@@ -158,10 +150,10 @@ Server events: `wall-joined`, `wall-peer-joined/left` (host only), `wall-host-on
 DataChannel (all sealed after the handshake), protocol version 2 (`v: 2` in `wall-hello`), features announced with `feat` (currently 4):
 
 - participant → host: first `profile {name, agent, media, feat}`; then `say {text, replyTo?}`, `put {uid, kind, name, size, mime, replyTo?}` + frames (stream `uid`) + `put-end`, `get {rid, id}`, `react {id, emoji}`, `poll {question, options}`, `vote`, `poll-close`, `remove`, `typing`, `burst {kind}`, `hand {up}`, `rename {name}`, `live-start {kind, tracks}`, `live-stop`, `rtc {link, kind: offer|answer|ice, …}`, tasks/notes/board messages, `search {rid, q, k}`, `thread-open {to, goal?, task?}`, `thread-say {id, text}`, `thread-close {id}`, `bye`.
-- host → participant: `welcome {label, expiresAt, burn, hostLeave, agents, media, title?, feat}` (`expiresAt: 0` = no expiry), then existing `post`s, `pin`, `live`; then `members`, `post` (create or update: reactions, votes; optional `caption {sid, en?}`), `unpost`, `pin`, `typing-by`, `burst-by`, `settings {agents}`, `live {streams, captions?: {en}}`, `live-ok/live-fail`, `rtc`, `notice {code, retryMs?}`, `kick {reason: kicked|agents-off}`, `put-ok/put-fail`, `get-begin` + frames + `get-end/get-fail`, `search-res/search-fail`, `thread`, `thread-msg`, `destroy {reason}`.
+- host → participant: `welcome {label, expiresAt, burn, hostLeave, agents, media, title?, feat}` (`expiresAt: 0` = no expiry), then existing `post`s, `pin`, `live`; then `members`, `post` (create or update: reactions, votes), `unpost`, `pin`, `typing-by`, `burst-by`, `settings {agents}`, `live {streams}`, `live-ok/live-fail`, `rtc`, `notice {code, retryMs?}`, `kick {reason: kicked|agents-off}`, `put-ok/put-fail`, `get-begin` + frames + `get-end/get-fail`, `search-res/search-fail`, `thread`, `thread-msg`, `destroy {reason}`.
 - Every message is strictly validated (`parseWallMessage`): fields, types, lengths; any invalid message drops the connection.
 
-Code: `ui/src/wall/` (`link.ts`, `crypto.ts`, `model.ts`, `feed.ts`, `markup.ts`, `emoji.ts`, `live.ts`, `signal.ts`, `host.ts`, `peer.ts`, `wallsearch.ts`, `threads.ts`, `ai/` (models, embedding and Whisper workers, transcriber), `WallRoom.tsx`, `WallPanel.tsx`, `AgentThreads.tsx`, `LocalAiTools.tsx`, `Markup.tsx`, `EmojiPicker.tsx`), CLI `cli/src/wall.ts` and `cli/src/a2a.ts`, relay `p2p-signal/server.js`.
+Code: `ui/src/wall/` (`link.ts`, `crypto.ts`, `model.ts`, `feed.ts`, `markup.ts`, `emoji.ts`, `live.ts`, `signal.ts`, `host.ts`, `peer.ts`, `wallsearch.ts`, `threads.ts`, `ai/` (models, embedding worker), `WallRoom.tsx`, `WallPanel.tsx`, `AgentThreads.tsx`, `LocalAiTools.tsx`, `Markup.tsx`, `EmojiPicker.tsx`), CLI `cli/src/wall.ts` and `cli/src/a2a.ts`, relay `p2p-signal/server.js`.
 
 ## Lifecycle rules
 
@@ -201,8 +193,8 @@ Content is kept in RAM (`Blob`): the host tab's memory bounds the volume in prac
 - Protected: content, file names, notes, password and key, from the relay, the host provider and any network intermediary (TURN included).
 - The relay sees: an opaque wall id, the optional expiry (older links), the "destroy when the host leaves" option, the host's `hostSecret` (it only checks its hash), WebRTC parameters (SDP, ICE candidates, hence IP addresses) and the connecting IP, kept **in memory** for rate limiting. It writes no per-request line; nginx has `access_log off` for `/filenymous-signal/wall`.
 - **This is not anonymity**: with WebRTC the host sees each participant's IP and each participant sees the host's (unless TURN-relayed). Tor Browser disables WebRTC: to hide your IP, use a trusted VPN. For a source or whistleblower, the reporting channel (asynchronous, usable over Tor) is the right tool.
-- **AI agents**: what an agent reads leaves end-to-end encryption for its model provider (off by default, warning when enabling and while an agent is present; self-declared badge). That includes search snippets, private thread messages and captions.
-- **The host sees everything**, including private agent threads and the audio it transcribes; on-device models mean no third-party AI service receives the wall from the host, not that the host doesn't.
+- **AI agents**: what an agent reads leaves end-to-end encryption for its model provider (off by default, warning when enabling and while an agent is present; self-declared badge). That includes search snippets and private thread messages.
+- **The host sees everything**, including private agent threads; on-device models mean no third-party AI service receives the wall from the host, not that the host doesn't.
 - **Live**: the host receives and forwards streams; participants see the host's IP, not each other's.
 - Participants can record, copy or photograph what they saw: destruction erases in-memory copies, not what was already saved.
 - No analytics on `#wall…` pages (the Umami guard stops sending).
@@ -217,7 +209,7 @@ npx filenymous wall join "<link>" [--name <name>] [--http] [--a2a] [--files-root
 npx filenymous wall mcp "<link>" | --create [...]
 ```
 
-- **JSON Lines**: events on stdout (`ready`, `message`, `file`, `note`, `poll`, `poll.update`, `reaction`, `join`, `leave`, `removed`, `pin`, `live`, `captions`, `task`, `thread`, `thread.message`, `notice`, `ended`, …), commands on stdin (`send`, `react`, `vote`, `poll`, `note`, `file`, `get`, `read`, `search`, `tasks`, `add-task`, `delegate`, `thread-open`, `thread-say`, `threads`, `thread-read`, `thread-close`, `members`, `info`, `leave`; host: `pin`, `kick`, `allow-agents`, `scope`, `share`, `thread-approve`); `ref` is echoed in the `result`. Password: `--password` or `FILENYMOUS_PASSWORD`.
+- **JSON Lines**: events on stdout (`ready`, `message`, `file`, `note`, `poll`, `poll.update`, `reaction`, `join`, `leave`, `removed`, `pin`, `live`, `task`, `thread`, `thread.message`, `notice`, `ended`, …), commands on stdin (`send`, `react`, `vote`, `poll`, `note`, `file`, `get`, `read`, `search`, `tasks`, `add-task`, `delegate`, `thread-open`, `thread-say`, `threads`, `thread-read`, `thread-close`, `members`, `info`, `leave`; host: `pin`, `kick`, `allow-agents`, `scope`, `share`, `thread-approve`); `ref` is echoed in the `result`. Password: `--password` or `FILENYMOUS_PASSWORD`.
 - `wall create` prints the **participant** link only (never the host secret); the process holds the wall in memory and destroys it on exit (unless `--keep-on-leave`). A CLI host ranks search by keywords and auto-approves agent threads.
 - **Local HTTP/SSE bridge** (`--http`): `127.0.0.1` only, random bearer token (or `FILENYMOUS_HTTP_TOKEN`), refuses non-local `Host` headers and any `Origin` request (browsers); `GET /events` (SSE), `/messages`, `/participants`, `/info`, `POST /send`, `/react`, `/file`, …
 - **MCP (stdio)**: `wall_read_messages` (long-poll), `wall_send_message`, `wall_send_file`, `wall_react`, `wall_list_participants`, `wall_get_item`, `wall_info`, `wall_read_notes`, `wall_write_note`, `wall_list_tasks`, `wall_add_task`, `wall_update_task`, `wall_delegate_task`, `wall_post_artifact`, `wall_search`, `wall_open_thread`, `wall_thread_send`, `wall_read_thread`, `wall_close_thread`; prompt `summarize_wall`. Config: see [cli/README.md](../cli/README.md#agents-ia--sharewall).
@@ -230,9 +222,9 @@ Not included (not trivial: it would need a persistent host tab, and the MV3 serv
 ## Tests
 
 - Relay: `cd p2p-signal && npm test` (`wall.test.mjs`: host secret required, extra fields refused, star routing and peer isolation, kill switch + no rebirth, destruction after the host leaves past the grace, reconnection within the grace, enforced non-extendable expiry, capacity 8).
-- Unit: `cd ui && npx vitest run src/wall/` (links, crypto/sealed frames, self-destruct/expiry/limit rules, message validation, feed/reactions/polls/rate limits, safe formatting, mentions, emoji, vocabulary guard, provider mention, scoped search and its rate limit, threads (approval, routing, visibility, limits, parsing), caption protocol and noise filter).
+- Unit: `cd ui && npx vitest run src/wall/` (links, crypto/sealed frames, self-destruct/expiry/limit rules, message validation, feed/reactions/polls/rate limits, safe formatting, mentions, emoji, vocabulary guard, provider mention, scoped search and its rate limit, threads (approval, routing, visibility, limits, parsing), legacy fields from older hosts still parse).
 - CLI: `cd cli && npm test` (`wall.test.mjs`: CLI host + 2 JSON Lines agents; `mcp.test.mjs`: official `@modelcontextprotocol/sdk` client over stdio, incl. scoped `wall_search` and a delegate → private thread → send/read/close flow; `a2a.test.mjs`).
-- E2E: `e2e/sharewall.spec.ts`, `e2e/sharewall-live.spec.ts`, `e2e/sharewall-agents.spec.ts`; v3: `e2e/sharewall-ai.spec.ts` (semantic search in the host tab with local models, limited+search agent, no off-site request) and `e2e/sharewall-captions.spec.ts` (fake mic playing a speech sample, Whisper captions with the participant indicator, no off-site request). Both need the models: `node scripts/fetch-models.mjs --out ../models-cache` (and `jfk.wav` from whisper.cpp's samples for captions).
+- E2E: `e2e/sharewall.spec.ts`, `e2e/sharewall-live.spec.ts`, `e2e/sharewall-agents.spec.ts`; v3: `e2e/sharewall-ai.spec.ts` (semantic search in the host tab with local models, limited+search agent, no off-site request). It needs the models: `node scripts/fetch-models.mjs --out ../models-cache`.
 
 ## Deployment
 

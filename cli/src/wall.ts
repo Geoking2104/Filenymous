@@ -217,9 +217,6 @@ export class WallAgent {
       case "pin":
         this.emit({ event: "pin", id: ev.id });
         return;
-      case "captions":
-        this.emit({ event: "captions", on: !!ev.mode, ...(ev.mode ? { en: ev.mode.en } : {}) });
-        return;
       case "live":
         if (!ev.streams.length && !this.liveCount) return;
         this.liveCount = ev.streams.length;

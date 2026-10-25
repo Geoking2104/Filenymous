@@ -251,7 +251,6 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
 
   const room: RoomState = {
     role: "host",
-    captions: state.captions,
     status: state.status,
     statusText,
     online: true,
@@ -292,7 +291,7 @@ function HostView({ params, password, allowAgents }: { params: HostWallParams; p
         host ? (
           <>
             <AgentThreads threads={state.threads} msgs={state.threadMsgs} members={state.members} onApprove={(id) => host.approveThread(id)} onClose={(id) => host.closeThread(id)} />
-            <LocalAiTools host={host} media={state.media} canCaption={mediaSupported()} />
+            <LocalAiTools host={host} />
           </>
         ) : null
       }
@@ -452,7 +451,6 @@ function PeerView({ params }: { params: WallParams }) {
 
   const room: RoomState = {
     role: "peer",
-    captions: s?.captions ?? null,
     status: s?.status ?? "connecting",
     statusText,
     online: s?.status === "online",

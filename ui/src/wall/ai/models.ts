@@ -10,8 +10,7 @@ import ortWasmUrl from "../../../node_modules/onnxruntime-web/dist/ort-wasm-simd
 export const MODEL_BASE = `${import.meta.env.BASE_URL}models/`;
 
 export const EMBED_MODEL = { id: "Xenova/all-MiniLM-L6-v2", dtype: "q8", approxMB: 23 } as const;
-export const WHISPER_MODEL = { id: "Xenova/whisper-tiny", dtype: "q8", approxMB: 41 } as const;
-/** ONNX Runtime WebAssembly (shared by both models, downloaded once). */
+/** ONNX Runtime WebAssembly (downloaded once). */
 export const ORT_APPROX_MB = 21;
 
 import manifest from "../../../../scripts/models.manifest.json";

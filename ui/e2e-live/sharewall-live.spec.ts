@@ -1,14 +1,13 @@
 /**
  * Opt-in live check (not in CI): Sharewall on https://filenymous.eu/app/ with the live relay.
  * Host + guest, keyword search, on-device semantic search with the models served by the site,
- * captions honestly "unavailable" when the speech model is absent. Screenshots blur the invite
+ * and no live-captions control (removed). Screenshots blur the invite
  * link / key (SHOTS=dir). Never prints the link.
  *   npx playwright test -c playwright.live-p2p.config.ts e2e-live/sharewall-live.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
 const BASE = process.env.LIVE_BASE || "https://filenymous.eu/app/";
 const SHOTS = process.env.SHOTS;
-const CAPTIONS_PRESENT = process.env.CAPTIONS === "1";
 
 async function shot(p: Page, name: string) {
   if (!SHOTS) return;
@@ -16,11 +15,13 @@ async function shot(p: Page, name: string) {
   await p.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
 }
 
-test("live sharewall: guest, search, on-device semantic search, captions state", async ({ browser }) => {
+test("live sharewall: guest, search, on-device semantic search, no captions control", async ({ browser }) => {
   test.setTimeout(240_000);
   const host = await (await browser.newContext()).newPage();
   const off: string[] = [];
   host.on("request", (r) => { const u = new URL(r.url()); if (!u.hostname.endsWith("filenymous.eu")) off.push(u.hostname); });
+  const speech: string[] = [];
+  host.on("request", (r) => { if (/whisper/i.test(r.url())) speech.push(new URL(r.url()).pathname); });
   host.on("dialog", (d) => void d.accept());
   await host.goto(`${BASE}#wall-new`);
   await host.getByTestId("wall-agents").check();
@@ -53,13 +54,11 @@ test("live sharewall: guest, search, on-device semantic search, captions state",
   await host.getByTestId("wall-semantic-toggle").check();
   await expect(host.getByTestId("wall-semantic-state")).toContainText(/(On|Activée)/, { timeout: 150_000 });
 
-  // Captions: honest state.
-  const cap = host.getByTestId("wall-captions-toggle");
-  if (CAPTIONS_PRESENT) await expect(cap).toBeEnabled();
-  else {
-    await expect(cap).toBeDisabled({ timeout: 20_000 });
-    await expect(host.getByTestId("wall-captions-state")).toContainText(/(Unavailable|Indisponible)/i);
-  }
+  // Live captions were removed: no control, no indicator, no speech model fetched.
+  await expect(host.getByTestId("wall-captions-toggle")).toHaveCount(0);
+  await expect(host.getByText(/sous-titres|live captions/i)).toHaveCount(0);
+  await expect(guest.getByTestId("wall-captions-on")).toHaveCount(0);
+  expect(speech, "no speech model requested").toEqual([]);
   await host.getByTestId("wall-ai-tools").scrollIntoViewIfNeeded();
   await shot(host, "2-host-ai-tools");
   expect(off.filter((h) => !h.includes("umami") && h !== "www.opendpe.net"), "only the site + its signal relay (no model/runtime CDN)").toEqual([]);
