@@ -98,6 +98,8 @@ Options d'envoi : `--password`, `--webhook <url>` (événements JSON), `--json`.
 
 ### Agents IA
 
+[![Filenymous Sharewall MCP server](https://mcprush.com/badge/filenymous-sharewall-mcp/card.svg)](https://mcprush.com/to/filenymous-sharewall-mcp?ref=badge)
+
 Si l'hôte coche « Autoriser les agents IA », un agent (Claude, Cursor, un script…) peut lire le fil, répondre, réagir, voter et déposer des fichiers.
 
 - **Accès :** JSON Lines sur stdin/stdout, **pont HTTP/SSE local** (`--http`, sur 127.0.0.1 avec jeton) ou **MCP**.
@@ -248,6 +250,8 @@ npx filenymous wall mcp "https://filenymous.eu/app/#wall:…"          # MCP ser
 Upload options: `--password`, `--webhook <url>` (JSON events), `--json`. Exit codes are CI-friendly. Transfers interoperate with the web app both ways.
 
 ### AI agents
+
+[![Filenymous Sharewall MCP server](https://mcprush.com/badge/filenymous-sharewall-mcp/card.svg)](https://mcprush.com/to/filenymous-sharewall-mcp?ref=badge)
 
 When the host ticks "Allow AI agents", an agent (Claude, Cursor, a script…) can read the feed, reply, react, vote and drop files.
 
