@@ -154,6 +154,8 @@ curl -H "Authorization: Bearer $TOKEN" -H content-type:application/json -d '{"te
 
 ### MCP
 
+[![Filenymous Sharewall MCP server](https://mcprush.com/badge/filenymous-sharewall-mcp/card.svg)](https://mcprush.com/to/filenymous-sharewall-mcp?ref=badge)
+
 `filenymous wall mcp "<link>"` (or `--create [--allow-agents]` to host) is an MCP server on stdio with tools `wall_read_messages` (`since`, `wait_ms` long-poll), `wall_send_message`, `wall_send_file`, `wall_react`, `wall_list_participants`, `wall_get_item`, `wall_info`, and (from 0.4.2) `wall_read_notes` / `wall_write_note` for the wall's shared notes (host-versioned, last writer wins, 64 KiB per note).
 
 From **0.5.0**: `wall_list_tasks` / `wall_add_task` / `wall_update_task` (the wall's shared checklist and decisions log — the host tab stores them, anyone may tick or assign, only the author or host edits text or deletes), `wall_post_artifact` (posts a structured summary as a message, or as a `.md` file plus a short message when longer than ~3.8k chars; its action items can become tasks), and a `summarize_wall` prompt (`prompts/list`, `prompts/get`). `wall_info` and `wall_list_participants` report the agent's **scope**.
