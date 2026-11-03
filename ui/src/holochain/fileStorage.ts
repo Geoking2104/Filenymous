@@ -20,6 +20,10 @@ import type { EntryHash } from "@holochain/client";
 import { callZome, webBridgeGet } from "./client";
 import type { FileMetadata, CreateFileInput } from "./types";
 
+// Large mobile uploads/downloads can pause while Chrome is backgrounded.
+// Give these bulk zome calls time to resume instead of failing at 30 seconds.
+const BULK_FILE_TIMEOUT_MS = 10 * 60 * 1000;
+
 export const fileStorageZome = {
   /**
    * Crée une entrée fichier sur le DHT.
@@ -32,7 +36,7 @@ export const fileStorageZome = {
       name,
       chunks: chunks.map((c) => Array.from(c)),
     };
-    return callZome<EntryHash>("file_storage", "create_file", input);
+    return callZome<EntryHash>("file_storage", "create_file", input, BULK_FILE_TIMEOUT_MS);
   },
 
   /**
@@ -51,6 +55,7 @@ export const fileStorageZome = {
       "file_storage",
       "get_file",
       fileHash,
+      BULK_FILE_TIMEOUT_MS,
     );
     if (!result) return null;
     return {

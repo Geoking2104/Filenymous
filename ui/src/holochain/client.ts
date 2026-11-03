@@ -94,7 +94,7 @@ export async function createHoloWebRuntime(
   return {
     mode: "holo-web",
     ...caps,
-    callZome<T>(zomeName: string, fnName: string, payload: unknown = null) {
+    callZome<T>(zomeName: string, fnName: string, payload: unknown = null, timeoutMs = ZOME_TIMEOUT) {
       return hwc.callZome(
         {
           role_name: ROLE,
@@ -102,7 +102,7 @@ export async function createHoloWebRuntime(
           fn_name: fnName,
           payload,
         },
-        ZOME_TIMEOUT,
+        timeoutMs,
       ) as Promise<T>;
     },
     webBridgeGet<T>(path: string) {
@@ -174,7 +174,7 @@ async function createWebsocketRuntime(): Promise<HoloRuntimeClient> {
   return {
     mode: "websocket",
     ...caps,
-    callZome<T>(zomeName: string, fnName: string, payload: unknown = null) {
+    callZome<T>(zomeName: string, fnName: string, payload: unknown = null, timeoutMs = ZOME_TIMEOUT) {
       return client.callZome(
         {
           role_name: ROLE,
@@ -182,7 +182,7 @@ async function createWebsocketRuntime(): Promise<HoloRuntimeClient> {
           fn_name: fnName,
           payload,
         } as RoleNameCallZomeRequest,
-        ZOME_TIMEOUT,
+        timeoutMs,
       ) as Promise<T>;
     },
     webBridgeGet<T>(path: string) {
@@ -297,6 +297,7 @@ export async function callZome<T>(
   zome_name: string,
   fn_name: string,
   payload: unknown = null,
+  timeoutMs?: number,
 ): Promise<T> {
   if (_mode === "detecting") await initClient();
 
@@ -307,7 +308,7 @@ export async function callZome<T>(
     );
   }
 
-  return _client.callZome<T>(zome_name, fn_name, payload);
+  return _client.callZome<T>(zome_name, fn_name, payload, timeoutMs);
 }
 
 export async function webBridgeGet<T>(path: string): Promise<T> {
