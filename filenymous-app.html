@@ -1139,6 +1139,16 @@
   <span id="net-badge" class="detecting">Connexion…</span>
 </header>
 
+<aside id="transfer-away-banner" class="hidden" role="status" aria-live="polite" style="position:sticky;top:0;z-index:50;margin:0 auto;padding:10px 14px;max-width:1100px;border:1px solid var(--border);border-radius:0 0 12px 12px;background:var(--surface);box-shadow:0 8px 24px rgba(0,0,0,.24);">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+    <span id="transfer-away-label" style="font-size:13px;line-height:1.4;"></span>
+    <button id="transfer-away-return" type="button" class="btn btn-secondary btn-sm" onclick="returnToTransfer()"></button>
+  </div>
+  <div id="transfer-away-track" class="magic-progress-track" style="margin-top:8px;height:5px;">
+    <div id="transfer-away-fill" class="magic-progress-fill" style="width:0"></div>
+  </div>
+</aside>
+
 <main>
 
 <!-- ════════════════════════════════════════════════════ PANEL ROOM -->
@@ -1526,6 +1536,7 @@
   <button id="btn-send" class="btn btn-primary btn-full mt-3" onclick="handleSend(event)" disabled>
     <span data-i18n="send.createEncrypted">Create Magic Link</span>
   </button>
+  <p id="send-keep-screen-note" class="muted hidden mt-2" style="font-size:.78rem" data-i18n="send.keepScreenOn">Keep Chrome open until sending finishes. Switching screens inside Filenymous will not cancel it.</p>
 
   <div id="link-result" class="card magic-result-card hidden">
     <p class="card-title" data-i18n="send.magicReady">Magic Link ready</p>
@@ -1562,6 +1573,7 @@
     <p class="muted mt-2" data-i18n="send.magicKeepOpen">Keep this tab open until the receiver has finished downloading.</p>
     <div id="p2p-send-status" class="status info mt-3 hidden"></div>
   </div>
+  <div id="send-identity-result" class="card hidden" role="group" aria-label="Transfer identity check" style="margin-top:12px;"></div>
 
   <div class="card" style="border-color:transparent">
     <ul class="feature-list">
@@ -1579,6 +1591,7 @@
   <div id="recv-auto" class="card hidden">
     <p class="card-title" data-i18n="receive.detected">File detected</p>
     <div id="recv-meta" class="meta-grid mt-2"></div>
+    <div id="recv-identity" class="card hidden" role="group" aria-label="Transfer identity check" style="margin-top:12px;padding:12px;"></div>
     <div id="recv-msg-wrap" class="hidden mt-3">
       <p class="msg-box-label" data-i18n="receive.senderMessage">Sender message</p>
       <div id="recv-msg" class="msg-box"></div>
@@ -1614,6 +1627,7 @@
     <video id="qr-video" class="qr-video hidden" muted playsinline></video>
     <button class="btn btn-primary btn-full mt-3" onclick="receiveFromSingleInput(event)" data-i18n="common.continue">Continue</button>
     <div id="p2p-recv-status" class="status info mt-3 hidden"></div>
+    <div id="p2p-recv-identity" class="card hidden" role="group" aria-label="Transfer identity check" style="margin-top:12px;padding:12px;"></div>
     <p class="context-note mt-3"><strong data-i18n="receive.afterValidationTitle">After validation:</strong> <span data-i18n="receive.afterValidationCopy">keep this page open. For large files, transfer continues directly with the sender. The downloaded file will appear in your browser Downloads folder, unless your browser asks you to choose a location.</span></p>
   </div>
 
@@ -3367,6 +3381,7 @@ Object.assign(S, {
   transferState: TRANSFER_STATES.IDLE,
   transferStartedAt: 0,
   transferProgressPercent: 0,
+  transferReturnTab: 'send',
   selectedFiles: [],
   preparedPayload: null,
   preparedMagicCode: '',
@@ -3394,15 +3409,66 @@ Object.assign(S, {
   publicRoomDirectory: [],
 });
 
+let transferWakeLock = null;
+
+function updateTransferAwayBanner() {
+  const banner = $('transfer-away-banner');
+  if (!banner) return;
+  const activePanel = document.querySelector('.panel.active')?.id || '';
+  const awayFromSend = activePanel !== 'panel-send';
+  const hasArtifact = Boolean(S.lastShareArtifact?.url || S.lastShareArtifact?.code);
+  const failed = S.transferState === TRANSFER_STATES.FAILED && S.transferStartedAt > 0;
+  const visible = awayFromSend && (S.transferActive || hasArtifact || failed);
+  banner.classList.toggle('hidden', !visible);
+  if (!visible) return;
+
+  const label = S.transferActive
+    ? tr('transfer.continuesAway', 'Your transfer remains active while you switch screens in Filenymous. Keep this Chrome tab open.')
+    : failed
+      ? tr('transfer.failedAway', 'The transfer stopped with an error. Return to Send to review it.')
+      : tr('transfer.readyAway', 'Your share is ready and saved. Return to Send to view or copy the link.');
+  $('transfer-away-label').textContent = label;
+  $('transfer-away-return').textContent = tr('transfer.return', 'Return to Send');
+  $('transfer-away-fill').style.width = `${Math.max(0, Math.min(100, Number(S.transferProgressPercent) || 0))}%`;
+  $('transfer-away-track').classList.toggle('hidden', !S.transferActive);
+}
+
+async function syncTransferWakeLock() {
+  if (!S.transferActive || document.visibilityState !== 'visible' || !navigator.wakeLock?.request) {
+    const previous = transferWakeLock;
+    transferWakeLock = null;
+    if (previous) await previous.release().catch(() => {});
+    return;
+  }
+  if (transferWakeLock) return;
+  try {
+    transferWakeLock = await navigator.wakeLock.request('screen');
+    transferWakeLock.addEventListener('release', () => { transferWakeLock = null; });
+  } catch (_) { /* Screen Wake Lock is optional; the transfer continues without it. */ }
+}
+
+document.addEventListener('visibilitychange', () => { void syncTransferWakeLock(); });
+
 function markTransferActive(label) {
   S.transferActive = true;
   S.transferLabel = label || 'Transfer in progress';
+  S.transferReturnTab = document.querySelector('.panel.active')?.id === 'panel-receive' ? 'receive' : 'send';
+  $('send-keep-screen-note')?.classList.remove('hidden');
+  void syncTransferWakeLock();
+  updateTransferAwayBanner();
 }
 
 function markTransferDone() {
   S.transferActive = false;
   S.transferLabel = '';
+  $('send-keep-screen-note')?.classList.add('hidden');
+  void syncTransferWakeLock();
+  updateTransferAwayBanner();
 }
+
+window.returnToTransfer = function () {
+  showTab(S.transferReturnTab === 'receive' ? 'receive' : 'send');
+};
 
 window.addEventListener('beforeunload', e => {
   if (!S.transferActive) return;
@@ -3418,6 +3484,93 @@ const nacl = () => window.nacl;
 async function sha256hex(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function fingerprintPublicKey(value) {
+  if (!value) return '';
+  let raw;
+  if (typeof value === 'string') raw = b64d(value);
+  else if (value instanceof ArrayBuffer) raw = new Uint8Array(value);
+  else raw = new Uint8Array(value);
+  if (!raw.length) return '';
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', raw));
+  return [...digest.slice(0, 12)].map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('').match(/.{1,4}/g).join(' ');
+}
+
+async function getOwnIdentityPublicKey() {
+  try {
+    const pair = await idGetKeyPair();
+    return pair?.publicKey ? b64e(new Uint8Array(pair.publicKey)) : '';
+  } catch (_) { return ''; }
+}
+
+async function buildTransferIdentity(recipientPublicKey = '', recipientContact = '') {
+  const senderPublicKey = await getOwnIdentityPublicKey();
+  const [senderFingerprint, recipientFingerprint] = await Promise.all([
+    senderPublicKey ? fingerprintPublicKey(senderPublicKey) : '',
+    recipientPublicKey ? fingerprintPublicKey(recipientPublicKey) : '',
+  ]);
+  return {
+    senderPublicKey,
+    recipientPublicKey,
+    senderFingerprint,
+    recipientFingerprint,
+    recipientContact: recipientContact || '',
+  };
+}
+
+function renderSendIdentity(identity) {
+  const el = $('send-identity-result');
+  if (!el) return;
+  if (!identity || (!identity.senderFingerprint && !identity.recipientFingerprint && !identity.recipientContact)) {
+    el.classList.add('hidden');
+    el.innerHTML = '';
+    return;
+  }
+  const rows = [`<p class="card-title">${esc(tr('transfer.identityTitle', 'Identity check'))}</p>`];
+  if (identity.recipientContact) {
+    rows.push(`<div class="meta-item" style="margin:6px 0"><label>${esc(tr('send.recipient', 'Recipient'))}</label><span>${esc(identity.recipientContact)}</span></div>`);
+  }
+  if (identity.recipientFingerprint) {
+    rows.push(`<div class="meta-item" style="margin:6px 0"><label>${esc(tr('transfer.recipientFingerprint', 'Recipient fingerprint'))}</label><code class="sender-id-mono">${esc(identity.recipientFingerprint)}</code></div>`);
+  } else {
+    rows.push(`<p class="muted" style="font-size:.8rem;margin:6px 0">${esc(tr('transfer.recipientUnverified', 'No registered recipient identity matched this contact.'))}</p>`);
+  }
+  if (identity.senderFingerprint) {
+    rows.push(`<div class="meta-item" style="margin:6px 0"><label>${esc(tr('transfer.senderFingerprint', 'Sender fingerprint'))}</label><code class="sender-id-mono">${esc(identity.senderFingerprint)}</code></div>`);
+  }
+  rows.push(`<p class="muted" style="font-size:.76rem;margin:8px 0 0">${esc(tr('transfer.identityHint', 'Compare fingerprints with the other person over a trusted channel.'))}</p>`);
+  el.innerHTML = rows.join('');
+  el.classList.remove('hidden');
+}
+
+async function renderReceiveIdentity(senderPublicKey = '', containerId = 'recv-identity') {
+  const el = $(containerId);
+  if (!el) return;
+  let receiverPublicKey = '';
+  try {
+    const pair = await idGetKeyPair();
+    if (pair?.publicKey) receiverPublicKey = b64e(new Uint8Array(pair.publicKey));
+  } catch (_) { /* identity is optional */ }
+  const [senderFingerprint, receiverFingerprint] = await Promise.all([
+    senderPublicKey ? fingerprintPublicKey(senderPublicKey).catch(() => '') : '',
+    receiverPublicKey ? fingerprintPublicKey(receiverPublicKey).catch(() => '') : '',
+  ]);
+  if (!senderFingerprint && !receiverFingerprint) {
+    el.classList.add('hidden');
+    el.innerHTML = '';
+    return;
+  }
+  const rows = [`<p class="card-title">${esc(tr('transfer.identityTitle', 'Identity check'))}</p>`];
+  rows.push(senderFingerprint
+    ? `<div class="meta-item" style="margin:6px 0"><label>${esc(tr('transfer.senderFingerprint', 'Sender fingerprint'))}</label><code class="sender-id-mono">${esc(senderFingerprint)}</code></div>`
+    : `<p class="muted" style="font-size:.8rem;margin:6px 0">${esc(tr('transfer.senderUnknown', 'The sender did not include a registered identity fingerprint.'))}</p>`);
+  if (receiverFingerprint) {
+    rows.push(`<div class="meta-item" style="margin:6px 0"><label>${esc(tr('transfer.yourFingerprint', 'Your fingerprint'))}</label><code class="sender-id-mono">${esc(receiverFingerprint)}</code></div>`);
+  }
+  rows.push(`<p class="muted" style="font-size:.76rem;margin:8px 0 0">${esc(tr('receive.identityHint', 'Compare fingerprints with the sender over a trusted channel.'))}</p>`);
+  el.innerHTML = rows.join('');
+  el.classList.remove('hidden');
 }
 
 async function genAesKey() {
@@ -3797,6 +3950,7 @@ async function createWebParcelLink(file, message, recipContact = null) {
     cs: compact.bytes.byteLength,
     d: Date.now(),
     r: S.senderId || '',
+    x: await getOwnIdentityPublicKey(),
     m: message || '',
   };
   let keyPart = b64e(keyBytes);
@@ -3831,6 +3985,7 @@ function parseWebParcelLink(hash) {
         size: meta.s,
         created: meta.d,
         sender: meta.r || '',
+        senderX25519: meta.x || '',
         message: meta.m || '',
         data: dataB64,
         compression: meta.z || 'none',
@@ -3938,6 +4093,18 @@ window.FILENYMOUS_I18N = {
     "home.progressFailedEstimate": "Transfer stopped before completion.",
     "home.progressCancelledEstimate": "Transfer cancelled.",
     "home.progressRemaining": "remaining",
+    "transfer.continuesAway": "Your transfer remains active while you switch screens in Filenymous. Keep this Chrome tab open.",
+    "transfer.readyAway": "Your share is ready and saved. Return to Send to view or copy the link.",
+    "transfer.failedAway": "The transfer stopped with an error. Return to Send to review it.",
+    "transfer.return": "Return to transfer",
+    "transfer.identityTitle": "Identity check",
+    "transfer.senderFingerprint": "Sender fingerprint",
+    "transfer.recipientFingerprint": "Recipient fingerprint",
+    "transfer.yourFingerprint": "Your fingerprint",
+    "transfer.recipientUnverified": "No registered recipient identity matched this contact.",
+    "transfer.senderUnknown": "The sender did not include a registered identity fingerprint.",
+    "transfer.identityHint": "Compare fingerprints with the other person over a trusted channel.",
+    "transfer.saveFailed": "The share is ready, but this browser could not save a recovery copy. Copy the link now.",
     "home.magicLinkCreated": "Anonymous web link created.",
     "home.downloadLocation": "Received files appear where your browser saves downloads.",
     "home.options": "Options",
@@ -4049,6 +4216,7 @@ window.FILENYMOUS_I18N = {
     "send.magicCodeLabel": "Your code",
     "send.copyCode": "Copy code",
     "send.magicKeepOpen": "Keep this tab open until the receiver has finished downloading.",
+    "send.keepScreenOn": "Keep Chrome open until sending finishes. Switching screens inside Filenymous will not cancel it.",
     "send.roleTaken": "This one-time code is already active in another tab or device.",
     "send.codeReplaced": "Previous code was still active. A fresh code was created automatically.",
     "send.p2pAlreadyActive": "This transfer session is already open. Share the visible code and keep this tab open.",
@@ -4100,6 +4268,7 @@ window.FILENYMOUS_I18N = {
     "receive.metaStatus": "Status",
     "receive.metaDownloads": "Downloads",
     "receive.metaSender": "Sender",
+    "receive.identityHint": "Compare fingerprints with the sender over a trusted channel.",
     "receive.modeWeb": "Anonymous web",
     "receive.statusAvailable": "Available",
     "receive.statusRevoked": "Revoked",
@@ -4302,6 +4471,18 @@ window.FILENYMOUS_I18N = {
     "home.progressFailedEstimate": "Le transfert s'est arrêté avant la fin.",
     "home.progressCancelledEstimate": "Transfert annulé.",
     "home.progressRemaining": "restants",
+    "transfer.continuesAway": "Votre transfert reste actif quand vous changez d’écran dans Filenymous. Gardez cet onglet Chrome ouvert.",
+    "transfer.readyAway": "Votre partage est prêt et sauvegardé. Revenez à Envoyer pour voir ou copier le lien.",
+    "transfer.failedAway": "Le transfert s’est arrêté avec une erreur. Revenez à Envoyer pour la consulter.",
+    "transfer.return": "Revenir au transfert",
+    "transfer.identityTitle": "Vérification d’identité",
+    "transfer.senderFingerprint": "Empreinte de l’expéditeur",
+    "transfer.recipientFingerprint": "Empreinte du destinataire",
+    "transfer.yourFingerprint": "Votre empreinte",
+    "transfer.recipientUnverified": "Aucune identité enregistrée ne correspond à ce contact.",
+    "transfer.senderUnknown": "L’expéditeur n’a pas inclus d’empreinte d’identité enregistrée.",
+    "transfer.identityHint": "Comparez les empreintes avec l’autre personne par un canal de confiance.",
+    "transfer.saveFailed": "Le partage est prêt, mais le navigateur n’a pas pu en sauvegarder une copie. Copiez le lien maintenant.",
     "home.magicLinkCreated": "Lien web anonyme créé.",
     "home.downloadLocation": "Les fichiers reçus apparaissent là où votre navigateur enregistre les téléchargements.",
     "home.options": "Options",
@@ -4413,6 +4594,7 @@ window.FILENYMOUS_I18N = {
     "send.magicCodeLabel": "Votre code",
     "send.copyCode": "Copier le code",
     "send.magicKeepOpen": "Garde cet onglet ouvert jusqu’à la fin du téléchargement côté destinataire.",
+    "send.keepScreenOn": "Laissez Chrome ouvert jusqu’à la fin de l’envoi. Changer d’écran dans Filenymous ne l’annule pas.",
     "send.roleTaken": "Ce code à usage unique est déjà actif dans un autre onglet ou appareil.",
     "send.codeReplaced": "Le code précédent était encore actif. Un nouveau code a été créé automatiquement.",
     "send.p2pAlreadyActive": "Cette session de transfert est déjà ouverte. Partagez le code visible et gardez cet onglet ouvert.",
@@ -4464,6 +4646,7 @@ window.FILENYMOUS_I18N = {
     "receive.metaStatus": "Statut",
     "receive.metaDownloads": "Téléchargements",
     "receive.metaSender": "Expéditeur",
+    "receive.identityHint": "Comparez les empreintes avec l’expéditeur par un canal de confiance.",
     "receive.modeWeb": "Web anonyme",
     "receive.statusAvailable": "Disponible",
     "receive.statusRevoked": "Révoqué",
@@ -4666,6 +4849,18 @@ window.FILENYMOUS_I18N = {
     "home.progressFailedEstimate": "완료 전에 전송이 중단되었습니다.",
     "home.progressCancelledEstimate": "전송이 취소되었습니다.",
     "home.progressRemaining": "남음",
+    "transfer.continuesAway": "Filenymous 화면을 바꾸어도 전송은 계속됩니다. Chrome 탭을 열어 두세요.",
+    "transfer.readyAway": "공유가 준비되어 저장되었습니다. 보내기 화면에서 링크를 확인하거나 복사하세요.",
+    "transfer.failedAway": "전송이 오류로 중단되었습니다. 보내기 화면에서 확인하세요.",
+    "transfer.return": "전송으로 돌아가기",
+    "transfer.identityTitle": "신원 확인",
+    "transfer.senderFingerprint": "보내는 사람 지문",
+    "transfer.recipientFingerprint": "받는 사람 지문",
+    "transfer.yourFingerprint": "내 지문",
+    "transfer.recipientUnverified": "등록된 받는 사람 신원을 이 연락처에서 찾지 못했습니다.",
+    "transfer.senderUnknown": "보내는 사람이 등록된 신원 지문을 포함하지 않았습니다.",
+    "transfer.identityHint": "신뢰할 수 있는 별도 채널에서 서로의 지문을 비교하세요.",
+    "transfer.saveFailed": "공유가 준비되었지만 브라우저에 복구 사본을 저장하지 못했습니다. 지금 링크를 복사하세요.",
     "home.magicLinkCreated": "익명 웹 링크가 생성되었습니다.",
     "home.downloadLocation": "받은 파일은 브라우저가 다운로드를 저장하는 위치에 나타납니다.",
     "home.options": "옵션",
@@ -4777,6 +4972,7 @@ window.FILENYMOUS_I18N = {
     "send.magicCodeLabel": "내 코드",
     "send.copyCode": "코드 복사",
     "send.magicKeepOpen": "받는 사람의 다운로드가 끝날 때까지 이 탭을 열어 두세요.",
+    "send.keepScreenOn": "전송이 끝날 때까지 Chrome을 열어 두세요. Filenymous 화면 전환은 전송을 취소하지 않습니다.",
     "send.roleTaken": "이 일회용 코드는 다른 탭이나 기기에서 이미 활성 상태입니다.",
     "send.codeReplaced": "이전 코드가 아직 활성 상태였습니다. 새 코드가 자동으로 생성되었습니다.",
     "send.p2pAlreadyActive": "이 전송 세션은 이미 열려 있습니다. 표시된 코드를 공유하고 이 탭을 열어 두세요.",
@@ -4828,6 +5024,7 @@ window.FILENYMOUS_I18N = {
     "receive.metaStatus": "상태",
     "receive.metaDownloads": "다운로드",
     "receive.metaSender": "보낸 사람",
+    "receive.identityHint": "신뢰할 수 있는 별도 채널에서 보낸 사람의 지문을 비교하세요.",
     "receive.modeWeb": "익명 웹",
     "receive.statusAvailable": "사용 가능",
     "receive.statusRevoked": "취소됨",
@@ -5055,6 +5252,7 @@ function showTab(name) {
   if (name === 'rooms')    renderPublicRoom();
   // Rappel visuel du mode dans le panel send
   if (name === 'send') { updateSendNotice(); updateSendContactNotice(); renderSendContactChips(); renderSendIdentityMini(); }
+  updateTransferAwayBanner();
 }
 
 function setStatus(id, type, msg) {
@@ -5158,6 +5356,7 @@ function setTransferState(nextState, detail = {}) {
     detail.doneBytes ?? 0,
     detail.totalBytes ?? 0
   );
+  updateTransferAwayBanner();
 }
 
 function dosDateTime(date = new Date()) {
@@ -5741,6 +5940,7 @@ async function sendP2PFile(channel, file, message, statusId, code) {
     keyWrap: 'p2p-code-v1',
     key: wrappedKey,
     sender: S.senderId || '',
+    senderX25519: await getOwnIdentityPublicKey(),
     message: message || '',
   };
 
@@ -5783,11 +5983,13 @@ window.startP2PSend = async function () {
   S.preparedMagicCode = code;
   renderHomeMagicCode();
   const message = $('send-message').value.trim();
+  const identity = await buildTransferIdentity();
 
   const renderP2PShare = () => renderShareArtifact(createShareArtifact({
     kind: 'p2p-code',
     code,
     transportHint: 'direct-p2p',
+    identity,
   }));
   renderP2PShare();
   $('link-result').classList.add('hidden');
@@ -5955,6 +6157,7 @@ window.joinP2PReceive = async function () {
         const data = JSON.parse(msg.data);
         if (data.type === 'meta') {
           meta = data;
+          void renderReceiveIdentity(meta.senderX25519 || '', 'p2p-recv-identity');
           setStatus('p2p-recv-status', 'loading', trFormat('receive.p2pReceiving', {
             name: meta.name,
             size: fmtBytes(meta.size),
@@ -7026,6 +7229,7 @@ window.handleSend = async function (event, options = {}) {
   btn.disabled = true;
   $('link-result').classList.add('hidden');
   $('p2p-result').classList.add('hidden');
+  $('send-identity-result').classList.add('hidden');
   if (!verifyHumanGesture(event, 'send-status', ['send-human-proof', 'home-human-proof'])) {
     btn.disabled = false;
     return;
@@ -7059,6 +7263,7 @@ window.handleSend = async function (event, options = {}) {
       const out = await createWebParcelLink(S.file, message, S.sendContact?.code ? S.sendContact : null);
       if (out.e2eContact) toast(trFormat('contacts.linkEncrypted', { name: out.e2eContact }, 'Link encrypted end-to-end for {name}.'));
       const recipRaw = $('recipient').value.trim();
+      const identity = await buildTransferIdentity(S.sendContact?.code || '', recipRaw || S.sendContact?.label || '');
 
       S.history.unshift({
         id: out.id, ehBytes: [],
@@ -7071,12 +7276,17 @@ window.handleSend = async function (event, options = {}) {
       updateHistBadge();
 
       $('qr-panel').classList.add('hidden');
-      renderShareArtifact(createShareArtifact({
+      const artifact = createShareArtifact({
         kind: 'magic-link',
         url: out.url,
         transportHint: 'web-link',
         humanMessage: tr('home.magicLinkCreated', 'Anonymous web link created.'),
-      }));
+        identity,
+      });
+      if (!(await persistShareArtifact(artifact))) {
+        toast(tr('transfer.saveFailed', 'The share is ready, but this browser could not save a recovery copy. Copy the link now.'), 'error');
+      }
+      renderShareArtifact(artifact);
       $('send-status').classList.add('hidden');
     } catch (e) {
       setTransferState(TRANSFER_STATES.FAILED, {
@@ -7101,6 +7311,7 @@ window.handleSend = async function (event, options = {}) {
     const message  = $('send-message').value.trim();
     let contactHash = '0'.repeat(64);
     let encKeyBlob  = '';
+    let recipientPublicKeyB64 = S.sendContact?.code || '';
 
     // Lookup recipient in local and holo modes when a conductor is available.
     if (recipRaw && S.mode !== 'public') {
@@ -7112,6 +7323,7 @@ window.handleSend = async function (event, options = {}) {
         if (agent) {
           const x25519B64 = await zomeCall('identity', 'get_x25519_key', agent);
           if (x25519B64) {
+            recipientPublicKeyB64 = x25519B64;
             const recipPub = b64d(x25519B64);
             encKeyBlob     = await eciesWrap(keyBytes, recipPub);
             toast('Key encrypted directly for the recipient (ECIES).');
@@ -7131,7 +7343,11 @@ window.handleSend = async function (event, options = {}) {
 
     // Injection de l'ID expéditeur en préfixe structuré dans le message
     // Format : [from:XXXXXXXXXXXXXXXX]\n<message>
-    const senderTag  = S.senderId ? '[from:' + S.senderId.slice(0, 16) + ']\n' : '';
+    const senderPublicKeyB64 = await getOwnIdentityPublicKey();
+    const senderTags = [];
+    if (S.senderId) senderTags.push('from:' + S.senderId.slice(0, 16));
+    if (senderPublicKeyB64) senderTags.push('x25519:' + senderPublicKeyB64);
+    const senderTag = senderTags.length ? '[' + senderTags.join('][') + ']\n' : '';
     const fullMessage = senderTag + message;
 
     setStatus('send-status', 'loading', 'Creating the parcel on the DHT...');
@@ -7145,6 +7361,7 @@ window.handleSend = async function (event, options = {}) {
     const ehB64  = b64e(new Uint8Array(out.parcel_eh));
     const keyB64 = b64e(keyBytes);
     const url    = `${location.origin}${location.pathname}#${ehB64}:${keyB64}`;
+    const identity = await buildTransferIdentity(recipientPublicKeyB64, recipRaw || S.sendContact?.label || '');
 
     S.history.unshift({
       id: ehB64, ehBytes: out.parcel_eh,
@@ -7156,9 +7373,17 @@ window.handleSend = async function (event, options = {}) {
     });
     updateHistBadge();
 
-    $('link-text').textContent = url;
     $('qr-panel').classList.add('hidden');
-    $('link-result').classList.remove('hidden');
+    const artifact = createShareArtifact({
+      kind: 'magic-link',
+      url,
+      transportHint: 'dht',
+      identity,
+    });
+    if (!(await persistShareArtifact(artifact))) {
+      toast(tr('transfer.saveFailed', 'The share is ready, but this browser could not save a recovery copy. Copy the link now.'), 'error');
+    }
+    renderShareArtifact(artifact);
     $('send-status').classList.add('hidden');
     toast('File sent.');
   } catch (e) {
@@ -7173,10 +7398,18 @@ window.copyLink = () => {
   navigator.clipboard.writeText($('link-text').textContent).then(() => toast('Link copied.'));
 };
 
-function createShareArtifact({ kind, url = '', code = '', expiresAt = 0, transportHint = '', humanMessage = '' }) {
-  const artifact = { kind, url, code, expiresAt, transportHint, humanMessage };
+function createShareArtifact({ kind, url = '', code = '', expiresAt = 0, transportHint = '', humanMessage = '', identity = null }) {
+  const artifact = { kind, url, code, expiresAt, transportHint, humanMessage, identity };
   S.lastShareArtifact = artifact;
   return artifact;
+}
+
+async function persistShareArtifact(artifact) {
+  if (!artifact || artifact.kind !== 'magic-link' || !artifact.url) return true;
+  try {
+    await idb.set('last-share-artifact', artifact);
+    return true;
+  } catch (_) { return false; }
 }
 
 function renderShareArtifact(artifact) {
@@ -7190,6 +7423,10 @@ function renderShareArtifact(artifact) {
     $('p2p-code-out').textContent = artifact.code;
     $('p2p-result').classList.remove('hidden');
   }
+  renderSendIdentity(artifact.identity);
+  if (artifact.kind === 'magic-link' && artifact.url) {
+    void persistShareArtifact(artifact);
+  }
   if (artifact.humanMessage) toast(artifact.humanMessage);
   const isDirectCode = artifact.kind === 'p2p-code';
   setTransferState(TRANSFER_STATES.READY_TO_SHARE, {
@@ -7198,8 +7435,17 @@ function renderShareArtifact(artifact) {
     doneBytes: isDirectCode ? 0 : (S.file?.size || 0),
     totalBytes: S.file?.size || 0,
   });
+  updateTransferAwayBanner();
   return artifact;
 }
+
+async function restoreLastShareArtifact() {
+  if (location.hash) return;
+  const artifact = await idb.get('last-share-artifact').catch(() => null);
+  if (!artifact || artifact.kind !== 'magic-link' || !artifact.url) return;
+  renderShareArtifact({ ...artifact, humanMessage: '' });
+}
+void restoreLastShareArtifact();
 
 function currentShareLink() {
   return $('link-text')?.textContent?.trim() || '';
@@ -7445,6 +7691,8 @@ async function checkReceiveHash() {
   }
   if (hash === _loadedHash) return;
   _loadedHash = hash;
+  $('recv-identity').classList.add('hidden');
+  $('recv-identity').innerHTML = '';
 
   try {
     const webParcel = parseWebParcelLink(hash);
@@ -7517,6 +7765,7 @@ async function checkReceiveHash() {
         $('recv-msg').textContent = payload.message;
         $('recv-msg-wrap').classList.remove('hidden');
       }
+      await renderReceiveIdentity(payload.senderX25519 || '');
       return;
     }
   } catch (e) {
@@ -7567,10 +7816,18 @@ async function checkReceiveHash() {
     // Extraire l'ID expéditeur du préfixe [from:xxx] si présent
     let displayMsg     = m.message ?? '';
     let parsedSenderId = null;
-    const senderMatch  = displayMsg.match(/^\[from:([^\]]+)\]\n?([\s\S]*)/);
+    let parsedSenderX25519 = '';
+    const senderMatch  = displayMsg.match(/^\[from:([^\]]+)\](?:\[x25519:([^\]]+)\])?\n?([\s\S]*)/);
     if (senderMatch) {
       parsedSenderId = senderMatch[1];
-      displayMsg     = senderMatch[2];
+      parsedSenderX25519 = senderMatch[2] || '';
+      displayMsg     = senderMatch[3] || '';
+    } else {
+      const keyMatch = displayMsg.match(/^\[x25519:([^\]]+)\]\n?([\s\S]*)/);
+      if (keyMatch) {
+        parsedSenderX25519 = keyMatch[1];
+        displayMsg = keyMatch[2] || '';
+      }
     }
 
     $('recv-meta').innerHTML =
@@ -7583,6 +7840,7 @@ async function checkReceiveHash() {
         ? `<div class="meta-item" style="grid-column:1/-1"><label>${esc(tr('receive.metaSender', 'Sender'))}</label>` +
           `<span class="sender-id-mono">${esc(parsedSenderId)}…</span></div>`
         : '');
+    await renderReceiveIdentity(parsedSenderX25519);
 
     if (displayMsg) {
       $('recv-msg').textContent = displayMsg;   // textContent → pas de XSS
@@ -8195,23 +8453,14 @@ async function init() {
   applyI18n(localStorage.getItem('filenymous.lang') || 'en');
   updateBadge();
 
-  // Détection du mode : local → holo → public
-  // Le mode "public" (web) est le chemin par défaut pour filenymous.eu :
-  // aucun conductor requis. On ne tente Holo Web Conductor qu'en option et
-  // seulement si vraiment disponible, pour ne jamais bloquer l'envoi/réception
-  // quand l'infrastructure Holo n'est pas déployée.
+  // Détection du mode : local → holo → bridge
   const localOk = await initHolochain();
   if (localOk) {
     S.mode = 'local';
   } else {
-    // Tenter Holo Web Conductor uniquement si hApp déployé ET réellement dispo.
-    // En cas d'échec (Chaperone injoignable, paquet non déployé, etc.) on
-    // retombe sur le mode public : envoi/réception cryptés en navigateur.
-    let holoOk = false;
-    if (CFG.holoDeployed) {
-      try { holoOk = await initHoloWebConductor(); } catch (_) { holoOk = false; }
-    }
-    S.mode = holoOk ? 'holo' : 'public';
+    // Tenter Holo Web Conductor si hApp déployé sur Holo Host
+    const holoOk = await initHoloWebConductor();
+    S.mode = holoOk ? 'holo' : 'bridge';
   }
   updateBadge();
 
