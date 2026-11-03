@@ -29,7 +29,26 @@ const PIGEON_LOGO =
     </svg>`,
   );
 
-export default function SendWorkspace() {
+export interface SendWorkspaceStatus {
+  active: boolean;
+  pct: number;
+  outcome?: "complete" | "error";
+  code?: string;
+}
+
+interface Props {
+  onTransferStatusChange?: (status: SendWorkspaceStatus) => void;
+}
+
+interface ScreenWakeLockHandle {
+  release(): Promise<void>;
+}
+
+interface ScreenWakeLockApi {
+  request(type: "screen"): Promise<ScreenWakeLockHandle>;
+}
+
+export default function SendWorkspace({ onTransferStatusChange }: Props) {
   const { t, i18n } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -57,6 +76,9 @@ export default function SendWorkspace() {
         browserLink?: boolean;
         fileName?: string;
         receiptId?: string;
+        recipientContact?: string;
+        senderFingerprint?: string;
+        recipientFingerprint?: string | null;
       })
     | null
   >(null);
@@ -69,6 +91,46 @@ export default function SendWorkspace() {
   const [receipt, setReceipt] = useState<ReceiptStatus | null>(null);
   const [emailCopied, setEmailCopied] = useState(false);
   const [directFiles, setDirectFiles] = useState<File[] | null>(null);
+
+  useEffect(() => {
+    if (!busy) return;
+
+    const wakeLock = (navigator as Navigator & { wakeLock?: ScreenWakeLockApi }).wakeLock;
+    if (!wakeLock) return;
+
+    let lock: ScreenWakeLockHandle | null = null;
+    let disposed = false;
+    const release = () => {
+      const activeLock = lock;
+      lock = null;
+      if (activeLock) void activeLock.release().catch(() => undefined);
+    };
+    const acquire = async () => {
+      if (disposed || lock || document.visibilityState !== "visible") return;
+      try {
+        const nextLock = await wakeLock.request("screen");
+        if (disposed || document.visibilityState !== "visible") {
+          void nextLock.release().catch(() => undefined);
+        } else {
+          lock = nextLock;
+        }
+      } catch {
+        // Wake Lock is optional; the transfer still runs without it.
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void acquire();
+      else release();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    void acquire();
+    return () => {
+      disposed = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      release();
+    };
+  }, [busy]);
 
   useEffect(() => {
     void initClient().then(() => setWriteReady(canWrite()));
@@ -232,6 +294,7 @@ export default function SendWorkspace() {
         return;
       }
       setBusy(true);
+      onTransferStatusChange?.({ active: true, pct: 0 });
       setError("");
       setPct(10);
       setStep(t("send.progressEncrypt"));
@@ -259,8 +322,10 @@ export default function SendWorkspace() {
           fileName: realFiles[0]!.name,
           receiptId,
         });
+        onTransferStatusChange?.({ active: false, pct: 100, outcome: "complete", code: deriveShortCode(url) });
       } catch (e) {
         setError(t("send.errorTransfer", { message: String(e) }));
+        onTransferStatusChange?.({ active: false, pct, outcome: "error" });
       } finally {
         setBusy(false);
       }
@@ -268,6 +333,7 @@ export default function SendWorkspace() {
     }
 
     setBusy(true);
+    onTransferStatusChange?.({ active: true, pct: 0 });
     setError("");
     setPct(0);
     setStep(t("send.progressAes"));
@@ -282,6 +348,7 @@ export default function SendWorkspace() {
         onProgress: (p, key, params) => {
           setPct(p);
           setStep(t(key, params));
+          onTransferStatusChange?.({ active: true, pct: p });
         },
       });
 
@@ -306,11 +373,16 @@ export default function SendWorkspace() {
         passwordProtected: out.passwordProtected,
         fileName: out.fileName,
         receiptId: out.receiptId,
+        recipientContact: target,
+        senderFingerprint: out.senderFingerprint,
+        recipientFingerprint: out.recipientFingerprint,
       });
+      onTransferStatusChange?.({ active: false, pct: 100, outcome: "complete", code: out.code });
     } catch (e) {
       const msg = String(e);
       if (msg.includes("no_write")) setError(t("send.browserOnly"));
       else setError(t("send.errorTransfer", { message: msg }));
+      onTransferStatusChange?.({ active: false, pct, outcome: "error" });
     } finally {
       setBusy(false);
     }
@@ -394,6 +466,53 @@ export default function SendWorkspace() {
         <p className="v3-muted" style={{ marginBottom: 0 }}>
           {result.mode === "agent" ? t("send.notified") : t("ux.sendGiveCode")}
         </p>
+        <div
+          role="group"
+          aria-label={t("ux.sendIdentityHeading")}
+          style={{
+            display: "grid",
+            gap: ".65rem",
+            margin: "1rem 0",
+            padding: ".9rem",
+            borderRadius: "14px",
+            border: "1px solid var(--v3-border)",
+            background: "rgba(255,255,255,.035)",
+            textAlign: "left",
+          }}
+        >
+          <strong style={{ fontSize: ".84rem" }}>{t("ux.sendIdentityHeading")}</strong>
+          {result.recipientContact && (
+            <div>
+              <div className="v3-label">{t("ux.sendRecipientContact")}</div>
+              <div style={{ fontSize: ".82rem", marginBottom: ".45rem", wordBreak: "break-word" }}>
+                {result.recipientContact}
+              </div>
+            </div>
+          )}
+          {result.recipientFingerprint ? (
+            <div>
+              <div className="v3-label">{t("ux.sendRecipientFingerprint")}</div>
+              <code style={{ fontSize: ".78rem", letterSpacing: ".06em", wordBreak: "break-word" }}>
+                {result.recipientFingerprint}
+              </code>
+            </div>
+          ) : (
+            <p className="v3-muted" style={{ margin: 0, fontSize: ".78rem" }}>
+              {t("ux.sendRecipientUnknown")}
+            </p>
+          )}
+          {result.senderFingerprint && (
+            <div>
+              <div className="v3-label">{t("ux.sendYourFingerprint")}</div>
+              <code style={{ fontSize: ".78rem", letterSpacing: ".06em", wordBreak: "break-word" }}>
+                {result.senderFingerprint}
+              </code>
+            </div>
+          )}
+          <p className="v3-muted" style={{ margin: 0, fontSize: ".75rem" }}>
+            {t("ux.sendIdentityHint")}
+          </p>
+        </div>
         <div className="v3-code">{result.code}</div>
 
         {result.passwordProtected && (
@@ -513,6 +632,9 @@ export default function SendWorkspace() {
         <div style={{ fontSize: "2.5rem", marginBottom: "0.6rem" }}>🔒</div>
         <div className="v3-step">{step || t("ux.sendPreparing")}</div>
         <p className="v3-muted">{t("send.localOnlyProgress")}</p>
+        <p className="v3-muted" style={{ fontSize: ".78rem" }}>
+          {t("ux.sendKeepScreenNote")}
+        </p>
         <div className="v3-progress">
           <div className="v3-progress-fill" style={{ width: `${pct}%` }} />
         </div>

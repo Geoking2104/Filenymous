@@ -13,7 +13,7 @@ import { formatBytes } from "../ux-v3/types";
 import { EmojiPicker } from "./EmojiPicker";
 import { useModal } from "../home/useModal";
 import { AgentsGuide } from "./AgentsGuide";
-import { Hl, Markup } from "./Markup";
+import { Hl, Markup } from "./MarkupUi";
 import { normalizeQuery, searchNotes, searchPosts, searchTasks } from "./search-annotations";
 import { NoteEditor, NoteSearchHits, NotesList, liveLock, type NotesApi } from "./NotesUi";
 import { AgentShare, PendingAgents, ScopeChips, ScopeEditor, TaskSearchHits, TasksPanel, type TasksApi } from "./CollabUi";

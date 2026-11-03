@@ -22,11 +22,16 @@ import {
 } from "../holochain/webLink";
 import { parcelZome, webBridgeGetParcel } from "../holochain/delivery";
 import { fileStorageZome, webBridgeGetFile } from "../holochain/fileStorage";
-import { hasConductor, initClient } from "../holochain/client";
+import { getMyPubKey, hasConductor, initClient } from "../holochain/client";
+import { formatAgentFingerprint } from "../crypto/identityFingerprint";
 import { reportReceipt } from "../transfer/receipt";
 import type { ParcelOutput } from "../holochain/types";
 
 type RxState = "idle" | "found" | "locked" | "downloading" | "done" | "error";
+
+interface Props {
+  initialPayload?: string;
+}
 
 /** A password-protected transfer waiting to be unlocked. */
 type LockedSource =
@@ -63,7 +68,7 @@ function parseMagicInput(
   return { parcelEhB64, keyMaterial, receiptId };
 }
 
-export default function ReceivePanel() {
+export default function ReceivePanel({ initialPayload }: Props = {}) {
   const { t } = useTranslation();
   const units = [t("size.b"), t("size.kb"), t("size.mb"), t("size.gb"), t("size.tb")];
 
@@ -78,6 +83,8 @@ export default function ReceivePanel() {
   const [webLinkName, setWebLinkName] = useState("");
   const [webLinkSize, setWebLinkSize] = useState(0);
   const [doneName, setDoneName] = useState("");
+  const [senderFingerprint, setSenderFingerprint] = useState("");
+  const [receiverFingerprint, setReceiverFingerprint] = useState("");
 
   // Password unlock state
   const [locked, setLocked] = useState<LockedSource | null>(null);
@@ -104,22 +111,17 @@ export default function ReceivePanel() {
   };
 
   useEffect(() => {
-    const hash = window.location.hash.slice(1);
+    const hash = initialPayload ?? window.location.hash.slice(1);
     // Self-contained web link (#sl=... / #slp=...): decrypt locally, no conductor needed.
     if (hash.startsWith("sl=") || hash.startsWith("slp=")) {
       resolveWebLink(hash);
       return;
     }
-    if (!hash.includes(":")) return;
-    const [parcelEhB64, keyMaterial, ridSeg] = hash.split(":");
-    if (!parcelEhB64 || !keyMaterial) return;
-    const receiptId =
-      ridSeg && ridSeg.startsWith("r.") && /^[A-Za-z0-9_-]{10,64}$/.test(ridSeg.slice(2))
-        ? ridSeg.slice(2)
-        : undefined;
-    resolveFromUrl(parcelEhB64, keyMaterial, receiptId);
+    const parsed = parseMagicInput(hash);
+    if (!parsed) return;
+    resolveFromUrl(parsed.parcelEhB64, parsed.keyMaterial, parsed.receiptId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialPayload]);
 
   const resolveWebLink = async (fragment: string) => {
     setState("idle");
@@ -161,6 +163,8 @@ export default function ReceivePanel() {
   ) => {
     setState("idle");
     setErrMsg("");
+    setSenderFingerprint("");
+    setReceiverFingerprint("");
     try {
       await initClient();
       setPct(10);
@@ -218,6 +222,16 @@ export default function ReceivePanel() {
 
       setParcel(result);
       setAesKey(key);
+      try {
+        setSenderFingerprint(await formatAgentFingerprint(result.manifest.sender));
+      } catch {
+        setSenderFingerprint("");
+      }
+      try {
+        setReceiverFingerprint(await formatAgentFingerprint(await getMyPubKey()));
+      } catch {
+        setReceiverFingerprint("");
+      }
       reportOpenOnce(receiptId);
       setState("found");
       setPct(0);
@@ -259,6 +273,16 @@ export default function ReceivePanel() {
         const key = await importAesKey(raw);
         setParcel(locked.parcel);
         setAesKey(key);
+        try {
+          setSenderFingerprint(await formatAgentFingerprint(locked.parcel.manifest.sender));
+        } catch {
+          setSenderFingerprint("");
+        }
+        try {
+          setReceiverFingerprint(await formatAgentFingerprint(await getMyPubKey()));
+        } catch {
+          setReceiverFingerprint("");
+        }
         reportOpenOnce(locked.receiptId);
         setLocked(null);
         setPassword("");
@@ -526,6 +550,41 @@ export default function ReceivePanel() {
         )}
 
         <div className="info-box">🔒 {t("receive.aesInHash")}</div>
+
+        {senderFingerprint && parcel && (
+          <div
+            role="group"
+            aria-label={t("receive.identityHeading")}
+            style={{
+              display: "grid",
+              gap: ".45rem",
+              margin: ".8rem 0",
+              padding: ".8rem .9rem",
+              borderRadius: "12px",
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+            }}
+          >
+            <strong style={{ fontSize: ".82rem" }}>{t("receive.identityHeading")}</strong>
+            <div>
+              <div style={{ fontSize: ".7rem", color: "var(--muted)" }}>{t("receive.senderFingerprint")}</div>
+              <code style={{ fontSize: ".75rem", letterSpacing: ".05em", wordBreak: "break-word" }}>
+                {senderFingerprint}
+              </code>
+            </div>
+            {receiverFingerprint && (
+              <div>
+                <div style={{ fontSize: ".7rem", color: "var(--muted)" }}>{t("receive.yourFingerprint")}</div>
+                <code style={{ fontSize: ".75rem", letterSpacing: ".05em", wordBreak: "break-word" }}>
+                  {receiverFingerprint}
+                </code>
+              </div>
+            )}
+            <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>
+              {t("receive.identityHint")}
+            </div>
+          </div>
+        )}
 
         <button
           className="btn-success btn-full"

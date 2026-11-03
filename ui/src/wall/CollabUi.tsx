@@ -7,7 +7,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { SCOPE_DEFAULT, TASK_TEXT_MAX, TERMINAL_STATES, scopeName, type AgentScope, type Task, type TaskKind } from "./collab";
 import type { Member } from "./feed";
-import { Hl } from "./Markup";
+import { Hl } from "./MarkupUi";
 
 type Patch = import("./collab").TaskPatch;
 

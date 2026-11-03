@@ -18,7 +18,8 @@ import { newReceiptId } from "./receipt";
 import { identityZome } from "../holochain/identity";
 import { fileStorageZome } from "../holochain/fileStorage";
 import { parcelZome } from "../holochain/delivery";
-import { canWrite, initClient } from "../holochain/client";
+import { canWrite, getMyPubKey, initClient } from "../holochain/client";
+import { formatAgentFingerprint } from "../crypto/identityFingerprint";
 
 const CHUNK_SIZE = 256 * 1024;
 
@@ -51,6 +52,9 @@ export interface SendTransferResult {
   passwordProtected?: boolean;
   /** Opaque delivery-receipt id embedded in the link (optional). */
   receiptId?: string;
+  /** Comparable fingerprints for the sender and resolved recipient. */
+  senderFingerprint: string;
+  recipientFingerprint: string | null;
 }
 
 export function isValidContact(v: string): boolean {
@@ -92,6 +96,10 @@ export async function sendTransfer(input: SendTransferInput): Promise<SendTransf
   progress(5, "send.progressResolve");
   const contactHash = await hashContact(recipient);
   const recipientAgent = await identityZome.getAgentForContact(contactHash);
+  const senderFingerprint = await formatAgentFingerprint(await getMyPubKey());
+  const recipientFingerprint = recipientAgent
+    ? await formatAgentFingerprint(recipientAgent)
+    : null;
 
   progress(12, "send.progressAes");
   const aesKey = await generateAesKey();
@@ -178,5 +186,7 @@ export async function sendTransfer(input: SendTransferInput): Promise<SendTransf
     code: deriveShortCode(parcelEhB64),
     passwordProtected: !!input.password,
     receiptId,
+    senderFingerprint,
+    recipientFingerprint,
   };
 }

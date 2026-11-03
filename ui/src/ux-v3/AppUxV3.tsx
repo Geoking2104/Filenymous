@@ -12,7 +12,9 @@ import RoomEntry from "./components/RoomEntry";
 import BottomDock from "./components/BottomDock";
 import SecondaryDrawer from "./components/SecondaryDrawer";
 import RoomPanel from "../components/RoomPanel";
+import ReceivePanel from "../components/ReceivePanel";
 import type { DrawerId, PrimaryMode, RoomKind } from "./types";
+import type { SendWorkspaceStatus } from "./components/SendWorkspace";
 import { parseShareInput } from "../p2p/protocol";
 import "./styles/ux-v3.css";
 
@@ -21,6 +23,8 @@ export default function AppUxV3() {
   const [mode, setMode] = useState<PrimaryMode>("send");
   const [drawer, setDrawer] = useState<DrawerId>(null);
   const [roomActive, setRoomActive] = useState(false);
+  const [sendStatus, setSendStatus] = useState<SendWorkspaceStatus | null>(null);
+  const [magicPayload, setMagicPayload] = useState("");
 
   useEffect(() => {
     if (!drawer) return;
@@ -33,6 +37,10 @@ export default function AppUxV3() {
 
   useEffect(() => {
     if (mode !== "room") setRoomActive(false);
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode === "send") setSendStatus(null);
   }, [mode]);
 
   const hero =
@@ -77,7 +85,12 @@ export default function AppUxV3() {
     // A bare one-time code (123-456-ABC) or a p2p: fragment → live direct transfer.
     const direct = !value.includes("=") ? parseShareInput(value) : null;
     if (direct) value = `p2p:${direct.code}${direct.secret ? `/${direct.secret}` : ""}`;
-    window.location.hash = value;
+    if (value.startsWith("p2p:")) {
+      window.location.hash = value;
+      return;
+    }
+    setMagicPayload(value);
+    setMode("receive");
   };
 
   return (
@@ -101,9 +114,26 @@ export default function AppUxV3() {
 
         <ModeSwitcher mode={mode} onChange={setMode} />
 
-        <section className="v3-workspace" key={mode + String(roomActive)}>
-          {mode === "send" && <SendWorkspace />}
-          {mode === "receive" && <ReceiveWorkspace onOpen={openMagicLink} />}
+        <section className="v3-workspace">
+          <div style={{ display: mode === "send" ? undefined : "none" }} aria-hidden={mode !== "send"}>
+            <SendWorkspace onTransferStatusChange={setSendStatus} />
+          </div>
+          {mode === "receive" &&
+            (magicPayload ? (
+              <div>
+                <button
+                  type="button"
+                  className="v3-btn-ghost"
+                  style={{ marginBottom: ".8rem" }}
+                  onClick={() => setMagicPayload("")}
+                >
+                  {t("ux.receiveBack")}
+                </button>
+                <ReceivePanel initialPayload={magicPayload} />
+              </div>
+            ) : (
+              <ReceiveWorkspace onOpen={openMagicLink} />
+            ))}
           {mode === "room" && !roomActive && (
             <RoomEntry onEnter={(_kind: RoomKind) => setRoomActive(true)} />
           )}
@@ -113,6 +143,37 @@ export default function AppUxV3() {
             </div>
           )}
         </section>
+        {mode !== "send" && sendStatus && (
+          <aside
+            role="status"
+            aria-live="polite"
+            style={{
+              marginTop: ".75rem",
+              padding: ".8rem 1rem",
+              border: "1px solid var(--v3-border)",
+              borderRadius: "14px",
+              background: "var(--v3-surface)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: ".75rem", alignItems: "center" }}>
+              <span style={{ fontSize: ".84rem" }}>
+                {sendStatus.active
+                  ? t("ux.sendContinues")
+                  : sendStatus.outcome === "complete"
+                    ? t("ux.sendFinishedAway", { code: sendStatus.code ?? "" })
+                    : t("ux.sendFailedAway")}
+              </span>
+              <button type="button" className="v3-btn-ghost" onClick={() => setMode("send")}>
+                {t("ux.sendReturn")}
+              </button>
+            </div>
+            {sendStatus.active && (
+              <div className="v3-progress" style={{ marginTop: ".55rem" }}>
+                <div className="v3-progress-fill" style={{ width: `${sendStatus.pct}%` }} />
+              </div>
+            )}
+          </aside>
+        )}
       </main>
 
       <BottomDock active={drawer} onOpen={setDrawer} />

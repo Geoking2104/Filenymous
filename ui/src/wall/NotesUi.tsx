@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { confirmDialog } from "../home/confirmLeave";
-import { Hl, Markup } from "./Markup";
+import { Hl, Markup } from "./MarkupUi";
 import type { MentionTarget } from "./markup";
 import { NOTE_MAX_BYTES, NOTE_TITLE_MAX, utf8Bytes, type NoteLock, type SharedNote } from "./notes";
 import { matchSnippet } from "./search-annotations";
