@@ -77,6 +77,10 @@ pub fn get_agent_for_contact(contact_hash: String) -> ExternResult<Option<AgentP
                             )))
                         })?
                         .ok_or_else(|| wasm_error!(WasmErrorInner::Guest("Empty entry".into())))?;
+                    // Defence in depth: the claim must be authored by the agent it names.
+                    if record.action().author() != &claim.agent {
+                        return Ok(None);
+                    }
                     Ok(Some(claim.agent))
                 }
             }
@@ -171,7 +175,7 @@ pub fn get_x25519_key(agent: AgentPubKey) -> ExternResult<Option<String>> {
     use base64::{engine::general_purpose::STANDARD, Engine as _};
 
     let links = get_links(
-        LinkQuery::try_new(agent, LinkTypes::AgentToX25519Key)?,
+        LinkQuery::try_new(agent.clone(), LinkTypes::AgentToX25519Key)?,
         GetStrategy::default(),
     )?;
 
@@ -194,6 +198,11 @@ pub fn get_x25519_key(agent: AgentPubKey) -> ExternResult<Option<String>> {
                             wasm_error!(WasmErrorInner::Guest(format!("Deserialise: {e}")))
                         })?
                         .ok_or_else(|| wasm_error!(WasmErrorInner::Guest("Empty entry".into())))?;
+                    // Defence in depth (also enforced by validation): only a key
+                    // the agent published itself, never one planted by someone else.
+                    if key_entry.agent != agent || record.action().author() != &agent {
+                        return Ok(None);
+                    }
                     Ok(Some(STANDARD.encode(&key_entry.x25519_pubkey)))
                 }
             }

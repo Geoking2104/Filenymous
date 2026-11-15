@@ -20,6 +20,10 @@ members = [
   # Le build produit les WASM référencés dans dna.yaml
   "dnas/filenymous/zomes/extern/file_storage_stub",
   "dnas/filenymous/zomes/extern/delivery_stub",
+  # ── Tests uniquement : zomes « attaquants » pour prouver la validation ─────
+  # (jamais dans dnas/filenymous/dna.yaml ; voir dnas/filenymous/tests/)
+  "dnas/filenymous/tests/zomes/attacker_identity",
+  "dnas/filenymous/tests/zomes/attacker_parcel",
 ]
 
 # ── Dépendances workspace partagées ──────────────────────────────────────────

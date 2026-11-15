@@ -24,6 +24,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
+name = "attacker_identity"
+version = "0.1.0"
+dependencies = [
+ "hdk",
+ "identity_integrity",
+ "serde",
+]
+
+[[package]]
+name = "attacker_parcel"
+version = "0.1.0"
+dependencies = [
+ "hdk",
+ "parcel_integrity",
+ "serde",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
