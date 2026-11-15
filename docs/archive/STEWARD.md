@@ -35,7 +35,7 @@ jusqu'à leur expiration.
 
 ## 2. Ce que fait un nœud gardien Filenymous
 
-1. Rejoint le réseau public (`network_seed: "filenymous-mainnet-v2"`) via le
+1. Rejoint le réseau public (`network_seed: "filenymous-mainnet-v3"`) via le
    bootstrap/signal décrit dans [`network/README.md`](../network/README.md).
 2. Reste connecté en permanence (VPS) → il valide et **stocke durablement**
    les ops qu'il reçoit par gossip (métadonnées + chunks).

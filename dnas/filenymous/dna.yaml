@@ -5,8 +5,20 @@ integrity:
   # network_seed stable — tous les nœuds publics rejoignent le même réseau DHT.
   # Modifier pour créer un réseau de test isolé (staging).
   # ATTENTION : tout changement en prod crée un fork réseau.
-  network_seed: "filenymous-mainnet-v2"
-  properties: ~
+  # v3 (2026-11) : coupure unique = correctifs d'intégrité + properties.
+  # Voir docs/NETWORK_V3_MIGRATION.md.
+  network_seed: "filenymous-mainnet-v3"
+  # Requis par delivery_integrity::genesis_self_check (DeliveryProperties,
+  # camelCase). Sans elles, la genesis échoue ("No properties") et le hApp
+  # ne s'installe pas. Valeurs validées : chunk > 0, parcel >= chunk,
+  # 0 < min <= max pour le nom. Elles ne concernent que les entrées du zome
+  # delivery (ParcelDescription / ParcelChunk) ; les chunks Filenymous
+  # (256 KiB, file_storage) ne sont pas limités par elles.
+  properties:
+    maxParcelSize: 1073741824     # 1 GiB
+    maxChunkSize: 1048576         # 1 MiB
+    maxParcelNameLength: 255
+    minParcelNameLength: 1
   zomes:
     # ── Identité (custom) ───────────────────────────────────────────────────
     - name: identity_integrity

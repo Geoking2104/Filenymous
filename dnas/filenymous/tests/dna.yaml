@@ -9,9 +9,9 @@ integrity:
   # ATTENTION : tout changement en prod crée un fork réseau.
   network_seed: "filenymous-validation-tests"
   # The delivery zome's genesis_self_check requires these properties
-  # (dnas/filenymous/dna.yaml has `properties: ~`, see the PR notes).
+  # (same values as dnas/filenymous/dna.yaml).
   properties:
-    maxParcelSize: 104857600
+    maxParcelSize: 1073741824
     maxChunkSize: 1048576
     maxParcelNameLength: 255
     minParcelNameLength: 1
