@@ -2,7 +2,7 @@
 manifest_version: "0"
 name: agent_vault
 integrity:
-  # Separate network from filenymous-mainnet-v2: this DNA only holds PRIVATE
+  # Separate network from filenymous-mainnet-v3: this DNA only holds PRIVATE
   # entries (nothing is published but actions), so it never forks the main
   # Filenymous DHT. Change the seed to create an isolated staging network.
   network_seed: "filenymous-agent-vault-v1"

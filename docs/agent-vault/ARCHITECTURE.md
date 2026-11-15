@@ -67,7 +67,7 @@ offline mailbox, OS-keychain storage of agent keys, audit export, Playwright e2e
 | Item categories | `login`, `note`, `api_key`, `file`; roles `reader/editor/admin`; `ShareGrant{peerId, role, expiresAt}` | `ui/src/safe/types.ts` |
 | Sharing | `fny-safe-v1` WebRTC DataChannel, signed envelope (ephemeral X25519 → HKDF → AES-GCM, Ed25519 signature), relay = Sharewall "wall" rooms; **both vaults must be online** | `ui/src/safe/transport.ts`, `docs/VAULT.md` |
 | Roles/expiry | **Client-enforced**, explicitly not cryptographic; revocation does not un-share | `docs/VAULT.md` "Not protected against" |
-| Holochain DNA | `dnas/filenymous/dna.yaml`: zomes `identity`, `room`, `file_storage` (holochain-open-dev), `delivery` (ddd-mtl), `parcel`; `network_seed: filenymous-mainnet-v2` | `dnas/filenymous/dna.yaml` |
+| Holochain DNA | `dnas/filenymous/dna.yaml`: zomes `identity`, `room`, `file_storage` (holochain-open-dev), `delivery` (ddd-mtl), `parcel`; `network_seed: filenymous-mainnet-v3` | `dnas/filenymous/dna.yaml` |
 | Legacy zomes | `storage`, `transfer` (+ integrity) exist in the tree but are **not** in `dna.yaml` nor the workspace members | `Cargo.toml` members, `dna.yaml` |
 | Identity zome | `ContactClaim`, `AgentX25519Key` (public), `publish_x25519_key`, `get_x25519_key` | `dnas/filenymous/zomes/{integrity/identity_integrity,coordinator/identity}/src/lib.rs` |
 | Validation quality | Create/Update checked (author == field); **Delete / DeleteLink ops fall through to `Valid`**; `DownloadRecord.downloader` not checked against author | `identity_integrity/src/lib.rs` L51-87, `parcel_integrity/src/lib.rs` L88-162 |
@@ -150,7 +150,7 @@ Cargo.toml                       + 2 workspace members
 dnas/filenymous/dna.yaml         + integrity zome agent_vault_integrity, coordinator agent_vault (deps: agent_vault_integrity, identity_integrity)
 ```
 
-⚠ **Adding an integrity zome changes the DNA hash** → it is a **network fork** of `filenymous-mainnet-v2`
+⚠ **Adding an integrity zome changes the DNA hash** → it is a **network fork** of `filenymous-mainnet-v3`
 (the comment in `dna.yaml` already warns about `network_seed`; the same applies to integrity code). Options:
 (a) ship it as a **separate DNA in its own installed app** (`filenymous-agent-vault`, decided in v1; recommended: isolates the fork, private-only data,
 no DHT dependency), or (b) bundle it with the next planned DNA migration. This doc assumes **(a)**: a separate app

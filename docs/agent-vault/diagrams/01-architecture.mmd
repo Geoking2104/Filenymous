@@ -28,5 +28,5 @@ flowchart LR
 
   CLI -- "A. local: signed zome call<br/>agent_vault.fetch_bundle<br/>(cap secret + signing key)" --> HC
   REMOTE["Remote agent conductor<br/>(own AgentPubKey)"] -- "B. remote: call_remote<br/>with Assigned cap secret" --> HC
-  HC <-. "DHT gossip (kitsune2)<br/>public: AgentX25519Key only" .-> NET(("Filenymous DHT<br/>filenymous-mainnet-v2"))
+  HC <-. "DHT gossip (kitsune2)<br/>public: AgentX25519Key only" .-> NET(("Filenymous DHT<br/>filenymous-mainnet-v3"))
   MCP -- "list_configs / list_tokens<br/>(no secret values)" --> HC

@@ -38,7 +38,7 @@ gantt
 | # | Task | Output / exit criteria |
 |---|---|---|
 | 0.1 | Reconcile the working documents with ARCHITECTURE.md §9 | List of agreed changes; doc v2 |
-| 0.2 | Decide DNA strategy: **separate DNA + separate installed app** (chosen) vs. adding zomes to `filenymous` DNA (forks `filenymous-mainnet-v2`) | ADR committed under `docs/` |
+| 0.2 | Decide DNA strategy: **separate DNA + separate installed app** (chosen) vs. adding zomes to `filenymous` DNA (forks `filenymous-mainnet-v3`) | ADR committed under `docs/` |
 | 0.3 | Spike: in-zome `create_cap_grant(Assigned)` + client-signed zome call from a separate Node process using `@holochain/client` 0.20 signing credentials on HC 0.6.1 | Passing throwaway Tryorama test |
 | 0.4 | Spike: `fetch_bundle` denial persistence (return `Ok(Denied)` vs `Err` rollback) | Decision recorded |
 | 0.5 | Confirm whether Holo Web Conductor can host grants for external callers (expected: no) | Product copy: "requires desktop/local node" |
