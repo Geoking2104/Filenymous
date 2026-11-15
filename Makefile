@@ -14,6 +14,7 @@
 #   make build-dna      → pack les DNA (filenymous + agent_vault)
 #   make build-agent-vault-dna → compile + pack le seul DNA agent_vault
 #   make test-agent-vault      → tests unitaires + Sweettest de l'Agent Vault
+#   make test-validation → règles de validation (unitaires + Sweettest)
 #   make build-happ     → pack les hApps (filenymous + filenymous-agent-vault, installée à part)
 #   make build-ui       → build l'UI React
 #   make build-webhapp  → bundle .webhapp pour Holo Host
@@ -45,7 +46,7 @@ VITE_WEB_BRIDGE_URL ?= https://filenymous.holo.host/web-bridge
 VITE_APP_ID         ?= filenymous
 
 .PHONY: all build-external-zomes copy-external-zomes build-wasm build-dna build-happ \
-        build-ui build-webhapp pouch kangaroo kangaroo-dev release \
+        build-ui build-webhapp pouch kangaroo kangaroo-dev release test-validation \
         build-agent-vault-dna test-agent-vault \
         tests check clean dev dev-ui upload-holo
 
@@ -97,6 +98,14 @@ build-agent-vault-dna:
 test-agent-vault: build-agent-vault-dna
 	cargo test -p agent_vault_integrity
 	cd $(AGENT_VAULT_DNA)/tests/sweettest && cargo test --release
+
+# ── 2b. Tests de validation (Sweettest, conducteur 0.6.1 natif) ──────────────
+# DNA de test = zomes réels + 2 coordinateurs « attaquants » (tests uniquement).
+test-validation: build-wasm
+	mkdir -p $(WORKDIR)
+	hc dna pack dnas/filenymous/tests -o $(WORKDIR)/filenymous_validation_tests.dna
+	cargo test -p identity_integrity -p parcel_integrity
+	cd dnas/filenymous/tests/sweettest && cargo test --release
 
 # ── 3. Pack du hApp ───────────────────────────────────────────────────────────
 build-happ: build-dna

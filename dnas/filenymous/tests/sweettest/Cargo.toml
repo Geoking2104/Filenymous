@@ -1,0 +1,17 @@
+[package]
+name = "filenymous_validation_sweettest"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Standalone (not a member of the WASM workspace): it links the native
+# Holochain 0.6.1 conductor. Run: `make test-validation` from the repo root.
+[workspace]
+
+# Zome crates are NOT linked natively (several zomes in one binary clash on
+# their exported wasm symbols): the payload types are mirrored in the test.
+[dev-dependencies]
+holochain = { version = "=0.6.1", default-features = false, features = ["sweettest", "wasmer_sys", "transport-iroh"] }
+hdk = "=0.6.1"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }

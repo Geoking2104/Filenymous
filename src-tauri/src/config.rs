@@ -24,7 +24,8 @@ pub const PASSWORD: &str = "filenymous-lair-v1";
 /// Network seed partagé par tous les utilisateurs Filenymous.
 /// Modifier = fork du réseau (les données ne sont plus accessibles à l'ancienne seed).
 /// None = pas de seed (DHT global).
-pub const DEFAULT_NETWORK_SEED: Option<&str> = Some("filenymous-mainnet-v1");
+/// Doit rester égale à `network_seed` de dnas/filenymous/dna.yaml.
+pub const DEFAULT_NETWORK_SEED: Option<&str> = Some("filenymous-mainnet-v3");
 
 /// Serveur de signalisation WebRTC (kitsune2)
 pub const SIGNALING_SERVER: &str = "wss://signal.holo.host";

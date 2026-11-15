@@ -41,6 +41,13 @@ jobs:
             make --version | head -n 1
           '
 
+      - name: Check network seed consistency (DNA vs desktop)
+        run: |
+          dna=$(sed -n 's/^ *network_seed: *"\(.*\)".*/\1/p' dnas/filenymous/dna.yaml)
+          desk=$(sed -n 's/.*DEFAULT_NETWORK_SEED.*Some("\(.*\)").*/\1/p' src-tauri/src/config.rs)
+          echo "dna.yaml=$dna src-tauri=$desk"
+          test -n "$dna" && test "$dna" = "$desk"
+
       - name: Check Rust formatting
         run: nix develop -L --command cargo fmt --all -- --check
 
