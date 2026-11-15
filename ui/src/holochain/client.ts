@@ -4,7 +4,6 @@ import { modeCapabilities, type HoloRuntimeClient, type RuntimeMode } from "./ru
 declare const __HC_URL__: string;
 declare const __WEB_BRIDGE_URL__: string;
 declare const __HWC_LINKER_URL__: string;
-declare const __APP_ID__: string;
 
 const ROLE = "filenymous";
 const WS_TIMEOUT_MS = 3_000;
@@ -95,10 +94,10 @@ export async function createHoloWebRuntime(
   return {
     mode: "holo-web",
     ...caps,
-    callZome<T>(zomeName: string, fnName: string, payload: unknown = null, timeoutMs = ZOME_TIMEOUT, roleName = ROLE) {
+    callZome<T>(zomeName: string, fnName: string, payload: unknown = null, timeoutMs = ZOME_TIMEOUT) {
       return hwc.callZome(
         {
-          role_name: roleName,
+          role_name: ROLE,
           zome_name: zomeName,
           fn_name: fnName,
           payload,
@@ -175,10 +174,10 @@ async function createWebsocketRuntime(): Promise<HoloRuntimeClient> {
   return {
     mode: "websocket",
     ...caps,
-    callZome<T>(zomeName: string, fnName: string, payload: unknown = null, timeoutMs = ZOME_TIMEOUT, roleName = ROLE) {
+    callZome<T>(zomeName: string, fnName: string, payload: unknown = null, timeoutMs = ZOME_TIMEOUT) {
       return client.callZome(
         {
-          role_name: roleName,
+          role_name: ROLE,
           zome_name: zomeName,
           fn_name: fnName,
           payload,
@@ -310,31 +309,6 @@ export async function callZome<T>(
   }
 
   return _client.callZome<T>(zome_name, fn_name, payload, timeoutMs);
-}
-
-/**
- * Zome call on another role of the hApp (e.g. "agent_vault"). Requires a real
- * conductor reachable over the app websocket (`websocket` mode): the Agent
- * Vault must be reachable by an external runner process, which the Holo Web
- * Conductor and the Web Bridge cannot provide.
- */
-export async function callRoleZome<T>(
-  role_name: string,
-  zome_name: string,
-  fn_name: string,
-  payload: unknown = null,
-  timeoutMs?: number,
-): Promise<T> {
-  if (_mode === "detecting") await initClient();
-  if (!_client || _client.mode !== "websocket") {
-    throw new Error(`callRoleZome("${role_name}") requiert un conducteur Holochain local (mode websocket).`);
-  }
-  return _client.callZome<T>(zome_name, fn_name, payload, timeoutMs, role_name);
-}
-
-/** App websocket URL and installed app id of the local conductor (for agent token files). */
-export function conductorEndpoint(): { appUrl: string; installedAppId: string } {
-  return { appUrl: __HC_URL__, installedAppId: __APP_ID__ };
 }
 
 export async function webBridgeGet<T>(path: string): Promise<T> {

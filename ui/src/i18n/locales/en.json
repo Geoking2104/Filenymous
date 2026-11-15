@@ -1658,8 +1658,8 @@
     "agents": {
       "title": "Agents (AI credentials)",
       "intro": "Give each AI coding agent its own scoped, read-only, expiring set of credentials. Values are sealed to the agent's key inside this vault and injected into the agent process at launch; they are never written to files.",
-      "limits": "Requires the Filenymous desktop app or a local node (?node=local), and this device must be online when the agent starts. Revoking stops future reads only: rotate the upstream key if an agent may have leaked it.",
-      "needsNode": "Agent credentials need the Filenymous desktop app or a local node, so that the agent runner can reach this vault. Open the app with ?node=local on a machine that runs a node.",
+      "limits": "Requires the Filenymous desktop app or your own node with the Agent Vault app installed, and this device must be online when the agent starts. Revoking stops future reads only: rotate the upstream key if an agent may have leaked it.",
+      "needsNode": "Agent credentials need the Filenymous desktop app (which installs the separate “Agent Vault” app) or your own local node with the Agent Vault app installed, so that the agent runner can reach this vault.",
       "newConfig": "New agent config",
       "configName": "Name",
       "pickItem": "Choose an item…",

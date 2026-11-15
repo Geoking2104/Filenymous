@@ -18,9 +18,12 @@ pub const ALLOWED_ALGS: &[&str] = &[ALG_X25519_HKDF_AESGCM];
 pub const APPEND_ONLY: &str = "agent_vault entries are append-only (no update / delete)";
 pub const NO_LINKS: &str = "agent_vault defines no link types (links are public)";
 
+/// Prefix of every agent-token capability grant tag.
+pub const AGENT_TAG_PREFIX: &str = "fny-agent:";
+
 /// `fny-agent:<token_id>` — binds a capability grant to exactly one token.
 pub fn grant_tag(token_id: &str) -> String {
-    format!("fny-agent:{token_id}")
+    format!("{AGENT_TAG_PREFIX}{token_id}")
 }
 
 /// 16..=64 chars of base64url alphabet.

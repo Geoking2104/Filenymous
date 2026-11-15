@@ -101,7 +101,7 @@ export function Agents() {
         <section className="cf-sec" data-testid="cf-agents-token">
           <h2 className="cf-h3">{t("safe.agents.tokenOnce", { label: shown.label })}</h2>
           <p className="sw-small">{t("safe.agents.tokenHelp")}</p>
-          <textarea readOnly className="cf-input" rows={3} value={shown.file} onFocus={(e) => e.currentTarget.select()} />
+          <textarea readOnly className="cf-input" rows={3} value={shown.file} data-testid="cf-agents-token-value" onFocus={(e) => e.currentTarget.select()} />
           <pre className="sw-small">{`FNY_AGENT_TOKEN='…' npx filenymous vault run -- <agent command>`}</pre>
           <button type="button" className="pz-btn" onClick={() => { void navigator.clipboard?.writeText(shown.file); toast(t("safe.agents.copied"), "ok"); }}>{t("safe.copy")}</button>{" "}
           <button type="button" className="pz-btn pz-btn-ghost" onClick={() => setShown(null)}>{t("safe.close")}</button>
@@ -113,7 +113,7 @@ export function Agents() {
         {tokens.length === 0 ? <p className="sw-small">{t("safe.agents.noTokens")}</p> : (
           <ul className="cf-sec-list">
             {tokens.map((tk) => (
-              <li key={tk.token_id}>
+              <li key={tk.token_id} data-testid="cf-agents-token-row">
                 <strong>{tk.label || tk.token_id.slice(0, 8)}</strong>{" "}
                 <small>
                   {tk.revoked ? t("safe.agents.stRevoked") : tk.expired ? t("safe.agents.stExpired") : t("safe.agents.stActive")}
@@ -138,7 +138,7 @@ export function Agents() {
         {audit.length === 0 ? <p className="sw-small">{t("safe.agents.noAudit")}</p> : (
           <ul className="cf-sec-list">
             {audit.map((a) => (
-              <li key={a.action_seq}>
+              <li key={a.action_seq} data-testid={`cf-agents-audit-${a.event.kind.type}`}>
                 <small>#{a.action_seq} {fmt(a.event.at)}</small>{" "}
                 <strong>{t(`safe.agents.kind.${a.event.kind.type}`)}</strong>
                 {a.event.kind.type === "Denied" && <small className="cf-warn-text"> ({a.event.kind.reason})</small>}{" "}
@@ -172,22 +172,22 @@ function ConfigForm({ items, onCreated }: { items: ItemSummary[]; onCreated: () 
   return (
     <details className="cf-sec" data-testid="cf-agents-config">
       <summary className="cf-h3">{t("safe.agents.newConfig")}</summary>
-      <label className="sw-small">{t("safe.agents.configName")} <input className="cf-input" value={name} maxLength={64} onChange={(e) => setName(e.target.value)} /></label>
+      <label className="sw-small">{t("safe.agents.configName")} <input className="cf-input" value={name} maxLength={64} onChange={(e) => setName(e.target.value)} data-testid="cf-agents-config-name" /></label>
       {rows.map((r, i) => (
         <div key={i} className="cf-row">
-          <select className="cf-input" value={r.itemId} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, itemId: e.target.value } : x)))}>
+          <select className="cf-input" data-testid={`cf-agents-row-item-${i}`} value={r.itemId} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, itemId: e.target.value } : x)))}>
             <option value="">{t("safe.agents.pickItem")}</option>
             {items.map((it) => <option key={it.id} value={it.id}>{it.title}</option>)}
           </select>
-          <select className="cf-input" value={r.field} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, field: e.target.value as AgentEnvMapping["field"] } : x)))}>
+          <select className="cf-input" data-testid={`cf-agents-row-field-${i}`} value={r.field} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, field: e.target.value as AgentEnvMapping["field"] } : x)))}>
             {FIELDS.map((f) => <option key={f} value={f}>{t(`safe.agents.field.${f}`)}</option>)}
           </select>
-          <input className="cf-input" placeholder="GITHUB_TOKEN" value={r.env} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, env: e.target.value.toUpperCase() } : x)))} />
+          <input className="cf-input" data-testid={`cf-agents-row-env-${i}`} placeholder="GITHUB_TOKEN" value={r.env} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, env: e.target.value.toUpperCase() } : x)))} />
           <button type="button" className="cf-link" onClick={() => setRows(rows.filter((_, j) => j !== i))}>✕</button>
         </div>
       ))}
-      <button type="button" className="pz-btn pz-btn-ghost" onClick={() => setRows([...rows, { itemId: "", field: "apiKey", env: "" }])}>{t("safe.agents.addVar")}</button>{" "}
-      <button type="button" className="pz-btn" disabled={!valid} onClick={() => void save().catch((e) => toast(String(e.message), "err"))}>{t("safe.save")}</button>
+      <button type="button" className="pz-btn pz-btn-ghost" onClick={() => setRows([...rows, { itemId: "", field: "apiKey", env: "" }])} data-testid="cf-agents-addvar">{t("safe.agents.addVar")}</button>{" "}
+      <button type="button" className="pz-btn" data-testid="cf-agents-config-save" disabled={!valid} onClick={() => void save().catch((e) => toast(String(e.message), "err"))}>{t("safe.save")}</button>
     </details>
   );
 }
@@ -234,7 +234,7 @@ function IssueForm({ configs, onIssued }: { configs: AgentConfigEntry[]; onIssue
         maxUses,
       });
       setCode("");
-      await onIssued(tokenFileFor(issued, label), label);
+      await onIssued(await tokenFileFor(issued, label), label);
     } finally {
       setBusy(false);
     }
@@ -245,11 +245,11 @@ function IssueForm({ configs, onIssued }: { configs: AgentConfigEntry[]; onIssue
       <summary className="cf-h3">{t("safe.agents.issue")}</summary>
       <p className="sw-small">{t("safe.agents.enrollHelp")}</p>
       <pre className="sw-small">npx filenymous vault enroll --name claude-ci</pre>
-      <label className="sw-small">{t("safe.agents.enrollCode")} <textarea className="cf-input" rows={2} value={code} onChange={(e) => setCode(e.target.value)} /></label>
+      <label className="sw-small">{t("safe.agents.enrollCode")} <textarea className="cf-input" rows={2} value={code} onChange={(e) => setCode(e.target.value)} data-testid="cf-agents-enroll-code" /></label>
       {code.trim() && !enrollment && <p className="sw-small cf-warn-text">{t("safe.agents.badCode")}</p>}
-      {fp && <p className="sw-small">{t("safe.agents.fingerprint", { fp })}</p>}
+      {fp && <p className="sw-small" data-testid="cf-agents-fp">{t("safe.agents.fingerprint", { fp })}</p>}
       <label className="sw-small">{t("safe.agents.config")}{" "}
-        <select className="cf-input" value={configId} onChange={(e) => setConfigId(e.target.value)}>
+        <select className="cf-input" data-testid="cf-agents-issue-config" value={configId} onChange={(e) => setConfigId(e.target.value)}>
           <option value="">—</option>
           {configs.map((c) => <option key={c.config_id} value={c.config_id}>{c.name}</option>)}
         </select>

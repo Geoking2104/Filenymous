@@ -1,7 +1,7 @@
 # Filenymous Agent Vault — Deployment plan
 
 > **Progress (2026-11-15):** Phases 1–3 are implemented in v1 (branch `feat/agent-vault`), with the defaults below
-> chosen for Phase 0: local conductor + owner node online; separate `agent_vault` DNA; denied fetches audited;
+> chosen for Phase 0: local conductor + owner node online; `agent_vault` DNA shipped as a **separate installed app** (`filenymous-agent-vault`, installed by the desktop shell on launch if missing); denied fetches audited;
 > TypeScript CLI runner only (no Rust runner yet). Phases 4–6 remain. See ARCHITECTURE.md §0.1.
 
 > **Original status: provisional.** The brief said "analyse the working documents and, if OK, write a deployment plan".
@@ -38,7 +38,7 @@ gantt
 | # | Task | Output / exit criteria |
 |---|---|---|
 | 0.1 | Reconcile the working documents with ARCHITECTURE.md §9 | List of agreed changes; doc v2 |
-| 0.2 | Decide DNA strategy: **new role `agent_vault`** (recommended) vs. adding zomes to `filenymous` DNA (forks `filenymous-mainnet-v2`) | ADR committed under `docs/` |
+| 0.2 | Decide DNA strategy: **separate DNA + separate installed app** (chosen) vs. adding zomes to `filenymous` DNA (forks `filenymous-mainnet-v2`) | ADR committed under `docs/` |
 | 0.3 | Spike: in-zome `create_cap_grant(Assigned)` + client-signed zome call from a separate Node process using `@holochain/client` 0.20 signing credentials on HC 0.6.1 | Passing throwaway Tryorama test |
 | 0.4 | Spike: `fetch_bundle` denial persistence (return `Ok(Denied)` vs `Err` rollback) | Decision recorded |
 | 0.5 | Confirm whether Holo Web Conductor can host grants for external callers (expected: no) | Product copy: "requires desktop/local node" |
@@ -51,7 +51,7 @@ or plan the HC 0.7 upgrade first (then `holochain_client` 0.9.x).
 
 | # | Task | Files |
 |---|---|---|
-| 1.1 | Scaffold `dnas/agent_vault/dna.yaml` (own `network_seed`), add role to `happ.yaml` / `web-happ.yaml` | `happ.yaml`, `web-happ.yaml`, `dnas/agent_vault/` |
+| 1.1 | Scaffold `dnas/agent_vault/dna.yaml` (own `network_seed`), own `happ.yaml` → separate installed app `filenymous-agent-vault` (done in v1) | `happ.yaml`, `web-happ.yaml`, `dnas/agent_vault/` |
 | 1.2 | Integrity zome: private entry types `AgentConfig`, `SealedBundle`, `AgentToken`, `TokenRevocation`, `AccessEvent`; validation (TTL ≤ 30 d, sizes, append-only, `agent_key != author`) | `dnas/agent_vault/zomes/integrity/agent_vault_integrity/` |
 | 1.3 | Coordinator: `create_agent_config`, `list_agent_configs`, `issue_agent_token`, `rotate_config_bundle`, `revoke_agent_token`, `list_agent_tokens`, `list_access_events`, `export_audit`, `fetch_bundle`, `token_status` | `dnas/agent_vault/zomes/coordinator/agent_vault/` |
 | 1.4 | Workspace + build: `Cargo.toml` members, `Makefile` targets, CI build of the new WASM / `.happ` | `Cargo.toml`, `Makefile`, `.github/workflows/*` |

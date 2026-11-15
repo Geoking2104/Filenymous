@@ -5,6 +5,10 @@ pub const APP_NAME: &str = "Filenymous";
 /// Modifier = breaking change (les données existantes ne sont plus accessibles).
 pub const APP_ID: &str = "filenymous";
 
+/// App ID de l'Agent Vault, installée À PART (dnas/agent_vault/happ.yaml) :
+/// son DNA a son propre network seed (dna.yaml), le hApp principal est inchangé.
+pub const AGENT_VAULT_APP_ID: &str = "filenymous-agent-vault";
+
 /// Titre de la fenêtre principale
 pub const WINDOW_TITLE: &str = "Filenymous";
 

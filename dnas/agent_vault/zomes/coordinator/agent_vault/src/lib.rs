@@ -127,9 +127,26 @@ fn guest(msg: impl Into<String>) -> WasmError {
     wasm_error!(WasmErrorInner::Guest(msg.into()))
 }
 
+/// Owner-only functions accept:
+/// * the chain author (desktop app: calls signed by the owner's own key), or
+/// * a signing key the owner delegated through the conductor's admin API
+///   (`grant_zome_call_capability` / `authorizeSigningCredentials`, as a
+///   browser client on the owner's machine does): an **Assigned** grant that is
+///   not an agent token. Grants live on the owner's own chain, only the owner /
+///   admin can create them, and the conductor already checked that the grant
+///   covers this function — agent-token grants (`fny-agent:` tag) never do.
+///
+/// Returns the key recorded as provenance in the audit log.
 fn require_author() -> ExternResult<AgentPubKey> {
-    match call_info()?.cap_grant {
+    let info = call_info()?;
+    match info.cap_grant {
         CapGrant::ChainAuthor(agent) => Ok(agent),
+        CapGrant::RemoteAgent(grant)
+            if matches!(grant.access, CapAccess::Assigned { .. })
+                && !grant.tag.starts_with(AGENT_TAG_PREFIX) =>
+        {
+            Ok(info.provenance)
+        }
         _ => Err(guest("owner only")),
     }
 }
@@ -315,7 +332,9 @@ pub fn issue_agent_token(input: IssueTokenInput) -> ExternResult<IssuedToken> {
         cap_secret: secret,
         grant_action_hash,
         expires_at,
-        cell_id: CellId::new(dna_info()?.hash, owner),
+        // The cell is (DNA, chain author) — not the caller, which may be a
+        // delegated signing key.
+        cell_id: CellId::new(dna_info()?.hash, agent_info()?.agent_initial_pubkey),
     })
 }
 

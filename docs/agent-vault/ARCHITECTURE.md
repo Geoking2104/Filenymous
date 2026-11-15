@@ -12,15 +12,16 @@
 
 | Layer | Where | What |
 |---|---|---|
-| DNA | `dnas/agent_vault/` (role `agent_vault` in `happ.yaml`, own network seed) | Separate DNA — the existing `filenymous` DNA and its network are untouched. |
+| hApp / DNA | `dnas/agent_vault/` (`dna.yaml`, `happ.yaml`) → `workdir/filenymous-agent-vault.happ` | **Separate installed app** (`installed_app_id` `filenymous-agent-vault`, role `agent_vault`, own network seed) next to the main `filenymous` app. The main hApp and DNA are unchanged, and existing desktop installs get the vault without a reinstall: the desktop shell installs it on launch if missing (`src-tauri/src/launch.rs`). |
 | Integrity | `zomes/integrity/agent_vault_integrity` | Private entries `AgentConfig`, `AgentToken`, `SealedBundle` (keyed by `token_id` + `version`), `TokenRevocation`, `AccessEvent`. No link types. Append-only: every `Update`, and every `Delete` of an app entry, is invalid (cap-grant deletes allowed, for revocation). Limits: TTL 60 s–30 d, bundle ≤ 64 KiB, manifest ≤ 16 KiB, ±5 min clock skew, ids 16–64 base64url chars, `agent_key ≠ author`. Pure fetch policy in `policy.rs` (unit-tested). |
 | Coordinator | `zomes/coordinator/agent_vault` | Owner only: `create_agent_config`, `list_agent_configs`, `issue_agent_token`, `rotate_bundle`, `revoke_agent_token`, `list_agent_tokens`, `list_access_events`. Agent (cap grant): `fetch_bundle`, `token_status`. |
+| Owner identity | `require_author()` | Owner functions accept the chain author (desktop app, host-signed calls) or an **Assigned** signing-key grant created by the node admin (`authorizeSigningCredentials`) that is not an agent token (`fny-agent:` tag). Unrestricted grants and agent grants never reach owner functions. The delegated key is recorded as provenance in the audit log. |
 | Grant | `issue_agent_token` | `CapAccess::Assigned{secret, {agent_key}}`, `GrantedFunctions::Listed{fetch_bundle, token_status}`, tag `fny-agent:<token_id>`. Expiry / `max_uses` / revocation are enforced in the zome (grants have no expiry). |
 | Denials | `fetch_bundle` → `FetchResult` | Returns `{status:"denied", reason}` as **Ok** so the `AccessEvent::Denied` audit entry commits (an `Err` would roll it back). Reasons: `grant_mismatch`, `wrong_agent`, `unknown_token`, `expired`, `revoked`, `quota_exhausted`, `no_bundle`. After revocation the grant is deleted, so later calls are refused by the conductor *before* the zome runs and are not audited (documented limitation). |
 | Crypto | `ui/src/safe/agentSeal.ts` | Ephemeral X25519 → HKDF-SHA256 (salt `eph‖agentX`, info `fny-agent/bundle/v1`) → AES-256-GCM, AAD `fny-agent/v1|<token_id>|<version>`. Token id is chosen client-side so the AAD is bound before issuance. Byte fields travel as msgpack `bin` (`serde_bytes`). |
-| UI | `ui/src/safe/SafeAgents.tsx` (+ `repo.ts`, `safe.worker.ts`, `holochain/agentVault.ts`) | Coffre-fort › **Agents** tab: configs (item field → env var name, manifest sealed under the vault DEK), issue token from an enrollment code (fingerprint shown), TTL 1 h–30 d, max uses, token shown once, re-seal (rotation), revoke, audit log. Plaintext stays in the safe worker. Available only in the local-conductor (`websocket`) runtime. |
+| UI | `ui/src/safe/SafeAgents.tsx` (+ `repo.ts`, `safe.worker.ts`, `holochain/agentVault.ts`) | Coffre-fort › **Agents** tab: configs (item field → env var name, manifest sealed under the vault DEK), issue token from an enrollment code (fingerprint shown), TTL 1 h–30 d, max uses, token shown once, re-seal (rotation), revoke, audit log. Plaintext stays in the safe worker. The page opens its own connection to the Agent Vault app, independent of the main app's runtime mode: desktop app → `window.__FNY_AGENT_VAULT_ENV__` (port + app token injected by the shell, host signing); own node → build with `VITE_HC_ADMIN_URL` (single-use 30 s app token + signing key delegated for the owner functions only; **never set for a hosted build**). Otherwise the tab shows "unavailable". |
 | CLI | `cli/src/vault.ts` | `filenymous vault enroll` (Ed25519 + X25519 key file, `0600`), `vault run -- <cmd>` (signed zome call → open bundle → `spawn` with env; secrets never written to disk; `FNY_AGENT_TOKEN` / `FNY_APP_TOKEN` stripped from the child; `FNY_AGENT_ENV_NAMES` = names only), `vault status`, `vault mcp` (read-only: `vault_list_env_names`, `vault_token_status` — never values). |
-| Tests | `dnas/agent_vault/tests/sweettest`, `agent_vault_integrity` unit tests, `ui/src/safe/agentSeal.test.ts`, `cli/test/vault.test.mjs` | See the PR for what ran. |
+| Tests | `dnas/agent_vault/tests/sweettest`, `agent_vault_integrity` unit tests, `ui/src/safe/agentSeal.test.ts`, `cli/test/vault.test.mjs`, `ui/e2e/agent-vault.spec.ts` (browser → 0.6.1 conductor → CLI, run with `scripts/agent-vault-e2e.sh`) | See the PR for what ran. |
 
 Not in v1 (later phases, see DEPLOYMENT_PLAN.md): Rust/Tauri runner (§5.6 sketch), remote agents (mode B, `call_remote`),
 offline mailbox, OS-keychain storage of agent keys, audit export, Playwright e2e, external crypto review.
@@ -151,8 +152,8 @@ dnas/filenymous/dna.yaml         + integrity zome agent_vault_integrity, coordin
 
 ⚠ **Adding an integrity zome changes the DNA hash** → it is a **network fork** of `filenymous-mainnet-v2`
 (the comment in `dna.yaml` already warns about `network_seed`; the same applies to integrity code). Options:
-(a) ship it as a **second DNA / role `agent_vault`** in `happ.yaml` (recommended: isolates the fork, private-only data,
-no DHT dependency), or (b) bundle it with the next planned DNA migration. This doc assumes **(a)**: a new role
+(a) ship it as a **separate DNA in its own installed app** (`filenymous-agent-vault`, decided in v1; recommended: isolates the fork, private-only data,
+no DHT dependency), or (b) bundle it with the next planned DNA migration. This doc assumes **(a)**: a separate app
 `agent_vault` with its own `dnas/agent_vault/dna.yaml` and its own `network_seed`.
 
 ### 5.2 Entry types (`agent_vault_integrity`)

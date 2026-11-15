@@ -14,7 +14,7 @@
 #   make build-dna      → pack les DNA (filenymous + agent_vault)
 #   make build-agent-vault-dna → compile + pack le seul DNA agent_vault
 #   make test-agent-vault      → tests unitaires + Sweettest de l'Agent Vault
-#   make build-happ     → pack le hApp
+#   make build-happ     → pack les hApps (filenymous + filenymous-agent-vault, installée à part)
 #   make build-ui       → build l'UI React
 #   make build-webhapp  → bundle .webhapp pour Holo Host
 #   make pouch          → copie happ + ui.zip dans pouch/ (experimental Kangaroo)
@@ -90,7 +90,8 @@ build-agent-vault-dna:
 	cargo build --release --target $(WASM_TARGET) -p agent_vault_integrity -p agent_vault
 	mkdir -p $(WORKDIR)
 	hc dna pack $(AGENT_VAULT_DNA) -o $(WORKDIR)/agent_vault.dna
-	@echo "✅ DNA packagé : $(WORKDIR)/agent_vault.dna"
+	hc app pack $(AGENT_VAULT_DNA) -o $(WORKDIR)/filenymous-agent-vault.happ
+	@echo "✅ DNA + hApp prêts : $(WORKDIR)/agent_vault.dna, $(WORKDIR)/filenymous-agent-vault.happ"
 
 # Tests unitaires (validation + politique) et Sweettest (conducteur 0.6.1 natif).
 test-agent-vault: build-agent-vault-dna
@@ -100,7 +101,8 @@ test-agent-vault: build-agent-vault-dna
 # ── 3. Pack du hApp ───────────────────────────────────────────────────────────
 build-happ: build-dna
 	hc app pack . -o $(WORKDIR)/filenymous.happ
-	@echo "✅ hApp prêt : $(WORKDIR)/filenymous.happ"
+	hc app pack $(AGENT_VAULT_DNA) -o $(WORKDIR)/filenymous-agent-vault.happ
+	@echo "✅ hApps prêts : $(WORKDIR)/filenymous.happ, $(WORKDIR)/filenymous-agent-vault.happ (app installée à part)"
 
 # ── 4. Build de l'UI (single-file HTML) ──────────────────────────────────────
 # L'UI est filenymous-app.html — standalone, pas de build step.
@@ -131,6 +133,7 @@ pouch: build-happ build-ui
 	@echo "→ Préparation du pouch Kangaroo…"
 	mkdir -p $(POUCH_DIR)
 	cp $(WORKDIR)/filenymous.happ $(POUCH_DIR)/filenymous.happ
+	cp $(WORKDIR)/filenymous-agent-vault.happ $(POUCH_DIR)/filenymous-agent-vault.happ
 	cp $(WORKDIR)/ui.zip          $(POUCH_DIR)/ui.zip
 	@echo "✅ Pouch prêt : $(POUCH_DIR)/"
 
