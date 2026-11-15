@@ -45,3 +45,7 @@ Secrets.toml
 
 # Stray nested clone on some machines (old pre-cleanup checkout)
 /filenymous/
+
+# hc sandbox bookkeeping
+.hc
+.hc_live_*

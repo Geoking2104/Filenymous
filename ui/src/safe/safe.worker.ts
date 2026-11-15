@@ -100,6 +100,7 @@ const OPS = new Set([
   "lock", "identity", "list", "get", "secret", "put", "remove", "versions", "getVersion", "restoreVersion", "readFile", "embeddingTodo",
   "setEmbedding", "search", "peers", "addPeer", "removePeer", "buildShare", "recordGrant", "buildUpdates", "receive", "pendingShares",
   "acceptPending", "declinePending", "conflicts", "resolve", "purgeExpired", "security", "passwordSha1", "settings", "setSettings",
+  "agentManifestSeal", "agentManifestOpen", "agentSeal",
 ]);
 
 let queue: Promise<unknown> = Promise.resolve();

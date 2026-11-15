@@ -32,6 +32,31 @@ pub async fn build_main_window(
         Err(e) => panic!("Failed to issue app auth token: {:?}", e),
     };
 
+    // Token de l'Agent Vault (app séparée), si elle est installée.
+    let agent_vault_env = match admin_ws
+        .issue_app_auth_token(IssueAppAuthenticationTokenPayload {
+            installed_app_id: config::AGENT_VAULT_APP_ID.to_string(),
+            expiry_seconds:   999_999,
+            single_use:       false,
+        })
+        .await
+    {
+        Ok(r) => format!(
+            r#"window.__FNY_AGENT_VAULT_ENV__ = {{
+          "APP_INTERFACE_PORT": {},
+          "INSTALLED_APP_ID": "{}",
+          "APP_INTERFACE_TOKEN": {:?}
+        }};"#,
+            app_port,
+            config::AGENT_VAULT_APP_ID,
+            r.token,
+        ),
+        Err(e) => {
+            log::warn!("Agent Vault indisponible : {:?}", e);
+            String::new()
+        }
+    };
+
     WindowBuilder::new(
         &app_handle.app_handle(),
         "main",
@@ -46,7 +71,7 @@ pub async fn build_main_window(
     .center()
     // Injecter les infos de connexion pour que le WebView puisse se connecter
     // au conductor local via AppWebsocket (même interface que Holochain Launcher)
-    .initialization_script(&format!(
+    .initialization_script(&(format!(
         r#"window.__HC_LAUNCHER_ENV__ = {{
           "APP_INTERFACE_PORT": {},
           "ADMIN_INTERFACE_PORT": {},
@@ -57,7 +82,7 @@ pub async fn build_main_window(
         admin_port,
         config::APP_ID,
         app_token,
-    ))
+    ) + &agent_vault_env))
     .build()
     .expect("Failed to build main window")
 }

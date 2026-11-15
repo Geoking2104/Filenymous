@@ -1,0 +1,15 @@
+---
+# Agent Vault — shipped as its OWN installed app (installed_app_id
+# "filenymous-agent-vault"), next to the main "filenymous" app, so existing
+# installs get it without a reinstall and the main hApp is unchanged.
+# Pack: hc app pack dnas/agent_vault -o workdir/filenymous-agent-vault.happ
+manifest_version: "0"
+name: filenymous-agent-vault
+description: "Filenymous Agent Vault — scoped, expiring, revocable, audited secrets for AI agents"
+roles:
+  - name: agent_vault
+    provisioning:
+      strategy: create
+      deferred: false
+    dna:
+      path: "../../workdir/agent_vault.dna"

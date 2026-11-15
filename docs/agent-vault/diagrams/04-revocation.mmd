@@ -1,0 +1,15 @@
+sequenceDiagram
+  autonumber
+  actor O as Owner (UI or CLI)
+  participant C as agent_vault zome
+  participant ADM as Admin API
+  participant CLI as Agent runner
+  O->>C: revoke_agent_token(token_id, reason)
+  C->>C: query own chain -> AgentToken.grant_action_hash
+  C->>C: delete_cap_grant(grant_action_hash)
+  C->>C: create_entry(TokenRevocation{token_id, reason}) + AccessEvent{Revoked}
+  O->>ADM: revoke_app_authentication_token(token) (optional, closes app socket)
+  CLI->>C: fetch_bundle(token_id)
+  C-->>CLI: Err: capability check fails (grant deleted)
+  Note over O,CLI: Revocation stops FUTURE reads only.<br/>Values already injected stay in the running process:<br/>rotate the upstream credential (rotate_config_bundle + provider-side rotation).
+  O->>C: rotate_config_bundle(config_id, new sealed bundles)

@@ -32,6 +32,9 @@ jobs:
             set -euo pipefail
             holochain --version
             hc --version
+            # DNAs/hApps must be packed by the same major as the 0.6.1 runtime.
+            hc --version | grep -Eq " 0\.6\." || { echo "hc must be 0.6.x"; exit 1; }
+            holochain --version | grep -Eq " 0\.6\." || { echo "holochain must be 0.6.x"; exit 1; }
             cargo --version
             rustc --version
             node --version
@@ -64,7 +67,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: filenymous-happ
-          path: workdir/filenymous.happ
+          path: |
+            workdir/filenymous.happ
+            workdir/filenymous-agent-vault.happ
           retention-days: 7
 
   # Holochain 0.6 replaces JS Tryorama with Rust Sweettest.

@@ -131,3 +131,9 @@ schema, items, versions, sharing, conflicts), `clock.ts` (vector clocks),
 `safe.worker.ts` / `client.ts` (worker RPC), `transport.ts` (WebRTC delivery and
 inbox), `passkey.ts` (PRF), `Safe*.tsx` (UI). Tests: `*.test.ts` (Vitest) and
 `ui/e2e/safe.spec.ts` (Playwright, two browsers sharing over a local relay).
+
+## AI agents (Agent Vault)
+
+Scoped, expiring, revocable, audited credentials for AI agents (Doppler-style `vault run`), backed by a
+separate Holochain `agent_vault` DNA on the owner's node: see [agent-vault/ARCHITECTURE.md](agent-vault/ARCHITECTURE.md)
+and [agent-vault/DEPLOYMENT_PLAN.md](agent-vault/DEPLOYMENT_PLAN.md).

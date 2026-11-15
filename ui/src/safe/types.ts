@@ -138,3 +138,18 @@ export type ReceiveResult =
   | { status: "new" | "updated" | "stale" | "conflict"; id: string; from: string; alias?: string; title: string }
   | { status: "pending"; pendingId: string; from: string; title: string; card: string }
   | { status: "rejected"; reason: string; from?: string };
+
+/* ── Agent Vault ─────────────────────────────────────────────────────────── */
+
+/** Which vault field is exported to an AI agent, and under which env var name. */
+export interface AgentEnvMapping {
+  itemId: string;
+  field: "password" | "apiKey" | "username" | "url" | "notes";
+  env: string;
+}
+
+/** Plaintext of an AgentConfig manifest (stored encrypted under the vault DEK on the conductor). */
+export interface AgentManifest {
+  v: 1;
+  mappings: AgentEnvMapping[];
+}

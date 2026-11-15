@@ -1270,6 +1270,7 @@
     "tabs": {
       "items": "Éléments",
       "contacts": "Contacts",
+      "agents": "Agents",
       "security": "Sécurité",
       "settings": "Réglages"
     },
@@ -1653,6 +1654,65 @@
       "replyLead": "Pour que cette personne puisse aussi vous partager des éléments, renvoyez-lui votre propre lien :",
       "self": "C’est votre propre carte de contact.",
       "pendingUnlock": "Une invitation de contact vous attend : créez ou déverrouillez votre coffre pour l’ajouter."
+    },
+    "agents": {
+      "title": "Agents (accès IA)",
+      "intro": "Donnez à chaque agent IA de code son propre jeu d'accès, limité, en lecture seule et qui expire. Les valeurs sont scellées pour la clé de l'agent dans ce coffre et injectées dans le processus de l'agent au lancement ; elles ne sont jamais écrites dans des fichiers.",
+      "limits": "Nécessite l'application de bureau Filenymous ou votre propre nœud avec l'app Agent Vault installée, et cet appareil doit être en ligne au lancement de l'agent. La révocation bloque seulement les lectures futures : changez la clé chez le fournisseur si un agent a pu la divulguer.",
+      "needsNode": "Les accès pour agents nécessitent l'application de bureau Filenymous (qui installe l'app séparée « Agent Vault ») ou votre propre nœud local avec l'app Agent Vault installée, pour que le lanceur de l'agent puisse joindre ce coffre.",
+      "newConfig": "Nouvelle configuration d'agent",
+      "configName": "Nom",
+      "pickItem": "Choisir un élément…",
+      "addVar": "Ajouter une variable",
+      "configSaved": "Configuration enregistrée",
+      "issue": "Délivrer un jeton à un agent",
+      "enrollHelp": "Sur la machine qui exécute l'agent, créez ses clés puis collez ici le code d'enrôlement :",
+      "enrollCode": "Code d'enrôlement",
+      "badCode": "Code d'enrôlement invalide",
+      "fingerprint": "Empreinte de l'agent : {{fp}} (vérifiez qu'elle correspond à celle du lanceur)",
+      "config": "Configuration",
+      "ttl": "Durée de vie",
+      "maxUses": "Lancements max (0 = illimité)",
+      "issueCta": "Délivrer le jeton",
+      "tokenOnce": "Jeton pour {{label}} — affiché une seule fois",
+      "tokenHelp": "Donnez ce jeton au lanceur (variable d'environnement FNY_AGENT_TOKEN ou fichier --token). Ne le commitez pas.",
+      "copied": "Jeton copié",
+      "tokens": "Jetons",
+      "noTokens": "Aucun jeton pour l'instant.",
+      "stActive": "actif",
+      "stExpired": "expiré",
+      "stRevoked": "révoqué",
+      "uses": "{{n}}/{{max}} lancements",
+      "expires": "expire le {{at}}",
+      "rotate": "Resceller",
+      "rotated": "Nouvelle version scellée",
+      "revoke": "Révoquer",
+      "revokeConfirm": "Révoquer ce jeton ? L'agent ne pourra plus lire ses accès.",
+      "revoked": "Jeton révoqué",
+      "audit": "Journal d'audit",
+      "noAudit": "Aucun accès pour l'instant.",
+      "errNoConfig": "Configuration introuvable",
+      "kind": {
+        "Issued": "délivré",
+        "Fetch": "lu",
+        "Denied": "refusé",
+        "Revoked": "révoqué",
+        "Rotated": "rescellé"
+      },
+      "field": {
+        "apiKey": "Clé d'API",
+        "password": "Mot de passe",
+        "username": "Identifiant",
+        "url": "URL",
+        "notes": "Notes"
+      },
+      "ttlOpt": {
+        "1h": "1 heure",
+        "8h": "8 heures",
+        "24h": "24 heures",
+        "7d": "7 jours",
+        "30d": "30 jours"
+      }
     }
   },
   "privacyPanel": {

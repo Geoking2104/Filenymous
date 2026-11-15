@@ -9,6 +9,7 @@ import { buildShareLink, parseShareInput } from "../../ui/src/p2p/protocol";
 import { P2PReceiver, P2PSender, type ReceiverState, type SenderState } from "../../ui/src/p2p/session";
 import { WallAgent, runJsonl, runMcp, startHttpBridge } from "./wall";
 import { startA2aBridge } from "./a2a";
+import { vault } from "./vault";
 
 declare const __VERSION__: string;
 
@@ -20,6 +21,9 @@ Usage:
   filenymous wall join <link> [options]     join a Sharewall as an AI agent (JSON Lines)
   filenymous wall create [options]          host a new Sharewall from this process
   filenymous wall mcp <link> | --create     MCP server (stdio) for AI agents
+  filenymous vault enroll --name <label>    create an AI agent's keys (Coffre-fort › Agents)
+  filenymous vault run -- <cmd…>            run <cmd> with the agent's credentials in its env
+  filenymous vault status | mcp             token status / read-only MCP (names, never values)
 
 upload options:
   --ttl <dur>             how long the share stays online (default 1h; e.g. 90s, 15m, 2d)
@@ -64,6 +68,13 @@ wall options (agents show an "AI" badge; it is self-declared):
   {"cmd":"notes"} {"cmd":"write-note","title":"…","text":"…"} (shared notes)
   Everything an agent reads is sent to its model provider.
 
+vault options (credentials stay in process memory, never on disk):
+  --token <file>          agent token from the Coffre-fort (or env FNY_AGENT_TOKEN)
+  --key-file <file>       agent key file (default ~/.config/filenymous/agents/<label>.json)
+  --app-token <b64url>    app-interface token of the owner's node (or env FNY_APP_TOKEN)
+  --admin-url <ws-url>    owner's local admin interface, to mint a 30 s single-use app token
+  --force                 enroll: replace an existing key file
+
 common:
   --signal <wss-url>      signaling relay (default ${DEFAULT_SIGNAL_URL})
   -q, --quiet             no progress on stderr
@@ -100,6 +111,11 @@ const { values: o, positionals } = parseArgs({
     "a2a-wait": { type: "string" },
     "files-root": { type: "string" },
     create: { type: "boolean" },
+    token: { type: "string" },
+    "key-file": { type: "string" },
+    "app-token": { type: "string" },
+    "admin-url": { type: "string" },
+    force: { type: "boolean" },
     help: { type: "boolean", short: "h" },
     version: { type: "boolean", short: "v" },
   },
@@ -328,6 +344,7 @@ async function main(): Promise<number> {
   if (o.version) { process.stdout.write(`${__VERSION__}\n`); return 0; }
   const [cmd, ...rest] = positionals;
   if (o.help || !cmd) { process.stdout.write(HELP); return cmd || o.help ? 0 : 1; }
+  if (cmd === "vault") return vault(rest, o);
   installBrowserShims(o.signal ?? process.env.FILENYMOUS_SIGNAL_URL ?? DEFAULT_SIGNAL_URL);
   if (cmd === "upload" || cmd === "send") return upload(rest);
   if (cmd === "receive" || cmd === "get") return receive(rest[0]);

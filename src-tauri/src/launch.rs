@@ -16,7 +16,7 @@ use holochain_types::websocket::AllowedOrigins;
 
 use crate::{
     app_state::filesystem::AppFileSystem,
-    config::{APP_ID, BOOTSTRAP_SERVER, DEFAULT_NETWORK_SEED, SIGNALING_SERVER},
+    config::{AGENT_VAULT_APP_ID, APP_ID, BOOTSTRAP_SERVER, DEFAULT_NETWORK_SEED, SIGNALING_SERVER},
     errors::{AppError, AppResult, LairKeystoreError, LaunchHolochainError},
     process::{
         conductor::launch_holochain_process,
@@ -87,6 +87,10 @@ pub async fn launch(fs: &AppFileSystem, password: String) -> AppResult<(MetaLair
     let mut admin_ws = connect_admin_ws_with_retry(admin_port, 5).await?;
 
     // ── 7. Ouvrir (ou récupérer) l'interface app ──────────────────────────────
+    // Interface non restreinte à une app : elle sert le hApp principal ET
+    // l'Agent Vault (app installée à part). L'accès reste contrôlé par les
+    // tokens d'authentification, émis par app. Les profils existants ont une
+    // interface restreinte à APP_ID : on en ajoute une seconde dans ce cas.
     let app_port = {
         let interfaces = admin_ws.list_app_interfaces().await.map_err(|e| {
             LaunchHolochainError::CouldNotConnectToConductor(format!(
@@ -95,12 +99,12 @@ pub async fn launch(fs: &AppFileSystem, password: String) -> AppResult<(MetaLair
             ))
         })?;
 
-        if !interfaces.is_empty() {
-            interfaces[0].port
+        if let Some(open) = interfaces.iter().find(|i| i.installed_app_id.is_none()) {
+            open.port
         } else {
             let free_port = portpicker::pick_unused_port().expect("No unused port found");
             admin_ws
-                .attach_app_interface(free_port, AllowedOrigins::Any, Some(APP_ID.to_string()))
+                .attach_app_interface(free_port, AllowedOrigins::Any, None)
                 .await
                 .map_err(|_| {
                     LaunchHolochainError::CouldNotConnectToConductor(
@@ -117,6 +121,12 @@ pub async fn launch(fs: &AppFileSystem, password: String) -> AppResult<(MetaLair
         .or_else(|| DEFAULT_NETWORK_SEED.map(String::from));
 
     install_app_if_necessary(network_seed, &mut admin_ws).await?;
+
+    // ── 9. Installer l'Agent Vault (app séparée) si absente ──────────────────
+    // Non bloquant : sans elle, seul l'onglet « Agents » est indisponible.
+    if let Err(e) = install_agent_vault_if_necessary(&mut admin_ws).await {
+        log::warn!("Agent Vault non installée : {:?}", e);
+    }
 
     Ok((meta_lair_client, app_port, admin_port))
 }
@@ -189,6 +199,55 @@ async fn install_app_if_necessary(
         }
     }
 
+    Ok(())
+}
+
+/// Installe `filenymous-agent-vault` (pouch/filenymous-agent-vault.happ) à
+/// côté du hApp principal, au premier lancement ou après une mise à jour qui
+/// l'apporte. Pas de network seed : celui du DNA (dna.yaml) s'applique, et ses
+/// entrées sont toutes privées.
+async fn install_agent_vault_if_necessary(admin_ws: &mut AdminWebsocket) -> AppResult<()> {
+    let apps = admin_ws
+        .list_apps(None)
+        .await
+        .map_err(|e| AppError::ConductorApiError(e))?;
+    if apps.iter().any(|info| info.installed_app_id == AGENT_VAULT_APP_ID) {
+        return Ok(());
+    }
+
+    #[cfg(debug_assertions)]
+    let happ_bytes: Option<Vec<u8>> = {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../pouch/filenymous-agent-vault.happ");
+        std::fs::read(&path).ok()
+    };
+    #[cfg(not(debug_assertions))]
+    let happ_bytes: Option<Vec<u8>> =
+        Some(include_bytes!("../pouch/filenymous-agent-vault.happ").to_vec());
+
+    let Some(bytes) = happ_bytes else {
+        log::warn!("Dev: pouch/filenymous-agent-vault.happ absent — Agent Vault ignorée");
+        return Ok(());
+    };
+    let agent_key = admin_ws
+        .generate_agent_pub_key()
+        .await
+        .map_err(|e| AppError::ConductorApiError(e))?;
+    let app_bundle = AppBundle::decode(&bytes).map_err(|e| AppError::AppBundleError(e))?;
+    admin_ws
+        .install_app(InstallAppPayload {
+            source: holochain_types::prelude::AppBundleSource::Bundle(app_bundle),
+            agent_key,
+            network_seed: None,
+            installed_app_id: Some(AGENT_VAULT_APP_ID.to_string()),
+            membrane_proofs: HashMap::new(),
+        })
+        .await
+        .map_err(|e| AppError::ConductorApiError(e))?;
+    admin_ws
+        .enable_app(AGENT_VAULT_APP_ID.to_string())
+        .await
+        .map_err(|e| AppError::ConductorApiError(e))?;
     Ok(())
 }
 

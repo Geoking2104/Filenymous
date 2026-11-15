@@ -1,0 +1,7 @@
+flowchart TB
+  F["fetch_bundle / issue / revoke / rotate"] --> E["create_entry(AccessEvent) private<br/>on owner source chain"]
+  E --> SC[("Source chain<br/>hash-linked, Ed25519-signed actions<br/>append-only")]
+  SC --> Q["list_access_events(filter)<br/>query(ChainQueryFilter::entry_type)"]
+  Q --> UI["Coffre-fort > Agents > Audit<br/>timeline per token / agent"]
+  Q --> X["export_audit() -> JSONL + action hashes + signatures<br/>verifiable offline with owner AgentPubKey"]
+  SC -. "optional v2: publish AuditCheckpoint<br/>(head hash only, no content)" .-> DHT(("DHT"))

@@ -16,6 +16,7 @@ import { Onboarding, SetNewPassword, Unlock } from "./SafeGate";
 import { ItemDetail, ItemEditor, ItemList } from "./SafeItems";
 import { Palette } from "./SafePalette";
 import { Security } from "./SafeSecurity";
+import { Agents } from "./SafeAgents";
 import { ImportBackup, Settings, exportBackupFile } from "./SafeSettings";
 import { needsBackupReminder } from "./persist";
 import { parseContactInvite, type ContactInvite } from "./invite";
@@ -27,7 +28,7 @@ import { confirmDialog } from "../home/confirmLeave";
 import "./safe.css";
 
 type Phase = "loading" | "busy" | "error" | "onboard" | "import" | "locked" | "newpw" | "open";
-type Tab = "items" | "contacts" | "security" | "settings";
+type Tab = "items" | "contacts" | "agents" | "security" | "settings";
 type Pane = { mode: "empty" } | { mode: "view"; id: string } | { mode: "edit"; id: string } | { mode: "new"; cat: Category } | { mode: "conflict"; id: string };
 
 async function inboxIdOf(secret: string): Promise<string> {
@@ -428,7 +429,7 @@ function OpenVault({ client, status, onLocked: onLockedProp, setStatus: setStatu
         )}
         <PendingShares list={pending} onDone={async (id) => { setPending(await client.pendingShares()); if (id) open(id); }} />
         <nav className="cf-tabs" role="tablist">
-          {(["items", "contacts", "security", "settings"] as const).map((x) => (
+          {(["items", "contacts", "agents", "security", "settings"] as const).map((x) => (
             <button key={x} type="button" role="tab" aria-selected={tab === x} className={tab === x ? "is-on" : ""} onClick={() => setTab(x)} data-testid={`cf-tab-${x}`}>
               {t(`safe.tabs.${x}`)}
               {x === "items" && conflicts > 0 && <span className="cf-badge cf-badge--warn">{conflicts}</span>}
@@ -442,6 +443,7 @@ function OpenVault({ client, status, onLocked: onLockedProp, setStatus: setStatu
           </div>
         )}
         {tab === "contacts" && <Contacts invite={invite} onInviteDone={onInviteDone} />}
+        {tab === "agents" && <Agents />}
         {tab === "security" && <Security onOpen={open} />}
         {tab === "settings" && <Settings onReset={onLocked} />}
         <details className="sw-privacy cf-privacy">

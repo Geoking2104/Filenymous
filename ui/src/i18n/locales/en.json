@@ -1270,6 +1270,7 @@
     "tabs": {
       "items": "Items",
       "contacts": "Contacts",
+      "agents": "Agents",
       "security": "Security",
       "settings": "Settings"
     },
@@ -1653,6 +1654,65 @@
       "replyLead": "So this person can share items with you too, send them your own link back:",
       "self": "This is your own contact card.",
       "pendingUnlock": "A contact invite is waiting: create or unlock your vault to add it."
+    },
+    "agents": {
+      "title": "Agents (AI credentials)",
+      "intro": "Give each AI coding agent its own scoped, read-only, expiring set of credentials. Values are sealed to the agent's key inside this vault and injected into the agent process at launch; they are never written to files.",
+      "limits": "Requires the Filenymous desktop app or your own node with the Agent Vault app installed, and this device must be online when the agent starts. Revoking stops future reads only: rotate the upstream key if an agent may have leaked it.",
+      "needsNode": "Agent credentials need the Filenymous desktop app (which installs the separate “Agent Vault” app) or your own local node with the Agent Vault app installed, so that the agent runner can reach this vault.",
+      "newConfig": "New agent config",
+      "configName": "Name",
+      "pickItem": "Choose an item…",
+      "addVar": "Add a variable",
+      "configSaved": "Config saved",
+      "issue": "Issue a token to an agent",
+      "enrollHelp": "On the machine that runs the agent, create its keys and paste the enrollment code here:",
+      "enrollCode": "Enrollment code",
+      "badCode": "Invalid enrollment code",
+      "fingerprint": "Agent fingerprint: {{fp}} (check it matches the runner output)",
+      "config": "Config",
+      "ttl": "Lifetime",
+      "maxUses": "Max launches (0 = unlimited)",
+      "issueCta": "Issue token",
+      "tokenOnce": "Token for {{label}} — shown once",
+      "tokenHelp": "Give this token to the runner (environment variable FNY_AGENT_TOKEN or --token file). Do not commit it.",
+      "copied": "Token copied",
+      "tokens": "Tokens",
+      "noTokens": "No token yet.",
+      "stActive": "active",
+      "stExpired": "expired",
+      "stRevoked": "revoked",
+      "uses": "{{n}}/{{max}} launches",
+      "expires": "expires {{at}}",
+      "rotate": "Re-seal",
+      "rotated": "New version sealed",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke this token? The agent will not be able to read its credentials any more.",
+      "revoked": "Token revoked",
+      "audit": "Audit log",
+      "noAudit": "No access yet.",
+      "errNoConfig": "Config not found",
+      "kind": {
+        "Issued": "issued",
+        "Fetch": "read",
+        "Denied": "denied",
+        "Revoked": "revoked",
+        "Rotated": "re-sealed"
+      },
+      "field": {
+        "apiKey": "API key",
+        "password": "Password",
+        "username": "Username",
+        "url": "URL",
+        "notes": "Notes"
+      },
+      "ttlOpt": {
+        "1h": "1 hour",
+        "8h": "8 hours",
+        "24h": "24 hours",
+        "7d": "7 days",
+        "30d": "30 days"
+      }
     }
   },
   "privacyPanel": {

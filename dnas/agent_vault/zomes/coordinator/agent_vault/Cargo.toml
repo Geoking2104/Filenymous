@@ -1,0 +1,15 @@
+[package]
+name = "agent_vault"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "agent_vault"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hdk = { workspace = true }
+serde = { workspace = true }
+# Byte fields travel as msgpack `bin` so JS clients get/send Uint8Array.
+serde_bytes = "0.11"
+agent_vault_integrity = { path = "../../integrity/agent_vault_integrity" }

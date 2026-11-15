@@ -15,12 +15,21 @@ import {
   shareKeyToRecipient, sign, unwrapDek, verify, wrapDek, type Identity, type KdfParams, type Sealed,
 } from "./crypto";
 import { compareClocks, mergeClocks, tick } from "./clock";
+import { sealAgentBundle, type Binding, type SealedBundleWire, type X25519Impl } from "./agentSeal";
+import { x25519 } from "@noble/curves/ed25519";
 import { normaliseBm25, rankResults } from "./rank";
 import { WEAK_BITS, estimateBits } from "./strength";
 import {
   DEFAULT_SETTINGS, type ConflictInfo, type Envelope, type ItemData, type ItemFields, type ItemSummary, type Outgoing, type Peer,
-  type ReceiveResult, type Role, type SecurityReport, type VaultSettings, type VaultStatus, type VersionInfo,
+  type AgentEnvMapping, type AgentManifest, type ReceiveResult, type Role, type SecurityReport, type VaultSettings, type VaultStatus,
+  type VersionInfo,
 } from "./types";
+
+const nobleX25519: X25519Impl = {
+  randomSecretKey: () => x25519.utils.randomPrivateKey(),
+  getPublicKey: (s) => x25519.getPublicKey(s),
+  getSharedSecret: (s, p) => x25519.getSharedSecret(s, p),
+};
 
 export interface Db {
   exec(sql: string | { sql: string; bind?: unknown[] }): unknown;
@@ -847,6 +856,33 @@ export class VaultRepo {
     const gone = [...u.items.entries()].filter(([, d]) => d.received?.expiresAt && d.received.expiresAt <= now).map(([id]) => id);
     for (const id of gone) void this.remove(id);
     return gone;
+  }
+
+  /* ── Agent Vault (docs/agent-vault): plaintext never leaves this worker ── */
+
+  /** Encrypt an agent config manifest (item → env var mapping) under the vault DEK. */
+  async agentManifestSeal(manifest: AgentManifest): Promise<Uint8Array> {
+    const u = this.need();
+    for (const m of manifest.mappings) if (!u.items.has(m.itemId)) throw new Error("not-found");
+    return packJson(await sealJson(u.dek, manifest, "agent-manifest"));
+  }
+
+  async agentManifestOpen(blob: Uint8Array): Promise<AgentManifest> {
+    return openJson<AgentManifest>(this.need().dek, unpackJson(blob), "agent-manifest");
+  }
+
+  /** Build the env map from vault items and seal it to the agent's X25519 key. */
+  async agentSeal(mappings: AgentEnvMapping[], agentX: Uint8Array, binding: Binding): Promise<SealedBundleWire> {
+    const u = this.need();
+    const env: Record<string, string> = {};
+    for (const m of mappings) {
+      const d = u.items.get(m.itemId);
+      if (!d) throw new Error("not-found");
+      const v = d[m.field];
+      if (typeof v !== "string" || !v) throw new Error(`empty-field:${m.env}`);
+      env[m.env] = v;
+    }
+    return sealAgentBundle(nobleX25519, agentX, env, binding);
   }
 
   security(): SecurityReport {

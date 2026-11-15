@@ -1,0 +1,47 @@
+erDiagram
+  AGENT_CONFIG ||--o{ SEALED_BUNDLE : "versioned per agent"
+  AGENT_CONFIG ||--o{ AGENT_TOKEN : "scopes"
+  AGENT_TOKEN ||--|| CAP_GRANT : "grant_action_hash"
+  AGENT_TOKEN ||--o| TOKEN_REVOCATION : "revoked by"
+  AGENT_TOKEN ||--o{ ACCESS_EVENT : "audited by"
+  AGENT_CONFIG {
+    string config_id
+    string name
+    bytes enc_manifest "item ids + env names, encrypted under vault key"
+    Timestamp created_at
+  }
+  SEALED_BUNDLE {
+    string config_id
+    u32 version
+    AgentPubKey agent_signing_key
+    bytes eph_x25519_pub
+    bytes nonce
+    bytes ciphertext "<= 64 KiB"
+    Timestamp expires_at
+  }
+  AGENT_TOKEN {
+    string token_id
+    string config_id
+    AgentPubKey agent_signing_key
+    ActionHash grant_action_hash
+    Timestamp issued_at
+    Timestamp expires_at
+    u32 max_uses
+    string label
+  }
+  CAP_GRANT {
+    string tag "fny-agent:token_id"
+    CapAccess access "Assigned{secret, assignees}"
+    GrantedFunctions functions "Listed{fetch_bundle, token_status}"
+  }
+  TOKEN_REVOCATION {
+    string token_id
+    string reason
+  }
+  ACCESS_EVENT {
+    string token_id
+    string kind "Issued|Fetch|Denied|Revoked|Rotated"
+    AgentPubKey provenance
+    u32 bundle_version
+    Timestamp at
+  }

@@ -74,6 +74,15 @@ export default defineConfig({
       process.env.VITE_APP_ID ?? "filenymous"
     ),
 
+    // Agent Vault : app installée à part (dnas/agent_vault/happ.yaml).
+    __AGENT_VAULT_APP_ID__: JSON.stringify(
+      process.env.VITE_AGENT_VAULT_APP_ID ?? "filenymous-agent-vault"
+    ),
+    // Admin WS d'un nœud local à soi (dev / power users) — permet à l'onglet
+    // Agents d'obtenir un token d'app et une clé de signature déléguée.
+    // NE JAMAIS définir pour un build hébergé : donne l'accès admin au nœud.
+    __HC_ADMIN_URL__: JSON.stringify(process.env.VITE_HC_ADMIN_URL ?? ""),
+
     // DNA rôle (dna.yaml > name) — utilisé lors de l'install via Launcher API
     __DNA_ROLE__: JSON.stringify("filenymous"),
   },

@@ -1,0 +1,15 @@
+[package]
+name = "agent_vault_integrity"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "agent_vault_integrity"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hdi = { workspace = true }
+serde = { workspace = true }
+# Byte fields travel as msgpack `bin` so JS clients get/send Uint8Array.
+serde_bytes = "0.11"
+holochain_serialized_bytes = { workspace = true }

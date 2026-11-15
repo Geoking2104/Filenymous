@@ -11,9 +11,11 @@
 # Cibles principales :
 #   make all            → build-webhapp complet
 #   make build-wasm     → compile les zomes Rust en WASM
-#   make build-dna      → pack le DNA
-#   make build-happ     → pack le hApp
+#   make build-dna      → pack les DNA (filenymous + agent_vault)
+#   make build-agent-vault-dna → compile + pack le seul DNA agent_vault
+#   make test-agent-vault      → tests unitaires + Sweettest de l'Agent Vault
 #   make test-validation → règles de validation (unitaires + Sweettest)
+#   make build-happ     → pack les hApps (filenymous + filenymous-agent-vault, installée à part)
 #   make build-ui       → build l'UI React
 #   make build-webhapp  → bundle .webhapp pour Holo Host
 #   make pouch          → copie happ + ui.zip dans pouch/ (experimental Kangaroo)
@@ -26,6 +28,7 @@
 
 WASM_TARGET  := wasm32-unknown-unknown
 DNA_PATH     := dnas/filenymous
+AGENT_VAULT_DNA := dnas/agent_vault
 WORKDIR      := workdir
 UI_DIR       := ui
 UI_DIST      := $(UI_DIR)/dist
@@ -44,6 +47,7 @@ VITE_APP_ID         ?= filenymous
 
 .PHONY: all build-external-zomes copy-external-zomes build-wasm build-dna build-happ \
         build-ui build-webhapp pouch kangaroo kangaroo-dev release test-validation \
+        build-agent-vault-dna test-agent-vault \
         tests check clean dev dev-ui upload-holo
 
 all: build-webhapp
@@ -78,7 +82,22 @@ build-wasm: build-external-zomes
 build-dna: build-wasm
 	mkdir -p $(WORKDIR)
 	hc dna pack $(DNA_PATH) -o $(WORKDIR)/filenymous.dna
-	@echo "✅ DNA packagé : $(WORKDIR)/filenymous.dna"
+	hc dna pack $(AGENT_VAULT_DNA) -o $(WORKDIR)/agent_vault.dna
+	@echo "✅ DNA packagés : $(WORKDIR)/filenymous.dna, $(WORKDIR)/agent_vault.dna"
+
+# ── 2b. Agent Vault seul (DNA séparé, rôle `agent_vault`) ────────────────────
+# Rapide : ne compile que les deux zomes agent_vault (pas les zomes externes).
+build-agent-vault-dna:
+	cargo build --release --target $(WASM_TARGET) -p agent_vault_integrity -p agent_vault
+	mkdir -p $(WORKDIR)
+	hc dna pack $(AGENT_VAULT_DNA) -o $(WORKDIR)/agent_vault.dna
+	hc app pack $(AGENT_VAULT_DNA) -o $(WORKDIR)/filenymous-agent-vault.happ
+	@echo "✅ DNA + hApp prêts : $(WORKDIR)/agent_vault.dna, $(WORKDIR)/filenymous-agent-vault.happ"
+
+# Tests unitaires (validation + politique) et Sweettest (conducteur 0.6.1 natif).
+test-agent-vault: build-agent-vault-dna
+	cargo test -p agent_vault_integrity
+	cd $(AGENT_VAULT_DNA)/tests/sweettest && cargo test --release
 
 # ── 2b. Tests de validation (Sweettest, conducteur 0.6.1 natif) ──────────────
 # DNA de test = zomes réels + 2 coordinateurs « attaquants » (tests uniquement).
@@ -91,7 +110,8 @@ test-validation: build-wasm
 # ── 3. Pack du hApp ───────────────────────────────────────────────────────────
 build-happ: build-dna
 	hc app pack . -o $(WORKDIR)/filenymous.happ
-	@echo "✅ hApp prêt : $(WORKDIR)/filenymous.happ"
+	hc app pack $(AGENT_VAULT_DNA) -o $(WORKDIR)/filenymous-agent-vault.happ
+	@echo "✅ hApps prêts : $(WORKDIR)/filenymous.happ, $(WORKDIR)/filenymous-agent-vault.happ (app installée à part)"
 
 # ── 4. Build de l'UI (single-file HTML) ──────────────────────────────────────
 # L'UI est filenymous-app.html — standalone, pas de build step.
@@ -122,6 +142,7 @@ pouch: build-happ build-ui
 	@echo "→ Préparation du pouch Kangaroo…"
 	mkdir -p $(POUCH_DIR)
 	cp $(WORKDIR)/filenymous.happ $(POUCH_DIR)/filenymous.happ
+	cp $(WORKDIR)/filenymous-agent-vault.happ $(POUCH_DIR)/filenymous-agent-vault.happ
 	cp $(WORKDIR)/ui.zip          $(POUCH_DIR)/ui.zip
 	@echo "✅ Pouch prêt : $(POUCH_DIR)/"
 
