@@ -19,7 +19,7 @@ await build({
   banner: { js: "#!/usr/bin/env node\nimport{createRequire as __cr}from'node:module';const require=__cr(import.meta.url);" },
   define: { __VERSION__: JSON.stringify(pkg.version) },
   // Native/optional deps stay external (installed from npm).
-  external: ["node-datachannel", "node-datachannel/*", "ws", "bufferutil", "utf-8-validate"],
+  external: ["node-datachannel", "node-datachannel/*", "ws", "bufferutil", "utf-8-validate", "@holochain/client"],
   plugins: [{
     // The web app's ui/src/p2p code is bundled as-is; only the device label is swapped.
     name: "cli-device",

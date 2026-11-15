@@ -12,7 +12,8 @@ export interface RuntimeCapabilities {
 
 export interface HoloRuntimeClient extends RuntimeCapabilities {
   readonly mode: RuntimeMode;
-  callZome<T>(zomeName: string, fnName: string, payload?: unknown, timeoutMs?: number): Promise<T>;
+  /** `roleName` defaults to the main `filenymous` role (e.g. "agent_vault" for the Agent Vault DNA). */
+  callZome<T>(zomeName: string, fnName: string, payload?: unknown, timeoutMs?: number, roleName?: string): Promise<T>;
   webBridgeGet<T>(path: string): Promise<T>;
   getMyPubKey(): Promise<Uint8Array>;
   onSignal(handler: (signal: unknown) => void): void;

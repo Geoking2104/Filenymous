@@ -3,6 +3,26 @@
 version = 4
 
 [[package]]
+name = "agent_vault"
+version = "0.1.0"
+dependencies = [
+ "agent_vault_integrity",
+ "hdk",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
+name = "agent_vault_integrity"
+version = "0.1.0"
+dependencies = [
+ "hdi",
+ "holochain_serialized_bytes",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

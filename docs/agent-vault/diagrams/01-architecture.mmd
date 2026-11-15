@@ -1,0 +1,32 @@
+flowchart LR
+  subgraph OWNER["Owner device (Geoffroy)"]
+    direction TB
+    UI["Browser UI<br/>ui/src/safe/* (Coffre-fort)<br/>+ new SafeAgents.tsx"]
+    W["safe.worker<br/>SQLite/OPFS, vault DEK,<br/>Ed25519/X25519 identity"]
+    HC["Holochain conductor 0.6.x<br/>(Tauri desktop / local node)"]
+    subgraph DNA["DNA filenymous"]
+      ID["identity zome<br/>AgentX25519Key"]
+      AV["NEW agent_vault zome<br/>private entries:<br/>AgentConfig, SealedBundle,<br/>AgentToken, AccessEvent"]
+      CAP[("Source chain<br/>CapGrant (Assigned)<br/>append-only audit")]
+    end
+    LAIR[("Lair keystore<br/>agent signing key")]
+    UI -- postMessage RPC --> W
+    W -- "AppWebsocket.callZome<br/>(@holochain/client)" --> HC
+    HC --- DNA
+    AV --- CAP
+    HC --- LAIR
+  end
+
+  subgraph AGENTHOST["AI agent host (same or other machine)"]
+    direction TB
+    CLI["npx filenymous vault run<br/>(new cli/src/vault.ts)<br/>holds X25519 + Ed25519 signing key in RAM"]
+    AGENT["AI coding agent process<br/>(Claude Code, Cursor, Codex...)<br/>secrets only in env"]
+    MCP["filenymous vault mcp<br/>metadata-only, read-only"]
+    CLI -- "spawn with env vars" --> AGENT
+    AGENT -. stdio .-> MCP
+  end
+
+  CLI -- "A. local: signed zome call<br/>agent_vault.fetch_bundle<br/>(cap secret + signing key)" --> HC
+  REMOTE["Remote agent conductor<br/>(own AgentPubKey)"] -- "B. remote: call_remote<br/>with Assigned cap secret" --> HC
+  HC <-. "DHT gossip (kitsune2)<br/>public: AgentX25519Key only" .-> NET(("Filenymous DHT<br/>filenymous-mainnet-v2"))
+  MCP -- "list_configs / list_tokens<br/>(no secret values)" --> HC

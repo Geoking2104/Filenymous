@@ -11,7 +11,9 @@
 # Cibles principales :
 #   make all            → build-webhapp complet
 #   make build-wasm     → compile les zomes Rust en WASM
-#   make build-dna      → pack le DNA
+#   make build-dna      → pack les DNA (filenymous + agent_vault)
+#   make build-agent-vault-dna → compile + pack le seul DNA agent_vault
+#   make test-agent-vault      → tests unitaires + Sweettest de l'Agent Vault
 #   make build-happ     → pack le hApp
 #   make build-ui       → build l'UI React
 #   make build-webhapp  → bundle .webhapp pour Holo Host
@@ -25,6 +27,7 @@
 
 WASM_TARGET  := wasm32-unknown-unknown
 DNA_PATH     := dnas/filenymous
+AGENT_VAULT_DNA := dnas/agent_vault
 WORKDIR      := workdir
 UI_DIR       := ui
 UI_DIST      := $(UI_DIR)/dist
@@ -43,6 +46,7 @@ VITE_APP_ID         ?= filenymous
 
 .PHONY: all build-external-zomes copy-external-zomes build-wasm build-dna build-happ \
         build-ui build-webhapp pouch kangaroo kangaroo-dev release \
+        build-agent-vault-dna test-agent-vault \
         tests check clean dev dev-ui upload-holo
 
 all: build-webhapp
@@ -77,7 +81,21 @@ build-wasm: build-external-zomes
 build-dna: build-wasm
 	mkdir -p $(WORKDIR)
 	hc dna pack $(DNA_PATH) -o $(WORKDIR)/filenymous.dna
-	@echo "✅ DNA packagé : $(WORKDIR)/filenymous.dna"
+	hc dna pack $(AGENT_VAULT_DNA) -o $(WORKDIR)/agent_vault.dna
+	@echo "✅ DNA packagés : $(WORKDIR)/filenymous.dna, $(WORKDIR)/agent_vault.dna"
+
+# ── 2b. Agent Vault seul (DNA séparé, rôle `agent_vault`) ────────────────────
+# Rapide : ne compile que les deux zomes agent_vault (pas les zomes externes).
+build-agent-vault-dna:
+	cargo build --release --target $(WASM_TARGET) -p agent_vault_integrity -p agent_vault
+	mkdir -p $(WORKDIR)
+	hc dna pack $(AGENT_VAULT_DNA) -o $(WORKDIR)/agent_vault.dna
+	@echo "✅ DNA packagé : $(WORKDIR)/agent_vault.dna"
+
+# Tests unitaires (validation + politique) et Sweettest (conducteur 0.6.1 natif).
+test-agent-vault: build-agent-vault-dna
+	cargo test -p agent_vault_integrity
+	cd $(AGENT_VAULT_DNA)/tests/sweettest && cargo test --release
 
 # ── 3. Pack du hApp ───────────────────────────────────────────────────────────
 build-happ: build-dna

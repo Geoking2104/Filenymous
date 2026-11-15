@@ -1,0 +1,21 @@
+sequenceDiagram
+  autonumber
+  participant CLI as filenymous vault run
+  participant A as Admin API (owner conductor)
+  participant C as agent_vault zome (owner cell)
+  participant P as AI agent process
+  Note over A: owner pre-issues AppAuthenticationToken<br/>(expiry_seconds, single_use=true)
+  CLI->>C: AppWebsocket.connect(app_url, app_auth_token, ClientAgentSigner{signing creds})
+  CLI->>C: callZome agent_vault.fetch_bundle(FetchInput{token_id, nonce})<br/>signed by agent Ed25519 key, carries cap_secret
+  C->>C: conductor: verify signature + cap grant (Assigned to provenance, fn listed)
+  C->>C: zome: call_info().cap_grant tag == token_id ?<br/>sys_time() < expires_at ? not revoked ? uses < max_uses ?
+  alt allowed
+    C->>C: create_entry(AccessEvent{Fetch, provenance, bundle_version, Allowed})
+    C-->>CLI: SealedBundle{version, eph_pub, nonce, ciphertext}
+    CLI->>CLI: open sealed box with X25519 secret -> env map
+    CLI->>P: spawn(cmd, env = parent env + secrets) then zeroize buffers
+    Note over P: secrets live only in process env,<br/>not in files, not editable by agent
+  else denied (expired / revoked / over quota)
+    C->>C: create_entry(AccessEvent{Fetch, Denied(reason)})
+    C-->>CLI: Err(Unauthorized)
+  end

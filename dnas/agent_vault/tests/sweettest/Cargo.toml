@@ -1,0 +1,20 @@
+[package]
+name = "agent_vault_sweettest"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Standalone (not a member of the WASM workspace): it links the native
+# Holochain conductor. Run from this directory:
+#   make -C ../../../.. build-agent-vault-dna && cargo test --release
+[workspace]
+
+
+
+[dev-dependencies]
+holochain = { version = "=0.6.1", default-features = false, features = ["sweettest", "wasmer_sys", "transport-iroh"] }
+hdk = "=0.6.1"
+agent_vault_integrity = { path = "../../zomes/integrity/agent_vault_integrity" }
+agent_vault = { path = "../../zomes/coordinator/agent_vault" }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }

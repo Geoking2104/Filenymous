@@ -1,0 +1,20 @@
+sequenceDiagram
+  autonumber
+  actor O as Owner (browser UI)
+  participant W as safe.worker (vault DEK)
+  participant C as Conductor / agent_vault zome
+  participant CLI as filenymous vault (agent host)
+  O->>CLI: filenymous vault enroll --name "claude-ci"
+  CLI->>CLI: gen Ed25519 signing key + X25519 key (RAM / OS keychain)
+  CLI-->>O: enrollment code fny-agent:v1:{ed25519_pub, x25519_pub, label}
+  O->>W: choose AgentConfig (subset of items), TTL, max_uses
+  W->>W: decrypt items with DEK, build env map {GITHUB_TOKEN:..}
+  W->>W: seal bundle = X25519(eph -> agent x25519) + XSalsa20-Poly1305 / AES-GCM
+  W->>C: issue_agent_token(IssueTokenInput{config, agent_signing_key, sealed_bundle, ttl, max_uses})
+  C->>C: generate_cap_secret()
+  C->>C: create_cap_grant(tag="fny-agent:{token_id}", Assigned{secret, [agent_signing_key]}, Listed{agent_vault.fetch_bundle, agent_vault.token_status})
+  C->>C: create_entry(SealedBundle private) + create_entry(AgentToken private)
+  C->>C: create_entry(AccessEvent{kind: Issued})
+  C-->>W: IssuedToken{token_id, cap_secret, cell_id, expires_at}
+  W-->>O: token file (cap_secret, cell_id, app url) shown once / QR / one-time #s: link
+  O->>CLI: paste token (never written to repo or .env)

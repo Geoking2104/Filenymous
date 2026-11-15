@@ -16,6 +16,10 @@ members = [
   # (remplace transfer_integrity + storage_integrity + leurs coordinators)
   "dnas/filenymous/zomes/integrity/parcel_integrity",
   "dnas/filenymous/zomes/coordinator/parcel",
+  # Agent Vault (separate DNA / role `agent_vault`): Doppler-style scoped,
+  # expiring, audited secrets for AI agents. See docs/agent-vault/.
+  "dnas/agent_vault/zomes/integrity/agent_vault_integrity",
+  "dnas/agent_vault/zomes/coordinator/agent_vault",
   # ── Stubs externes : déclenchent le build WASM des crates tiers ──────────
   # Le build produit les WASM référencés dans dna.yaml
   "dnas/filenymous/zomes/extern/file_storage_stub",

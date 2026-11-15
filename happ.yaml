@@ -9,3 +9,11 @@ roles:
       deferred: false
     dna:
       path: "./workdir/filenymous.dna"
+  # Agent Vault: scoped, expiring, audited secrets for AI agents (private
+  # entries only, own network seed — the filenymous DNA hash is unchanged).
+  - name: agent_vault
+    provisioning:
+      strategy: create
+      deferred: false
+    dna:
+      path: "./workdir/agent_vault.dna"

@@ -1,5 +1,6 @@
 /** Page-side RPC client for the vault worker. The page never holds the vault keys. */
-import type { ConflictInfo, Envelope, ItemData, ItemFields, ItemSummary, Outgoing, Peer, ReceiveResult, Role, SecurityReport, VaultSettings, VaultStatus, VersionInfo } from "./types";
+import type { Binding, SealedBundleWire } from "./agentSeal";
+import type { AgentEnvMapping, AgentManifest, ConflictInfo, Envelope, ItemData, ItemFields, ItemSummary, Outgoing, Peer, ReceiveResult, Role, SecurityReport, VaultSettings, VaultStatus, VersionInfo } from "./types";
 
 type Pending = { ok: (v: unknown) => void; ko: (e: Error) => void };
 
@@ -74,6 +75,9 @@ export class SafeClient {
   exportBackup = () => this.call<Uint8Array>("exportBackup");
   importBackup = (bytes: Uint8Array) => this.call<void>("importBackup", bytes);
   destroyVault = () => this.call<void>("destroyVault");
+  agentManifestSeal = (m: AgentManifest) => this.call<Uint8Array>("agentManifestSeal", m);
+  agentManifestOpen = (blob: Uint8Array) => this.call<AgentManifest>("agentManifestOpen", blob);
+  agentSeal = (mappings: AgentEnvMapping[], agentX: Uint8Array, binding: Binding) => this.call<SealedBundleWire>("agentSeal", mappings, agentX, binding);
 
   dispose() {
     this.worker.terminate();
