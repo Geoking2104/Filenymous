@@ -21,9 +21,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo pass | hc sandbox --piped -f "$ADMIN_PORT" generate --in-process-lair --root "$WORK" \
-  -a filenymous-agent-vault -r "$APP_PORT" workdir/filenymous-agent-vault.happ network mem \
-  > "$WORK/sandbox.log" 2>&1 &
+HAPP="$PWD/workdir/filenymous-agent-vault.happ"
+# Run from $WORK: hc sandbox writes its .hc bookkeeping files in the cwd.
+(cd "$WORK" && echo pass | exec hc sandbox --piped -f "$ADMIN_PORT" generate --in-process-lair --root "$WORK" \
+  -a filenymous-agent-vault -r "$APP_PORT" "$HAPP" network mem) > "$WORK/sandbox.log" 2>&1 &
 SANDBOX_PID=$!
 for _ in $(seq 60); do grep -q '"app_ports"' "$WORK/sandbox.log" && break; sleep 1; done
 grep -q '"app_ports"' "$WORK/sandbox.log" || { cat "$WORK/sandbox.log"; exit 1; }
