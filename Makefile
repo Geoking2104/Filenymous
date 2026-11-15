@@ -13,6 +13,7 @@
 #   make build-wasm     → compile les zomes Rust en WASM
 #   make build-dna      → pack le DNA
 #   make build-happ     → pack le hApp
+#   make test-validation → règles de validation (unitaires + Sweettest)
 #   make build-ui       → build l'UI React
 #   make build-webhapp  → bundle .webhapp pour Holo Host
 #   make pouch          → copie happ + ui.zip dans pouch/ (experimental Kangaroo)
@@ -42,7 +43,7 @@ VITE_WEB_BRIDGE_URL ?= https://filenymous.holo.host/web-bridge
 VITE_APP_ID         ?= filenymous
 
 .PHONY: all build-external-zomes copy-external-zomes build-wasm build-dna build-happ \
-        build-ui build-webhapp pouch kangaroo kangaroo-dev release \
+        build-ui build-webhapp pouch kangaroo kangaroo-dev release test-validation \
         tests check clean dev dev-ui upload-holo
 
 all: build-webhapp
@@ -78,6 +79,14 @@ build-dna: build-wasm
 	mkdir -p $(WORKDIR)
 	hc dna pack $(DNA_PATH) -o $(WORKDIR)/filenymous.dna
 	@echo "✅ DNA packagé : $(WORKDIR)/filenymous.dna"
+
+# ── 2b. Tests de validation (Sweettest, conducteur 0.6.1 natif) ──────────────
+# DNA de test = zomes réels + 2 coordinateurs « attaquants » (tests uniquement).
+test-validation: build-wasm
+	mkdir -p $(WORKDIR)
+	hc dna pack dnas/filenymous/tests -o $(WORKDIR)/filenymous_validation_tests.dna
+	cargo test -p identity_integrity -p parcel_integrity
+	cd dnas/filenymous/tests/sweettest && cargo test --release
 
 # ── 3. Pack du hApp ───────────────────────────────────────────────────────────
 build-happ: build-dna

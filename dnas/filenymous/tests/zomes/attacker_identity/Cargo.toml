@@ -1,0 +1,16 @@
+[package]
+name = "attacker_identity"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# TEST-ONLY coordinator: tries unauthorized writes against identity_integrity so the
+# Sweettest suite can prove validation rejects them. Never part of dnas/filenymous/dna.yaml.
+[lib]
+name = "attacker_identity"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hdk = { workspace = true }
+serde = { workspace = true }
+identity_integrity = { path = "../../../zomes/integrity/identity_integrity" }
