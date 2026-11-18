@@ -95,7 +95,7 @@ test("each card's icon is shown on every screen of its service (desktop, light)"
   test.setTimeout(180_000);
   const home = await open(browser);
   icons = await cardIcons(home);
-  expect(Object.keys(icons).sort()).toEqual(["cli", "drop", "pro", "report", "safe", "secret", "send", "stream", "wall"]);
+  expect(Object.keys(icons).sort()).toEqual(["cli", "document", "drop", "pro", "report", "safe", "secret", "send", "stream", "wall"]);
   if (SHOTS) await home.screenshot({ path: `${SHOTS}/00-home-cards.png` });
 
   // Direct transfer: review → sending → recipient (by link).
@@ -192,6 +192,12 @@ test("each card's icon is shown on every screen of its service (desktop, light)"
   await expectIcon(peer, "wall", "22-wall-peer-destroyed");
   await expect(host.getByTestId("wall-ended")).toHaveAttribute("data-reason", "destroyed");
   await expectIcon(host, "wall", "23-wall-host-destroyed");
+
+  // Document: local PDF tools.
+  const docp = await open(browser);
+  await docp.goto("/");
+  await docp.getByTestId("document-entry").click();
+  await expectIcon(docp, "document", "24-document", /Document/);
 
   // CLI card: documentation link (no in-app screen).
   await home.goto("/");

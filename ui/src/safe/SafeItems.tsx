@@ -1,5 +1,6 @@
 /** Item list, detail view, editor and version history. */
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { handOff, isPdfFile } from "../document/handoff";
 import { useTranslation } from "react-i18next";
 import { confirmDialog, useLeaveGuard } from "../home/confirmLeave";
 import { copySecret } from "./clipboard";
@@ -178,6 +179,17 @@ export function ItemDetail({ id, summary, onEdit, onShare, onConflicts, onDelete
     }
   };
 
+  /** Decrypt locally and hand the PDF to the Document tab (same page, memory only). */
+  const openInDocument = async () => {
+    try {
+      const f = await client.readFile(id);
+      handOff("document", new File([f.bytes as Uint8Array<ArrayBuffer>], f.name, { type: f.type || "application/pdf" }));
+      location.hash = "#document";
+    } catch (ex) {
+      toast(t(errKey(ex)), "err");
+    }
+  };
+
   return (
     <div className="cf-detail" data-testid="cf-detail" data-id={id}>
       <div className="cf-detail-head">
@@ -233,6 +245,11 @@ export function ItemDetail({ id, summary, onEdit, onShare, onConflicts, onDelete
               <button type="button" className="cf-chip-btn" onClick={() => void download()} data-testid="cf-download">
                 {t("safe.f.download")}
               </button>
+              {isPdfFile(d.file) && (
+                <button type="button" className="cf-chip-btn" onClick={() => void openInDocument()} data-testid="cf-open-document">
+                  📄 {t("safe.f.openInDocument")}
+                </button>
+              )}
             </span>
           </div>
         )}
@@ -341,15 +358,21 @@ function History({ id, readOnly }: { id: string; readOnly: boolean }) {
 
 /* ── Editor ── */
 
-export function ItemEditor({ id, category, onSaved, onCancel }: { id: string | null; category: Category; onSaved: (id: string) => void; onCancel: () => void }) {
+export function ItemEditor({ id, category, onSaved, onCancel, initialFile }: { id: string | null; category: Category; onSaved: (id: string) => void; onCancel: () => void; initialFile?: File }) {
   const { t } = useTranslation();
   const { client, toast } = useSafe();
-  const [f, setF] = useState<ItemFields>({ category, title: "", tags: [] });
+  // A file handed over by another tab (Document) is pre-selected, still unsaved.
+  const handed = !id && category === "file" && initialFile && initialFile.size <= MAX_FILE ? initialFile : null;
+  const [f, setF] = useState<ItemFields>({ category, title: handed?.name ?? "", tags: [] });
   const [tags, setTags] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(handed);
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [dirty, setDirty] = useState(false);
+  const [dirty, setDirty] = useState(!!handed);
+  useEffect(() => {
+    if (initialFile && !handed) toast(t("safe.editor.tooBig"), "err");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [loaded, setLoaded] = useState(!id);
   useLeaveGuard(dirty, { detail: "safe.leaveEditor" });
 
@@ -440,6 +463,11 @@ export function ItemEditor({ id, category, onSaved, onCancel }: { id: string | n
         <label className="v3-field sw-field">
           <span>{t("safe.f.file")}</span>
           <input type="file" onChange={(e) => { const x = e.target.files?.[0] ?? null; if (x && x.size > MAX_FILE) { toast(t("safe.editor.tooBig"), "err"); e.target.value = ""; return; } setFile(x); setDirty(true); }} data-testid="cf-f-file" />
+          {handed && file === handed && (
+            <small className="sw-small" data-testid="cf-f-handed">
+              📎 {t("safe.editor.handedFile", { name: handed.name, size: fmtSize(handed.size) })}
+            </small>
+          )}
           <small className="sw-small">{t("safe.editor.fileHint")}</small>
         </label>
       )}

@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  # onnxruntime-node (via @huggingface/transformers) tries to download a CUDA
+  # build on linux-x64 during `npm ci`; that asset now 404s. CPU only is enough.
+  ONNXRUNTIME_NODE_INSTALL_CUDA: skip
+
 jobs:
   # ── Rust / Holochain DNA ────────────────────────────────────────────────────
   rust:

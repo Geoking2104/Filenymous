@@ -34,6 +34,8 @@ import "./home.css";
 
 // Coffre-fort (SQLite WASM + crypto) is loaded only when opened.
 const SafePanel = lazy(() => import("../safe/SafePanel"));
+// Document (pdf.js + pdf-lib) is loaded only when opened, too.
+const DocumentPanel = lazy(() => import("../document/DocumentPanel"));
 import { dragHasFiles, mergeFiles, removeFileAt, totalBytes } from "./files";
 
 function Logo() {
@@ -143,6 +145,15 @@ export default function HomeApp({ hash }: { hash: string }) {
     }
   };
 
+  /** Document tab → the regular send flow (review step, then P2P transfer). */
+  const sendFromDocument = (file: File) => {
+    setSending(null);
+    setPicked([file]);
+    setVia(null);
+    history.replaceState(null, "", location.pathname + location.search);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  };
+
   const openCode = () => {
     const parsed = parseShareInput(code.includes("#") ? code.split("#").pop()! : code);
     if (!parsed) {
@@ -169,6 +180,12 @@ export default function HomeApp({ hash }: { hash: string }) {
     body = (
       <Suspense fallback={<div className="v3-result sw" data-testid="cf-loading">…</div>}>
         <SafePanel />
+      </Suspense>
+    );
+  } else if (route === "document") {
+    body = (
+      <Suspense fallback={<div className="v3-result sw" data-testid="doc-loading">…</div>}>
+        <DocumentPanel onSend={sendFromDocument} />
       </Suspense>
     );
   } else if (route === "secret-reveal") {
@@ -372,6 +389,16 @@ export default function HomeApp({ hash }: { hash: string }) {
             <Benefits prefix="home.safe" />
             <a className="pz-btn pz-btn-block" href="#safe" data-testid="safe-entry">{t("home.safe.cta")}</a>
           </article>
+          <article className="pz-service pz-service--document" data-service="document" aria-labelledby="svc-document" data-testid="document-card">
+            <span className="pz-badge pz-badge--new">{t("home.badgeNew")}</span>
+            <div className="pz-service-head">
+              <ServiceIcon service="document" />
+              <h2 id="svc-document">{t("home.document.title")}</h2>
+            </div>
+            <p className="pz-service-lead">{t("home.document.lead")}</p>
+            <Benefits prefix="home.document" />
+            <a className="pz-btn pz-btn-block" href="#document" data-testid="document-entry">{t("home.document.cta")}</a>
+          </article>
           <article className="pz-service pz-service--secret" data-service="secret" aria-labelledby="svc-secret">
             <div className="pz-service-head">
               <ServiceIcon service="secret" />
@@ -469,7 +496,7 @@ export default function HomeApp({ hash }: { hash: string }) {
         </a>
         <LangSwitch />
       </header>
-      <main className={`pz-main${isHome || route === "wall-host" || route === "wall-peer" || route === "safe" ? " is-wide" : ""}`} key={isHome ? "home" : route}>
+      <main className={`pz-main${isHome || route === "wall-host" || route === "wall-peer" || route === "safe" || route === "document" ? " is-wide" : ""}`} key={isHome ? "home" : route}>
         {!isHome && (
           <a className="pz-back" href={location.pathname} onClick={(e) => { e.preventDefault(); void reset(); }} data-testid="back-home">
             ← {t("home.back")}
