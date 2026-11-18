@@ -48,11 +48,7 @@
         "icons/icon.ico"
       ],
       "externalBin": [
-        "bins/holochain-v0.3.2",
-        "bins/lair-keystore-v0.4.5"
-      ],
-      "resources": [
-        "../pouch/filenymous.happ"
+        "bins/holochain-v0.6.1"
       ],
       "copyright": "© 2024 Filenymous Contributors",
       "category": "Utility",
@@ -77,19 +73,6 @@
     "security": {
       "csp": null
     },
-    "windows": [
-      {
-        "label": "main",
-        "title": "Filenymous",
-        "width": 900,
-        "height": 680,
-        "minWidth": 700,
-        "minHeight": 520,
-        "resizable": true,
-        "fullscreen": false,
-        "center": true,
-        "url": "index.html"
-      }
-    ]
+    "windows": []
   }
 }

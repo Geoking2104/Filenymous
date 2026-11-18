@@ -1,5 +1,6 @@
 import { AppWebsocket, type RoleNameCallZomeRequest } from "@holochain/client";
 import { modeCapabilities, type HoloRuntimeClient, type RuntimeMode } from "./runtime";
+import { installTauriZomeCallSigner, isDesktopLauncher } from "./tauriSigner";
 
 declare const __HC_URL__: string;
 declare const __WEB_BRIDGE_URL__: string;
@@ -147,12 +148,14 @@ export async function initClient(): Promise<ClientMode> {
   }
 
   _connecting = (async () => {
+    // Desktop : signature des appels de zome par src-tauri (lair local).
+    installTauriZomeCallSigner();
     const detectRuntime = createRuntimeDetector({
       createHoloWebClient: createHoloWebRuntime,
       createWebsocketClient: createWebsocketRuntime,
       createWebBridgeClient: async () => createWebBridgeRuntime(),
       createLocalOnlyClient: createLocalOnlyRuntime,
-    }, () => localNodeAllowed());
+    }, () => isDesktopLauncher() || localNodeAllowed());
     _client = await detectRuntime();
     _mode = _client.mode;
   })();
