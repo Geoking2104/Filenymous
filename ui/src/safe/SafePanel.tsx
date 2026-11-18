@@ -14,6 +14,7 @@ import { SafeEmbedder } from "./embed";
 import { ConflictView } from "./SafeConflict";
 import { Onboarding, SetNewPassword, Unlock } from "./SafeGate";
 import { ItemDetail, ItemEditor, ItemList } from "./SafeItems";
+import { peekHandoff, takeHandoff } from "../document/handoff";
 import { Palette } from "./SafePalette";
 import { Security } from "./SafeSecurity";
 import { Agents } from "./SafeAgents";
@@ -29,7 +30,7 @@ import "./safe.css";
 
 type Phase = "loading" | "busy" | "error" | "onboard" | "import" | "locked" | "newpw" | "open";
 type Tab = "items" | "contacts" | "agents" | "security" | "settings";
-type Pane = { mode: "empty" } | { mode: "view"; id: string } | { mode: "edit"; id: string } | { mode: "new"; cat: Category } | { mode: "conflict"; id: string };
+type Pane = { mode: "empty" } | { mode: "view"; id: string } | { mode: "edit"; id: string } | { mode: "new"; cat: Category; file?: File } | { mode: "conflict"; id: string };
 
 async function inboxIdOf(secret: string): Promise<string> {
   const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret)));
@@ -157,7 +158,15 @@ function OpenVault({ client, status, onLocked: onLockedProp, setStatus: setStatu
   useEffect(() => {
     if (invite) setTab("contacts");
   }, [invite]);
-  const [pane, setPane] = useState<Pane>({ mode: "empty" });
+  // A PDF handed over by the Document tab opens straight in a new file item.
+  // (Read in the initializer, consumed in an effect: StrictMode-safe.)
+  const [pane, setPane] = useState<Pane>(() => {
+    const file = peekHandoff("safe");
+    return file ? { mode: "new", cat: "file", file } : { mode: "empty" };
+  });
+  useEffect(() => {
+    takeHandoff("safe");
+  }, []);
   const [filter, setFilter] = useState<Category | "all" | "shared">("all");
   const [palette, setPalette] = useState(false);
   /** "Plus tard" hides the backup reminder for this session only. */
@@ -341,7 +350,8 @@ function OpenVault({ client, status, onLocked: onLockedProp, setStatus: setStatu
   if (pane.mode === "new" || pane.mode === "edit")
     paneEl = (
       <ItemEditor
-        key={pane.mode === "edit" ? pane.id : `new-${pane.cat}`}
+        key={pane.mode === "edit" ? pane.id : `new-${pane.cat}${pane.file ? "-handoff" : ""}`}
+        initialFile={pane.mode === "new" ? pane.file : undefined}
         id={pane.mode === "edit" ? pane.id : null}
         category={pane.mode === "new" ? pane.cat : byId.get(pane.id)?.category ?? "note"}
         onSaved={async (id) => {

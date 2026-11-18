@@ -5,7 +5,7 @@
  */
 import type { Route } from "./routes";
 
-export type ServiceId = "send" | "receive" | "drop" | "wall" | "safe" | "secret" | "report" | "cli" | "pro" | "stream";
+export type ServiceId = "send" | "receive" | "drop" | "wall" | "safe" | "document" | "secret" | "report" | "cli" | "pro" | "stream";
 
 type LineIcon = "send" | "download" | "tray" | "key" | "check";
 const LINE_PATHS: Record<LineIcon, JSX.Element> = {
@@ -32,6 +32,7 @@ export const SERVICES: Record<ServiceId, { glyph: { line: LineIcon } | { emoji: 
   drop: { glyph: { line: "tray" }, titleKey: "home.drop.title" },
   wall: { glyph: { emoji: "🧱" }, titleKey: "home.wall.title" },
   safe: { glyph: { emoji: "🔐" }, titleKey: "home.safe.title" },
+  document: { glyph: { emoji: "📄" }, titleKey: "home.document.title" },
   secret: { glyph: { line: "key" }, titleKey: "home.secret.title" },
   report: { glyph: { emoji: "🛡️" }, titleKey: "home.whistle.title" },
   cli: { glyph: { emoji: "🤖" }, titleKey: "home.cli.title" },
@@ -63,6 +64,8 @@ export function serviceForScreen(route: Route, ctx: { receiving: boolean; stream
       return "wall";
     case "safe":
       return "safe";
+    case "document":
+      return "document";
     case "secret-new":
     case "secret-reveal":
       return "secret";

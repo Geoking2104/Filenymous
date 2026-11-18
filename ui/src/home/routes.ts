@@ -4,7 +4,7 @@ import { REPORT_HASH } from "../report/crypto";
 import { isWallHash, isWallHostHash } from "../wall/link";
 import { isContactInviteHash } from "../safe/invite";
 
-export type Route = "home" | "drop-owner" | "drop-contrib" | "secret-new" | "secret-reveal" | "report-new" | "report-submit" | "report-inbox" | "report-follow" | "wall-host" | "wall-peer" | "safe";
+export type Route = "home" | "drop-owner" | "drop-contrib" | "secret-new" | "secret-reveal" | "report-new" | "report-submit" | "report-inbox" | "report-follow" | "wall-host" | "wall-peer" | "safe" | "document";
 
 /** Hash routes rendered inside the single-page shell (besides #p2p:). */
 export function serviceRoute(hash: string): Route {
@@ -16,6 +16,8 @@ export function serviceRoute(hash: string): Route {
   if (hash === "#secret-new") return "secret-new";
   // Coffre-fort: the persistent personal vault (not the one-time "#secret-new").
   if (hash === "#safe" || hash === "#coffre" || isContactInviteHash(hash)) return "safe";
+  // Document: local PDF tools (view, merge, split, forms, annotations).
+  if (hash === "#document" || hash === "#doc" || hash === "#pdf") return "document";
   if (REPORT_HASH.test(hash)) return "report-submit";
   if (hash === "#report-new") return "report-new";
   if (hash === "#report-inbox") return "report-inbox";

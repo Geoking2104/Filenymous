@@ -4,13 +4,13 @@ test.describe("home services carousel", () => {
   test("arrows, dots, keyboard and whistleblowing card", async ({ page }) => {
     await page.goto("/");
     const carousel = page.getByTestId("services-carousel");
-    await expect(carousel.locator("article.pz-service")).toHaveCount(9);
+    await expect(carousel.locator("article.pz-service")).toHaveCount(10);
     const dots = page.getByTestId("carousel-dot");
-    await expect(dots).toHaveCount(9);
+    await expect(dots).toHaveCount(10);
     await expect(page.getByTestId("carousel-prev")).toBeDisabled();
     await page.getByTestId("carousel-next").click();
     await expect(dots.nth(1)).toHaveAttribute("aria-current", "true");
-    await dots.nth(8).click();
+    await dots.nth(9).click();
     await expect(page.locator("article.pz-service--stream")).toBeInViewport();
     const track = carousel.locator(".pz-carousel-track");
     await track.focus();
@@ -23,7 +23,10 @@ test.describe("home services carousel", () => {
     await dots.nth(3).click();
     await expect(page.getByTestId("safe-card")).toContainText("Nouveau");
     await expect(page.getByTestId("safe-entry")).toHaveAttribute("href", "#safe");
-    await dots.nth(5).click();
+    await dots.nth(4).click();
+    await expect(page.getByTestId("document-card")).toContainText("Nouveau");
+    await expect(page.getByTestId("document-entry")).toHaveAttribute("href", "#document");
+    await dots.nth(6).click();
     const whistle = page.getByTestId("whistle-card");
     await expect(whistle).toContainText("Nouveau");
     await expect(whistle.locator(".pz-teaser")).toContainText("Sapin II");
