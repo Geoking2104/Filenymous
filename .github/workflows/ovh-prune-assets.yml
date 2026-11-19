@@ -19,6 +19,11 @@ on:
         required: true
         default: "0"
 
+env:
+  # onnxruntime-node (via @huggingface/transformers) tries to download a CUDA
+  # build on linux-x64 during `npm ci`; that asset now 404s. CPU only is enough.
+  ONNXRUNTIME_NODE_INSTALL_CUDA: skip
+
 concurrency:
   group: deploy-ovh-ui
   cancel-in-progress: false
