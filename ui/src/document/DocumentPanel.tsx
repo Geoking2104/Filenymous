@@ -6,9 +6,12 @@
  * Model: `doc.bytes` is the committed PDF; page operations (reorder, rotate,
  * delete) are kept as a cheap `edits` list over it and only materialised
  * (pdf-lib) when another tool or an export needs real bytes. Every commit
- * pushes the previous state on an undo stack.
+ * pushes the previous state on an undo stack (and clears the redo stack).
+ *
+ * Text documents (new, .md / .txt, or a PDF converted to text) open in the
+ * Word-like editor (TextEditor, lazy chunk) instead.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { zipSync } from "fflate";
 import { formatBytes } from "../ux-v3/types";
@@ -36,7 +39,20 @@ import {
   type PdfInfo,
 } from "./pdfOps";
 import { isPasswordError, openPdf, pageGeometry, renderPage, type PDFDocumentProxy } from "./pdfView";
+import { ContextMenu, ExportBar, MenuBar, NameField, SaveAsDialog, inField, mod, useShortcuts, type Menu, type MenuEntry, type SaveAction } from "./chrome";
+import { MIME, openKind, stem as stemOf, withExt, type SaveFormat } from "./fileName";
+import { clickSelect, duplicateAt, insertAt, keyNav, moveBy, moveTo, removeAt, selectAll as selectAllPages, targets as selTargets, type PageSel } from "./pageSelection";
+import { clearDraft, loadDraft, type Draft } from "./draft";
 import "./document.css";
+
+const TextEditor = lazy(() => import("./TextEditor"));
+
+interface TextDoc {
+  key: number;
+  html: string;
+  stem: string;
+  notice?: string;
+}
 
 type Tool = "pages" | "merge" | "split" | "form" | "annotate" | "optimise";
 const TOOLS: Tool[] = ["pages", "merge", "split", "form", "annotate", "optimise"];
@@ -63,8 +79,8 @@ const isIdentity = (e: PageEdit[], n: number) => e.length === n && e.every((x, i
 const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
 const MAX_PDF = 512 * 1024 * 1024;
 
-function download(bytes: Uint8Array, name: string, type = "application/pdf") {
-  const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type }));
+function download(data: Uint8Array | Blob, name: string, type = "application/pdf") {
+  const url = URL.createObjectURL(data instanceof Blob ? data : new Blob([data as Uint8Array<ArrayBuffer>], { type }));
   const a = document.createElement("a");
   a.href = url;
   a.download = name;
@@ -74,7 +90,7 @@ function download(bytes: Uint8Array, name: string, type = "application/pdf") {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-const baseName = (n: string) => n.replace(/\.pdf$/i, "") || "document";
+const baseName = (n: string) => stemOf(n);
 
 export default function DocumentPanel({ onSend }: { onSend: (file: File) => void }) {
   const { t } = useTranslation();
@@ -91,17 +107,33 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
   const [drag, setDrag] = useState(false);
   const [mergeQueue, setMergeQueue] = useState<{ name: string; bytes: Uint8Array }[]>([]);
   const [overlays, setOverlays] = useState<UiOverlay[]>([]);
+  const [redo, setRedo] = useState<UndoEntry[]>([]);
+  const [textDoc, setTextDoc] = useState<TextDoc | null>(null);
+  const [textDirty, setTextDirty] = useState(false);
+  const [draft, setDraft] = useState<Draft | null>(() => loadDraft());
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const [saveAs, setSaveAs] = useState<{ format: SaveFormat; intent: SaveAction } | null>(null);
+  const [dropAt, setDropAt] = useState<number | null>(null);
+  /** Pages copied with Ctrl+C / Ctrl+X (a standalone PDF, so it survives commits). */
+  const pageClip = useRef<{ bytes: Uint8Array; count: number } | null>(null);
+  const [clipCount, setClipCount] = useState(0);
+  const anchor = useRef(0);
+  const dragFrom = useRef<number[] | null>(null);
+  const thumbsRef = useRef<HTMLOListElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const openInput = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
   const overlaySeq = useRef(0);
   /**
    * Latest document / edits / overlays, readable synchronously inside async
    * actions that chain several commits (state only updates on next render).
    */
   const live = useRef<{ doc: Doc | null; edits: PageEdit[]; overlays: UiOverlay[] }>({ doc: null, edits: [], overlays: [] });
+  const closeCtx = useCallback(() => setCtxMenu(null), []);
   const registerPlace = useCallback((fn: (x: number, y: number) => void) => {
     placeRef.current = fn;
   }, []);
-  useLeaveGuard(dirty, { detail: "document.leaveDetail" });
+  useLeaveGuard(dirty || textDirty, { detail: "document.leaveDetail" });
 
   const errText = useCallback(
     (e: unknown) => {
@@ -175,28 +207,37 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
     async (bytes: Uint8Array, name?: string) => {
       const { doc: d, edits: e } = live.current;
       if (d) setUndo((u) => [...u.slice(-19), { name: d.name, bytes: d.bytes, edits: e }]);
+      setRedo([]);
       await show(bytes, name ?? d?.name ?? "document.pdf", true);
       setDirty(true);
     },
     [show],
   );
 
-  const pushEdits = (next: PageEdit[]) => {
+  const pushEdits = (next: PageEdit[], sel?: PageSel) => {
     if (!doc) return;
     setUndo((u) => [...u.slice(-19), { name: doc.name, bytes: doc.bytes, edits }]);
+    setRedo([]);
     setEditsLive(next);
     setDirty(true);
+    if (sel) applySel(sel);
   };
 
-  const doUndo = () =>
+  const restore = (from: UndoEntry[], setFrom: (f: (u: UndoEntry[]) => UndoEntry[]) => void, setTo: (f: (u: UndoEntry[]) => UndoEntry[]) => void) =>
     void run(async () => {
-      const last = undo[undo.length - 1];
+      const last = from[from.length - 1];
       if (!last || !doc) return;
-      setUndo((u) => u.slice(0, -1));
+      const now: UndoEntry = { name: doc.name, bytes: doc.bytes, edits: live.current.edits };
+      setFrom((u) => u.slice(0, -1));
+      setTo((u) => [...u.slice(-19), now]);
       if (last.bytes !== doc.bytes) await show(last.bytes, last.name, true);
       setEditsLive(last.edits);
+      setSelected(new Set());
       setCur((c) => Math.min(c, last.edits.length - 1));
+      setDirty(true);
     });
+  const doUndo = () => restore(undo, setUndo, setRedo);
+  const doRedo = () => restore(redo, setRedo, setUndo);
 
   /** Committed bytes with pending page edits applied. */
   const materialize = useCallback(async (): Promise<Uint8Array> => {
@@ -219,9 +260,41 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
     return out;
   }, [commit, materialize, setOverlaysLive]);
 
+  /** Leave the current document (asks first when it has unsaved changes). */
+  const confirmDiscard = () => !(dirty || textDirty) || window.confirm(t("document.ui.discardConfirm"));
+
+  const openText = (td: Omit<TextDoc, "key">) => {
+    resetPdf();
+    setTextDirty(false);
+    setTextDoc({ ...td, key: Date.now() });
+  };
+
+  const newDocument = () => {
+    if (!confirmDiscard()) return;
+    openText({ html: "", stem: t("document.ui.untitled") });
+  };
+
   const openFiles = (list: FileList | File[] | null) => {
-    const files = Array.from(list ?? []);
-    if (files.length === 0) return;
+    const all = Array.from(list ?? []);
+    if (all.length === 0) return;
+    const textFile = all.find((f) => openKind(f) === "markdown" || openKind(f) === "text");
+    if (textFile) {
+      if ((live.current.doc || textDoc) && !confirmDiscard()) return;
+      void run(async () => {
+        if (textFile.size > 20 * 1024 * 1024) throw new Error(t("document.err.tooBig", { name: textFile.name }));
+        const src = await textFile.text();
+        const m = await import("./markdown");
+        const html = openKind(textFile) === "markdown" ? m.mdToHtml(src) : m.textToHtml(src);
+        openText({ html, stem: stemOf(textFile.name) });
+      });
+      return;
+    }
+    const files = all;
+    if (textDoc) {
+      if (!confirmDiscard()) return;
+      setTextDoc(null);
+      setTextDirty(false);
+    }
     void run(async () => {
       const loaded: { name: string; bytes: Uint8Array }[] = [];
       for (const f of files) {
@@ -259,16 +332,44 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const closeDoc = () => {
-    overlays.forEach((o) => o.url && URL.revokeObjectURL(o.url));
+  const resetPdf = () => {
+    live.current.overlays.forEach((o) => o.url && URL.revokeObjectURL(o.url));
     live.current.doc = null;
     setDoc(null);
     setEditsLive([]);
     setUndo([]);
+    setRedo([]);
     setOverlaysLive(() => []);
     setMergeQueue([]);
+    setSelected(new Set());
+    setCur(0);
+    setTool("pages");
     setDirty(false);
     setMsg(null);
+  };
+
+  const closeDoc = () => {
+    if (!confirmDiscard()) return;
+    resetPdf();
+    if (textDoc && textDirty) clearDraft();
+    setDraft(loadDraft());
+    setTextDoc(null);
+    setTextDirty(false);
+  };
+
+  /** Hand a saved file to its destination. */
+  const deliver = (f: File, action: SaveAction) => {
+    if (action === "download") download(f, f.name);
+    else if (action === "send") onSend(f);
+    else {
+      handOff("safe", f);
+      location.hash = "#safe";
+    }
+    if (textDoc) {
+      clearDraft();
+      setDraft(null);
+      setTextDirty(false);
+    }
   };
 
   const switchTool = (next: Tool) => {
@@ -288,69 +389,270 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
     return new File([bytes as Uint8Array<ArrayBuffer>], name, { type: "application/pdf" });
   };
 
-  /* ── page operations (edit list) ── */
-  const rotate = (i: number, by: number) => pushEdits(edits.map((e, k) => (k === i ? { ...e, rotate: (e.rotate + by + 360) % 360 } : e)));
-  const move = (i: number, by: number) => {
-    const j = i + by;
-    if (j < 0 || j >= edits.length) return;
-    const next = edits.slice();
-    [next[i], next[j]] = [next[j], next[i]];
-    pushEdits(next);
-    setCur(j);
+  /** Text of the (edited) PDF, paragraphs per page; throws when there is none (scanned PDF). */
+  const pdfParagraphs = async (): Promise<string[][]> => {
+    const bytes = await applyOverlays();
+    const { extractParagraphs } = await import("./pdfText");
+    const pdf = await openPdf(bytes);
+    try {
+      const pages = await extractParagraphs(pdf);
+      if (!pages.some((p) => p.length)) throw new Error(t("document.ui.noText"));
+      return pages;
+    } finally {
+      void pdf.destroy();
+    }
   };
-  const remove = (idx: number[]) => {
-    const drop = new Set(idx);
-    const next = edits.filter((_, k) => !drop.has(k));
-    if (next.length === 0) {
+
+  const savePdfAs = (format: SaveFormat, action: SaveAction, s = stemOf(live.current.doc?.name ?? "document")) =>
+    void run(async () => {
+      rename(s);
+      let f: File;
+      if (format === "pdf") {
+        const pdfFile = await exportFile();
+        f = new File([pdfFile], withExt(s, "pdf"), { type: MIME.pdf });
+      } else {
+        const m = await import("./markdown");
+        const md = m.htmlToMd(m.pagesToHtml(await pdfParagraphs()));
+        f = new File([md], withExt(s, "md"), { type: MIME.md });
+      }
+      setDirty(false);
+      deliver(f, action);
+      if (action === "download") setMsg({ kind: "ok", text: t("document.editor.saved", { name: f.name }) });
+    });
+
+  const convertToText = () => {
+    if (!live.current.doc) return;
+    if (!window.confirm(t("document.ui.convertConfirm"))) return;
+    void run(async () => {
+      const name = live.current.doc!.name;
+      const m = await import("./markdown");
+      const html = m.pagesToHtml(await pdfParagraphs());
+      openText({ html, stem: stemOf(name), notice: t("document.ui.convertedNotice") });
+      setTextDirty(true);
+    });
+  };
+
+  const rename = (s: string) => {
+    const d = live.current.doc;
+    if (!d) return;
+    const name = withExt(s, "pdf");
+    if (name === d.name) return;
+    const next = { ...d, name };
+    live.current.doc = next;
+    setDoc(next);
+  };
+
+  /* ── page operations (edit list) ── */
+  const sel: PageSel = { selected, anchor: anchor.current, cur };
+  const applySel = (n: PageSel) => {
+    anchor.current = n.anchor;
+    setSelected(n.selected);
+    setCur(n.cur);
+  };
+  const focusThumb = (i: number) => requestAnimationFrame(() => thumbsRef.current?.querySelectorAll<HTMLButtonElement>(".doc-thumb-view")[i]?.focus());
+  const tgt = () => selTargets(sel, edits.length);
+  const rotateSel = (by: number) => {
+    const s2 = new Set(tgt());
+    pushEdits(edits.map((e, k) => (s2.has(k) ? { ...e, rotate: (e.rotate + by + 360) % 360 } : e)));
+  };
+  const removeSel = (idx = tgt()) => {
+    if (idx.length >= edits.length) {
       setMsg({ kind: "err", text: t("document.err.lastPage") });
       return;
     }
-    pushEdits(next);
-    setSelected(new Set());
-    setCur((c) => Math.min(c, next.length - 1));
+    const r = removeAt(edits, idx);
+    pushEdits(r.items, r.sel);
   };
-  const duplicate = (i: number) => pushEdits([...edits.slice(0, i + 1), { ...edits[i] }, ...edits.slice(i + 1)]);
-  const rotateSelected = (by: number) => {
-    const sel = selected.size ? selected : new Set(edits.map((_, i) => i));
-    pushEdits(edits.map((e, k) => (sel.has(k) ? { ...e, rotate: (e.rotate + by + 360) % 360 } : e)));
+  const duplicateSel = () => {
+    const r = duplicateAt(edits, tgt(), (e) => ({ ...e }));
+    pushEdits(r.items, r.sel);
   };
-  const toggleSel = (i: number) =>
-    setSelected((s) => {
-      const n = new Set(s);
-      if (n.has(i)) n.delete(i);
-      else n.add(i);
-      return n;
+  const moveSel = (by: -1 | 1) => {
+    const r = moveBy(edits, tgt(), by);
+    if (r) {
+      pushEdits(r.items, r.sel);
+      focusThumb(r.sel.cur);
+    }
+  };
+  const moveSelTo = (before: number, idx = tgt()) => {
+    const r = moveTo(edits, idx, before);
+    if (r.items.every((e, k) => e === edits[k])) return;
+    pushEdits(r.items, r.sel);
+  };
+  const copyPages = (cut: boolean) =>
+    void run(async () => {
+      const d = live.current.doc;
+      if (!d) return;
+      const idx = tgt();
+      const bytes = await applyPageEdits(d.bytes, idx.map((i) => live.current.edits[i]));
+      pageClip.current = { bytes, count: idx.length };
+      setClipCount(idx.length);
+      if (cut) removeSel(idx);
+      setMsg({ kind: "info", text: t(cut ? "document.pagesUi.cutDone" : "document.pagesUi.copied", { count: idx.length }) });
     });
+  const pastePages = () =>
+    void run(async () => {
+      const clip = pageClip.current;
+      if (!clip || !live.current.doc) return;
+      const at = (tgt().slice(-1)[0] ?? -1) + 1;
+      const base = await applyOverlays();
+      const merged = await mergePdfs([base, clip.bytes]);
+      const n = live.current.edits.length;
+      await commit(merged);
+      const all = Array.from({ length: n + clip.count }, (_, i) => ({ src: i, rotate: 0 }));
+      const r = insertAt(all.slice(0, n), all.slice(n), at);
+      setEditsLive(r.items);
+      applySel(r.sel);
+      setMsg({ kind: "ok", text: t("document.pagesUi.pasted", { count: clip.count }) });
+    });
+
+  const onThumbClick = (i: number, e: ReactMouseEvent) => applySel(clickSelect(sel, i, { shift: e.shiftKey, toggle: e.ctrlKey || e.metaKey }));
+  const onThumbsKey = (e: ReactKeyboardEvent) => {
+    if (doc?.readOnly && !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+    const k = e.key.toLowerCase();
+    if (mod(e) && e.altKey === false) {
+      if (k === "a") return e.preventDefault(), applySel(selectAllPages(edits.length, cur));
+      if (k === "c") return e.preventDefault(), copyPages(false);
+      if (k === "x") return e.preventDefault(), copyPages(true);
+      if (k === "v") return e.preventDefault(), pastePages();
+      if (k === "d") return e.preventDefault(), duplicateSel();
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft") return e.preventDefault(), moveSel(-1);
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") return e.preventDefault(), moveSel(1);
+    }
+    if (e.key === "Delete" || e.key === "Backspace") return e.preventDefault(), removeSel();
+    if (e.key === "Escape") return applySel({ selected: new Set(), anchor: cur, cur });
+    if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
+      e.preventDefault();
+      const r = thumbsRef.current?.querySelectorAll<HTMLElement>(".doc-thumb-view")[cur]?.getBoundingClientRect();
+      if (r) setCtxMenu({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+      return;
+    }
+    const n = keyNav(sel, e.key, edits.length, e.shiftKey);
+    if (n) {
+      e.preventDefault();
+      applySel(n);
+      focusThumb(n.cur);
+    }
+  };
+  const onThumbContext = (i: number, e: ReactMouseEvent) => {
+    e.preventDefault();
+    if (!selected.has(i)) applySel(clickSelect(sel, i));
+    setCtxMenu({ x: e.clientX, y: e.clientY });
+  };
+  const onThumbDragStart = (i: number, e: ReactDragEvent) => {
+    const idx = selected.has(i) ? tgt() : [i];
+    if (!selected.has(i)) applySel(clickSelect(sel, i));
+    dragFrom.current = idx;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("application/x-filenymous-pages", idx.join(","));
+  };
+  const onThumbDragOver = (i: number, e: ReactDragEvent) => {
+    if (!dragFrom.current) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setDropAt(e.clientY < r.top + r.height / 2 ? i : i + 1);
+  };
+  const onThumbDrop = (e: ReactDragEvent) => {
+    if (!dragFrom.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (dropAt !== null) moveSelTo(dropAt, dragFrom.current);
+    dragFrom.current = null;
+    setDropAt(null);
+  };
+
+  /* ── keyboard shortcuts (PDF and empty states; the text editor has its own) ── */
+  useShortcuts((e) => {
+    if (textDoc || saveAs) return false;
+    const k = e.key.toLowerCase();
+    if (e.altKey && !mod(e) && (k === "n" || e.code === "KeyN")) return newDocument(), true;
+    if (!mod(e)) {
+      if (e.key === "F2" && doc) return nameRef.current?.focus(), nameRef.current?.select(), true;
+      return false;
+    }
+    if (k === "o") return (doc ? openInput : fileInput).current?.click(), true;
+    if (k === "n" && e.altKey) return newDocument(), true;
+    if (!doc || inField(e.target)) return false;
+    if (k === "s") return setSaveAs({ format: "pdf", intent: "download" }), true;
+    if (busy) return false;
+    if (k === "z" && !e.shiftKey) return doUndo(), true;
+    if (k === "y" || (k === "z" && e.shiftKey)) return doRedo(), true;
+    return false;
+  });
+
+  const ACCEPT = "application/pdf,.pdf,.md,.markdown,text/markdown,.txt,text/plain";
+  const hiddenOpen = <input ref={openInput} type="file" accept={ACCEPT} multiple hidden onChange={(e) => { openFiles(e.currentTarget.files); e.currentTarget.value = ""; }} data-testid="doc-open-file" />;
+
+  if (textDoc) {
+    return (
+      <>
+        {hiddenOpen}
+        <Suspense fallback={<p className="doc-status" role="status">{t("document.loading")}</p>}>
+          <TextEditor
+            key={textDoc.key}
+            initialHtml={textDoc.html}
+            stem={textDoc.stem}
+            notice={textDoc.notice}
+            onRename={(s) => setTextDoc((d) => d && { ...d, stem: s })}
+            onDirty={setTextDirty}
+            onNew={newDocument}
+            onOpen={() => openInput.current?.click()}
+            onClose={closeDoc}
+            deliver={deliver}
+          />
+        </Suspense>
+      </>
+    );
+  }
 
   if (!doc) {
     return (
       <section className="doc-panel doc-empty" data-testid="doc-panel">
-        <p className="doc-lead">{t("document.lead")}</p>
-        <label
-          className={`pz-drop doc-drop${drag ? " is-drag" : ""}`}
-          data-testid="doc-drop"
-          tabIndex={0}
-          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), fileInput.current?.click())}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDrag(true);
-          }}
-          onDragLeave={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDrag(false);
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDrag(false);
-            openFiles(e.dataTransfer.files);
-          }}
-        >
-          <input ref={fileInput} type="file" accept="application/pdf,.pdf" multiple hidden onChange={(e) => { openFiles(e.currentTarget.files); e.currentTarget.value = ""; }} data-testid="doc-file" />
-          <span className="pz-drop-title">{t("document.dropTitle")}</span>
-          <span className="pz-drop-btn" aria-hidden="true">＋ {t("document.choose")}</span>
-          <span className="pz-drop-sub">{t("document.dropSub")}</span>
-        </label>
+        {hiddenOpen}
+        <p className="doc-lead">{t("document.ui.lead")}</p>
+        <div className="doc-start">
+          <button type="button" className="doc-start-card" onClick={newDocument} disabled={busy} data-testid="doc-new">
+            <span className="doc-start-icon" aria-hidden="true">📝</span>
+            <strong>{t("document.ui.newDoc")}</strong>
+            <small>{t("document.ui.newDocSub")}</small>
+          </button>
+          <label
+            className={`pz-drop doc-drop${drag ? " is-drag" : ""}`}
+            data-testid="doc-drop"
+            tabIndex={0}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), fileInput.current?.click())}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDrag(true);
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDrag(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDrag(false);
+              openFiles(e.dataTransfer.files);
+            }}
+          >
+            <input ref={fileInput} type="file" accept={ACCEPT} multiple hidden onChange={(e) => { openFiles(e.currentTarget.files); e.currentTarget.value = ""; }} data-testid="doc-file" />
+            <span className="pz-drop-title">{t("document.dropTitle")}</span>
+            <span className="pz-drop-btn" aria-hidden="true">＋ {t("document.choose")}</span>
+            <span className="pz-drop-sub">{t("document.dropSub")}</span>
+          </label>
+        </div>
+        {draft && (
+          <div className="doc-draft" data-testid="doc-draft">
+            <span>📝 {t("document.ui.draftFound", { name: draft.name, time: new Date(draft.at).toLocaleString() })}</span>
+            <span className="doc-row">
+              <button type="button" className="pz-btn" onClick={() => (openText({ html: draft.html, stem: draft.name }), setTextDirty(true))} data-testid="doc-draft-restore">{t("document.ui.draftRestore")}</button>
+              <button type="button" className="pz-btn-ghost" onClick={() => (clearDraft(), setDraft(null))}>{t("document.ui.draftDiscard")}</button>
+            </span>
+          </div>
+        )}
         {busy && <p className="doc-status" role="status">{t("document.loading")}</p>}
         {msg && <p className={msg.kind === "err" ? "pz-err" : "doc-status"} role={msg.kind === "err" ? "alert" : "status"}>{msg.text}</p>}
+        <p className="doc-shortcuts">{t("document.ui.emptyShortcuts")}</p>
         <p className="doc-privacy">🔒 {t("document.privacy")}</p>
       </section>
     );
@@ -360,25 +662,97 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
   const curEdit = edits[Math.min(cur, pageCount - 1)] ?? edits[0];
   const editsPending = !isIdentity(edits, doc.pdf.numPages);
   const disabled = busy || doc.readOnly;
+  const canEditPages = tool === "pages" && !disabled;
+  const nTargets = tgt().length;
+
+  const extractSel = () =>
+    void run(async () => {
+      const order = tgt();
+      const bytes = await applyPageEdits(doc.bytes, order.map((i) => edits[i]));
+      download(bytes, `${baseName(doc.name)}-${t("document.file.extract")}.pdf`);
+      setMsg({ kind: "ok", text: t("document.extracted", { count: order.length }) });
+    });
+
+  const pageItems: MenuEntry[] = [
+    { id: "pg-rotl", label: t("document.pagesUi.rotateLeft"), shortcut: "", onSelect: () => rotateSel(-90), disabled: !canEditPages },
+    { id: "pg-rotr", label: t("document.pagesUi.rotateRight"), onSelect: () => rotateSel(90), disabled: !canEditPages },
+    { id: "pg-dup", label: t("document.pagesUi.duplicate"), shortcut: "Ctrl+D", onSelect: duplicateSel, disabled: !canEditPages },
+    { sep: true },
+    { id: "pg-cut", label: t("document.pagesUi.cut"), shortcut: "Ctrl+X", onSelect: () => copyPages(true), disabled: !canEditPages },
+    { id: "pg-copy", label: t("document.pagesUi.copy"), shortcut: "Ctrl+C", onSelect: () => copyPages(false), disabled: disabled },
+    { id: "pg-paste", label: clipCount ? t("document.pagesUi.paste", { count: clipCount }) : t("document.pagesUi.pasteEmpty"), shortcut: "Ctrl+V", onSelect: pastePages, disabled: !canEditPages || !clipCount },
+    { sep: true },
+    { id: "pg-up", label: t("document.pagesUi.moveUp"), shortcut: "Ctrl+↑", onSelect: () => moveSel(-1), disabled: !canEditPages },
+    { id: "pg-down", label: t("document.pagesUi.moveDown"), shortcut: "Ctrl+↓", onSelect: () => moveSel(1), disabled: !canEditPages },
+    { id: "pg-first", label: t("document.pagesUi.moveFirst"), onSelect: () => moveSelTo(0), disabled: !canEditPages },
+    { id: "pg-last", label: t("document.pagesUi.moveLast"), onSelect: () => moveSelTo(pageCount), disabled: !canEditPages },
+    { sep: true },
+    { id: "pg-extract", label: t("document.pagesUi.extract"), onSelect: extractSel, disabled },
+    { id: "pg-delete", label: t("document.pagesUi.delete"), shortcut: "Suppr", onSelect: () => removeSel(), disabled: !canEditPages || nTargets >= pageCount },
+  ];
+
+  const menus: Menu[] = [
+    {
+      id: "file",
+      label: t("document.ui.menuFile"),
+      items: [
+        { id: "new", label: t("document.ui.new"), shortcut: "Alt+N", onSelect: newDocument },
+        { id: "open", label: t("document.ui.open"), shortcut: "Ctrl+O", onSelect: () => openInput.current?.click() },
+        { id: "rename", label: t("document.ui.rename"), shortcut: "F2", onSelect: () => (nameRef.current?.focus(), nameRef.current?.select()) },
+        { sep: true },
+        { id: "saveas", label: t("document.ui.saveAs"), shortcut: "Ctrl+S", onSelect: () => setSaveAs({ format: "pdf", intent: "download" }) },
+        { id: "save-pdf", label: t("document.ui.savePdf"), onSelect: () => savePdfAs("pdf", "download") },
+        { id: "save-md", label: t("document.ui.saveMdText"), onSelect: () => savePdfAs("md", "download") },
+        { sep: true },
+        { id: "send", label: t("document.ui.sendDots"), onSelect: () => setSaveAs({ format: "pdf", intent: "send" }) },
+        { id: "safe", label: t("document.ui.safeDots"), onSelect: () => setSaveAs({ format: "pdf", intent: "safe" }) },
+        { sep: true },
+        { id: "convert", label: t("document.ui.convert"), onSelect: convertToText },
+        { sep: true },
+        { id: "close", label: t("document.close"), onSelect: closeDoc },
+      ],
+    },
+    {
+      id: "edit",
+      label: t("document.ui.menuEdit"),
+      items: [
+        { id: "undo", label: t("document.undo"), shortcut: "Ctrl+Z", onSelect: doUndo, disabled: busy || !undo.length },
+        { id: "redo", label: t("document.ui.redo"), shortcut: "Ctrl+Y", onSelect: doRedo, disabled: busy || !redo.length },
+        { sep: true },
+        ...pageItems.filter((it) => !it.sep && ["pg-cut", "pg-copy", "pg-paste", "pg-dup", "pg-delete"].includes(it.id)),
+        { sep: true },
+        { id: "selectall", label: t("document.selectAll"), shortcut: "Ctrl+A", onSelect: () => applySel(selectAllPages(pageCount, cur)) },
+      ],
+    },
+    { id: "pages", label: t("document.tool.pages"), items: pageItems },
+    {
+      id: "tools",
+      label: t("document.ui.menuTools"),
+      items: TOOLS.map((k) => ({ id: `tool-${k}`, label: toolLabel(t, k), checked: tool === k, disabled: busy || (doc.readOnly && k !== "pages"), onSelect: () => switchTool(k) })),
+    },
+  ];
 
   return (
-    <section className="doc-panel" data-testid="doc-panel" aria-busy={busy}>
+    <section className="doc-panel" data-testid="doc-panel" data-mode="pdf" aria-busy={busy}>
+      {hiddenOpen}
       <div className="doc-bar">
         <div className="doc-file">
-          <strong title={doc.name} data-testid="doc-name">📄 {doc.name}</strong>
+          <NameField stem={stemOf(doc.name)} ext="pdf" onRename={rename} inputRef={nameRef} disabled={busy} />
           <small>
             {t("document.pages", { count: pageCount })} · {formatBytes(doc.bytes.length)}
             {editsPending ? ` · ${t("document.pendingEdits")}` : ""}
           </small>
         </div>
         <div className="doc-bar-actions">
-          <button type="button" className="pz-btn-ghost" onClick={doUndo} disabled={busy || undo.length === 0} data-testid="doc-undo">
-            ↶ {t("document.undo")}
-          </button>
-          <button type="button" className="pz-btn-ghost" onClick={closeDoc} disabled={busy} data-testid="doc-close">
-            {t("document.close")}
-          </button>
+          <button type="button" className="pz-btn-ghost doc-icon-btn" onClick={doUndo} disabled={busy || undo.length === 0} title={`${t("document.undo")} (Ctrl+Z)`} aria-label={t("document.undo")} data-testid="doc-undo">↶</button>
+          <button type="button" className="pz-btn-ghost doc-icon-btn" onClick={doRedo} disabled={busy || redo.length === 0} title={`${t("document.ui.redo")} (Ctrl+Y)`} aria-label={t("document.ui.redo")} data-testid="doc-redo">↷</button>
+          <button type="button" className="pz-btn-ghost" onClick={convertToText} disabled={busy} title={t("document.ui.convertHint")} data-testid="doc-convert">✎ {t("document.ui.convertShort")}</button>
+          <button type="button" className="pz-btn" onClick={() => setSaveAs({ format: "pdf", intent: "download" })} disabled={busy} data-testid="doc-saveas-open">💾 {t("document.ui.saveAs")}</button>
+          <button type="button" className="pz-btn-ghost" onClick={closeDoc} disabled={busy} data-testid="doc-close">{t("document.close")}</button>
         </div>
+      </div>
+      <div className="doc-ribbon">
+        <MenuBar menus={menus} label={t("document.ui.menuAria")} />
       </div>
       {doc.readOnly && <p className="doc-note" role="note" data-testid="doc-readonly">{t("document.readOnly")}</p>}
 
@@ -402,29 +776,56 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
       </div>
 
       <div className="doc-work">
-        <ol className="doc-thumbs" aria-label={t("document.thumbsAria")} data-testid="doc-thumbs">
-          {edits.map((e, i) => (
-            <li key={`${i}-${e.src}-${e.rotate}`} className={`doc-thumb${i === cur ? " is-current" : ""}${selected.has(i) ? " is-selected" : ""}`} data-testid="doc-thumb">
-              <button type="button" className="doc-thumb-view" onClick={() => setCur(i)} aria-current={i === cur ? "page" : undefined} aria-label={t("document.goToPage", { n: i + 1 })}>
-                <PageCanvas pdf={doc.pdf} src={e.src} rotate={e.rotate} fitWidth={104} lazy />
-                <span className="doc-thumb-n">{i + 1}</span>
-              </button>
-              {tool === "pages" && !doc.readOnly && (
-                <div className="doc-thumb-actions">
-                  <label className="doc-check" title={t("document.select")}>
-                    <input type="checkbox" checked={selected.has(i)} onChange={() => toggleSel(i)} aria-label={t("document.selectPage", { n: i + 1 })} data-testid="doc-select" />
-                  </label>
-                  <button type="button" onClick={() => move(i, -1)} disabled={busy || i === 0} aria-label={t("document.moveUp", { n: i + 1 })} title={t("document.moveUp", { n: i + 1 })}>↑</button>
-                  <button type="button" onClick={() => move(i, 1)} disabled={busy || i === pageCount - 1} aria-label={t("document.moveDown", { n: i + 1 })} title={t("document.moveDown", { n: i + 1 })}>↓</button>
-                  <button type="button" onClick={() => rotate(i, -90)} disabled={busy} aria-label={t("document.rotateLeft", { n: i + 1 })} title={t("document.rotateLeft", { n: i + 1 })}>⟲</button>
-                  <button type="button" onClick={() => rotate(i, 90)} disabled={busy} aria-label={t("document.rotateRight", { n: i + 1 })} title={t("document.rotateRight", { n: i + 1 })} data-testid="doc-rotate">⟳</button>
-                  <button type="button" onClick={() => duplicate(i)} disabled={busy} aria-label={t("document.duplicate", { n: i + 1 })} title={t("document.duplicate", { n: i + 1 })}><DuplicateIcon /></button>
-                  <button type="button" className="doc-danger" onClick={() => remove([i])} disabled={busy || pageCount === 1} aria-label={t("document.deletePage", { n: i + 1 })} title={t("document.deletePage", { n: i + 1 })} data-testid="doc-delete">✕</button>
+        <div className="doc-thumbs-col">
+          {tool === "pages" && !doc.readOnly && (
+            <div className="doc-thumbs-bar" role="toolbar" aria-label={t("document.pagesUi.toolbarAria")} data-testid="doc-thumbs-bar">
+              <ToolBtn label={t("document.pagesUi.rotateLeft")} onClick={() => rotateSel(-90)} disabled={disabled} testId="doc-rotate-left">⟲</ToolBtn>
+              <ToolBtn label={t("document.pagesUi.rotateRight")} onClick={() => rotateSel(90)} disabled={disabled} testId="doc-rotate">⟳</ToolBtn>
+              <ToolBtn label={t("document.pagesUi.duplicate")} onClick={duplicateSel} disabled={disabled} testId="doc-duplicate"><DuplicateIcon /></ToolBtn>
+              <ToolBtn label={t("document.pagesUi.moveUp")} onClick={() => moveSel(-1)} disabled={disabled || tgt()[0] === 0} testId="doc-move-up">↑</ToolBtn>
+              <ToolBtn label={t("document.pagesUi.moveDown")} onClick={() => moveSel(1)} disabled={disabled || tgt().slice(-1)[0] === pageCount - 1} testId="doc-move-down">↓</ToolBtn>
+              <ToolBtn label={t("document.pagesUi.delete")} onClick={() => removeSel()} disabled={disabled || nTargets >= pageCount} testId="doc-delete" danger>✕</ToolBtn>
+              <span className="doc-thumbs-count" aria-live="polite" data-testid="doc-sel-count">{selected.size > 1 ? t("document.pagesUi.nSelected", { count: selected.size }) : ""}</span>
+            </div>
+          )}
+          <ol
+            className="doc-thumbs"
+            ref={thumbsRef}
+            role="listbox"
+            aria-multiselectable="true"
+            aria-label={t("document.thumbsAria")}
+            onKeyDown={onThumbsKey}
+            onDragOver={(e) => dragFrom.current && e.preventDefault()}
+            onDrop={onThumbDrop}
+            data-testid="doc-thumbs"
+          >
+            {edits.map((e, i) => (
+              <li
+                key={`${i}-${e.src}-${e.rotate}`}
+                role="option"
+                tabIndex={i === cur ? 0 : -1}
+                aria-selected={selected.has(i)}
+                aria-current={i === cur ? "page" : undefined}
+                aria-label={t("document.goToPage", { n: i + 1 })}
+                className={`doc-thumb${i === cur ? " is-current" : ""}${selected.has(i) ? " is-selected" : ""}${dropAt === i ? " drop-before" : ""}${dropAt === pageCount && i === pageCount - 1 ? " drop-after" : ""}`}
+                draggable={canEditPages}
+                onClick={(ev) => onThumbClick(i, ev)}
+                onContextMenu={(ev) => (canEditPages || tool === "pages" ? onThumbContext(i, ev) : undefined)}
+                onDragStart={(ev) => onThumbDragStart(i, ev)}
+                onDragOver={(ev) => onThumbDragOver(i, ev)}
+                onDragEnd={() => ((dragFrom.current = null), setDropAt(null))}
+                data-testid="doc-thumb"
+                data-src={e.src}
+                data-rotate={e.rotate}
+              >
+                <div className="doc-thumb-view">
+                  <PageCanvas pdf={doc.pdf} src={e.src} rotate={e.rotate} fitWidth={THUMB_W} lazy />
                 </div>
-              )}
-            </li>
-          ))}
-        </ol>
+                <span className="doc-thumb-n">{i + 1}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
 
         <div className="doc-viewer">
           <div className="doc-viewer-bar">
@@ -461,19 +862,12 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
           {tool === "pages" && (
             <PagesTool
               selectedCount={selected.size}
+              total={pageCount}
               disabled={disabled}
-              onRotateAll={rotateSelected}
-              onDeleteSelected={() => remove([...selected])}
-              onExtractSelected={() =>
-                void run(async () => {
-                  const order = [...selected].sort((a, b) => a - b);
-                  const bytes = await applyPageEdits(doc.bytes, order.map((i) => edits[i]));
-                  download(bytes, `${baseName(doc.name)}-${t("document.file.extract")}.pdf`);
-                  setMsg({ kind: "ok", text: t("document.extracted", { count: order.length }) });
-                })
-              }
-              onClearSelection={() => setSelected(new Set())}
-              onSelectAll={() => setSelected(new Set(edits.map((_, i) => i)))}
+              onDeleteSelected={() => removeSel()}
+              onExtractSelected={extractSel}
+              onClearSelection={() => applySel({ selected: new Set(), anchor: cur, cur })}
+              onSelectAll={() => applySel(selectAllPages(pageCount, cur))}
             />
           )}
           {tool === "merge" && (
@@ -581,56 +975,34 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
         </p>
       )}
 
-      <div className="doc-export" data-testid="doc-export">
-        <button
-          type="button"
-          className="pz-btn"
-          disabled={busy}
-          data-testid="doc-download"
-          onClick={() =>
-            void run(async () => {
-              const f = await exportFile();
-              download(new Uint8Array(await f.arrayBuffer()), f.name);
-              setDirty(false);
-            })
-          }
-        >
-          ⬇ {t("document.download")}
-        </button>
-        <button
-          type="button"
-          className="pz-btn"
-          disabled={busy}
-          data-testid="doc-send"
-          onClick={() =>
-            void run(async () => {
-              const f = await exportFile();
-              setDirty(false);
-              onSend(f);
-            })
-          }
-        >
-          ↗ {t("document.send")}
-        </button>
-        <button
-          type="button"
-          className="pz-btn-ghost"
-          disabled={busy}
-          data-testid="doc-to-safe"
-          onClick={() =>
-            void run(async () => {
-              const f = await exportFile();
-              handOff("safe", f);
-              setDirty(false);
-              location.hash = "#safe";
-            })
-          }
-        >
-          🔐 {t("document.toSafe")}
-        </button>
-      </div>
+      <ExportBar busy={busy} onRun={(f, a) => savePdfAs(f, a)} mdTitle={t("document.ui.mdFromPdf")} />
       <p className="doc-privacy">🔒 {t("document.privacy")}</p>
+
+      {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={pageItems} label={t("document.tool.pages")} onClose={closeCtx} />}
+      {saveAs && (
+        <SaveAsDialog
+          stem={stemOf(doc.name)}
+          format={saveAs.format}
+          intent={saveAs.intent}
+          mdNote={t("document.ui.mdFromPdf")}
+          onCancel={() => setSaveAs(null)}
+          onConfirm={(s2, f, a) => {
+            setSaveAs(null);
+            savePdfAs(f, a, s2);
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+const THUMB_W = 132;
+
+function ToolBtn({ label, onClick, disabled, testId, danger, children }: { label: string; onClick: () => void; disabled?: boolean; testId?: string; danger?: boolean; children: ReactNode }) {
+  return (
+    <button type="button" className={`doc-tb-btn${danger ? " doc-danger" : ""}`} aria-label={label} title={label} disabled={disabled} onClick={onClick} data-testid={testId}>
+      {children}
+    </button>
   );
 }
 
@@ -816,25 +1188,27 @@ function Viewer({
 
 /* ── tools ── */
 
-function PagesTool({ selectedCount, disabled, onRotateAll, onDeleteSelected, onExtractSelected, onClearSelection, onSelectAll }: { selectedCount: number; disabled: boolean; onRotateAll: (by: number) => void; onDeleteSelected: () => void; onExtractSelected: () => void; onClearSelection: () => void; onSelectAll: () => void }) {
+function PagesTool({ selectedCount, total, disabled, onDeleteSelected, onExtractSelected, onClearSelection, onSelectAll }: { selectedCount: number; total: number; disabled: boolean; onDeleteSelected: () => void; onExtractSelected: () => void; onClearSelection: () => void; onSelectAll: () => void }) {
   const { t } = useTranslation();
   return (
     <div className="doc-tool">
       <h2>{t("document.tool.pages")}</h2>
-      <p className="doc-hint">{t("document.pagesHint")}</p>
+      <p className="doc-hint">{t("document.pagesUi.hint")}</p>
       <p className="doc-hint" aria-live="polite">{t("document.selectedCount", { count: selectedCount })}</p>
       <div className="doc-row">
         <button type="button" className="pz-btn-ghost" disabled={disabled} onClick={onSelectAll}>{t("document.selectAll")}</button>
         <button type="button" className="pz-btn-ghost" disabled={disabled || !selectedCount} onClick={onClearSelection}>{t("document.clearSelection")}</button>
       </div>
       <div className="doc-row">
-        <button type="button" className="pz-btn-ghost" disabled={disabled} onClick={() => onRotateAll(-90)}>⟲ {selectedCount ? t("document.rotateSelLeft") : t("document.rotateAllLeft")}</button>
-        <button type="button" className="pz-btn-ghost" disabled={disabled} onClick={() => onRotateAll(90)}>⟳ {selectedCount ? t("document.rotateSelRight") : t("document.rotateAllRight")}</button>
-      </div>
-      <div className="doc-row">
         <button type="button" className="pz-btn-ghost" disabled={disabled || !selectedCount} onClick={onExtractSelected} data-testid="doc-extract">{t("document.extractSelected")}</button>
-        <button type="button" className="pz-btn-ghost doc-danger" disabled={disabled || !selectedCount} onClick={onDeleteSelected} data-testid="doc-delete-selected">{t("document.deleteSelected")}</button>
+        <button type="button" className="pz-btn-ghost doc-danger" disabled={disabled || !selectedCount || selectedCount >= total} onClick={onDeleteSelected} data-testid="doc-delete-selected">{t("document.deleteSelected")}</button>
       </div>
+      <dl className="doc-keys">
+        <dt>{t("document.pagesUi.keysClick")}</dt><dd>{t("document.pagesUi.keysClickD")}</dd>
+        <dt>{t("document.pagesUi.keysDrag")}</dt><dd>{t("document.pagesUi.keysDragD")}</dd>
+        <dt>{t("document.pagesUi.keysRight")}</dt><dd>{t("document.pagesUi.keysRightD")}</dd>
+        <dt>{t("document.pagesUi.keysKeys")}</dt><dd>{t("document.pagesUi.keysKeysD")}</dd>
+      </dl>
     </div>
   );
 }
