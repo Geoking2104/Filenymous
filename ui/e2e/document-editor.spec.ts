@@ -47,6 +47,12 @@ const download = async (page: Page, click: () => Promise<void>) => {
   return { name: dl.suggestedFilename(), bytes: new Uint8Array(readFileSync((await dl.path())!)) };
 };
 
+test("#document-new opens a blank editor", async ({ page }) => {
+  await page.goto("/#document-new");
+  await expect(page.getByTestId("doc-editor")).toBeVisible();
+  await expect(page.getByTestId("doc-new")).toHaveCount(0);
+});
+
 test("new document: type, format, rename, save as PDF and Markdown", async ({ page }) => {
   const uploads: string[] = [];
   page.on("request", (r) => ["POST", "PUT"].includes(r.method()) && uploads.push(r.url()));

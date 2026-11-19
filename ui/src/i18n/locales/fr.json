@@ -680,14 +680,17 @@
     },
     "document": {
       "title": "Document",
-      "lead": "Lisez et modifiez vos PDF directement dans votre navigateur : rien n'est envoyé sur un serveur.",
-      "b1": "100 % local",
-      "b1d": "Le PDF est ouvert, modifié et enregistré sur votre appareil ; aucun envoi.",
-      "b2": "Fusionner, découper, signer",
-      "b2d": "Réorganisez les pages, remplissez les formulaires, ajoutez texte et signature.",
-      "b3": "Envoyez-le en P2P",
-      "b3d": "Partagez le résultat par transfert Filenymous ou rangez-le dans votre coffre-fort.",
-      "cta": "Ouvrir un PDF"
+      "lead": "Créez, éditez et convertissez vos documents comme dans un traitement de texte, 100 % dans votre navigateur.",
+      "b1": "Créer et éditer comme dans Word",
+      "b1d": "Nouveau document, barre d'outils, copier-coller, renommer.",
+      "b2": "PDF ↔ Markdown",
+      "b2d": "Ouvrez un PDF et enregistrez-le en .md, ou exportez votre texte en PDF ; ouvrez aussi .md / .txt.",
+      "b3": "Fusionner, découper, signer",
+      "b3d": "Réorganisez les pages, remplissez les formulaires, ajoutez texte et signature, optimisez.",
+      "b4": "100 % local, envoi en P2P",
+      "b4d": "Rien n'est envoyé sur un serveur ; partagez par transfert Filenymous ou rangez au coffre-fort.",
+      "cta": "Ouvrir un fichier",
+      "ctaNew": "Nouveau document"
     }
   },
   "stream": {

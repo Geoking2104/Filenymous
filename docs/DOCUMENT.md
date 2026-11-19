@@ -1,7 +1,7 @@
 # Document tab (local editor and PDF tools)
 
 `#document` (also `#doc`, `#pdf`) opens a Word-like workspace that runs **entirely in
-the browser**. It has two modes:
+the browser**. `#document-new` (also `#doc-new`) starts a blank document. It has two modes:
 
 - **Text documents**: created from scratch ("Nouveau document"), opened from `.md` /
   `.txt`, or converted from a PDF's text. Edited in a rich-text editor (TipTap /

@@ -46,7 +46,7 @@ describe("SEO / agent discoverability output", () => {
       for (const m of html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)) expect(() => JSON.parse(m[1])).not.toThrow();
       for (const u of urlsIn(html)) {
         const hash = u.split("#")[1]?.replace(/[.,;:]+$/, "");
-        if (hash !== undefined) expect(["drop-new", "secret-new", "report-new", "wall-new", "safe"]).toContain(hash);
+        if (hash !== undefined) expect(["drop-new", "secret-new", "report-new", "wall-new", "safe", "document"]).toContain(hash);
       }
       expect(html).not.toMatch(/file\.?pizza/i);
     }
@@ -65,6 +65,9 @@ describe("SEO / agent discoverability output", () => {
     expect(t).toMatch(/\n> .+/);
     expect(t).toMatch(/\n## Features\n/);
     expect(t).toMatch(/assistant and its provider see the plaintext/);
+    expect(t).toContain("Document (editor and PDF)");
+    expect(t).toMatch(/save as PDF or \.md/);
+
     const full: string = seo.llmsFullTxt();
     expect(full).toContain("#s:<id>/<key>");
     expect(full).not.toMatch(/#s:[A-Za-z0-9_-]{22}\//); // patterns only, never a real id

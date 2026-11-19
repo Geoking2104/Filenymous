@@ -92,7 +92,7 @@ function download(data: Uint8Array | Blob, name: string, type = "application/pdf
 
 const baseName = (n: string) => stemOf(n);
 
-export default function DocumentPanel({ onSend }: { onSend: (file: File) => void }) {
+export default function DocumentPanel({ onSend, startNew = false }: { onSend: (file: File) => void; startNew?: boolean }) {
   const { t } = useTranslation();
   const [doc, setDoc] = useState<Doc | null>(null);
   const [edits, setEdits] = useState<PageEdit[]>([]);
@@ -274,6 +274,25 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
     openText({ html: "", stem: t("document.ui.untitled") });
   };
 
+  const startedNew = useRef(false);
+  // A PDF handed over by the Coffre-fort ("Open in Document"), or a blank
+  // document when arriving from the home card's "Nouveau document" (#document-new).
+  useEffect(() => {
+    const f = takeHandoff("document");
+    if (f) {
+      openFiles([f]);
+      return;
+    }
+    if (startNew && !startedNew.current) {
+      startedNew.current = true;
+      newDocument();
+      if (location.hash === "#document-new" || location.hash === "#doc-new") {
+        history.replaceState(null, "", `${location.pathname}${location.search}#document`);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startNew]);
+
   const openFiles = (list: FileList | File[] | null) => {
     const all = Array.from(list ?? []);
     if (all.length === 0) return;
@@ -325,12 +344,6 @@ export default function DocumentPanel({ onSend }: { onSend: (file: File) => void
     });
   };
 
-  // A PDF handed over by the Coffre-fort ("Open in Document").
-  useEffect(() => {
-    const f = takeHandoff("document");
-    if (f) openFiles([f]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const resetPdf = () => {
     live.current.overlays.forEach((o) => o.url && URL.revokeObjectURL(o.url));

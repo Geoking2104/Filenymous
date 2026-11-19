@@ -15,6 +15,7 @@ Filenymous est un logiciel libre (MIT). Les fichiers passent directement d'un na
 | Partage streamé (vidéo, audio) | [Partage streamé](https://filenymous.eu/app/fonctionnalites/partage-streame/) | [Streaming](https://filenymous.eu/app/en/features/streaming/) |
 | Canal de signalement | [Canal de signalement](https://filenymous.eu/app/fonctionnalites/canal-de-signalement/) | [Whistleblowing channel](https://filenymous.eu/app/en/features/whistleblowing-channel/) |
 | Mur éphémère en direct | [Sharewall](https://filenymous.eu/app/fonctionnalites/mur-de-partage/) | [Sharewall](https://filenymous.eu/app/en/features/sharewall/) |
+| Éditeur de documents et PDF | [Document](https://filenymous.eu/app/fonctionnalites/document/) | [Document](https://filenymous.eu/app/en/features/document/) |
 | Terminal, CI/CD, agents IA | [CLI npm](https://filenymous.eu/app/fonctionnalites/cli-npm/) | [CLI npm](https://filenymous.eu/app/en/features/cli-npm/) |
 | Extension Chrome / Firefox | [Extension](https://filenymous.eu/app/fonctionnalites/extension-navigateur/) | [Extension](https://filenymous.eu/app/en/features/browser-extension/) |
 
@@ -68,6 +69,7 @@ Chaque carte de l'accueil ouvre un écran qui garde la même icône et le même 
   - **Code de vérification** `XXXX-XXXX` à comparer à voix haute.
   - **Limites :** 8 participants, 256 Mio par élément, 200 éléments par mur. L'onglet de l'hôte doit rester ouvert.
   - **Agents IA** (option de l'hôte, désactivée par défaut) : voir [Agents IA](#agents-ia). Détails : [`docs/SHAREWALL.md`](docs/SHAREWALL.md).
+- **Document.** Un éditeur type traitement de texte et des outils PDF, 100 % dans le navigateur (`#document`) : créer un document, ouvrir un PDF, un `.md` ou un `.txt`, enregistrer en PDF ou en Markdown, fusionner, découper, signer, puis envoyer en P2P ou ranger dans le coffre-fort. Rien n'est envoyé sur un serveur tant que vous ne partagez pas le fichier.
 - **Extension navigateur (Chrome MV3, Firefox).** Partager une sélection en secret, envoyer une image, une vidéo ou le fichier d'un lien en P2P depuis le menu contextuel, plusieurs fichiers depuis la fenêtre de l'extension. Les partages restent actifs onglet fermé, tant que le navigateur est ouvert.
   - **Pas encore publiée** sur le Chrome Web Store ni sur addons.mozilla.org. Installation manuelle en mode développeur : voir [`extension/README.md`](extension/README.md).
 
@@ -226,6 +228,7 @@ Each home card opens a screen that keeps the same icon and title. Every service 
   - **Verification code** `XXXX-XXXX` to compare out loud.
   - **Limits:** 8 participants, 256 MiB per item, 200 items per wall. The host's tab must stay open.
   - **AI agents** (host option, off by default): see [AI agents](#ai-agents). Details: [`docs/SHAREWALL.md`](docs/SHAREWALL.md).
+- **Document.** A word-processor-like editor and PDF tools, 100% in the browser (`#document`): create a document, open a PDF, `.md` or `.txt` file, save as PDF or Markdown, merge, split, sign, then send peer-to-peer or store in the vault. Nothing is sent to a server unless you share the file.
 - **Browser extension (Chrome MV3, Firefox).** Share a selection as a secret, or send an image, a video or a link's file P2P from the context menu; send several files from the extension window. Shares keep running with the tab closed, as long as the browser is open.
   - **Not yet published** on the Chrome Web Store or addons.mozilla.org. Manual install in developer mode: see [`extension/README.md`](extension/README.md).
 

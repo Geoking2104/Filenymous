@@ -16,7 +16,7 @@ export const SITE = {
   relay: "wss://www.opendpe.net/filenymous-signal/",
   vaultApi: "https://www.opendpe.net/filenymous-signal/api/v1/secrets",
   license: "MIT",
-  updated: "2026-10-21",
+  updated: "2026-11-19",
 };
 
 export const abs = (path) => SITE.origin + path;
@@ -189,6 +189,49 @@ export const FEATURES = [
       ],
       howto: ["Open https://filenymous.eu/app/#safe.", "Write the 24-word phrase down offline, then choose a password.", "Add your items; to share, add the recipient’s contact card."],
       cta: "Open the vault",
+    },
+  },
+  {
+    id: "document",
+    slug: { fr: "document", en: "document" },
+    cta: { fr: "#document", en: "#document" },
+    fr: {
+      name: "Document (éditeur et PDF)",
+      title: "Éditeur de documents et outils PDF, 100 % dans le navigateur — Filenymous",
+      description: "Créez et éditez un document comme dans un traitement de texte, ouvrez un PDF, un Markdown ou un texte, enregistrez en PDF ou en .md, fusionnez, découpez et signez : tout reste dans votre navigateur.",
+      lead: "Créez, éditez et convertissez vos documents comme dans un traitement de texte, 100 % dans votre navigateur.",
+      facts: [
+        "Nouveau document, barre d’outils (titres, gras, listes, tableau, images), copier-coller, renommer.",
+        "Ouvrez un PDF et enregistrez-le en Markdown (.md), ou exportez votre texte en PDF ; ouvrez aussi les fichiers .md et .txt.",
+        "Sur un PDF : fusionner, découper, réorganiser les pages, remplir les formulaires, ajouter du texte et une signature, optimiser.",
+        "Traitement 100 % local (pdf.js, pdf-lib, TipTap) : rien n’est envoyé sur un serveur, sauf si vous partagez le fichier par transfert Filenymous ou le rangez dans le coffre-fort.",
+        "Sans compte, gratuit, licence MIT.",
+      ],
+      limits: [
+        "La conversion d’un PDF en document éditable n’extrait que le texte : la mise en page, les colonnes, les images et les polices d’origine sont perdues ; un PDF scanné n’a pas de texte.",
+        "Le PDF exporté depuis l’éditeur utilise Noto Sans (latin, accents inclus) : emoji et écritures CJK, arabes ou indiennes sont remplacés par « ? ».",
+      ],
+      howto: ["Ouvrez https://filenymous.eu/app/#document.", "Créez un document ou ouvrez un fichier PDF, .md ou .txt.", "Enregistrez sous en PDF ou en Markdown, ou envoyez le fichier en P2P / au coffre-fort."],
+      cta: "Ouvrir l’éditeur",
+    },
+    en: {
+      name: "Document (editor and PDF)",
+      title: "Document editor and PDF tools, 100% in your browser — Filenymous",
+      description: "Create and edit a document like in a word processor, open a PDF, Markdown or text file, save as PDF or .md, merge, split and sign: everything stays in your browser.",
+      lead: "Create, edit and convert your documents like in a word processor, 100% in your browser.",
+      facts: [
+        "New document, toolbar (headings, bold, lists, table, images), copy-paste, rename.",
+        "Open a PDF and save it as Markdown (.md), or export your text as a PDF; you can also open .md and .txt files.",
+        "On a PDF: merge, split, reorder pages, fill forms, add text and a signature, optimise.",
+        "100% local processing (pdf.js, pdf-lib, TipTap): nothing is sent to a server unless you share the file with a Filenymous transfer or store it in the vault.",
+        "No account, free, MIT licence.",
+      ],
+      limits: [
+        "Converting a PDF to an editable document extracts text only: the original layout, columns, images and fonts are lost; a scanned PDF has no text.",
+        "PDFs exported from the editor use Noto Sans (Latin, including accents): emoji and CJK, Arabic or Indic scripts are replaced by “?”.",
+      ],
+      howto: ["Open https://filenymous.eu/app/#document.", "Create a document or open a PDF, .md or .txt file.", "Save as PDF or Markdown, or send the file peer-to-peer / to the vault."],
+      cta: "Open the editor",
     },
   },
   {
