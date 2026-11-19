@@ -1,4 +1,3 @@
-use crate::app_state::AppState;
 use tauri::{
     api::process, AppHandle, CustomMenuItem, Manager, SystemTrayEvent, SystemTrayMenu,
     SystemTrayMenuItem, Wry,

@@ -12,9 +12,9 @@ pub struct AppFileSystem {
     /// Répertoire racine des données du profil (dans app data dir OS)
     pub profile_data_dir: PathBuf,
     /// Répertoire du conductor Holochain
-    conductor_dir_path:   PathBuf,
+    conductor_dir_path: PathBuf,
     /// Répertoire du keystore lair
-    keystore_dir_path:    PathBuf,
+    keystore_dir_path: PathBuf,
 }
 
 pub type Profile = String;
@@ -27,9 +27,9 @@ impl AppFileSystem {
         let app_data = app_data_dir(&config)
             .ok_or_else(|| AppError::FileSystemError("Cannot resolve app data dir".into()))?;
 
-        let profile_data_dir   = app_data.join("profiles").join(profile);
+        let profile_data_dir = app_data.join("profiles").join(profile);
         let conductor_dir_path = profile_data_dir.join("conductor");
-        let keystore_dir_path  = profile_data_dir.join("keystore");
+        let keystore_dir_path = profile_data_dir.join("keystore");
 
         Ok(Self {
             profile_data_dir,
@@ -46,10 +46,6 @@ impl AppFileSystem {
         self.keystore_dir_path.clone()
     }
 
-    pub fn keystore_initialized(&self) -> bool {
-        self.keystore_dir_path.join("lair-keystore-config.yaml").exists()
-    }
-
     /// Lit la network seed du profil courant (si elle a été personnalisée)
     pub fn read_profile_network_seed(&self) -> Option<String> {
         let seed_path = self.profile_data_dir.join("network-seed.txt");
@@ -58,7 +54,8 @@ impl AppFileSystem {
 
     /// Retourne le profil actif (lu depuis un fichier de config simple)
     pub fn get_active_profile(&self) -> String {
-        let profile_path = self.profile_data_dir
+        let profile_path = self
+            .profile_data_dir
             .parent()
             .unwrap_or(&self.profile_data_dir)
             .parent()

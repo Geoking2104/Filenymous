@@ -49,3 +49,4 @@ Secrets.toml
 # hc sandbox bookkeeping
 .hc
 .hc_live_*
+pouch/

@@ -15,8 +15,11 @@ mod config;
 mod errors;
 mod launch;
 mod process;
+mod setup;
 
 fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
     let builder_result = tauri::Builder::default()
         .system_tray(SystemTray::new().with_menu(app_system_tray()))
         .on_system_tray_event(handle_system_tray_event)

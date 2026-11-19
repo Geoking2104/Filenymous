@@ -18,6 +18,7 @@
  */
 import { AdminWebsocket, AppWebsocket, type CallZomeRequest, type CellId } from "@holochain/client";
 import { b64u, encodeTokenFile, type SealedBundleWire } from "../safe/agentSeal";
+import { installTauriZomeCallSigner } from "./tauriSigner";
 
 declare const __HC_URL__: string;
 declare const __HC_ADMIN_URL__: string;
@@ -73,6 +74,7 @@ async function connectOnce(): Promise<Conn> {
   let appUrl: string;
   let app: AppWebsocket;
   if (desktop?.APP_INTERFACE_PORT && desktop.APP_INTERFACE_TOKEN) {
+    installTauriZomeCallSigner(); // signature par src-tauri (lair local)
     appUrl = `ws://127.0.0.1:${desktop.APP_INTERFACE_PORT}`;
     app = await AppWebsocket.connect({ url: new URL(appUrl), token: desktop.APP_INTERFACE_TOKEN, defaultTimeout: TIMEOUT });
   } else if (adminUrl) {

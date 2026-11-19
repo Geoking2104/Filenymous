@@ -1,5 +1,3 @@
-use futures::lock::Mutex;
-use std::sync::Arc;
 use tauri::{App, Manager};
 
 use crate::{
@@ -23,12 +21,12 @@ pub fn setup_app(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
 
     tauri::async_runtime::block_on(async move {
         match launch(&fs, config::PASSWORD.to_string()).await {
-            Ok((meta_lair_client, app_port, admin_port)) => {
+            Ok((lair_client, app_port, admin_port)) => {
                 let state = AppState {
                     fs: fs.clone(),
                     app_port,
                     admin_port,
-                    meta_lair_client: Arc::new(Mutex::new(meta_lair_client)),
+                    lair_client,
                 };
                 handle.manage(state);
 

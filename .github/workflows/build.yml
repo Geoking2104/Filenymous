@@ -79,6 +79,56 @@ jobs:
 
   # Holochain 0.6 replaces JS Tryorama with Rust Sweettest.
   # Keep the browser-only transfer path covered while Sweettest migration is planned.
+  desktop:
+    name: Desktop (src-tauri, Holochain 0.6.1)
+    # Tauri 1 needs webkit2gtk-4.0 (libsoup2), available on Ubuntu 22.04.
+    runs-on: ubuntu-22.04
+    needs: rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.0-dev libgtk-3-dev libayatana-appindicator3-dev \
+            librsvg2-dev libsoup2.4-dev libssl-dev pkg-config
+
+      - name: Rust toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Holochain 0.6.1 sidecar (official release)
+        run: bash scripts/download-binaries.sh x86_64-unknown-linux-gnu
+
+      - name: hApps from the Rust & DNA job
+        uses: actions/download-artifact@v4
+        with:
+          name: filenymous-happ
+          path: pouch
+
+      - name: Check formatting
+        working-directory: src-tauri
+        run: cargo fmt -- --check
+
+      - name: Cargo check (all targets)
+        working-directory: src-tauri
+        run: cargo check --locked --all-targets
+
+      - name: First launch against a real conductor (installs both hApps, signs zome calls)
+        working-directory: src-tauri
+        env:
+          HOLOCHAIN_BIN: ${{ github.workspace }}/src-tauri/bins/holochain-v0.6.1-x86_64-unknown-linux-gnu
+          FILENYMOUS_POUCH_DIR: ${{ github.workspace }}/pouch
+        run: |
+          ls -la "$FILENYMOUS_POUCH_DIR"
+          cargo test --locked -- --nocapture 2>&1 | tee test.log
+          # The conductor test skips itself when the env is missing: fail loudly instead.
+          ! grep -q "test ignoré" test.log
+
   web-tests:
     name: Web/P2P tests
     runs-on: ubuntu-latest

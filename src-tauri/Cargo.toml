@@ -11,24 +11,24 @@ lto       = true
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 [build-dependencies]
-serde          = { version = "1.0", features = ["derive"] }
 tauri-build    = { version = "1.5", features = [] }
 toml           = "0.8"
 
-# ── Runtime deps (mirror holochain-kangaroo exactly) ─────────────────────────
+# ── Runtime deps ──────────────────────────────────────────────────────────────
+# ── Holochain 0.6.1 ──────────────────────────────────────────────────────────
+# `holochain` est lancé en sidecar (bins/holochain-v<version>) ; on ne dépend
+# donc que des crates d'API/de types, pas du conductor lui-même.
+# build.rs lit la version de `holochain_conductor_api` pour nommer le sidecar :
+# elle doit correspondre au binaire holochain embarqué.
 [dependencies]
-
-# ── Holochain — version must match the sidecar binary in bins/ ──────────────
-# build.rs reads this version to set HOLOCHAIN_VERSION at compile time
-holochain_client     = "0.8.1"
-holochain            = { version = "0.6.1", default-features = false, features = ["sqlite-encrypted", "schema", "wasmer_sys"] }
-holochain_keystore   = "0.6.1"
-holochain_types      = "0.6.1"
-holochain_zome_types = "0.6.1"
-mr_bundle            = "0.6.1"
+holochain_client        = "0.8.1"
+holochain_conductor_api = "0.6.1"
+holochain_types         = "0.6.1"
+holochain_zome_types    = "0.6.1"
+lair_keystore_api       = "0.6.3"
 
 # ── Tauri ──────────────────────────────────────────────────────────────────────
-tauri = { version = "1.5", features = [
+tauri = { version = "1.8", features = [
   "devtools",
   "cli",
   "clipboard-write-text",
@@ -38,28 +38,23 @@ tauri = { version = "1.5", features = [
   "shell-open",
 ] }
 
-# ── Optional: single-instance (tray) ─────────────────────────────────────────
-tauri-plugin-single-instance = { git = "https://github.com/matthme/plugins-workspace", branch = "single-instance-semver" }
-
 # ── Async ─────────────────────────────────────────────────────────────────────
-futures    = "0.3"
+futures = "0.3"
+tokio   = { version = "1", features = ["time", "macros", "rt-multi-thread", "sync", "process", "io-util"] }
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
+bytes      = "1"
+env_logger = "0.11"
 log        = "0.4"
-log4rs     = "1.0"
-nanoid     = "0.4"
-opener     = "0.5"
 portpicker = "0.1"
-semver     = "1.0"
+rand       = "0.8"
 serde      = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_yaml = "0.8"
-sodoken    = "0.0.9"
-symlink    = "0.1"
+serde_yaml = "0.9"
+sodoken    = "0.1"
 thiserror  = "1"
 url        = "2"
 url2       = "0.0.6"
-chrono     = "0.4"
 
 # ── Feature flags ─────────────────────────────────────────────────────────────
 [features]

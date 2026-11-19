@@ -148,8 +148,8 @@ pouch: build-happ build-ui
 
 # ── 6a. Kangaroo desktop build experimental (plateforme courante) ────────────
 # Produit : bundle Tauri local experimental, non publie en release.
-# Pré-requis : les binaires holochain + lair-keystore doivent être dans
-#   src-tauri/binaries/holochain-<triple> et lair-keystore-<triple>
+# Pré-requis : le binaire holochain doit être dans
+#   src-tauri/bins/holochain-v<version>-<triple> (lair est in-process en 0.6)
 #   Télécharger via : scripts/download-binaries.sh
 kangaroo: pouch
 	@echo "→ Build Kangaroo (Tauri desktop)…"
