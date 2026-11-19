@@ -26,6 +26,9 @@
     <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 
     <title>Filenymous</title>
+    <script>
+      if (/^#(document-new|doc-new)$/.test(location.hash)) document.title = "Éditeur Filenymous";
+    </script>
 
     <!--
       Mesure d'audience Umami auto-hébergée (www.opendpe.net/umami, VPS OVHcloud) :

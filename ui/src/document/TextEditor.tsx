@@ -18,6 +18,8 @@ import { TextSelection } from "@tiptap/pm/state";
 import { htmlToMd } from "./markdown";
 import { MIME, withExt, type SaveFormat } from "./fileName";
 import { ExportBar, MenuBar, NameField, SaveAsDialog, ToolButton, inField, mod, useShortcuts, type Menu, type MenuEntry, type SaveAction } from "./chrome";
+import { useBookmarkMenu } from "./BookmarkBar";
+import type { Draft } from "./draft";
 import { saveDraft } from "./draft";
 import "./editor.css";
 
@@ -73,6 +75,9 @@ export interface TextEditorProps {
   initialHtml: string;
   stem: string;
   notice?: string;
+  pendingDraft?: Draft | null;
+  onRestoreDraft?: () => void;
+  onDiscardDraft?: () => void;
   onRename: (s: string) => void;
   onDirty: (d: boolean) => void;
   onNew: () => void;
@@ -83,8 +88,9 @@ export interface TextEditorProps {
 
 type Msg = { kind: "ok" | "err" | "info"; text: string } | null;
 
-export default function TextEditor({ initialHtml, stem, notice, onRename, onDirty, onNew, onOpen, onClose, deliver }: TextEditorProps) {
+export default function TextEditor({ initialHtml, stem, notice, pendingDraft, onRestoreDraft, onDiscardDraft, onRename, onDirty, onNew, onOpen, onClose, deliver }: TextEditorProps) {
   const { t, i18n } = useTranslation();
+  const bookmark = useBookmarkMenu();
   const [msg, setMsg] = useState<Msg>(notice ? { kind: "info", text: notice } : null);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirtyState] = useState(false);
@@ -166,6 +172,11 @@ export default function TextEditor({ initialHtml, stem, notice, onRename, onDirt
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
   useEffect(() => () => window.clearTimeout(draftTimer.current), []);
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const id = window.requestAnimationFrame(() => editor.commands.focus("end"));
+    return () => window.cancelAnimationFrame(id);
+  }, [editor]);
 
   const st = useEditorState({
     editor,
@@ -315,6 +326,8 @@ export default function TextEditor({ initialHtml, stem, notice, onRename, onDirt
     { id: "send", label: t("document.ui.sendDots"), onSelect: () => setSaveAs({ format: "pdf", intent: "send" }) },
     { id: "safe", label: t("document.ui.safeDots"), onSelect: () => setSaveAs({ format: "pdf", intent: "safe" }) },
     { sep: true },
+    bookmark.item,
+    { sep: true },
     { id: "close", label: t("document.close"), onSelect: onClose },
   ];
   const menus: Menu[] = [
@@ -391,6 +404,16 @@ export default function TextEditor({ initialHtml, stem, notice, onRename, onDirt
           </button>
         </div>
       </div>
+      {bookmark.dialog}
+      {pendingDraft && !dirty && onRestoreDraft && (
+        <div className="doc-draft doc-draft--live" data-testid="doc-draft">
+          <span>📝 {t("document.ui.draftFound", { name: pendingDraft.name, time: new Date(pendingDraft.at).toLocaleString() })}</span>
+          <span className="doc-row">
+            <button type="button" className="pz-btn" onClick={onRestoreDraft} data-testid="doc-draft-restore">{t("document.ui.draftRestore")}</button>
+            {onDiscardDraft && <button type="button" className="pz-btn-ghost" onClick={onDiscardDraft} data-testid="doc-draft-discard">{t("document.ui.draftDiscard")}</button>}
+          </span>
+        </div>
+      )}
 
       <div className="doc-ribbon">
         <MenuBar menus={menus} label={t("document.ui.menuAria")} />

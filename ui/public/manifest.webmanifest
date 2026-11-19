@@ -10,7 +10,10 @@
   "theme_color": "#09090b",
   "orientation": "any",
   "lang": "fr",
-  "categories": ["utilities", "productivity"],
+  "categories": [
+    "utilities",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "icons/icon.svg",
@@ -35,6 +38,69 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouveau document",
+      "short_name": "Nouveau",
+      "description": "Ouvrir un document vierge dans l'éditeur Filenymous",
+      "url": "./#document-new",
+      "icons": [
+        {
+          "src": "icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        },
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Ouvrir un fichier",
+      "short_name": "Ouvrir",
+      "description": "Ouvrir un PDF, un Markdown ou un texte",
+      "url": "./#document",
+      "icons": [
+        {
+          "src": "icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        },
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "./#document",
+      "accept": {
+        "application/pdf": [
+          ".pdf"
+        ],
+        "text/markdown": [
+          ".md",
+          ".markdown"
+        ],
+        "text/plain": [
+          ".txt"
+        ]
+      },
+      "icons": [
+        {
+          "src": "icons/icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ],
+      "launch_type": "single-client"
     }
   ]
 }

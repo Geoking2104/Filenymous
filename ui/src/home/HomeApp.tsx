@@ -31,6 +31,9 @@ import "../report/report.css";
 import { WallHostPanel, WallPeerPanel } from "../wall/WallPanel";
 import { ConfirmDialogHost, confirmLeave } from "./confirmLeave";
 import "./home.css";
+import { BookmarkLink } from "../document/BookmarkBar";
+import { isNewDocumentHash, listenForFileLaunches, prefetchDocumentEditor } from "../document/bookmark";
+import { handOff } from "../document/handoff";
 
 // Coffre-fort (SQLite WASM + crypto) is loaded only when opened.
 const SafePanel = lazy(() => import("../safe/SafePanel"));
@@ -112,8 +115,17 @@ export default function HomeApp({ hash }: { hash: string }) {
   const [rxStream, setRxStream] = useState(false);
 
   useEffect(() => {
-    document.title = t("pz.docTitle");
-  }, [t]);
+    document.title = isNewDocumentHash(hash) ? t("document.bookmark.title") : t("pz.docTitle");
+  }, [t, hash]);
+
+  useEffect(() => {
+    if (isNewDocumentHash(hash) || hash === "#document" || hash === "#doc" || hash === "#pdf") prefetchDocumentEditor();
+  }, [hash]);
+
+  useEffect(() => listenForFileLaunches((file) => {
+    handOff("document", file);
+    if (location.hash !== "#document") location.hash = "#document";
+  }), []);
 
   const add = useCallback((list: FileList | null) => {
     if (!list || list.length === 0) return;
@@ -400,6 +412,9 @@ export default function HomeApp({ hash }: { hash: string }) {
             <div className="pz-service-ctas">
               <a className="pz-btn pz-btn-block" href="#document" data-testid="document-entry">{t("home.document.cta")}</a>
               <a className="pz-btn-ghost pz-btn-block" href="#document-new" data-testid="document-new">{t("home.document.ctaNew")}</a>
+            </div>
+            <div className="pz-bookmark" data-testid="document-bookmark">
+              <BookmarkLink showHints />
             </div>
           </article>
           <article className="pz-service pz-service--secret" data-service="secret" aria-labelledby="svc-secret">

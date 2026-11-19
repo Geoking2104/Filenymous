@@ -21,7 +21,7 @@ PDFCraft (AGPL-3.0) is used, so the project stays MIT.
   the save format.
 - **Menu bar**: *Fichier* (Nouveau, Ouvrir, Renommer, Enregistrer sous…, Enregistrer en
   PDF / en Markdown, Envoyer en P2P…, Ranger dans le coffre-fort…, Convertir en
-  document éditable (PDF), Fermer), *Édition* (Annuler / Rétablir, Couper / Copier /
+  document éditable (PDF), Ajouter aux favoris…, Fermer), *Édition* (Annuler / Rétablir, Couper / Copier /
   Coller, Tout sélectionner, Rechercher), *Insertion* and *Format* (text) or *Pages* and
   *Outils PDF* (PDF). Menus are keyboard navigable (arrows, Home/End, Esc).
 - **"Enregistrer sous" dialog** (`Ctrl+S`): file name, format (PDF / Markdown), then
@@ -30,6 +30,19 @@ PDFCraft (AGPL-3.0) is used, so the project stays MIT.
 - **Shortcuts**: `Ctrl+S` save as, `Ctrl+O` open, `Alt+N` new document (browsers
   reserve `Ctrl+N`), `Ctrl+Z` / `Ctrl+Y` (or `Ctrl+Shift+Z`) undo / redo, `F2` rename.
   `Cmd` replaces `Ctrl` on macOS.
+
+
+## Bookmarks bar
+
+The Document card and the *Fichier* menu offer a draggable **Éditeur Filenymous**
+button that points to the plain URL `https://filenymous.eu/app/#document-new`
+(not a `javascript:` bookmarklet, so it works in every browser and under a CSP).
+Drag it onto the bookmarks bar (show the bar with `Ctrl+Shift+B` / `⌘⇧B`, or
+use `Ctrl+D` / `⌘D`). Browsers cannot add a bookmark programmatically; the
+dialog explains this and also offers to copy the link. Opening that URL (or the
+PWA shortcut *Nouveau document*) starts a blank editor, focuses the caret, and
+sets the page title to « Éditeur Filenymous » so a later bookmark gets a clear
+name. An unsaved draft, if any, is offered in a banner that does not block typing.
 
 ## Text editor
 
