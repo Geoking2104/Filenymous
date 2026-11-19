@@ -40,6 +40,8 @@ import {
 } from "./pdfOps";
 import { isPasswordError, openPdf, pageGeometry, renderPage, type PDFDocumentProxy } from "./pdfView";
 import { ContextMenu, ExportBar, MenuBar, NameField, SaveAsDialog, inField, mod, useShortcuts, type Menu, type MenuEntry, type SaveAction } from "./chrome";
+import { EDITOR_NEW_EVENT, isNewDocumentHash } from "./bookmark";
+import { useBookmarkMenu } from "./BookmarkBar";
 import { MIME, openKind, stem as stemOf, withExt, type SaveFormat } from "./fileName";
 import { clickSelect, duplicateAt, insertAt, keyNav, moveBy, moveTo, removeAt, selectAll as selectAllPages, targets as selTargets, type PageSel } from "./pageSelection";
 import { clearDraft, loadDraft, type Draft } from "./draft";
@@ -94,6 +96,7 @@ const baseName = (n: string) => stemOf(n);
 
 export default function DocumentPanel({ onSend, startNew = false }: { onSend: (file: File) => void; startNew?: boolean }) {
   const { t } = useTranslation();
+  const bookmark = useBookmarkMenu();
   const [doc, setDoc] = useState<Doc | null>(null);
   const [edits, setEdits] = useState<PageEdit[]>([]);
   const [undo, setUndo] = useState<UndoEntry[]>([]);
@@ -263,10 +266,18 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
   /** Leave the current document (asks first when it has unsaved changes). */
   const confirmDiscard = () => !(dirty || textDirty) || window.confirm(t("document.ui.discardConfirm"));
 
+  const leaveNewHash = () => {
+    if (isNewDocumentHash(location.hash)) {
+      history.replaceState(null, "", `${location.pathname}${location.search}#document`);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    }
+  };
+
   const openText = (td: Omit<TextDoc, "key">) => {
     resetPdf();
     setTextDirty(false);
     setTextDoc({ ...td, key: Date.now() });
+    if (td.html) leaveNewHash();
   };
 
   const newDocument = () => {
@@ -274,24 +285,31 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
     openText({ html: "", stem: t("document.ui.untitled") });
   };
 
-  const startedNew = useRef(false);
   // A PDF handed over by the Coffre-fort ("Open in Document"), or a blank
-  // document when arriving from the home card's "Nouveau document" (#document-new).
+  // document when arriving from the home card / a bookmark (#document-new).
+  // The hash is kept as #document-new so a bookmarks-bar Ctrl+D gets the
+  // editor URL and title; it is changed to #document only when a file is opened.
   useEffect(() => {
     const f = takeHandoff("document");
     if (f) {
       openFiles([f]);
       return;
     }
-    if (startNew && !startedNew.current) {
-      startedNew.current = true;
+    if (startNew) {
+      // Pick up a draft saved in this session (TextEditor writes to
+      // localStorage; the panel only loads it at mount or here).
+      setDraft(loadDraft());
       newDocument();
-      if (location.hash === "#document-new" || location.hash === "#doc-new") {
-        history.replaceState(null, "", `${location.pathname}${location.search}#document`);
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startNew]);
+
+  useEffect(() => {
+    const on = () => newDocument();
+    window.addEventListener(EDITOR_NEW_EVENT, on);
+    return () => window.removeEventListener(EDITOR_NEW_EVENT, on);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openFiles = (list: FileList | File[] | null) => {
     const all = Array.from(list ?? []);
@@ -329,6 +347,7 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
       if (!live.current.doc) {
         const [first, ...rest] = loaded;
         await show(first.bytes, first.name);
+        leaveNewHash();
         setUndo([]);
         setOverlaysLive(() => []);
         setDirty(false);
@@ -598,15 +617,24 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
   const hiddenOpen = <input ref={openInput} type="file" accept={ACCEPT} multiple hidden onChange={(e) => { openFiles(e.currentTarget.files); e.currentTarget.value = ""; }} data-testid="doc-open-file" />;
 
   if (textDoc) {
+    const offerDraft = draft && !textDoc.html && !textDoc.notice;
     return (
       <>
         {hiddenOpen}
+        {bookmark.dialog}
         <Suspense fallback={<p className="doc-status" role="status">{t("document.loading")}</p>}>
           <TextEditor
             key={textDoc.key}
             initialHtml={textDoc.html}
             stem={textDoc.stem}
             notice={textDoc.notice}
+            pendingDraft={offerDraft ? draft : null}
+            onRestoreDraft={() => {
+              if (!draft) return;
+              openText({ html: draft.html, stem: draft.name });
+              setTextDirty(true);
+            }}
+            onDiscardDraft={() => (clearDraft(), setDraft(null))}
             onRename={(s) => setTextDoc((d) => d && { ...d, stem: s })}
             onDirty={setTextDirty}
             onNew={newDocument}
@@ -722,6 +750,8 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
         { sep: true },
         { id: "convert", label: t("document.ui.convert"), onSelect: convertToText },
         { sep: true },
+        bookmark.item,
+        { sep: true },
         { id: "close", label: t("document.close"), onSelect: closeDoc },
       ],
     },
@@ -748,6 +778,7 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
   return (
     <section className="doc-panel" data-testid="doc-panel" data-mode="pdf" aria-busy={busy}>
       {hiddenOpen}
+      {bookmark.dialog}
       <div className="doc-bar">
         <div className="doc-file">
           <NameField stem={stemOf(doc.name)} ext="pdf" onRename={rename} inputRef={nameRef} disabled={busy} />

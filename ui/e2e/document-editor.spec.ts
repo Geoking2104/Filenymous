@@ -49,8 +49,57 @@ const download = async (page: Page, click: () => Promise<void>) => {
 
 test("#document-new opens a blank editor", async ({ page }) => {
   await page.goto("/#document-new");
-  await expect(page.getByTestId("doc-editor")).toBeVisible();
+  const ed = page.getByTestId("doc-editor");
+  await expect(ed).toBeVisible();
   await expect(page.getByTestId("doc-new")).toHaveCount(0);
+  await expect(ed).toBeFocused();
+  await expect(page).toHaveTitle("Éditeur Filenymous");
+  await expect(page).toHaveURL(/#document-new$/);
+});
+
+test("bookmarks-bar pill on the Document card is a draggable production URL", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("carousel-dot").nth(4).click();
+  const link = page.getByTestId("doc-bookmark-link");
+  await expect(link).toHaveAttribute("href", "https://filenymous.eu/app/#document-new");
+  await expect(link).toHaveAttribute("draggable", "true");
+  await expect(link).toHaveAttribute("title", "Éditeur Filenymous");
+  await link.click();
+  await expect(page.getByTestId("doc-editor")).toBeVisible();
+  await expect(page.getByTestId("doc-editor")).toBeFocused();
+  await expect(page).toHaveURL(/#document-new$/);
+  expect(new URL(page.url()).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/);
+});
+
+test("Fichier menu opens the add-to-bookmarks dialog", async ({ page }) => {
+  await page.goto("/#document-new");
+  await expect(page.getByTestId("doc-editor")).toBeVisible();
+  await page.getByTestId("doc-menubar-file").click();
+  await page.getByTestId("doc-menu-bookmark").click();
+  const dlg = page.getByTestId("doc-bookmark-dialog");
+  await expect(dlg).toBeVisible();
+  const link = page.getByTestId("doc-bookmark-dialog-link");
+  await expect(link).toHaveAttribute("href", "https://filenymous.eu/app/#document-new");
+  await expect(link).toHaveAttribute("draggable", "true");
+});
+
+test("#document-new offers a draft without blocking the caret", async ({ page }) => {
+  await page.goto("/#document");
+  await page.getByTestId("doc-new").click();
+  await expect(page.getByTestId("doc-editor")).toBeFocused();
+  await page.keyboard.type("Brouillon à reprendre");
+  await page.waitForTimeout(1200);
+  // Full load, as when the bookmarks-bar shortcut is opened (a hash-only
+  // move would ask to discard the current unsaved document).
+  await page.goto("about:blank");
+  await page.goto("/#document-new");
+  const ed = page.getByTestId("doc-editor");
+  await expect(ed).toBeFocused();
+  await expect(page.getByTestId("doc-draft")).toContainText("Sans titre");
+  await page.getByTestId("doc-draft-restore").click();
+  await expect(ed).toContainText("Brouillon à reprendre");
+  await ed.pressSequentially(" !");
+  await expect(ed).toContainText("Brouillon à reprendre !");
 });
 
 test("new document: type, format, rename, save as PDF and Markdown", async ({ page }) => {

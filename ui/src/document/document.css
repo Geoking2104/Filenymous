@@ -162,3 +162,10 @@
 @media (prefers-reduced-motion: reduce) {
   .doc-tools button { transition: none; }
 }
+
+
+.doc-bookmark { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; }
+.doc-bookmark-dialog .doc-bookmark { align-items: stretch; }
+.doc-bookmark-dialog .doc-bookmark-pill { font-size: .92rem; padding: .45rem .9rem; }
+.doc-bookmark-howto { margin: 0; font-size: .85rem; color: var(--fy-text-2); }
+.doc-draft--live { margin: 0; }

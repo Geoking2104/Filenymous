@@ -1911,6 +1911,22 @@
       "noText": "Aucun texte trouvé dans ce PDF (document scanné ou composé d'images ?).",
       "mdFromPdf": "Markdown : seul le texte du PDF est exporté (sans mise en page ni images)."
     },
+      "bookmark": {
+        "title": "Éditeur Filenymous",
+        "pill": "⭐ Éditeur Filenymous",
+        "dragHint": "Glissez ce bouton dans votre barre de favoris",
+        "shortcutHint": "{{mod}}+D pour ajouter cette page aux favoris.",
+        "showBar": "{{mod}}+Maj+B pour afficher la barre",
+        "add": "Ajouter aux favoris…",
+        "dialogTitle": "Ajouter l'éditeur aux favoris",
+        "dialogLead": "Les navigateurs n'autorisent pas un site à ajouter un favori automatiquement. Glissez le bouton ci-dessous dans la barre de favoris, ou copiez le lien.",
+        "copy": "Copier le lien",
+        "copied": "Lien copié",
+        "howtoChrome": "Chrome et Edge : affichez la barre ({{mod}}+Maj+B) puis glissez le bouton. Ou {{mod}}+D et choisissez « Barre de favoris ».",
+        "howtoFirefox": "Firefox : affichez la barre ({{mod}}+Maj+B) puis glissez le bouton. Ou {{mod}}+D.",
+        "howtoSafari": "Safari : affichez la barre des favoris ({{mod}}+Maj+B) puis glissez le bouton. Ou {{mod}}+D.",
+        "limit": "Impossible d'ajouter le favori à votre place : le navigateur bloque cette action, pour empêcher des sites d'ajouter des favoris sans votre accord."
+      },
     "pagesUi": {
       "toolbarAria": "Actions sur les pages sélectionnées",
       "rotateLeft": "Pivoter à gauche",

@@ -28,6 +28,10 @@ test.describe("home services carousel", () => {
     await expect(page.getByTestId("document-card")).toContainText("Markdown");
     await expect(page.getByTestId("document-entry")).toHaveAttribute("href", "#document");
     await expect(page.getByTestId("document-new")).toHaveAttribute("href", "#document-new");
+    const bookmark = page.getByTestId("doc-bookmark-link");
+    await expect(bookmark).toHaveAttribute("href", "https://filenymous.eu/app/#document-new");
+    await expect(bookmark).toHaveAttribute("draggable", "true");
+    await expect(page.getByTestId("document-bookmark")).toContainText("Glissez ce bouton");
     await dots.nth(6).click();
     const whistle = page.getByTestId("whistle-card");
     await expect(whistle).toContainText("Nouveau");
