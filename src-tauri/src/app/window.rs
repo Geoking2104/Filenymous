@@ -69,3 +69,17 @@ pub async fn build_main_window(
     .build()
     .expect("Failed to build main window")
 }
+
+/// Met la fenêtre principale au premier plan (2e lancement de l'app).
+/// Si le conductor démarre encore, la fenêtre n'existe pas : elle s'ouvrira
+/// d'elle-même à la fin du démarrage.
+pub fn focus_main_window(app_handle: &AppHandle) {
+    match app_handle.get_window("main") {
+        Some(window) => {
+            let _ = window.show();
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+        }
+        None => log::info!("2e lancement pendant le démarrage : fenêtre pas encore créée"),
+    }
+}

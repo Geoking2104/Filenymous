@@ -1,0 +1,215 @@
+name: Desktop bundles (macOS / Windows)
+
+# Construit l'app desktop Tauri (src-tauri, Holochain 0.6.1) sur macOS et
+# Windows, sans signature, et publie les bundles en artefacts.
+on:
+  pull_request:
+    paths:
+      - "src-tauri/**"
+      - "scripts/download-binaries.*"
+      - "ui/**"
+      - "dnas/**"
+      - "happ.yaml"
+      - ".github/workflows/desktop-bundles.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-bundles-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # onnxruntime-node (via @huggingface/transformers) tente de télécharger un
+  # build CUDA pendant `npm ci` ; l'asset est en 404. Le CPU suffit.
+  ONNXRUNTIME_NODE_INSTALL_CUDA: skip
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Les hApps sont embarqués dans le binaire de release (include_bytes!).
+  happ:
+    name: hApps (Holochain 0.6)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Cache Nix store
+        uses: cachix/cachix-action@v14
+        with:
+          name: holochain-ci
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN || '' }}
+      - name: Pack hApps
+        run: nix develop -L --command make build-happ
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-happ
+          path: |
+            workdir/filenymous.happ
+            workdir/filenymous-agent-vault.happ
+          retention-days: 3
+
+  bundle:
+    name: Bundle ${{ matrix.name }}
+    needs: happ
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS arm64
+            os: macos-latest
+            target: aarch64-apple-darwin
+          - name: macOS x86_64
+            os: macos-15-intel
+            target: x86_64-apple-darwin
+          - name: Windows x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: .exe
+    defaults:
+      run:
+        shell: bash
+    env:
+      SIDECAR_EXT: ${{ matrix.ext }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Rust toolchain (rust-toolchain.toml) + target
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          rustup target add ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+
+      - name: Holochain 0.6.1 sidecar (Unix)
+        if: runner.os != 'Windows'
+        run: bash scripts/download-binaries.sh ${{ matrix.target }}
+
+      - name: Holochain 0.6.1 sidecar (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/download-binaries.ps1
+
+      - name: Sidecar smoke test (--version)
+        run: |
+          bin="src-tauri/bins/holochain-v0.6.1-${{ matrix.target }}${SIDECAR_EXT}"
+          ls -la "$bin"
+          out=$("$bin" --version)
+          echo "$out"
+          echo "$out" | grep -q "0\.6\.1"
+
+      - name: hApps from the happ job
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-happ
+          path: pouch
+
+      - name: UI dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: ui
+
+      - name: Unit tests (single instance, stale conductor)
+        working-directory: src-tauri
+        run: cargo test --locked --target ${{ matrix.target }} -- single_instance stale
+
+      - name: Build bundles (unsigned)
+        run: npx --yes @tauri-apps/cli@1.6.3 build --target ${{ matrix.target }}
+
+      - name: Collect bundles
+        id: collect
+        run: |
+          set -euo pipefail
+          bundle="src-tauri/target/${{ matrix.target }}/release/bundle"
+          mkdir -p out
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            cp "$bundle"/dmg/*.dmg out/
+            # ditto garde les permissions/symlinks du .app (upload-artifact non).
+            ditto -c -k --keepParent "$bundle"/macos/Filenymous.app out/Filenymous-${{ matrix.target }}.app.zip
+          else
+            cp "$bundle"/msi/*.msi out/
+            cp "$bundle"/nsis/*.exe out/
+          fi
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: filenymous-desktop-${{ matrix.target }}
+          path: out/*
+          retention-days: 14
+          if-no-files-found: error
+
+      # Lance le binaire construit : il doit démarrer le conductor, et une 2e
+      # instance doit quitter immédiatement sans en démarrer un second.
+      - name: Smoke test — launch + single instance
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            app="src-tauri/target/${{ matrix.target }}/release/bundle/macos/Filenymous.app/Contents/MacOS/filenymous"
+          else
+            app="src-tauri/target/${{ matrix.target }}/release/filenymous.exe"
+          fi
+          count_hc() {
+            if [[ "$RUNNER_OS" == "Windows" ]]; then
+              (tasklist //FI "IMAGENAME eq holochain-v0.6.1.exe" //NH | grep -c "holochain-v0.6.1") || true
+            else
+              (pgrep -f "holochain-v0.6.1" | wc -l | tr -d ' ') || true
+            fi
+          }
+          RUST_LOG=info "$app" > first.log 2>&1 &
+          first=$!
+          for i in $(seq 1 60); do
+            [[ "$(count_hc)" -ge 1 ]] && break
+            kill -0 $first 2>/dev/null || { cat first.log; echo "::error::1re instance arrêtée"; exit 1; }
+            sleep 2
+          done
+          echo "conductors après lancement : $(count_hc)"
+          [[ "$(count_hc)" -eq 1 ]] || { cat first.log; echo "::error::conductor non démarré"; exit 1; }
+          sleep 10
+          kill -0 $first || { cat first.log; echo "::error::1re instance arrêtée"; exit 1; }
+
+          start=$SECONDS
+          RUST_LOG=info "$app" > second.log 2>&1 &
+          second=$!
+          for i in $(seq 1 30); do
+            kill -0 $second 2>/dev/null || break
+            sleep 1
+          done
+          if kill -0 $second 2>/dev/null; then
+            cat second.log; echo "::error::la 2e instance ne quitte pas"; exit 1
+          fi
+          wait $second && rc=0 || rc=$?
+          echo "2e instance : code $rc en $((SECONDS - start)) s"
+          cat second.log
+          [[ $rc -eq 0 ]]
+          sleep 3
+          echo "conductors après 2e lancement : $(count_hc)"
+          [[ "$(count_hc)" -eq 1 ]] || { echo "::error::2 conductors"; exit 1; }
+          kill -0 $first || { echo "::error::1re instance arrêtée"; exit 1; }
+
+      - name: Smoke logs
+        if: always()
+        run: |
+          for f in first.log second.log; do
+            [[ -f $f ]] && { echo "── $f"; grep -v "\[holochain\]" $f | tail -40; } || true
+          done
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            taskkill //F //IM filenymous.exe || true
+            taskkill //F //IM holochain-v0.6.1.exe || true
+          else
+            pkill -f "MacOS/filenymous" || true
+            pkill -f holochain-v0.6.1 || true
+          fi
