@@ -25,6 +25,11 @@ describe("home service cards copy", () => {
 
 describe("service routes", () => {
   it("maps hashes to the shell routes", () => {
+    expect(serviceRoute("#document")).toBe("document");
+    expect(serviceRoute("#doc")).toBe("document");
+    expect(serviceRoute("#pdf")).toBe("document");
+    expect(serviceRoute("#document-new")).toBe("document");
+    expect(serviceRoute("#doc-new")).toBe("document");
     expect(serviceRoute("")).toBe("home");
     expect(serviceRoute("#secret-new")).toBe("secret-new");
     expect(serviceRoute("#safe")).toBe("safe");
@@ -61,6 +66,29 @@ describe("carousel", () => {
       for (const id of ["whistle"]) expect(loc.home[id].teaser).toBeTruthy();
       const w = JSON.stringify(loc.home.whistle).toLowerCase();
       for (const bad of ["anonymat absolu", "absolute anonymity", "certifi", "iso 27001", "iso27001", "masqu"]) expect(w).not.toContain(bad);
+    }
+  });
+});
+
+describe("document service card copy", () => {
+  it("lists four benefits, PDF ↔ Markdown and both CTAs in FR and EN", () => {
+    const cases = [
+      [fr, "Ouvrir un fichier", "Nouveau document", "traitement de texte"],
+      [en, "Open a file", "New document", "word processor"],
+    ] as const;
+    for (const [loc, cta, ctaNew, leadBit] of cases) {
+      const c = loc.home.document as Record<string, string>;
+      expect(c.title).toBe("Document");
+      expect(c.lead).toContain(leadBit);
+      expect(Object.keys(c).filter((k) => /^b\d$/.test(k))).toEqual(["b1", "b2", "b3", "b4"]);
+      for (const k of ["b1", "b2", "b3", "b4"]) {
+        expect(c[k]!.length).toBeLessThanOrEqual(32);
+        expect(c[`${k}d`]?.trim()).toBeTruthy();
+      }
+      expect(c.b2).toMatch(/Markdown/);
+      expect(c.b2d.toLowerCase()).toMatch(/\.md/);
+      expect(c.cta).toBe(cta);
+      expect(c.ctaNew).toBe(ctaNew);
     }
   });
 });

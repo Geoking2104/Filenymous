@@ -680,14 +680,17 @@
     },
     "document": {
       "title": "Document",
-      "lead": "Read and edit your PDFs right in your browser: nothing is sent to a server.",
-      "b1": "100% local",
-      "b1d": "The PDF is opened, edited and saved on your device; no upload.",
-      "b2": "Merge, split, sign",
-      "b2d": "Reorder pages, fill forms, add text and a signature.",
-      "b3": "Send it peer-to-peer",
-      "b3d": "Share the result with a Filenymous transfer or keep it in your vault.",
-      "cta": "Open a PDF"
+      "lead": "Create, edit and convert your documents like in a word processor, 100% in your browser.",
+      "b1": "Create and edit like in Word",
+      "b1d": "New document, toolbar, copy-paste, rename.",
+      "b2": "PDF ↔ Markdown",
+      "b2d": "Open a PDF and save it as .md, or export your text as a PDF; you can also open .md / .txt.",
+      "b3": "Merge, split, sign",
+      "b3d": "Reorder pages, fill forms, add text and a signature, and optimise.",
+      "b4": "100% local, send peer-to-peer",
+      "b4d": "Nothing is sent to a server; share with a Filenymous transfer or keep it in your vault.",
+      "cta": "Open a file",
+      "ctaNew": "New document"
     }
   },
   "stream": {

@@ -16,8 +16,8 @@ export function serviceRoute(hash: string): Route {
   if (hash === "#secret-new") return "secret-new";
   // Coffre-fort: the persistent personal vault (not the one-time "#secret-new").
   if (hash === "#safe" || hash === "#coffre" || isContactInviteHash(hash)) return "safe";
-  // Document: local PDF tools (view, merge, split, forms, annotations).
-  if (hash === "#document" || hash === "#doc" || hash === "#pdf") return "document";
+  // Document: local editor and PDF tools. #document-new opens a blank document.
+  if (hash === "#document" || hash === "#doc" || hash === "#pdf" || hash === "#document-new" || hash === "#doc-new") return "document";
   if (REPORT_HASH.test(hash)) return "report-submit";
   if (hash === "#report-new") return "report-new";
   if (hash === "#report-inbox") return "report-inbox";

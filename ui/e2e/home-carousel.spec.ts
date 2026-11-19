@@ -25,7 +25,9 @@ test.describe("home services carousel", () => {
     await expect(page.getByTestId("safe-entry")).toHaveAttribute("href", "#safe");
     await dots.nth(4).click();
     await expect(page.getByTestId("document-card")).toContainText("Nouveau");
+    await expect(page.getByTestId("document-card")).toContainText("Markdown");
     await expect(page.getByTestId("document-entry")).toHaveAttribute("href", "#document");
+    await expect(page.getByTestId("document-new")).toHaveAttribute("href", "#document-new");
     await dots.nth(6).click();
     const whistle = page.getByTestId("whistle-card");
     await expect(whistle).toContainText("Nouveau");

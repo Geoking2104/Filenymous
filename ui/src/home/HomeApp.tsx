@@ -1,6 +1,6 @@
 /**
- * Single-page shell. Home shows the three services (direct transfer,
- * Dropzone, Sharewall, Secrets Vault…), each with three benefits; every flow then renders
+ * Single-page shell. Home shows the service cards (direct transfer,
+ * Dropzone, Sharewall, vault, Document…), each with benefits; every flow then renders
  * in the same shell (header, card, legal footer).
  */
 import { Carousel } from "./Carousel";
@@ -58,11 +58,11 @@ function Logo() {
   );
 }
 
-function Benefits({ prefix }: { prefix: string }) {
+function Benefits({ prefix, count = 3 }: { prefix: string; count?: number }) {
   const { t } = useTranslation();
   return (
     <ul className="pz-benefits">
-      {[1, 2, 3].map((n) => (
+      {Array.from({ length: count }, (_, i) => i + 1).map((n) => (
         <li key={n}>
           <span className="pz-check"><LineIconSvg name="check" /></span>
           <span>
@@ -185,7 +185,7 @@ export default function HomeApp({ hash }: { hash: string }) {
   } else if (route === "document") {
     body = (
       <Suspense fallback={<div className="v3-result sw" data-testid="doc-loading">…</div>}>
-        <DocumentPanel onSend={sendFromDocument} />
+        <DocumentPanel onSend={sendFromDocument} startNew={hash === "#document-new" || hash === "#doc-new"} />
       </Suspense>
     );
   } else if (route === "secret-reveal") {
@@ -396,8 +396,11 @@ export default function HomeApp({ hash }: { hash: string }) {
               <h2 id="svc-document">{t("home.document.title")}</h2>
             </div>
             <p className="pz-service-lead">{t("home.document.lead")}</p>
-            <Benefits prefix="home.document" />
-            <a className="pz-btn pz-btn-block" href="#document" data-testid="document-entry">{t("home.document.cta")}</a>
+            <Benefits prefix="home.document" count={4} />
+            <div className="pz-service-ctas">
+              <a className="pz-btn pz-btn-block" href="#document" data-testid="document-entry">{t("home.document.cta")}</a>
+              <a className="pz-btn-ghost pz-btn-block" href="#document-new" data-testid="document-new">{t("home.document.ctaNew")}</a>
+            </div>
           </article>
           <article className="pz-service pz-service--secret" data-service="secret" aria-labelledby="svc-secret">
             <div className="pz-service-head">

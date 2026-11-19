@@ -352,6 +352,7 @@ ${GUIDES.map((g) => `- [${g.en.h1}](${abs(paths.guide(g, "en"))}): ${g.en.descri
 - [Create a one-time secret](${abs(SITE.app)}#secret-new)
 - [Create a whistleblowing channel](${abs(SITE.app)}#report-new)
 - [Create a Sharewall](${abs(SITE.app)}#wall-new): ephemeral, end-to-end encrypted peer-to-peer live wall for humans and AI agents (also ${abs("/wall/new")}).
+- [Document editor](${abs(SITE.app)}#document): create a document or open a PDF, Markdown or text file, 100% in the browser; save as PDF or .md, merge, split and sign, then send peer-to-peer or store in the vault (also ${abs(SITE.app)}#document-new).
 - Open a received short code: ${abs(SITE.app)} then type the code in “Vous avez reçu un code ? / Got a code?”.
 - Force the language: ${abs(SITE.app)}?lang=en or ?lang=fr.
 
