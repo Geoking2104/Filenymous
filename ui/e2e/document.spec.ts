@@ -35,14 +35,15 @@ test("open, edit, export and send a PDF locally", async ({ page }) => {
   await expect(page.getByTestId("doc-pageno")).toHaveText(/1 \/ 3/);
   await expect(page.locator(".doc-page canvas")).toBeVisible();
 
-  // Pages: rotate the first, delete the last.
-  await page.getByTestId("doc-rotate").first().click();
-  await page.getByTestId("doc-delete").nth(2).click();
+  // Pages: rotate the first (current page), delete the last.
+  await page.getByTestId("doc-rotate").click();
+  await page.getByTestId("doc-thumb").nth(2).click();
+  await page.getByTestId("doc-delete").click();
   await expect(page.getByTestId("doc-thumb")).toHaveCount(2);
   // Undo / redo the deletion through the undo stack.
   await page.getByTestId("doc-undo").click();
   await expect(page.getByTestId("doc-thumb")).toHaveCount(3);
-  await page.getByTestId("doc-delete").nth(2).click();
+  await page.getByTestId("doc-redo").click();
   await expect(page.getByTestId("doc-thumb")).toHaveCount(2);
 
   // Form.
@@ -150,7 +151,7 @@ test("Coffre-fort round trip: store the PDF, reopen it in Document", async ({ pa
   await page.getByTestId("cf-open-document").click();
   await expect(page.getByTestId("service-head")).toHaveAttribute("data-service", "document");
   await expect(page.getByTestId("doc-thumb")).toHaveCount(2, { timeout: 15_000 });
-  await expect(page.getByTestId("doc-name")).toContainText("facture.pdf");
+  await expect(page.getByTestId("doc-name-input")).toHaveValue("facture");
 });
 
 test("draw a signature and stamp it on a page", async ({ page }) => {
@@ -160,6 +161,7 @@ test("draw a signature and stamp it on a page", async ({ page }) => {
   await page.getByLabel(/Image ou signature/).check();
   await page.getByTestId("doc-sign").click();
   const pad = page.getByTestId("doc-pad").locator("canvas");
+  await pad.scrollIntoViewIfNeeded();
   const box = (await pad.boundingBox())!;
   await page.mouse.move(box.x + 20, box.y + box.height / 2);
   await page.mouse.down();

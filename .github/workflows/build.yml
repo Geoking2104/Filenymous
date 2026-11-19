@@ -186,9 +186,36 @@ jobs:
       - name: Build (base /app/)
         run: npm run build -- --base=/app/
         working-directory: ui
-      - name: Wall, home and SEO unit tests
-        run: npx vitest run src/wall/ src/home/ src/safe/ src/i18n/copy.test.ts src/seo.test.ts src/p2p/ src/holochain/runtime.test.ts
+      - name: Wall, home, Document and SEO unit tests
+        run: npx vitest run src/wall/ src/home/ src/safe/ src/document/ src/i18n/copy.test.ts src/seo.test.ts src/p2p/ src/holochain/runtime.test.ts
         working-directory: ui
+
+  document-e2e:
+    name: Document tab (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - name: Install UI dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: ui
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: ui
+      - name: Document editor, PDF tools and Pages panel (browser)
+        run: npx playwright test e2e/document.spec.ts e2e/document-editor.spec.ts --reporter=line
+        working-directory: ui
+      - name: Upload Playwright results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: document-e2e-results
+          path: ui/test-results
+          retention-days: 7
 
   cli-tests:
     name: CLI (filenymous) tests
