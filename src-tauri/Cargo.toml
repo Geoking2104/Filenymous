@@ -55,6 +55,8 @@ sodoken    = "0.1"
 thiserror  = "1"
 url        = "2"
 url2       = "0.0.6"
+fs4 = { version = "0.13", features = ["sync"] }
+sysinfo = { version = "0.37", default-features = false, features = ["system"] }
 
 # ── Feature flags ─────────────────────────────────────────────────────────────
 [features]

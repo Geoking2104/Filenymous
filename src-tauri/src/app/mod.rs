@@ -34,6 +34,8 @@ pub fn setup_app(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => {
                 log::error!("Failed to launch Holochain: {:?}", e);
+                // Ne pas laisser un conductor à moitié démarré derrière nous.
+                tauri::api::process::kill_children();
                 tauri::api::dialog::message(
                     None::<&tauri::Window>,
                     "Erreur de démarrage",

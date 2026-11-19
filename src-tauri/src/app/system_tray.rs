@@ -23,6 +23,12 @@ pub fn handle_system_tray_event(app: &AppHandle<Wry>, event: SystemTrayEvent) {
             }
             "restart" => {
                 process::kill_children();
+                // `restart` lance le nouveau processus avant de quitter :
+                // rendre le verrou d'instance unique, sinon il se croirait
+                // une 2e instance et quitterait aussitôt.
+                if let Some(state) = app.try_state::<crate::single_instance::InstanceState>() {
+                    state.release();
+                }
                 app.app_handle().restart();
             }
             "quit" => {

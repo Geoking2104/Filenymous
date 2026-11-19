@@ -1,6 +1,7 @@
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
 
+use super::stale::{self, StaleOutcome};
 use crate::{
     config::HOLOCHAIN_VERSION,
     errors::{AppResult, LaunchHolochainError},
@@ -12,6 +13,25 @@ pub async fn launch_holochain_process(
     conductor_config_path: &Path,
     password: &str,
 ) -> AppResult<()> {
+    let conductor_dir = conductor_config_path
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+
+    // Conductor orphelin d'un crash précédent (cf. process::stale) : il
+    // tiendrait la base et le lair du profil, le nouveau échouerait.
+    match stale::reap(&conductor_dir, conductor_config_path) {
+        StaleOutcome::StillRunning => {
+            return Err(LaunchHolochainError::CouldNotConnectToConductor(
+                "un conductor Holochain d'une session précédente tourne encore \
+                 et n'a pas pu être arrêté"
+                    .into(),
+            )
+            .into())
+        }
+        outcome => log::info!("Conductor précédent : {outcome:?}"),
+    }
+
     let sidecar = format!("holochain-v{}", HOLOCHAIN_VERSION);
     let (mut rx, mut child) = Command::new_sidecar(&sidecar)
         .map_err(|e| LaunchHolochainError::SidecarBinaryCommandError(format!("{sidecar}: {e}")))?
@@ -24,6 +44,10 @@ pub async fn launch_holochain_process(
         ])
         .spawn()
         .map_err(|e| LaunchHolochainError::SidecarBinaryCommandError(format!("{sidecar}: {e}")))?;
+
+    if let Err(e) = stale::record(&conductor_dir, child.pid(), conductor_config_path) {
+        log::warn!("PID du conductor non enregistré : {e}");
+    }
 
     child
         .write(format!("{password}\n").as_bytes())
@@ -65,6 +89,7 @@ pub async fn launch_holochain_process(
                 CommandEvent::Stderr(line) => log::debug!("[holochain] {line}"),
                 CommandEvent::Terminated(status) => {
                     log::error!("holochain s'est arrêté : {status:?}");
+                    let _ = std::fs::remove_file(stale::pid_file(&conductor_dir));
                     break;
                 }
                 _ => {}
