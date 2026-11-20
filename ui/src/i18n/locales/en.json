@@ -690,7 +690,8 @@
       "b4": "100% local, send peer-to-peer",
       "b4d": "Nothing is sent to a server; share with a Filenymous transfer or keep it in your vault.",
       "cta": "Open a file",
-      "ctaNew": "New document"
+      "ctaNew": "New document",
+      "resume": "Resume “{{name}}”"
     }
   },
   "stream": {
@@ -1909,24 +1910,26 @@
       "convertConfirm": "The PDF's text will be extracted into an editable document.\n\nOnly the text is kept: layout, columns, images and fonts are lost. A scanned PDF contains no text.\n\nContinue?",
       "convertedNotice": "Text extracted from the PDF (layout not kept). Review it before saving.",
       "noText": "No text found in this PDF (scanned or image-only document?).",
-      "mdFromPdf": "Markdown: only the PDF's text is exported (no layout, no images)."
+      "mdFromPdf": "Markdown: only the PDF's text is exported (no layout, no images).",
+      "resumed": "Resumed “{{name}}” (changed {{time}}), kept in this browser only.",
+      "forget": "Close and forget"
     },
-      "bookmark": {
-        "title": "Éditeur Filenymous",
-        "pill": "⭐ Éditeur Filenymous",
-        "dragHint": "Drag this button onto your bookmarks bar",
-        "shortcutHint": "{{mod}}+D to bookmark this page.",
-        "showBar": "{{mod}}+Shift+B to show the bar",
-        "add": "Add to bookmarks…",
-        "dialogTitle": "Add the editor to your bookmarks",
-        "dialogLead": "Browsers will not add a bookmark on their own. Drag the button below onto your bookmarks bar, or copy the link.",
-        "copy": "Copy link",
-        "copied": "Link copied",
-        "howtoChrome": "Chrome and Edge: show the bar ({{mod}}+Shift+B) then drag the button. Or {{mod}}+D and choose “Bookmarks bar”.",
-        "howtoFirefox": "Firefox: show the bar ({{mod}}+Shift+B) then drag the button. Or {{mod}}+D.",
-        "howtoSafari": "Safari: show the favorites bar ({{mod}}+Shift+B) then drag the button. Or {{mod}}+D.",
-        "limit": "The editor cannot add the bookmark for you: the browser blocks this, so sites cannot fill your bookmarks without your consent."
-      },
+    "bookmark": {
+      "title": "Éditeur Filenymous",
+      "pill": "⭐ Éditeur Filenymous",
+      "dragHint": "Drag this button onto your bookmarks bar",
+      "shortcutHint": "{{mod}}+D to bookmark this page.",
+      "showBar": "{{mod}}+Shift+B to show the bar",
+      "add": "Add to bookmarks…",
+      "dialogTitle": "Add the editor to your bookmarks",
+      "dialogLead": "Browsers will not add a bookmark on their own. Drag the button below onto your bookmarks bar, or copy the link.",
+      "copy": "Copy link",
+      "copied": "Link copied",
+      "howtoChrome": "Chrome and Edge: show the bar ({{mod}}+Shift+B) then drag the button. Or {{mod}}+D and choose “Bookmarks bar”.",
+      "howtoFirefox": "Firefox: show the bar ({{mod}}+Shift+B) then drag the button. Or {{mod}}+D.",
+      "howtoSafari": "Safari: show the favorites bar ({{mod}}+Shift+B) then drag the button. Or {{mod}}+D.",
+      "limit": "The editor cannot add the bookmark for you: the browser blocks this, so sites cannot fill your bookmarks without your consent."
+    },
     "pagesUi": {
       "toolbarAria": "Actions on the selected pages",
       "rotateLeft": "Rotate left",
@@ -2014,7 +2017,11 @@
       "draftSaved": "local draft {{time}}",
       "saved": "“{{name}}” saved.",
       "mdNote": "Markdown keeps neither underline, alignment nor image sizes.",
-      "privacy": "100% local editing and export: the PDF is generated in this browser (Noto Sans font embedded). The draft stays in this browser until you save."
+      "privacy": "100% local editing and export: the PDF is generated in this browser (Noto Sans font embedded). The draft stays in this browser until you save.",
+      "draftQuota": "Browser storage is full: this document is no longer kept on this device. Save it as PDF or Markdown, or remove some images."
+    },
+    "badge": {
+      "title": "Unsaved document: {{name}}, changed since its last export. Open Document."
     }
   },
   "privacyPanel": {

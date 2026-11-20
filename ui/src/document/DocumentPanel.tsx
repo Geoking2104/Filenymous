@@ -44,7 +44,8 @@ import { EDITOR_NEW_EVENT, isNewDocumentHash } from "./bookmark";
 import { useBookmarkMenu } from "./BookmarkBar";
 import { MIME, openKind, stem as stemOf, withExt, type SaveFormat } from "./fileName";
 import { clickSelect, duplicateAt, insertAt, keyNav, moveBy, moveTo, removeAt, selectAll as selectAllPages, targets as selTargets, type PageSel } from "./pageSelection";
-import { clearDraft, loadDraft, type Draft } from "./draft";
+import { clearDraft, loadDraft, markDraftExported, type Draft } from "./draft";
+import { setPdfUnsaved } from "./activeDoc";
 import "./document.css";
 
 const TextEditor = lazy(() => import("./TextEditor"));
@@ -54,6 +55,8 @@ interface TextDoc {
   html: string;
   stem: string;
   notice?: string;
+  /** Reopened automatically from this browser's memory. */
+  resumed?: { name: string; at: number };
 }
 
 type Tool = "pages" | "merge" | "split" | "form" | "annotate" | "optimise";
@@ -113,7 +116,11 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
   const [redo, setRedo] = useState<UndoEntry[]>([]);
   const [textDoc, setTextDoc] = useState<TextDoc | null>(null);
   const [textDirty, setTextDirty] = useState(false);
-  const [draft, setDraft] = useState<Draft | null>(() => loadDraft());
+  const [draft, setDraft] = useState<Draft | null>(null);
+  /** The open text document is the one kept in this browser's memory (restored, or edited here). */
+  const ownsDraft = useRef(false);
+  /** Something was opened or created since mount: do not auto-reopen the remembered document over it. */
+  const touched = useRef(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [saveAs, setSaveAs] = useState<{ format: SaveFormat; intent: SaveAction } | null>(null);
   const [dropAt, setDropAt] = useState<number | null>(null);
@@ -137,6 +144,9 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
     placeRef.current = fn;
   }, []);
   useLeaveGuard(dirty || textDirty, { detail: "document.leaveDetail" });
+  // Logo / tab badge: a PDF with unsaved edits counts during this session only (PDFs are not persisted).
+  useEffect(() => setPdfUnsaved(doc && dirty ? doc.name : null), [doc, dirty]);
+  useEffect(() => () => setPdfUnsaved(null), []);
 
   const errText = useCallback(
     (e: unknown) => {
@@ -280,10 +290,38 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
     if (td.html) leaveNewHash();
   };
 
+  /** The user discarded the current document: drop it from this browser's memory too. */
+  const forgetDraft = () => {
+    if (!ownsDraft.current) return;
+    ownsDraft.current = false;
+    void clearDraft();
+    setDraft(null);
+  };
+
   const newDocument = () => {
+    touched.current = true;
     if (!confirmDiscard()) return;
+    forgetDraft();
     openText({ html: "", stem: t("document.ui.untitled") });
   };
+
+  // The remembered text document (IndexedDB) is reopened automatically on
+  // #document. #document-new opens a blank page and only offers it.
+  useEffect(() => {
+    let alive = true;
+    void loadDraft().then((d) => {
+      if (!alive) return;
+      setDraft(d);
+      if (!d || touched.current || startNew || isNewDocumentHash(location.hash)) return;
+      ownsDraft.current = true;
+      openText({ html: d.html, stem: d.name, resumed: { name: d.name, at: d.at } });
+      setTextDirty(!((d.exportedAt ?? 0) >= d.at));
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A PDF handed over by the Coffre-fort ("Open in Document"), or a blank
   // document when arriving from the home card / a bookmark (#document-new).
@@ -296,9 +334,8 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
       return;
     }
     if (startNew) {
-      // Pick up a draft saved in this session (TextEditor writes to
-      // localStorage; the panel only loads it at mount or here).
-      setDraft(loadDraft());
+      // Offer the remembered document (saved in this session too) without opening it.
+      void loadDraft().then(setDraft);
       newDocument();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -314,9 +351,11 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
   const openFiles = (list: FileList | File[] | null) => {
     const all = Array.from(list ?? []);
     if (all.length === 0) return;
+    touched.current = true;
     const textFile = all.find((f) => openKind(f) === "markdown" || openKind(f) === "text");
     if (textFile) {
       if ((live.current.doc || textDoc) && !confirmDiscard()) return;
+      forgetDraft();
       void run(async () => {
         if (textFile.size > 20 * 1024 * 1024) throw new Error(t("document.err.tooBig", { name: textFile.name }));
         const src = await textFile.text();
@@ -329,6 +368,7 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
     const files = all;
     if (textDoc) {
       if (!confirmDiscard()) return;
+      forgetDraft();
       setTextDoc(null);
       setTextDirty(false);
     }
@@ -383,8 +423,9 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
   const closeDoc = () => {
     if (!confirmDiscard()) return;
     resetPdf();
-    if (textDoc && textDirty) clearDraft();
-    setDraft(loadDraft());
+    // Closing = done with it: forget the remembered copy; otherwise offer the one still kept.
+    if (textDoc && ownsDraft.current) forgetDraft();
+    else void loadDraft().then(setDraft);
     setTextDoc(null);
     setTextDirty(false);
   };
@@ -398,8 +439,11 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
       location.hash = "#safe";
     }
     if (textDoc) {
-      clearDraft();
-      setDraft(null);
+      // Still remembered (the document stays open), but marked exported: no badge.
+      if (ownsDraft.current) {
+        void markDraftExported(stemOf(f.name));
+        setDraft(null);
+      }
       setTextDirty(false);
     }
   };
@@ -629,14 +673,27 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
             stem={textDoc.stem}
             notice={textDoc.notice}
             pendingDraft={offerDraft ? draft : null}
+            resumed={textDoc.resumed ?? null}
+            onForget={() => {
+              ownsDraft.current = true;
+              forgetDraft();
+              resetPdf();
+              setTextDoc(null);
+              setTextDirty(false);
+            }}
             onRestoreDraft={() => {
               if (!draft) return;
+              ownsDraft.current = true;
               openText({ html: draft.html, stem: draft.name });
-              setTextDirty(true);
+              setTextDirty(!((draft.exportedAt ?? 0) >= draft.at));
             }}
-            onDiscardDraft={() => (clearDraft(), setDraft(null))}
+            onDiscardDraft={() => (void clearDraft(), setDraft(null))}
             onRename={(s) => setTextDoc((d) => d && { ...d, stem: s })}
-            onDirty={setTextDirty}
+            onDirty={(d) => {
+              // The first keystroke makes this the remembered document (it overwrites the slot).
+              if (d) ownsDraft.current = true;
+              setTextDirty(d);
+            }}
             onNew={newDocument}
             onOpen={() => openInput.current?.click()}
             onClose={closeDoc}
@@ -686,8 +743,19 @@ export default function DocumentPanel({ onSend, startNew = false }: { onSend: (f
           <div className="doc-draft" data-testid="doc-draft">
             <span>📝 {t("document.ui.draftFound", { name: draft.name, time: new Date(draft.at).toLocaleString() })}</span>
             <span className="doc-row">
-              <button type="button" className="pz-btn" onClick={() => (openText({ html: draft.html, stem: draft.name }), setTextDirty(true))} data-testid="doc-draft-restore">{t("document.ui.draftRestore")}</button>
-              <button type="button" className="pz-btn-ghost" onClick={() => (clearDraft(), setDraft(null))}>{t("document.ui.draftDiscard")}</button>
+              <button
+                type="button"
+                className="pz-btn"
+                onClick={() => {
+                  ownsDraft.current = true;
+                  openText({ html: draft.html, stem: draft.name });
+                  setTextDirty(!((draft.exportedAt ?? 0) >= draft.at));
+                }}
+                data-testid="doc-draft-restore"
+              >
+                {t("document.ui.draftRestore")}
+              </button>
+              <button type="button" className="pz-btn-ghost" onClick={() => (void clearDraft(), setDraft(null))}>{t("document.ui.draftDiscard")}</button>
             </span>
           </div>
         )}

@@ -690,7 +690,8 @@
       "b4": "100 % local, envoi en P2P",
       "b4d": "Rien n'est envoyé sur un serveur ; partagez par transfert Filenymous ou rangez au coffre-fort.",
       "cta": "Ouvrir un fichier",
-      "ctaNew": "Nouveau document"
+      "ctaNew": "Nouveau document",
+      "resume": "Reprendre « {{name}} »"
     }
   },
   "stream": {
@@ -1909,24 +1910,26 @@
       "convertConfirm": "Le texte du PDF va être extrait dans un document éditable.\n\nSeul le texte est repris : mise en page, colonnes, images et polices sont perdues. Un PDF scanné ne contient pas de texte.\n\nContinuer ?",
       "convertedNotice": "Texte extrait du PDF (mise en page non conservée). Relisez-le avant d'enregistrer.",
       "noText": "Aucun texte trouvé dans ce PDF (document scanné ou composé d'images ?).",
-      "mdFromPdf": "Markdown : seul le texte du PDF est exporté (sans mise en page ni images)."
+      "mdFromPdf": "Markdown : seul le texte du PDF est exporté (sans mise en page ni images).",
+      "resumed": "Reprise de « {{name}} » (modifié le {{time}}), gardé dans ce navigateur uniquement.",
+      "forget": "Fermer et oublier"
     },
-      "bookmark": {
-        "title": "Éditeur Filenymous",
-        "pill": "⭐ Éditeur Filenymous",
-        "dragHint": "Glissez ce bouton dans votre barre de favoris",
-        "shortcutHint": "{{mod}}+D pour ajouter cette page aux favoris.",
-        "showBar": "{{mod}}+Maj+B pour afficher la barre",
-        "add": "Ajouter aux favoris…",
-        "dialogTitle": "Ajouter l'éditeur aux favoris",
-        "dialogLead": "Les navigateurs n'autorisent pas un site à ajouter un favori automatiquement. Glissez le bouton ci-dessous dans la barre de favoris, ou copiez le lien.",
-        "copy": "Copier le lien",
-        "copied": "Lien copié",
-        "howtoChrome": "Chrome et Edge : affichez la barre ({{mod}}+Maj+B) puis glissez le bouton. Ou {{mod}}+D et choisissez « Barre de favoris ».",
-        "howtoFirefox": "Firefox : affichez la barre ({{mod}}+Maj+B) puis glissez le bouton. Ou {{mod}}+D.",
-        "howtoSafari": "Safari : affichez la barre des favoris ({{mod}}+Maj+B) puis glissez le bouton. Ou {{mod}}+D.",
-        "limit": "Impossible d'ajouter le favori à votre place : le navigateur bloque cette action, pour empêcher des sites d'ajouter des favoris sans votre accord."
-      },
+    "bookmark": {
+      "title": "Éditeur Filenymous",
+      "pill": "⭐ Éditeur Filenymous",
+      "dragHint": "Glissez ce bouton dans votre barre de favoris",
+      "shortcutHint": "{{mod}}+D pour ajouter cette page aux favoris.",
+      "showBar": "{{mod}}+Maj+B pour afficher la barre",
+      "add": "Ajouter aux favoris…",
+      "dialogTitle": "Ajouter l'éditeur aux favoris",
+      "dialogLead": "Les navigateurs n'autorisent pas un site à ajouter un favori automatiquement. Glissez le bouton ci-dessous dans la barre de favoris, ou copiez le lien.",
+      "copy": "Copier le lien",
+      "copied": "Lien copié",
+      "howtoChrome": "Chrome et Edge : affichez la barre ({{mod}}+Maj+B) puis glissez le bouton. Ou {{mod}}+D et choisissez « Barre de favoris ».",
+      "howtoFirefox": "Firefox : affichez la barre ({{mod}}+Maj+B) puis glissez le bouton. Ou {{mod}}+D.",
+      "howtoSafari": "Safari : affichez la barre des favoris ({{mod}}+Maj+B) puis glissez le bouton. Ou {{mod}}+D.",
+      "limit": "Impossible d'ajouter le favori à votre place : le navigateur bloque cette action, pour empêcher des sites d'ajouter des favoris sans votre accord."
+    },
     "pagesUi": {
       "toolbarAria": "Actions sur les pages sélectionnées",
       "rotateLeft": "Pivoter à gauche",
@@ -2014,7 +2017,11 @@
       "draftSaved": "brouillon local {{time}}",
       "saved": "« {{name}} » enregistré.",
       "mdNote": "Markdown ne conserve ni le soulignement, ni l'alignement, ni la taille des images.",
-      "privacy": "Édition et export 100 % locaux : le PDF est généré dans ce navigateur (police Noto Sans intégrée). Le brouillon est gardé dans ce navigateur jusqu'à l'enregistrement."
+      "privacy": "Édition et export 100 % locaux : le PDF est généré dans ce navigateur (police Noto Sans intégrée). Le brouillon est gardé dans ce navigateur jusqu'à l'enregistrement.",
+      "draftQuota": "Espace du navigateur plein : ce document n'est plus gardé sur cet appareil. Enregistrez-le en PDF ou en Markdown, ou retirez des images."
+    },
+    "badge": {
+      "title": "Document non enregistré : {{name}} — modifié depuis le dernier export. Ouvrir Document."
     }
   },
   "privacyPanel": {

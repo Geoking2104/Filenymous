@@ -207,7 +207,7 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: ui
       - name: Document editor, PDF tools and Pages panel (browser)
-        run: npx playwright test e2e/document.spec.ts e2e/document-editor.spec.ts --reporter=line
+        run: npx playwright test e2e/document.spec.ts e2e/document-editor.spec.ts e2e/document-persistence.spec.ts --reporter=line
         working-directory: ui
       - name: Upload Playwright results
         if: failure()
