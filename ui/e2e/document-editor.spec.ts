@@ -88,7 +88,8 @@ test("#document-new offers a draft without blocking the caret", async ({ page })
   await page.getByTestId("doc-new").click();
   await expect(page.getByTestId("doc-editor")).toBeFocused();
   await page.keyboard.type("Brouillon à reprendre");
-  await page.waitForTimeout(1200);
+  // Saved in this browser (IndexedDB): the status line shows it.
+  await expect(page.getByText(/brouillon local/)).toBeVisible();
   // Full load, as when the bookmarks-bar shortcut is opened (a hash-only
   // move would ask to discard the current unsaved document).
   await page.goto("about:blank");
@@ -186,12 +187,11 @@ test("Markdown file opens in the editor; find and replace; draft survives a relo
   await page.getByTestId("doc-find-replace-all").click();
   await expect(ed).toContainText("Un essai avec");
 
-  // The edit is kept as a local draft and offered again after a reload.
-  await page.waitForTimeout(1200);
+  // The edit is kept in this browser and reopened automatically after a reload.
+  await expect(page.getByText(/brouillon local/)).toBeVisible();
   page.on("dialog", (d) => void d.accept());
   await page.reload();
-  await expect(page.getByTestId("doc-draft")).toContainText("notes");
-  await page.getByTestId("doc-draft-restore").click();
+  await expect(page.getByTestId("doc-resumed")).toContainText("notes");
   await expect(page.getByTestId("doc-editor")).toContainText("Un essai avec");
 });
 

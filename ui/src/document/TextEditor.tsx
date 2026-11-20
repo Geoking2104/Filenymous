@@ -20,7 +20,7 @@ import { MIME, withExt, type SaveFormat } from "./fileName";
 import { ExportBar, MenuBar, NameField, SaveAsDialog, ToolButton, inField, mod, useShortcuts, type Menu, type MenuEntry, type SaveAction } from "./chrome";
 import { useBookmarkMenu } from "./BookmarkBar";
 import type { Draft } from "./draft";
-import { saveDraft } from "./draft";
+import { draftGeneration, saveDraft } from "./draft";
 import "./editor.css";
 
 /** Word's Ctrl+Enter: a hard page break, kept in the PDF and as "\newpage" in Markdown. */
@@ -76,6 +76,9 @@ export interface TextEditorProps {
   stem: string;
   notice?: string;
   pendingDraft?: Draft | null;
+  /** Reopened automatically from this browser's memory (shows "Close and forget"). */
+  resumed?: { name: string; at: number } | null;
+  onForget?: () => void;
   onRestoreDraft?: () => void;
   onDiscardDraft?: () => void;
   onRename: (s: string) => void;
@@ -88,7 +91,7 @@ export interface TextEditorProps {
 
 type Msg = { kind: "ok" | "err" | "info"; text: string } | null;
 
-export default function TextEditor({ initialHtml, stem, notice, pendingDraft, onRestoreDraft, onDiscardDraft, onRename, onDirty, onNew, onOpen, onClose, deliver }: TextEditorProps) {
+export default function TextEditor({ initialHtml, stem, notice, pendingDraft, resumed, onForget, onRestoreDraft, onDiscardDraft, onRename, onDirty, onNew, onOpen, onClose, deliver }: TextEditorProps) {
   const { t, i18n } = useTranslation();
   const bookmark = useBookmarkMenu();
   const [msg, setMsg] = useState<Msg>(notice ? { kind: "info", text: notice } : null);
@@ -101,8 +104,37 @@ export default function TextEditor({ initialHtml, stem, notice, pendingDraft, on
   const nameRef = useRef<HTMLInputElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const draftTimer = useRef<number>();
+  /** The save waiting for its debounce, run at once on pagehide / tab hidden / export. */
+  const pendingSave = useRef<(() => void) | null>(null);
+  const quotaShown = useRef(false);
   const stemRef = useRef(stem);
   stemRef.current = stem;
+
+  const persist = useCallback(
+    (html: string, name: string, gen: number) => {
+      void saveDraft({ name, html }, gen).then((r) => {
+        if (r.ok) {
+          setDraftAt(r.at);
+          if (quotaShown.current) {
+            quotaShown.current = false;
+            setMsg(null);
+          }
+        } else if (r.reason === "quota" && !quotaShown.current) {
+          quotaShown.current = true;
+          setDraftAt(null);
+          setMsg({ kind: "err", text: t("document.editor.draftQuota") });
+        } else if (r.reason === "unavailable") setDraftAt(null);
+      });
+    },
+    [t],
+  );
+
+  const flushDraft = useCallback(() => {
+    window.clearTimeout(draftTimer.current);
+    const run = pendingSave.current;
+    pendingSave.current = null;
+    run?.();
+  }, []);
 
   const setDirty = useCallback(
     (d: boolean) => {
@@ -164,14 +196,35 @@ export default function TextEditor({ initialHtml, stem, notice, pendingDraft, on
     onUpdate: ({ editor: ed }) => {
       setDirty(true);
       window.clearTimeout(draftTimer.current);
-      draftTimer.current = window.setTimeout(() => {
-        if (saveDraft({ name: stemRef.current, html: ed.getHTML() })) setDraftAt(Date.now());
-      }, 800);
+      const gen = draftGeneration();
+      pendingSave.current = () => persist(ed.getHTML(), stemRef.current, gen);
+      draftTimer.current = window.setTimeout(flushDraft, 800);
     },
   });
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
-  useEffect(() => () => window.clearTimeout(draftTimer.current), []);
+  // Closing the tab, switching app or locking the phone: write now, not in 800 ms.
+  useEffect(() => {
+    const onHide = () => flushDraft();
+    const onVis = () => document.visibilityState === "hidden" && flushDraft();
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVis);
+      // Leaving the editor inside the app (back to home…): keep the last keystrokes.
+      flushDraft();
+    };
+  }, [flushDraft]);
+  // A rename is part of the document: remember it once the text was touched.
+  useEffect(() => {
+    if (!dirty || !editor || editor.isDestroyed) return;
+    const gen = draftGeneration();
+    pendingSave.current = () => persist(editor.getHTML(), stem, gen);
+    window.clearTimeout(draftTimer.current);
+    draftTimer.current = window.setTimeout(flushDraft, 800);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stem]);
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
     const id = window.requestAnimationFrame(() => editor.commands.focus("end"));
@@ -283,6 +336,12 @@ export default function TextEditor({ initialHtml, stem, notice, pendingDraft, on
     try {
       if (s !== stem) onRename(s);
       const f = await toFile(format, s);
+      // The pending save lands before the export mark (writes are queued in order).
+      if (dirty && editor) {
+        window.clearTimeout(draftTimer.current);
+        pendingSave.current = null;
+        persist(editor.getHTML(), s, draftGeneration());
+      }
       setDirty(false);
       deliver(f, action);
       if (action === "download") setMsg({ kind: "ok", text: t("document.editor.saved", { name: f.name }) });
@@ -405,6 +464,16 @@ export default function TextEditor({ initialHtml, stem, notice, pendingDraft, on
         </div>
       </div>
       {bookmark.dialog}
+      {resumed && !dirty && (
+        <div className="doc-draft doc-draft--live" data-testid="doc-resumed">
+          <span>🕘 {t("document.ui.resumed", { name: resumed.name, time: new Date(resumed.at).toLocaleString(i18n.language) })}</span>
+          {onForget && (
+            <span className="doc-row">
+              <button type="button" className="pz-btn-ghost" onClick={onForget} data-testid="doc-forget">{t("document.ui.forget")}</button>
+            </span>
+          )}
+        </div>
+      )}
       {pendingDraft && !dirty && onRestoreDraft && (
         <div className="doc-draft doc-draft--live" data-testid="doc-draft">
           <span>📝 {t("document.ui.draftFound", { name: pendingDraft.name, time: new Date(pendingDraft.at).toLocaleString() })}</span>

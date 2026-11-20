@@ -53,7 +53,8 @@ name. An unsaved draft, if any, is offered in a banner that does not block typin
 | Open | `.md` (markdown-it, raw HTML **not** rendered), `.txt` (blank line = paragraph) |
 | Save as PDF | A4, 2.2 cm margins, page numbers, real selectable / searchable text in **Noto Sans** (4 styles, embedded and subset), headings, paragraphs and alignment, bold / italic / underline / strike, inline code and code blocks (Courier), clickable links, nested lists, quotes, tables, images (PNG / JPEG directly, other formats converted with a canvas), horizontal lines, page breaks |
 | Save as Markdown | GitHub-flavoured (tables, `~~strike~~`); page break = `\newpage` (pandoc) |
-| Draft | the document is kept in this browser (`localStorage`) while you type and offered again ("Reprendre le brouillon") after a reload; it is deleted once saved or when closed without saving |
+| Browser memory | the text document (with its pasted images, stored apart) is kept in this browser (IndexedDB `fny-document`) while you type, written at once when the tab is hidden or closed, and reopened automatically on `#document` ("Reprise de …", with "Fermer et oublier"). `#document-new` opens a blank page and only offers it. It stays after "Save as" (marked exported) and is forgotten on "Fermer". The old `localStorage` draft (`fny.document.draft.v1`) is migrated once. A full browser quota shows an error instead of failing silently. PDFs are not kept (opt-in planned) |
+| Badge | an orange dot on the Filenymous logo (link to Document), "• " in the tab title, a dot on the favicon and the installed-app badge (`navigator.setAppBadge`) show ONLY while the active document changed since its last export (PDF / MD), or a PDF has unsaved edits in this tab. Synced across tabs (`storage` event + BroadcastChannel `fny-document`); the home card shows "Reprendre « … »" |
 | Convert a PDF | *Éditer le texte* / *Convertir en document éditable*: pdf.js text extraction (lines and paragraphs rebuilt from positions), one page break per PDF page. **Text only**: layout, columns, images and fonts are lost; scanned PDFs have no text |
 
 The PDF writer (`pdfExport.ts`) is our own layout engine on pdf-lib: it walks the
@@ -109,12 +110,13 @@ editor has its own unlimited history in text mode.
 - `ui/src/document/markdown.ts`: Markdown ⇄ editor HTML (markdown-it, turndown)
 - `ui/src/document/pdfText.ts`: PDF text extraction (lines → paragraphs)
 - `ui/src/document/pageSelection.ts`: Pages panel selection / reorder logic
-- `ui/src/document/fileName.ts`, `draft.ts`: names / extensions, local draft
+- `ui/src/document/fileName.ts`: names / extensions
+- `ui/src/document/draft.ts`, `idb.ts`, `activeDoc.ts`: browser memory (IndexedDB, images apart, migration), "not exported" badge (logo, title, favicon, app badge, cross-tab sync)
 - `ui/src/document/pdfOps.ts`: pure pdf-lib operations
 - `ui/src/document/pdfView.ts`: pdf.js loading and rendering (worker, hardening)
 - `ui/src/document/handoff.ts`: Document ↔ Coffre-fort hand-off
 - Unit tests (`*.test.ts`, run in CI): `pdfOps`, `pdfExport` (text, accents and styles checked with pdf.js), `markdown`, `pageSelection`, `pdfText`, `handoff`
-- Playwright (CI job "Document tab"): `e2e/document.spec.ts` (PDF tools, Coffre-fort), `e2e/document-editor.spec.ts` (new document → format → save PDF / MD, Markdown open, find / replace, draft, Pages panel, PDF → MD / editable); `e2e/document-shots.spec.ts` takes screenshots when `DOC_SHOTS=<dir>` is set
+- Playwright (CI job "Document tab"): `e2e/document.spec.ts` (PDF tools, Coffre-fort), `e2e/document-editor.spec.ts` (new document → format → save PDF / MD, Markdown open, find / replace, draft, Pages panel, PDF → MD / editable), `e2e/document-persistence.spec.ts` (reload → restored with its image, badge until "Save as MD", cross-tab badge, localStorage migration; screenshots with `PERSIST_SHOTS=<dir>`); `e2e/document-shots.spec.ts` takes screenshots when `DOC_SHOTS=<dir>` is set
 
 ## Dependencies and licences
 
@@ -178,8 +180,9 @@ Text editor:
   Images are embedded as `data:` URLs, so Markdown files with images are large.
 - Images referenced by URL (pasted HTML, Markdown) are loaded from that site by the
   browser; they are omitted from the PDF when the site does not allow it (CORS).
-- The draft lives in `localStorage` (~5 MB): very large documents with images may
-  not fit (the editor keeps working; the draft is just not updated).
+- The browser memory is plain (not encrypted) local storage, like any site data; private
+  browsing forgets it at close, and Safari may evict it after 7 days without a visit
+  unless the app is installed.
 - The menu's *Copier / Couper / Coller* use the browser clipboard API; when a browser
   refuses, the message points to `Ctrl+C` / `Ctrl+X` / `Ctrl+V`, which always work.
 - "Convertir en document éditable" keeps the text only (see above).

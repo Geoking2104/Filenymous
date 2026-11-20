@@ -34,6 +34,7 @@ import "./home.css";
 import { BookmarkLink } from "../document/BookmarkBar";
 import { isNewDocumentHash, listenForFileLaunches, prefetchDocumentEditor } from "../document/bookmark";
 import { handOff } from "../document/handoff";
+import { markTitle, setAppBadge, setFaviconDot, useActiveDocument } from "../document/activeDoc";
 
 // Coffre-fort (SQLite WASM + crypto) is loaded only when opened.
 const SafePanel = lazy(() => import("../safe/SafePanel"));
@@ -114,9 +115,15 @@ export default function HomeApp({ hash }: { hash: string }) {
   const [via, setVia] = useState<ServiceId | null>(null);
   const [rxStream, setRxStream] = useState(false);
 
+  const activeDoc = useActiveDocument();
   useEffect(() => {
-    document.title = isNewDocumentHash(hash) ? t("document.bookmark.title") : t("pz.docTitle");
-  }, [t, hash]);
+    document.title = markTitle(isNewDocumentHash(hash) ? t("document.bookmark.title") : t("pz.docTitle"), activeDoc.unexported);
+  }, [t, hash, activeDoc.unexported]);
+  // Same rule outside the page: favicon dot and installed-app badge, only while not exported.
+  useEffect(() => {
+    setFaviconDot(activeDoc.unexported);
+    setAppBadge(activeDoc.unexported);
+  }, [activeDoc.unexported]);
 
   useEffect(() => {
     if (isNewDocumentHash(hash) || hash === "#document" || hash === "#doc" || hash === "#pdf") prefetchDocumentEditor();
@@ -413,6 +420,12 @@ export default function HomeApp({ hash }: { hash: string }) {
               <a className="pz-btn pz-btn-block" href="#document" data-testid="document-entry">{t("home.document.cta")}</a>
               <a className="pz-btn-ghost pz-btn-block" href="#document-new" data-testid="document-new">{t("home.document.ctaNew")}</a>
             </div>
+            {activeDoc.stored && (
+              <a className="pz-btn-ghost pz-btn-block pz-doc-resume" href="#document" data-testid="document-resume">
+                {activeDoc.unexported ? <span className="pz-doc-resume-dot" aria-hidden="true">● </span> : "🕘 "}
+                {t("home.document.resume", { name: activeDoc.stored.name })}
+              </a>
+            )}
             <div className="pz-bookmark" data-testid="document-bookmark">
               <BookmarkLink showHints />
             </div>
@@ -498,20 +511,31 @@ export default function HomeApp({ hash }: { hash: string }) {
   return (
     <div className="pz-app">
       <header className="pz-header">
-        <a
-          className="pz-brand"
-          href={location.pathname}
-          onClick={(e) => {
-            e.preventDefault();
-            void reset();
-          }}
-        >
-          <Logo />
-          <span>
-            <strong>Filenymous</strong>
-            <small>{t("pz.tagline")}</small>
-          </span>
-        </a>
+        <div className="pz-brand-wrap">
+          <a
+            className="pz-brand"
+            href={location.pathname}
+            onClick={(e) => {
+              e.preventDefault();
+              void reset();
+            }}
+          >
+            <Logo />
+            <span>
+              <strong>Filenymous</strong>
+              <small>{t("pz.tagline")}</small>
+            </span>
+          </a>
+          {activeDoc.unexported && (
+            <a
+              className="pz-logo-badge"
+              href="#document"
+              data-testid="logo-doc-badge"
+              title={t("document.badge.title", { name: activeDoc.name ?? "" })}
+              aria-label={t("document.badge.title", { name: activeDoc.name ?? "" })}
+            />
+          )}
+        </div>
         <LangSwitch />
       </header>
       <main className={`pz-main${isHome || route === "wall-host" || route === "wall-peer" || route === "safe" || route === "document" ? " is-wide" : ""}`} key={isHome ? "home" : route}>
