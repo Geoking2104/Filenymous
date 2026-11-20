@@ -17,13 +17,14 @@ import AppUxV3 from "./ux-v3/AppUxV3";
 import HomeApp from "./home/HomeApp";
 import { isP2PHash } from "./p2p/protocol";
 import { isServiceHash } from "./home/routes";
+import { isFriendInviteHash } from "./messenger/link";
 import "./styles.css";
 import "./styles-notify.css";
 
 const TABS: Tab[] = ["send", "receive", "rooms", "contacts", "identity", "history", "advanced"];
 
 function isMagicHash(hash: string): boolean {
-  if (!hash.startsWith("#") || isP2PHash(hash) || isServiceHash(hash)) return false;
+  if (!hash.startsWith("#") || isP2PHash(hash) || isServiceHash(hash) || isFriendInviteHash(hash)) return false;
   const fragment = hash.slice(1);
   return fragment.includes(":") || fragment.startsWith("sl=") || fragment.startsWith("slp=");
 }

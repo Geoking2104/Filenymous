@@ -2038,5 +2038,110 @@
     "stop": "Fermer l'onglet de l'expéditeur met fin au partage : le lien devient inutilisable.",
     "fragmentTitle": "Clé dans le lien",
     "fragment": "La clé de déchiffrement se trouve après le « # » du lien : elle n'est jamais envoyée au serveur."
+  },
+  "msg": {
+    "button": "Messagerie",
+    "buttonPending": "Messagerie : {{count}} invitation(s) en attente",
+    "title": "Messagerie",
+    "close": "Fermer",
+    "tabs": {
+      "friends": "Amis",
+      "chats": "Conversations",
+      "invites": "Invitations",
+      "profile": "Mon profil"
+    },
+    "soon": "bientôt",
+    "soonTitle": "Arrive dans une prochaine version",
+    "footer": "Local d'abord : votre profil et vos amis restent sur cet appareil. Aucun annuaire, aucun serveur ne connaît vos amis.",
+    "qrTitle": "QR code du lien",
+    "linkLabel": "Lien à partager",
+    "copy": "Copier",
+    "copied": "Copié ✓",
+    "save": "Enregistrer",
+    "saved": "Enregistré ✓",
+    "photo": {
+      "pick": "Ajouter une photo",
+      "change": "Changer la photo",
+      "remove": "Retirer la photo",
+      "busy": "Préparation…",
+      "hint": "Recadrée en carré, réduite à {{kb}} Ko max ; la position GPS et les autres métadonnées de la photo sont supprimées."
+    },
+    "profile": {
+      "createTitle": "Créer mon profil",
+      "createLead": "Choisissez un pseudo et, si vous voulez, une photo. Ils ne seront montrés qu'aux amis que vous acceptez.",
+      "name": "Pseudo",
+      "create": "Créer mon profil",
+      "addFriend": "Ajouter un ami",
+      "addFriendLead": "Envoyez ce lien ou faites scanner ce QR code. Votre ami vous ajoute, puis vous renvoie son lien de réponse : vous devenez amis quand chacun a accepté.",
+      "makeInvite": "Créer mon lien d'invitation",
+      "edit": "Pseudo et photo",
+      "wipe": "Supprimer mon profil de cet appareil",
+      "wipeConfirm": "Supprimer votre profil, votre clé de messagerie et votre liste d'amis de cet appareil ? Cette action est définitive."
+    },
+    "privacy": {
+      "title": "Confidentialité",
+      "lead": "Enregistrés dès maintenant, appliqués quand la présence arrivera (bientôt).",
+      "discoverable": "Visible par mes amis",
+      "discoverableHint": "Mes amis voient quand je suis en ligne. Désactivé par défaut.",
+      "shareOfflineStatus": "Montrer mon statut hors ligne",
+      "shareOfflineStatusHint": "Mes amis voient « hors ligne » et ma dernière connexion. Désactivé par défaut.",
+      "hideLastSeen": "Masquer ma dernière connexion",
+      "hideLastSeenHint": "Réciproque : je ne verrai plus celle des autres.",
+      "hideReadReceipts": "Ne pas envoyer d'accusés de lecture",
+      "hideReadReceiptsHint": "Réciproque : je ne verrai plus les « Lu » des autres."
+    },
+    "import": {
+      "title": "Importer mes contacts du Coffre-fort",
+      "lead": "Chaque contact choisi reçoit une demande d'ami. Votre identifiant Coffre l'accompagne pour qu'il vous reconnaisse.",
+      "locked": "Ouvrez et déverrouillez votre Coffre-fort pour voir vos contacts.",
+      "openSafe": "Ouvrir le Coffre-fort",
+      "none": "Votre Coffre-fort n'a pas encore de contact.",
+      "go": "Envoyer une demande à {{count}} contact(s)",
+      "reaccept": "La messagerie a sa propre clé, distincte de celle du Coffre : chaque contact doit accepter une fois.",
+      "done": "{{count}} demande(s) prête(s) : retrouvez-les dans « Amis », avec le lien à leur envoyer."
+    },
+    "friends": {
+      "empty": "Aucun ami pour l'instant.",
+      "invite": "Inviter un ami",
+      "presence": "Présence",
+      "write": "Écrire",
+      "replyLink": "Mon lien de réponse",
+      "remove": "Retirer",
+      "removeConfirm": "Retirer {{name}} de vos amis ?",
+      "outgoing": "Demandes envoyées",
+      "outgoingLead": "Envoi automatique bientôt. En attendant, envoyez le lien vous-même.",
+      "requestLink": "Lien de la demande",
+      "requestLead": "Envoyez ce lien à {{name}} pour l'inviter.",
+      "cancel": "Annuler"
+    },
+    "invites": {
+      "empty": "Aucune invitation en attente.",
+      "incoming": "{{name}} vous invite à devenir amis.",
+      "replied": "{{name}} a accepté votre invitation. Confirmez pour l'ajouter.",
+      "accept": "Accepter",
+      "confirm": "Ajouter à mes amis",
+      "decline": "Refuser",
+      "acceptedTitle": "{{name}} est dans vos amis",
+      "replyLead": "Dernière étape : envoyez ce lien de réponse à {{name}} pour qu'il vous ajoute aussi (envoi automatique bientôt).",
+      "needProfile": "Créez d'abord votre profil pour répondre à cette invitation.",
+      "invalid": "Ce lien d'invitation est invalide ou a été modifié.",
+      "self": "C'est votre propre lien d'invitation.",
+      "notForMe": "Ce lien de réponse est destiné à quelqu'un d'autre.",
+      "already": "{{name}} est déjà dans vos amis.",
+      "vaultRef": "Identifiant Coffre-fort : {{handle}}",
+      "vaultKnown": "Contact de votre Coffre-fort : {{alias}}"
+    },
+    "chats": {
+      "title": "Conversations chiffrées",
+      "soon": "Bientôt : discussions de bout en bout avec vos amis, même hors ligne grâce à une boîte aux lettres chiffrée."
+    },
+    "err": {
+      "generic": "Une erreur est survenue. Réessayez.",
+      "bad-name": "Choisissez un pseudo.",
+      "avatar-not-image": "Ce fichier n'est pas une image.",
+      "avatar-input-too-big": "Image trop lourde (25 Mo max).",
+      "avatar-unreadable": "Impossible de lire cette image.",
+      "avatar-too-big": "Impossible de réduire cette image à 48 Ko."
+    }
   }
 }

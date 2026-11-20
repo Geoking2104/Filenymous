@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EMBED_MODEL, modelAvailable } from "../wall/ai/models";
 import { SafeClient } from "./client";
+import { releaseSafe, setActiveSafe } from "./shared";
 import { clearNow } from "./clipboard";
 import { SafeEmbedder } from "./embed";
 import { ConflictView } from "./SafeConflict";
@@ -64,6 +65,7 @@ export default function SafePanel() {
   useEffect(() => {
     const c = new SafeClient();
     setClient(c);
+    setActiveSafe(c);
     c.status()
       .then((s) => {
         setStatus(s);
@@ -74,6 +76,7 @@ export default function SafePanel() {
         setError(e.message);
       });
     return () => {
+      releaseSafe(c);
       c.dispose();
     };
   }, []);
