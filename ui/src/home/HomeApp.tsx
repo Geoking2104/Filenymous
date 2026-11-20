@@ -35,6 +35,7 @@ import { BookmarkLink } from "../document/BookmarkBar";
 import { isNewDocumentHash, listenForFileLaunches, prefetchDocumentEditor } from "../document/bookmark";
 import { handOff } from "../document/handoff";
 import { markTitle, setAppBadge, setFaviconDot, useActiveDocument } from "../document/activeDoc";
+import MessengerButton from "../messenger/MessengerButton";
 
 // Coffre-fort (SQLite WASM + crypto) is loaded only when opened.
 const SafePanel = lazy(() => import("../safe/SafePanel"));
@@ -536,7 +537,10 @@ export default function HomeApp({ hash }: { hash: string }) {
             />
           )}
         </div>
-        <LangSwitch />
+        <div className="pz-header-tools">
+          <MessengerButton />
+          <LangSwitch />
+        </div>
       </header>
       <main className={`pz-main${isHome || route === "wall-host" || route === "wall-peer" || route === "safe" || route === "document" ? " is-wide" : ""}`} key={isHome ? "home" : route}>
         {!isHome && (

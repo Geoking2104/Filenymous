@@ -2038,5 +2038,110 @@
     "stop": "Closing the sender's tab ends the share: the link stops working.",
     "fragmentTitle": "Key in the link",
     "fragment": "The decryption key sits after the “#” in the link: it is never sent to the server."
+  },
+  "msg": {
+    "button": "Messenger",
+    "buttonPending": "Messenger: {{count}} pending invitation(s)",
+    "title": "Messenger",
+    "close": "Close",
+    "tabs": {
+      "friends": "Friends",
+      "chats": "Chats",
+      "invites": "Invitations",
+      "profile": "My profile"
+    },
+    "soon": "soon",
+    "soonTitle": "Coming in a future version",
+    "footer": "Local first: your profile and friends stay on this device. No directory, and no server knows who your friends are.",
+    "qrTitle": "QR code of the link",
+    "linkLabel": "Link to share",
+    "copy": "Copy",
+    "copied": "Copied ✓",
+    "save": "Save",
+    "saved": "Saved ✓",
+    "photo": {
+      "pick": "Add a photo",
+      "change": "Change photo",
+      "remove": "Remove photo",
+      "busy": "Preparing…",
+      "hint": "Cropped square, reduced to {{kb}} KB max; GPS position and other photo metadata are removed."
+    },
+    "profile": {
+      "createTitle": "Create my profile",
+      "createLead": "Pick a nickname and, if you like, a photo. They are only shown to friends you accept.",
+      "name": "Nickname",
+      "create": "Create my profile",
+      "addFriend": "Add a friend",
+      "addFriendLead": "Send this link or have this QR code scanned. Your friend adds you, then sends back their reply link: you become friends once both have accepted.",
+      "makeInvite": "Create my invite link",
+      "edit": "Nickname and photo",
+      "wipe": "Delete my profile from this device",
+      "wipeConfirm": "Delete your profile, messenger key and friend list from this device? This cannot be undone."
+    },
+    "privacy": {
+      "title": "Privacy",
+      "lead": "Saved now, applied when presence arrives (soon).",
+      "discoverable": "Visible to my friends",
+      "discoverableHint": "My friends see when I'm online. Off by default.",
+      "shareOfflineStatus": "Show my offline status",
+      "shareOfflineStatusHint": "My friends see \"offline\" and when I was last seen. Off by default.",
+      "hideLastSeen": "Hide my last seen",
+      "hideLastSeenHint": "Mutual: I won't see other people's either.",
+      "hideReadReceipts": "Don't send read receipts",
+      "hideReadReceiptsHint": "Mutual: I won't see other people's \"Read\" either."
+    },
+    "import": {
+      "title": "Import my vault contacts",
+      "lead": "Each contact you pick gets a friend request. Your vault ID comes with it so they recognise you.",
+      "locked": "Open and unlock your vault to see your contacts.",
+      "openSafe": "Open the vault",
+      "none": "Your vault has no contacts yet.",
+      "go": "Send a request to {{count}} contact(s)",
+      "reaccept": "The messenger has its own key, separate from the vault's: each contact has to accept once.",
+      "done": "{{count}} request(s) ready: find them under \"Friends\", with the link to send them."
+    },
+    "friends": {
+      "empty": "No friends yet.",
+      "invite": "Invite a friend",
+      "presence": "Presence",
+      "write": "Write",
+      "replyLink": "My reply link",
+      "remove": "Remove",
+      "removeConfirm": "Remove {{name}} from your friends?",
+      "outgoing": "Sent requests",
+      "outgoingLead": "Automatic delivery is coming soon. Meanwhile, send the link yourself.",
+      "requestLink": "Request link",
+      "requestLead": "Send this link to {{name}} to invite them.",
+      "cancel": "Cancel"
+    },
+    "invites": {
+      "empty": "No pending invitations.",
+      "incoming": "{{name}} invites you to be friends.",
+      "replied": "{{name}} accepted your invitation. Confirm to add them.",
+      "accept": "Accept",
+      "confirm": "Add to my friends",
+      "decline": "Decline",
+      "acceptedTitle": "{{name}} is now your friend",
+      "replyLead": "Last step: send this reply link to {{name}} so they add you too (automatic delivery coming soon).",
+      "needProfile": "Create your profile first to answer this invitation.",
+      "invalid": "This invite link is invalid or was modified.",
+      "self": "This is your own invite link.",
+      "notForMe": "This reply link is meant for someone else.",
+      "already": "{{name}} is already your friend.",
+      "vaultRef": "Vault ID: {{handle}}",
+      "vaultKnown": "Contact from your vault: {{alias}}"
+    },
+    "chats": {
+      "title": "Encrypted chats",
+      "soon": "Coming soon: end-to-end encrypted chats with your friends, even offline thanks to an encrypted mailbox."
+    },
+    "err": {
+      "generic": "Something went wrong. Please try again.",
+      "bad-name": "Pick a nickname.",
+      "avatar-not-image": "This file is not an image.",
+      "avatar-input-too-big": "Image too large (25 MB max).",
+      "avatar-unreadable": "Can't read this image.",
+      "avatar-too-big": "Can't reduce this image to 48 KB."
+    }
   }
 }

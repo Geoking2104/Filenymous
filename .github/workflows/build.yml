@@ -187,7 +187,7 @@ jobs:
         run: npm run build -- --base=/app/
         working-directory: ui
       - name: Wall, home, Document and SEO unit tests
-        run: npx vitest run src/wall/ src/home/ src/safe/ src/document/ src/i18n/copy.test.ts src/seo.test.ts src/p2p/ src/holochain/runtime.test.ts
+        run: npx vitest run src/wall/ src/home/ src/safe/ src/document/ src/messenger/ src/i18n/copy.test.ts src/seo.test.ts src/p2p/ src/holochain/runtime.test.ts
         working-directory: ui
 
   document-e2e:
@@ -206,8 +206,8 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
         working-directory: ui
-      - name: Document editor, PDF tools and Pages panel (browser)
-        run: npx playwright test e2e/document.spec.ts e2e/document-editor.spec.ts e2e/document-persistence.spec.ts --reporter=line
+      - name: Document editor, PDF tools, Pages panel and messenger drawer (browser)
+        run: npx playwright test e2e/document.spec.ts e2e/document-editor.spec.ts e2e/document-persistence.spec.ts e2e/messenger.spec.ts --reporter=line
         working-directory: ui
       - name: Upload Playwright results
         if: failure()

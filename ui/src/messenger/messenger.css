@@ -1,0 +1,62 @@
+/* Messenger: header button + side drawer (full-screen sheet on mobile). */
+.pz-header-tools { display: flex; align-items: center; gap: .5rem; }
+.fy-msg-btn { position: relative; display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--fy-border); background: var(--fy-surface); backdrop-filter: blur(12px); font-size: 1.1rem; line-height: 1; cursor: pointer; color: inherit; transition: background .2s var(--fy-ease), border-color .2s; }
+.fy-msg-btn:hover, .fy-msg-btn.is-open { border-color: var(--fy-border-strong); background: var(--fy-surface-solid); }
+.fy-msg-btn:focus-visible { outline: none; box-shadow: var(--fy-ring); }
+.fy-msg-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #f97316; color: #fff; font-size: .68rem; font-weight: 800; display: grid; place-items: center; border: 2px solid var(--fy-bg); }
+
+.fy-avatar { display: inline-grid; place-items: center; flex: none; border-radius: 999px; color: #fff; font-weight: 700; letter-spacing: .01em; user-select: none; overflow: hidden; }
+.fy-avatar--photo { object-fit: cover; background: var(--fy-surface-2); }
+
+.fy-msg-backdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(2, 6, 23, .38); display: flex; justify-content: flex-end; animation: fy-msg-fade .18s var(--fy-ease); }
+.fy-msg-drawer { width: min(420px, 100vw); height: 100%; display: flex; flex-direction: column; background: var(--fy-surface-solid); color: var(--fy-text); border-left: 1px solid var(--fy-border); box-shadow: -18px 0 48px -24px rgba(15, 23, 42, .45); font-family: var(--fy-font); animation: fy-msg-slide .22s var(--fy-ease); }
+@keyframes fy-msg-fade { from { opacity: 0; } }
+@keyframes fy-msg-slide { from { transform: translateX(24px); opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { .fy-msg-backdrop, .fy-msg-drawer { animation: none; } }
+@media (max-width: 560px) { .fy-msg-drawer { width: 100vw; border-left: 0; } }
+
+.fy-msg-head { display: flex; align-items: center; gap: .6rem; padding: .9rem 1rem .6rem; }
+.fy-msg-head h2 { margin: 0; font-size: 1.1rem; flex: 1; }
+.fy-msg-close { border: 0; background: transparent; color: var(--fy-text-2); font-size: 1.6rem; line-height: 1; width: 36px; height: 36px; border-radius: 999px; cursor: pointer; }
+.fy-msg-close:hover { background: var(--fy-surface-2); }
+.fy-msg-close:focus-visible { outline: none; box-shadow: var(--fy-ring); }
+.fy-msg-tabs { display: flex; gap: 2px; padding: 0 .75rem; border-bottom: 1px solid var(--fy-border); overflow-x: auto; }
+.fy-msg-tabs button { border: 0; background: transparent; color: var(--fy-text-3); font: inherit; font-size: .85rem; font-weight: 600; padding: .55rem .6rem; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; display: inline-flex; gap: .35rem; align-items: center; }
+.fy-msg-tabs button.on { color: var(--fy-text); border-bottom-color: var(--fy-accent); }
+.fy-msg-count { min-width: 18px; padding: 0 5px; border-radius: 999px; background: var(--fy-surface-2); color: var(--fy-text-2); font-size: .7rem; }
+.fy-msg-body { flex: 1; overflow-y: auto; padding: .9rem 1rem 1.2rem; }
+.fy-msg-foot { padding: .55rem 1rem .8rem; font-size: .72rem; color: var(--fy-text-3); border-top: 1px solid var(--fy-border); }
+
+.fy-msg-stack { display: flex; flex-direction: column; gap: .8rem; }
+.fy-msg-card { border: 1px solid var(--fy-border); border-radius: var(--fy-radius-sm); padding: .85rem; background: var(--fy-surface-2); display: flex; flex-direction: column; gap: .55rem; }
+.fy-msg-card h3 { margin: 0; font-size: .95rem; }
+.fy-msg-success { border-color: rgba(22, 163, 74, .45); }
+.fy-msg-me { flex-direction: row; align-items: center; gap: .8rem; }
+.fy-msg-me strong { display: block; font-size: 1.05rem; }
+.fy-msg-handle { display: block; font-size: .72rem; color: var(--fy-text-3); word-break: break-all; }
+.fy-msg-hint { margin: 0; font-size: .8rem; color: var(--fy-text-2); }
+.fy-msg-err { margin: 0; font-size: .82rem; color: var(--fy-danger); }
+.fy-msg-ok { margin: 0; font-size: .82rem; color: var(--fy-success); }
+.fy-msg-danger { color: var(--fy-danger) !important; }
+.fy-msg-field { display: flex; flex-direction: column; gap: .25rem; font-size: .82rem; font-weight: 600; }
+.fy-msg-field input, .fy-msg-row input { font: inherit; font-weight: 400; padding: .5rem .65rem; border-radius: 10px; border: 1px solid var(--fy-border-strong); background: var(--fy-surface-solid); color: inherit; min-width: 0; }
+.fy-msg-row { display: flex; gap: .45rem; align-items: center; }
+.fy-msg-row input { flex: 1; font-size: .78rem; }
+.fy-msg-photo { display: flex; gap: .8rem; align-items: center; }
+.fy-msg-photo-actions { display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; }
+.fy-msg-link { display: flex; flex-direction: column; gap: .5rem; align-items: stretch; }
+.fy-msg-qr { align-self: center; background: #fff; border-radius: 12px; padding: 6px; line-height: 0; }
+.fy-msg-toggle { display: flex; gap: .6rem; align-items: flex-start; cursor: pointer; font-size: .85rem; }
+.fy-msg-toggle input { margin-top: .2rem; accent-color: var(--fy-accent); }
+.fy-msg-toggle small { display: block; color: var(--fy-text-3); font-size: .75rem; }
+.fy-msg-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+.fy-msg-friend { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; padding: .6rem; border-radius: var(--fy-radius-sm); border: 1px solid var(--fy-border); background: var(--fy-surface-solid); }
+.fy-msg-friend-main { flex: 1; min-width: 0; }
+.fy-msg-friend-main strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fy-msg-friend-actions { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; width: 100%; padding-left: 52px; }
+.fy-msg-friend-actions .pz-btn, .fy-msg-friend-actions .pz-btn-ghost { padding: .35rem .8rem; font-size: .8rem; }
+.fy-msg-friend-actions .fy-msg-link { width: 100%; }
+.fy-msg-friend-lead { width: 100%; }
+.fy-msg-soon { font-size: .72rem; color: var(--fy-text-3); padding: .15rem .5rem; border-radius: 999px; border: 1px dashed var(--fy-border-strong); }
+.fy-msg-empty { text-align: center; padding: 1.5rem .5rem; color: var(--fy-text-2); display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+.fy-msg-empty p { margin: 0; }
